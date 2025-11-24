@@ -34,7 +34,7 @@ const CommentSection = () => {
                             <span className={styles.time}>1 hour ago</span>
                         </div>
                         <p className={styles.text}>
-                            Good catch, Chioma. I've added the citation. Let me know if it looks good.
+                            Good catch, Chioma. I&apos;ve added the citation. Let me know if it looks good.
                         </p>
                     </div>
                 </div>

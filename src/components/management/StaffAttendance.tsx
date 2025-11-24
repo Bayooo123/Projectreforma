@@ -1,4 +1,4 @@
-import { Clock, UserCheck, UserX } from 'lucide-react';
+import { Clock } from 'lucide-react';
 import styles from './StaffAttendance.module.css';
 
 const STAFF = [

@@ -17,14 +17,25 @@ export async function processDocumentOCR(
     onProgress?: (progress: number) => void
 ): Promise<OCRResult | null> {
     try {
-        // Check if file is an image or scanned PDF
+        // Check file type
         const isImage = file.type.startsWith('image/');
+        const isPDF = file.type === 'application/pdf';
 
-        if (!isImage) {
+        if (!isImage && !isPDF) {
+            console.log('Unsupported file type for OCR:', file.type);
+            return null;
+        }
+
+        if (isPDF) {
             // For PDFs, we'd need to convert to images first
             // This is a simplified version - in production, use pdf.js to extract pages
-            console.log('PDF OCR requires conversion to images first');
-            return null;
+            console.log('PDF OCR requires conversion to images first. Skipping for now.');
+            // Return a mock result for PDFs to prevent UI errors during demo
+            return {
+                text: "PDF OCR is not fully implemented in this client-side demo. In production, this would use a server-side OCR service or pdf.js conversion.",
+                confidence: 100,
+                words: []
+            };
         }
 
         // Run Tesseract OCR
@@ -36,10 +47,13 @@ export async function processDocumentOCR(
             },
         });
 
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const data = result.data as any;
+
         return {
-            text: result.data.text,
-            confidence: result.data.confidence,
-            words: result.data.words,
+            text: data.text,
+            confidence: data.confidence,
+            words: data.words || [],
         };
     } catch (error) {
         console.error('OCR processing error:', error);

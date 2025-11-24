@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, Download, ArrowUp, ArrowDown } from 'lucide-react';
+import { AlertTriangle, Download, ArrowUp } from 'lucide-react';
 import styles from './page.module.css';
 
 export default function AnalyticsPage() {

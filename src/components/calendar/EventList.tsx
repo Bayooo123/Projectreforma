@@ -1,4 +1,4 @@
-import { Calendar as CalendarIcon, MapPin, User } from 'lucide-react';
+import { MapPin, User } from 'lucide-react';
 import styles from './EventList.module.css';
 
 const EventList = () => {

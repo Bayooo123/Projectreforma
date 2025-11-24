@@ -60,7 +60,7 @@ const MOCK_DOCUMENTS: Document[] = [
     },
 ];
 
-const DocumentList = ({ briefId, onDocumentClick }: DocumentListProps) => {
+const DocumentList = ({ onDocumentClick }: Omit<DocumentListProps, 'briefId'>) => {
     const [documents] = useState<Document[]>(MOCK_DOCUMENTS);
     const [uploadProgress, setUploadProgress] = useState(0);
     const [isUploading, setIsUploading] = useState(false);
@@ -74,7 +74,7 @@ const DocumentList = ({ briefId, onDocumentClick }: DocumentListProps) => {
     const getFileIcon = (type: string) => {
         switch (type) {
             case 'image':
-                return <Image size={20} />;
+                return <ImageIcon size={20} />;
             case 'scan':
                 return <FileCheck size={20} />;
             default:

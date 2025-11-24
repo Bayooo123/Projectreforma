@@ -4,7 +4,7 @@ import { runNotificationEngine, type Matter } from '@/lib/notificationEngine';
 // This endpoint will be called by Vercel Cron or a scheduler
 // For now, it uses mock data. In production, it will fetch from the database.
 
-export async function GET(request: Request) {
+export async function GET() {
     try {
         // TODO: Replace with actual database query
         // const matters = await prisma.matter.findMany({ where: { status: 'active' } });

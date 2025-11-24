@@ -1,6 +1,6 @@
 "use client";
 
-import { Bell, CheckCircle, AlertTriangle, Info } from 'lucide-react';
+import { CheckCircle, AlertTriangle, Info } from 'lucide-react';
 import styles from './NotificationPopover.module.css';
 
 const NOTIFICATIONS = [

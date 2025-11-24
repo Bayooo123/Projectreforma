@@ -1,6 +1,6 @@
 "use client";
 
-import { X, DollarSign } from 'lucide-react';
+import { X } from 'lucide-react';
 import styles from './ExpenseModal.module.css';
 
 interface ExpenseModalProps {

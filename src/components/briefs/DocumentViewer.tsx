@@ -1,4 +1,4 @@
-import { FileText, Download, Share2, Printer, Maximize2, ZoomIn, ZoomOut, Image as ImageIcon, FileSpreadsheet, File as FileIcon } from 'lucide-react';
+import { FileText, Download, Share2, Printer, Maximize2, ZoomIn, ZoomOut, Image as ImageIcon, File as FileIcon } from 'lucide-react';
 import styles from './DocumentViewer.module.css';
 
 interface Document {

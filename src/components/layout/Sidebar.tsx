@@ -9,7 +9,6 @@ import {
   Users,
   Briefcase,
   BarChart2,
-  ShieldCheck,
   HelpCircle,
   LogOut
 } from 'lucide-react';
