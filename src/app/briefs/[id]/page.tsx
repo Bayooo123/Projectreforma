@@ -7,8 +7,18 @@ import DocumentList from '@/components/briefs/DocumentList';
 import DocumentViewer from '@/components/briefs/DocumentViewer';
 import styles from './page.module.css';
 
+interface Document {
+    id: string;
+    name: string;
+    type: 'pdf' | 'docx' | 'image' | 'scan';
+    size: number;
+    uploadedAt: Date;
+    ocrStatus?: 'pending' | 'processing' | 'completed' | 'failed';
+    ocrText?: string;
+}
+
 export default function BriefDetailPage() {
-    const [selectedDocument, setSelectedDocument] = useState<any>(null);
+    const [selectedDocument, setSelectedDocument] = useState<Document | null>(null);
 
     return (
         <div className={styles.page}>
