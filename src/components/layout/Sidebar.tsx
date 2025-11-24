@@ -25,7 +25,7 @@ const Sidebar = () => {
     { name: 'Client Manager', href: '/management/clients', icon: Users },
     { name: 'Officer Manager', href: '/management/office', icon: Briefcase },
     { name: 'Analytics', href: '/analytics', icon: BarChart2 },
-    // { name: 'Partner Access', href: '/partner', icon: ShieldCheck },
+
   ];
 
   const isActive = (path: string) => {
