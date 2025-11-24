@@ -1,0 +1,245 @@
+.container {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.subtitle {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+}
+
+.uploadBtn {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background-color: var(--primary);
+    color: white;
+    border: none;
+    padding: 0.75rem 1.25rem;
+    border-radius: var(--radius-md);
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.uploadBtn:hover {
+    background-color: #1a252f;
+}
+
+.toolbar {
+    display: flex;
+    gap: 1rem;
+}
+
+.searchWrapper {
+    display: flex;
+    align-items: center;
+    background-color: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 0.5rem 1rem;
+    flex: 1;
+    max-width: 400px;
+}
+
+.searchIcon {
+    color: var(--text-secondary);
+    margin-right: 0.5rem;
+}
+
+.searchInput {
+    border: none;
+    background: none;
+    outline: none;
+    width: 100%;
+    color: var(--text-primary);
+}
+
+.sortBtn {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background-color: var(--surface);
+    border: 1px solid var(--border);
+    padding: 0.5rem 1rem;
+    border-radius: var(--radius-md);
+    color: var(--text-secondary);
+    cursor: pointer;
+}
+
+.tableWrapper {
+    background-color: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow-x: auto;
+}
+
+.table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+}
+
+.table th {
+    padding: 1rem;
+    border-bottom: 1px solid var(--border);
+    color: var(--text-secondary);
+    font-weight: 600;
+    font-size: 0.85rem;
+    white-space: nowrap;
+}
+
+.table td {
+    padding: 1rem;
+    border-bottom: 1px solid var(--border);
+    color: var(--text-primary);
+    font-size: 0.9rem;
+    vertical-align: middle;
+}
+
+.table tr:last-child td {
+    border-bottom: none;
+}
+
+.checkboxCell {
+    width: 40px;
+    text-align: center;
+}
+
+.briefNumber {
+    font-family: monospace;
+    color: var(--text-secondary);
+}
+
+.briefInfo {
+    display: flex;
+    flex-direction: column;
+}
+
+.briefName {
+    font-weight: 600;
+    color: var(--text-primary);
+    text-decoration: none;
+}
+
+.briefName:hover {
+    color: var(--primary);
+    text-decoration: underline;
+}
+
+.briefRef {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+}
+
+.clientName,
+.lawyerName {
+    font-weight: 500;
+}
+
+.dateCell {
+    color: var(--text-secondary);
+}
+
+.statusBadge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.25rem 0.6rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: capitalize;
+}
+
+.statusDot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background-color: currentColor;
+}
+
+.active {
+    background-color: #C6F6D5;
+    color: #2F855A;
+}
+
+.inactive {
+    background-color: #EDF2F7;
+    color: #718096;
+}
+
+.finalized {
+    background-color: #BEE3F8;
+    color: #2B6CB0;
+}
+
+.actionCell {
+    position: relative;
+}
+
+.actionBtn {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 0.25rem;
+    border-radius: var(--radius-sm);
+}
+
+.actionBtn:hover {
+    background-color: var(--accent);
+    color: var(--text-primary);
+}
+
+.actionMenu {
+    position: absolute;
+    right: 0;
+    top: 100%;
+    background-color: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-md);
+    z-index: 10;
+    min-width: 120px;
+    overflow: hidden;
+}
+
+.menuItem {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    border: none;
+    background: none;
+    text-align: left;
+    font-size: 0.85rem;
+    color: var(--text-primary);
+    cursor: pointer;
+}
+
+.menuItem:hover {
+    background-color: var(--accent);
+}
+
+.deleteItem {
+    color: #C53030;
+}
+
+.deleteItem:hover {
+    background-color: #FED7D7;
+}

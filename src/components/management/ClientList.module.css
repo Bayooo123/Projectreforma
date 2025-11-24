@@ -1,0 +1,138 @@
+.container {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.toolbar {
+    display: flex;
+    gap: 1rem;
+}
+
+.searchWrapper {
+    display: flex;
+    align-items: center;
+    background-color: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 0.5rem 1rem;
+    flex: 1;
+    max-width: 400px;
+}
+
+.searchIcon {
+    color: var(--text-secondary);
+    margin-right: 0.5rem;
+}
+
+.searchInput {
+    border: none;
+    background: none;
+    outline: none;
+    width: 100%;
+    color: var(--text-primary);
+}
+
+.filterBtn {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background-color: var(--surface);
+    border: 1px solid var(--border);
+    padding: 0.5rem 1rem;
+    border-radius: var(--radius-md);
+    color: var(--text-secondary);
+    cursor: pointer;
+}
+
+.tableWrapper {
+    background-color: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow-x: auto;
+}
+
+.table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+}
+
+.table th {
+    padding: 1rem;
+    border-bottom: 1px solid var(--border);
+    color: var(--text-secondary);
+    font-weight: 600;
+    font-size: 0.85rem;
+    white-space: nowrap;
+}
+
+.table td {
+    padding: 1rem;
+    border-bottom: 1px solid var(--border);
+    color: var(--text-primary);
+    font-size: 0.9rem;
+    vertical-align: middle;
+}
+
+.table tr:last-child td {
+    border-bottom: none;
+}
+
+.checkboxCell {
+    width: 40px;
+    text-align: center;
+}
+
+.clientInfo {
+    display: flex;
+    flex-direction: column;
+}
+
+.clientName {
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.clientEmail {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+}
+
+.statusBadge {
+    display: inline-block;
+    padding: 0.25rem 0.6rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.active {
+    background-color: #C6F6D5;
+    color: #2F855A;
+}
+
+.inactive {
+    background-color: #EDF2F7;
+    color: #718096;
+}
+
+.actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.iconBtn {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 0.25rem;
+    border-radius: var(--radius-sm);
+    transition: all 0.2s;
+}
+
+.iconBtn:hover {
+    background-color: var(--accent);
+    color: var(--primary);
+}

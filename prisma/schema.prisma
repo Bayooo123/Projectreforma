@@ -1,0 +1,239 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// AUTHENTICATION & WORKSPACE MODELS
+// ============================================
+
+model Workspace {
+  id        String   @id @default(cuid())
+  name      String   // "ASCO LP"
+  slug      String   @unique // "asco-lp"
+  ownerId   String
+  plan      String   @default("free") // 'free' | 'pro' | 'enterprise'
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  owner       User              @relation("WorkspaceOwner", fields: [ownerId], references: [id])
+  members     WorkspaceMember[]
+  invitations Invitation[]
+  matters     Matter[]
+  clients     Client[]
+  briefs      Brief[]
+
+  @@index([slug])
+}
+
+model WorkspaceMember {
+  id          String   @id @default(cuid())
+  workspaceId String
+  userId      String
+  role        String   // 'owner' | 'partner' | 'lawyer' | 'staff'
+  joinedAt    DateTime @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, userId])
+  @@index([userId])
+}
+
+model Invitation {
+  id          String    @id @default(cuid())
+  workspaceId String
+  email       String
+  role        String    // 'partner' | 'lawyer' | 'staff'
+  token       String    @unique
+  invitedBy   String
+  status      String    @default("pending") // 'pending' | 'accepted' | 'expired'
+  expiresAt   DateTime
+  createdAt   DateTime  @default(now())
+  acceptedAt  DateTime?
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  inviter   User      @relation(fields: [invitedBy], references: [id])
+
+  @@index([token])
+  @@index([email])
+}
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  password  String   // Hashed with bcrypt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  ownedWorkspaces      Workspace[]         @relation("WorkspaceOwner")
+  workspaces           WorkspaceMember[]
+  sentInvitations      Invitation[]
+  assignedMatters      Matter[]            @relation("AssignedMatters")
+  activityLogs         MatterActivityLog[]
+  clientCommunications ClientCommunication[]
+  briefs               Brief[]
+
+  @@index([email])
+}
+
+// ============================================
+// NOTIFICATION ENGINE MODELS
+// ============================================
+
+model Notification {
+  id              String    @id @default(cuid())
+  type            String    // 'alert' | 'info' | 'success' | 'warning' | 'critical'
+  title           String
+  message         String
+  recipientId     String
+  recipientType   String    // 'lawyer' | 'client' | 'partner' | 'staff'
+  relatedMatterId String?
+  relatedBriefId  String?
+  priority        String    // 'low' | 'medium' | 'high' | 'critical'
+  status          String    @default("unread") // 'unread' | 'read' | 'dismissed' | 'actioned'
+  channels        String    // JSON array: ['in-app', 'email', 'sms']
+  createdAt       DateTime  @default(now())
+  readAt          DateTime?
+  actionedAt      DateTime?
+
+  matter Matter? @relation(fields: [relatedMatterId], references: [id])
+  brief  Brief?  @relation(fields: [relatedBriefId], references: [id])
+
+  @@index([recipientId, status])
+  @@index([createdAt])
+}
+
+model NotificationRule {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  triggerType String   // 'time' | 'event' | 'inactivity'
+  conditions  String   // JSON object
+  actions     String   // JSON object
+  enabled     Boolean  @default(true)
+  createdBy   String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([enabled])
+}
+
+model Matter {
+  id                String    @id @default(cuid())
+  caseNumber        String    @unique
+  name              String
+  clientId          String
+  assignedLawyerId  String
+  workspaceId       String
+  court             String?
+  judge             String?
+  status            String    @default("active") // 'active' | 'inactive' | 'closed'
+  nextCourtDate     DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  lastActivityAt    DateTime  @default(now())
+  lastClientContact DateTime?
+
+  workspace            Workspace             @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  client               Client                @relation(fields: [clientId], references: [id])
+  assignedLawyer       User                  @relation("AssignedMatters", fields: [assignedLawyerId], references: [id])
+  activityLogs         MatterActivityLog[]
+  clientCommunications ClientCommunication[]
+  notifications        Notification[]
+  briefs               Brief[]
+
+  @@index([assignedLawyerId])
+  @@index([workspaceId])
+  @@index([lastActivityAt])
+  @@index([nextCourtDate])
+}
+
+model MatterActivityLog {
+  id           String   @id @default(cuid())
+  matterId     String
+  activityType String   // 'note_added' | 'document_uploaded' | 'status_changed' | 'client_contacted' | 'court_date_added'
+  description  String
+  performedBy  String
+  timestamp    DateTime @default(now())
+
+  matter Matter @relation(fields: [matterId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [performedBy], references: [id])
+
+  @@index([matterId, timestamp])
+}
+
+model ClientCommunication {
+  id                String   @id @default(cuid())
+  matterId          String
+  clientId          String
+  communicationType String   // 'email' | 'phone' | 'meeting' | 'sms' | 'letter'
+  subject           String
+  summary           String
+  sentBy            String
+  sentAt            DateTime @default(now())
+
+  matter Matter @relation(fields: [matterId], references: [id], onDelete: Cascade)
+  client Client @relation(fields: [clientId], references: [id])
+  user   User   @relation(fields: [sentBy], references: [id])
+
+  @@index([matterId])
+  @@index([clientId])
+  @@index([sentAt])
+}
+
+model Brief {
+  id          String    @id @default(cuid())
+  briefNumber String    @unique
+  name        String
+  clientId    String
+  matterId    String?
+  lawyerId    String
+  workspaceId String
+  category    String    // 'Litigation' | 'ADR' | 'Tax advisory' | etc.
+  status      String    @default("active") // 'active' | 'inactive' | 'finalized'
+  dueDate     DateTime?
+  description String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  workspace     Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  client        Client         @relation(fields: [clientId], references: [id])
+  matter        Matter?        @relation(fields: [matterId], references: [id])
+  lawyer        User           @relation(fields: [lawyerId], references: [id])
+  notifications Notification[]
+
+  @@index([lawyerId])
+  @@index([workspaceId])
+  @@index([dueDate])
+  @@index([status])
+}
+
+model Client {
+  id         String    @id @default(cuid())
+  name       String
+  email      String    @unique
+  phone      String?
+  company    String?
+  industry   String?
+  status     String    @default("active") // 'active' | 'inactive'
+  workspaceId String
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  workspace            Workspace             @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  matters              Matter[]
+  briefs               Brief[]
+  clientCommunications ClientCommunication[]
+
+  @@index([email])
+  @@index([workspaceId])
+}
