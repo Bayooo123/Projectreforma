@@ -29,7 +29,11 @@ const EVENTS = [
     { date: 27, cases: ['Ngozi v. FIRS', 'Segun v. CBN'] },
 ];
 
-const CalendarGrid = () => {
+interface CalendarGridProps {
+    onEventClick?: () => void;
+}
+
+const CalendarGrid = ({ onEventClick }: CalendarGridProps) => {
     const [currentDate, setCurrentDate] = useState(new Date(2025, 9, 1)); // October 2025
 
     const monthNames = [
@@ -51,12 +55,26 @@ const CalendarGrid = () => {
 
     const currentMonthYear = `${monthNames[currentDate.getMonth()]} ${currentDate.getFullYear()}`;
 
+    // Calculate days in current month
+    const daysInMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).getDate();
+
+    // Calculate the starting day of the week (0 = Sunday, 6 = Saturday)
+    const firstDayOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1).getDay();
+
     const renderEvent = (day: number) => {
         const dayEvent = EVENTS.find(e => e.date === day);
         if (!dayEvent || !dayEvent.cases) return null;
 
         return dayEvent.cases.map((caseName, idx) => (
-            <div key={idx} className={styles.caseItem}>
+            <div
+                key={idx}
+                className={styles.caseItem}
+                onClick={(e) => {
+                    e.stopPropagation();
+                    onEventClick?.();
+                }}
+                style={{ cursor: 'pointer' }}
+            >
                 <Gavel size={10} className={styles.caseIcon} />
                 <span className={styles.caseName}>{caseName}</span>
             </div>
@@ -83,11 +101,13 @@ const CalendarGrid = () => {
                     <div key={day} className={styles.dayHeader}>{day}</div>
                 ))}
 
-                {/* Empty cells for start of month (mock) */}
-                <div className={styles.dayCell}></div>
-                <div className={styles.dayCell}></div>
+                {/* Empty cells for days before the first day of the month */}
+                {Array.from({ length: firstDayOfMonth }, (_, i) => (
+                    <div key={`empty-${i}`} className={styles.dayCell}></div>
+                ))}
 
-                {Array.from({ length: 31 }, (_, i) => i + 1).map(day => (
+                {/* Actual days of the month */}
+                {Array.from({ length: daysInMonth }, (_, i) => i + 1).map(day => (
                     <div key={day} className={styles.dayCell}>
                         <span className={styles.dayNumber}>{day}</span>
                         <div className={styles.events}>

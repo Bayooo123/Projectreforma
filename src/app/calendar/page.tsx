@@ -27,9 +27,7 @@ export default function CalendarPage() {
                 </button>
             </div>
 
-            <div onClick={() => setIsDetailModalOpen(true)} style={{ cursor: 'pointer' }}>
-                <CalendarGrid />
-            </div>
+            <CalendarGrid onEventClick={() => setIsDetailModalOpen(true)} />
 
             <AddMatterModal
                 isOpen={isAddModalOpen}
