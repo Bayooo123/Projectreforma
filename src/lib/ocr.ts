@@ -3,7 +3,7 @@ import Tesseract from 'tesseract.js';
 export interface OCRResult {
     text: string;
     confidence: number;
-    words: any[];
+    words: unknown[];
 }
 
 /**

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from 'react';
-import { FileText, Image, FileCheck, Upload, Download, Eye, Loader } from 'lucide-react';
+import { FileText, Image as ImageIcon, FileCheck, Upload, Download, Eye, Loader } from 'lucide-react';
 import styles from './DocumentList.module.css';
 
 interface Document {
@@ -60,10 +60,13 @@ const MOCK_DOCUMENTS: Document[] = [
     },
 ];
 
-const DocumentList = ({ onDocumentClick }: Omit<DocumentListProps, 'briefId'>) => {
+const DocumentList = ({ briefId, onDocumentClick }: DocumentListProps) => {
     const [documents] = useState<Document[]>(MOCK_DOCUMENTS);
     const [uploadProgress, setUploadProgress] = useState(0);
     const [isUploading, setIsUploading] = useState(false);
+
+    // briefId will be used when integrating with database
+    console.log('Brief ID:', briefId);
 
     const formatFileSize = (bytes: number) => {
         if (bytes < 1024) return bytes + ' B';
