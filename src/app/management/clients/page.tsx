@@ -2,10 +2,11 @@ import { Plus, Download } from 'lucide-react';
 import ClientList from '@/components/management/ClientList';
 import ClientStats from '@/components/management/ClientStats';
 import styles from './page.module.css';
+import PasswordProtected from '@/components/auth/PasswordProtected';
 
 export default function ClientsPage() {
     return (
-        <div className={styles.page}>
+        <PasswordProtected password="12345678"><div className={styles.page}>
             <div className={styles.header}>
                 <div>
                     <h1 className={styles.title}>Clients</h1>
@@ -26,6 +27,6 @@ export default function ClientsPage() {
             <ClientStats />
 
             <ClientList />
-        </div>
+        </div></PasswordProtected>
     );
 }

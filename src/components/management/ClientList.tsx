@@ -1,26 +1,33 @@
 "use client";
 
 import { useState } from 'react';
-import { Search, Filter, MoreVertical, FileText } from 'lucide-react';
+import { Search, Filter, MoreVertical, FileText, DollarSign } from 'lucide-react';
 import InvoiceModal from './InvoiceModal';
+import PaymentModal from './PaymentModal';
 import styles from './ClientList.module.css';
 
 // Mock Data
 const CLIENTS = [
-    { id: 1, name: 'Stellar Corporation', email: 'contact@stellar.com', company: 'Stellar Corp', industry: 'Tech', matters: 12, lastActivity: '2 hours ago', status: 'Active' },
-    { id: 2, name: 'Green Meadow Estates', email: 'info@greenmeadow.com', company: 'Green Meadow', industry: 'Real Estate', matters: 5, lastActivity: '1 day ago', status: 'Active' },
-    { id: 3, name: 'OmniTech Solutions', email: 'support@omnitech.com', company: 'OmniTech', industry: 'Tech', matters: 8, lastActivity: '3 days ago', status: 'Inactive' },
-    { id: 4, name: 'Maritime Logistics', email: 'ops@maritime.com', company: 'Maritime Log', industry: 'Logistics', matters: 15, lastActivity: '5 hours ago', status: 'Active' },
-    { id: 5, name: 'Phoenix Group', email: 'admin@phoenix.com', company: 'Phoenix Grp', industry: 'Finance', matters: 3, lastActivity: '1 week ago', status: 'Active' },
+    { id: '1', name: 'Stellar Corporation', email: 'contact@stellar.com', company: 'Stellar Corp', industry: 'Tech', matters: 12, lastActivity: '2 hours ago', status: 'Active' },
+    { id: '2', name: 'Green Meadow Estates', email: 'info@greenmeadow.com', company: 'Green Meadow', industry: 'Real Estate', matters: 5, lastActivity: '1 day ago', status: 'Active' },
+    { id: '3', name: 'OmniTech Solutions', email: 'support@omnitech.com', company: 'OmniTech', industry: 'Tech', matters: 8, lastActivity: '3 days ago', status: 'Inactive' },
+    { id: '4', name: 'Maritime Logistics', email: 'ops@maritime.com', company: 'Maritime Log', industry: 'Logistics', matters: 15, lastActivity: '5 hours ago', status: 'Active' },
+    { id: '5', name: 'Phoenix Group', email: 'admin@phoenix.com', company: 'Phoenix Grp', industry: 'Finance', matters: 3, lastActivity: '1 week ago', status: 'Active' },
 ];
 
 const ClientList = () => {
-    const [selectedClient, setSelectedClient] = useState<string | null>(null);
+    const [selectedClient, setSelectedClient] = useState<{ name: string; id: string } | null>(null);
     const [isInvoiceModalOpen, setIsInvoiceModalOpen] = useState(false);
+    const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
 
-    const handleCreateInvoice = (clientName: string) => {
-        setSelectedClient(clientName);
+    const handleCreateInvoice = (clientName: string, clientId: string) => {
+        setSelectedClient({ name: clientName, id: clientId });
         setIsInvoiceModalOpen(true);
+    };
+
+    const handleRecordPayment = (clientName: string, clientId: string) => {
+        setSelectedClient({ name: clientName, id: clientId });
+        setIsPaymentModalOpen(true);
     };
 
     return (
@@ -69,20 +76,25 @@ const ClientList = () => {
                                 <td>{client.matters}</td>
                                 <td>{client.lastActivity}</td>
                                 <td>
-                                    <span className={`${styles.statusBadge} ${styles[client.status.toLowerCase()]}`}>
-                                        {client.status}
-                                    </span>
+                                    <span className={`${styles.statusBadge} ${styles[client.status.toLowerCase()]}`}>{client.status}</span>
                                 </td>
                                 <td>
                                     <div className={styles.actions}>
                                         <button
                                             className={styles.iconBtn}
                                             title="Create Invoice"
-                                            onClick={() => handleCreateInvoice(client.name)}
+                                            onClick={() => handleCreateInvoice(client.name, client.id)}
                                         >
                                             <FileText size={18} />
                                         </button>
-                                        <button className={styles.iconBtn}>
+                                        <button
+                                            className={styles.iconBtn}
+                                            title="Record Payment"
+                                            onClick={() => handleRecordPayment(client.name, client.id)}
+                                        >
+                                            <DollarSign size={18} />
+                                        </button>
+                                        <button className={styles.iconBtn} title="More Options">
                                             <MoreVertical size={18} />
                                         </button>
                                     </div>
@@ -96,7 +108,13 @@ const ClientList = () => {
             <InvoiceModal
                 isOpen={isInvoiceModalOpen}
                 onClose={() => setIsInvoiceModalOpen(false)}
-                clientName={selectedClient || ''}
+                clientName={selectedClient?.name || ''}
+                clientId={selectedClient?.id || ''}
+            />
+            <PaymentModal
+                isOpen={isPaymentModalOpen}
+                onClose={() => setIsPaymentModalOpen(false)}
+                clientName={selectedClient?.name || ''}
             />
         </div>
     );

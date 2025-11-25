@@ -149,6 +149,7 @@ model Matter {
   clientCommunications ClientCommunication[]
   notifications        Notification[]
   briefs               Brief[]
+  invoices             Invoice[]
 
   @@index([assignedLawyerId])
   @@index([workspaceId])
@@ -232,7 +233,85 @@ model Client {
   matters              Matter[]
   briefs               Brief[]
   clientCommunications ClientCommunication[]
+  invoices             Invoice[]
+  payments             Payment[]
 
   @@index([email])
   @@index([workspaceId])
+}
+
+model Invoice {
+  id            String   @id @default(cuid())
+  invoiceNumber String   @unique
+  clientId      String
+  matterId      String?
+  
+  // Invoice Details
+  date          DateTime @default(now())
+  dueDate       DateTime?
+  status        String   @default("pending") // 'paid' | 'pending' | 'overdue'
+  
+  // Bill To Information
+  billToName        String
+  billToAddress     String?
+  billToCity        String?
+  billToState       String?
+  
+  // Additional Fields
+  attentionTo       String?  // e.g., "Sven Hanson"
+  notes             String?  // Additional notes or payment instructions
+  
+  // Amounts (stored in kobo/cents)
+  subtotal          Int      @default(0)
+  vatRate           Float    @default(7.5) // VAT percentage
+  vatAmount         Int      @default(0)
+  securityChargeRate Float   @default(1.0) // Security charge percentage
+  securityChargeAmount Int   @default(0)
+  totalAmount       Int      @default(0)
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  client       Client        @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  matter       Matter?       @relation(fields: [matterId], references: [id])
+  payments     Payment[]
+  items        InvoiceItem[] // Line items
+
+  @@index([clientId])
+  @@index([matterId])
+  @@index([status])
+  @@index([date])
+}
+
+model InvoiceItem {
+  id          String  @id @default(cuid())
+  invoiceId   String
+  
+  description String  // e.g., "PROFESSIONAL FEE FOR: RECENT INTERFACE WITH EFCC..."
+  amount      Int     // Amount in kobo/cents
+  quantity    Int     @default(1)
+  order       Int     @default(0) // For ordering items
+  
+  createdAt   DateTime @default(now())
+  
+  invoice     Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  
+  @@index([invoiceId])
+}
+
+model Payment {
+  id        String   @id @default(cuid())
+  clientId  String
+  invoiceId String?
+  amount    Int
+  date      DateTime @default(now())
+  method    String
+  reference String?
+  createdAt DateTime @default(now())
+
+  client  Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  invoice Invoice? @relation(fields: [invoiceId], references: [id])
+
+  @@index([clientId])
+  @@index([invoiceId])
 }

@@ -1,91 +1,111 @@
 "use client";
 
 import { useState } from 'react';
-import { X, Plus, DollarSign, FileText, Calendar } from 'lucide-react';
+import { X, Plus, Trash2, FileText, DollarSign } from 'lucide-react';
 import styles from './InvoiceModal.module.css';
 
-interface Invoice {
-    id: string;
-    invoiceNumber: string;
-    amount: number;
-    date: Date;
-    dueDate: Date;
-    status: 'paid' | 'pending' | 'overdue';
+interface InvoiceItem {
     description: string;
-}
-
-interface Payment {
-    id: string;
     amount: number;
-    date: Date;
-    method: string;
-    reference: string;
 }
 
 interface InvoiceModalProps {
     isOpen: boolean;
     onClose: () => void;
     clientName: string;
+    clientId: string;
 }
 
-const MOCK_INVOICES: Invoice[] = [
-    {
-        id: '1',
-        invoiceNumber: 'INV-2025-001',
-        amount: 500000,
-        date: new Date('2025-10-01'),
-        dueDate: new Date('2025-10-15'),
-        status: 'paid',
-        description: 'Legal consultation and document review',
-    },
-    {
-        id: '2',
-        invoiceNumber: 'INV-2025-002',
-        amount: 750000,
-        date: new Date('2025-10-15'),
-        dueDate: new Date('2025-10-30'),
-        status: 'pending',
-        description: 'Court representation - Motion hearing',
-    },
-];
-
-const MOCK_PAYMENTS: Payment[] = [
-    {
-        id: '1',
-        amount: 500000,
-        date: new Date('2025-10-10'),
-        method: 'Bank Transfer',
-        reference: 'TRF/2025/10001',
-    },
-];
-
-const InvoiceModal = ({ isOpen, onClose, clientName }: InvoiceModalProps) => {
-    const [activeTab, setActiveTab] = useState<'invoices' | 'payments' | 'create'>('invoices');
-    const [invoices] = useState<Invoice[]>(MOCK_INVOICES);
-    const [payments] = useState<Payment[]>(MOCK_PAYMENTS);
+const InvoiceModal = ({ isOpen, onClose, clientName, clientId }: InvoiceModalProps) => {
+    const [activeTab, setActiveTab] = useState<'create' | 'list'>('create');
+    const [items, setItems] = useState<InvoiceItem[]>([{ description: '', amount: 0 }]);
+    const [vatRate, setVatRate] = useState(7.5);
+    const [securityChargeRate, setSecurityChargeRate] = useState(1.0);
 
     if (!isOpen) return null;
 
-    const formatCurrency = (amount: number) => {
-        return `₦${amount.toLocaleString()}`;
+    const addItem = () => {
+        setItems([...items, { description: '', amount: 0 }]);
     };
 
-    const getStatusBadge = (status: string) => {
-        const badges = {
-            paid: { text: 'Paid', className: styles.statusPaid },
-            pending: { text: 'Pending', className: styles.statusPending },
-            overdue: { text: 'Overdue', className: styles.statusOverdue },
-        };
-        const badge = badges[status as keyof typeof badges];
-        return <span className={badge.className}>{badge.text}</span>;
+    const removeItem = (index: number) => {
+        if (items.length > 1) {
+            setItems(items.filter((_, i) => i !== index));
+        }
     };
+
+    const updateItem = (index: number, field: 'description' | 'amount', value: string | number) => {
+        const newItems = [...items];
+        newItems[index] = { ...newItems[index], [field]: value };
+        setItems(newItems);
+    };
+
+    const calculateTotals = () => {
+        const subtotal = items.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+        const vat = subtotal * (vatRate / 100);
+        const securityCharge = subtotal * (securityChargeRate / 100);
+        const total = subtotal + vat + securityCharge;
+
+        return { subtotal, vat, securityCharge, total };
+    };
+
+    const formatCurrency = (amount: number) => {
+        return `₦${amount.toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    };
+
+    const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        const formData = new FormData(e.currentTarget);
+
+        const { subtotal, vat, securityCharge, total } = calculateTotals();
+
+        try {
+            const response = await fetch('/api/invoices', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    invoiceNumber: formData.get('invoiceNumber'),
+                    clientId,
+                    matterId: formData.get('matterId') || null,
+                    dueDate: formData.get('dueDate') || null,
+                    billToName: formData.get('billToName'),
+                    billToAddress: formData.get('billToAddress'),
+                    billToCity: formData.get('billToCity'),
+                    billToState: formData.get('billToState'),
+                    attentionTo: formData.get('attentionTo'),
+                    notes: formData.get('notes'),
+                    items: items.map(item => ({
+                        description: item.description,
+                        amount: Math.round(Number(item.amount) * 100), // Convert to kobo
+                    })),
+                    vatRate,
+                    securityChargeRate,
+                }),
+            });
+
+            if (response.ok) {
+                alert('Invoice created successfully!');
+                e.currentTarget.reset();
+                setItems([{ description: '', amount: 0 }]);
+                onClose();
+            } else {
+                const error = await response.json();
+                alert(`Error: ${error.error}`);
+            }
+        } catch (error) {
+            console.error('Error creating invoice:', error);
+            alert('Failed to create invoice');
+        }
+    };
+
+    const totals = calculateTotals();
 
     return (
         <div className={styles.overlay}>
             <div className={styles.modal}>
                 <div className={styles.header}>
                     <div>
-                        <h2 className={styles.title}>Invoice & Payment Management</h2>
+                        <h2 className={styles.title}>Invoice Management</h2>
                         <p className={styles.subtitle}>{clientName}</p>
                     </div>
                     <button onClick={onClose} className={styles.closeBtn}>
@@ -95,127 +115,201 @@ const InvoiceModal = ({ isOpen, onClose, clientName }: InvoiceModalProps) => {
 
                 <div className={styles.tabs}>
                     <button
-                        className={`${styles.tab} ${activeTab === 'invoices' ? styles.tabActive : ''}`}
-                        onClick={() => setActiveTab('invoices')}
-                    >
-                        <FileText size={16} />
-                        Invoices ({invoices.length})
-                    </button>
-                    <button
-                        className={`${styles.tab} ${activeTab === 'payments' ? styles.tabActive : ''}`}
-                        onClick={() => setActiveTab('payments')}
-                    >
-                        <DollarSign size={16} />
-                        Payments ({payments.length})
-                    </button>
-                    <button
                         className={`${styles.tab} ${activeTab === 'create' ? styles.tabActive : ''}`}
                         onClick={() => setActiveTab('create')}
                     >
                         <Plus size={16} />
                         Create Invoice
                     </button>
+                    <button
+                        className={`${styles.tab} ${activeTab === 'list' ? styles.tabActive : ''}`}
+                        onClick={() => setActiveTab('list')}
+                    >
+                        <FileText size={16} />
+                        View Invoices
+                    </button>
                 </div>
 
                 <div className={styles.content}>
-                    {activeTab === 'invoices' && (
-                        <div className={styles.invoiceList}>
-                            {invoices.map((invoice) => (
-                                <div key={invoice.id} className={styles.invoiceCard}>
-                                    <div className={styles.invoiceHeader}>
-                                        <div>
-                                            <h3 className={styles.invoiceNumber}>{invoice.invoiceNumber}</h3>
-                                            <p className={styles.invoiceDesc}>{invoice.description}</p>
-                                        </div>
-                                        {getStatusBadge(invoice.status)}
-                                    </div>
-                                    <div className={styles.invoiceDetails}>
-                                        <div className={styles.detailItem}>
-                                            <span className={styles.label}>Amount:</span>
-                                            <span className={styles.value}>{formatCurrency(invoice.amount)}</span>
-                                        </div>
-                                        <div className={styles.detailItem}>
-                                            <span className={styles.label}>Date:</span>
-                                            <span className={styles.value}>{invoice.date.toLocaleDateString()}</span>
-                                        </div>
-                                        <div className={styles.detailItem}>
-                                            <span className={styles.label}>Due:</span>
-                                            <span className={styles.value}>{invoice.dueDate.toLocaleDateString()}</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    )}
-
-                    {activeTab === 'payments' && (
-                        <div className={styles.paymentList}>
-                            {payments.map((payment) => (
-                                <div key={payment.id} className={styles.paymentCard}>
-                                    <div className={styles.paymentIcon}>
-                                        <DollarSign size={20} />
-                                    </div>
-                                    <div className={styles.paymentInfo}>
-                                        <h3 className={styles.paymentAmount}>{formatCurrency(payment.amount)}</h3>
-                                        <p className={styles.paymentMethod}>{payment.method}</p>
-                                        <p className={styles.paymentRef}>Ref: {payment.reference}</p>
-                                    </div>
-                                    <div className={styles.paymentDate}>
-                                        <Calendar size={14} />
-                                        {payment.date.toLocaleDateString()}
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    )}
-
                     {activeTab === 'create' && (
-                        <form className={styles.createForm}>
-                            <div className={styles.formGroup}>
-                                <label className={styles.formLabel}>Invoice Number</label>
-                                <input
-                                    type="text"
-                                    className={styles.input}
-                                    placeholder="INV-2025-003"
-                                    defaultValue={`INV-2025-${String(invoices.length + 1).padStart(3, '0')}`}
-                                />
-                            </div>
-
+                        <form className={styles.createForm} onSubmit={handleSubmit}>
+                            {/* Invoice Header */}
                             <div className={styles.formRow}>
                                 <div className={styles.formGroup}>
-                                    <label className={styles.formLabel}>Amount (₦)</label>
+                                    <label className={styles.formLabel}>Invoice Number</label>
                                     <input
-                                        type="number"
+                                        type="text"
+                                        name="invoiceNumber"
                                         className={styles.input}
-                                        placeholder="500000"
+                                        placeholder="INV-2025-001"
+                                        required
                                     />
                                 </div>
                                 <div className={styles.formGroup}>
                                     <label className={styles.formLabel}>Due Date</label>
                                     <input
                                         type="date"
+                                        name="dueDate"
                                         className={styles.input}
                                     />
                                 </div>
                             </div>
 
+                            {/* Bill To Information */}
                             <div className={styles.formGroup}>
-                                <label className={styles.formLabel}>Description</label>
-                                <textarea
-                                    className={styles.textarea}
-                                    rows={3}
-                                    placeholder="Legal services provided..."
+                                <label className={styles.formLabel}>Bill To (Name/Company)</label>
+                                <input
+                                    type="text"
+                                    name="billToName"
+                                    className={styles.input}
+                                    placeholder="The Managing Director, Arete Protea Global Services Ltd"
+                                    required
                                 />
                             </div>
 
                             <div className={styles.formGroup}>
-                                <label className={styles.formLabel}>Matter/Case</label>
-                                <select className={styles.select}>
-                                    <option value="">Select matter...</option>
-                                    <option value="1">State v. Johnson</option>
-                                    <option value="2">Adeyemi v. FBN</option>
-                                    <option value="3">Estate of Okoro</option>
-                                </select>
+                                <label className={styles.formLabel}>Address</label>
+                                <input
+                                    type="text"
+                                    name="billToAddress"
+                                    className={styles.input}
+                                    placeholder="47b Royal Palm Drive, Osborne Foreshore Estate"
+                                />
+                            </div>
+
+                            <div className={styles.formRow}>
+                                <div className={styles.formGroup}>
+                                    <label className={styles.formLabel}>City</label>
+                                    <input
+                                        type="text"
+                                        name="billToCity"
+                                        className={styles.input}
+                                        placeholder="Lagos"
+                                    />
+                                </div>
+                                <div className={styles.formGroup}>
+                                    <label className={styles.formLabel}>State</label>
+                                    <input
+                                        type="text"
+                                        name="billToState"
+                                        className={styles.input}
+                                        placeholder="Phase 2, Ikoyi"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className={styles.formGroup}>
+                                <label className={styles.formLabel}>Attention To</label>
+                                <input
+                                    type="text"
+                                    name="attentionTo"
+                                    className={styles.input}
+                                    placeholder="Sven Hanson"
+                                />
+                            </div>
+
+                            {/* Line Items */}
+                            <div className={styles.formGroup}>
+                                <label className={styles.formLabel}>Line Items</label>
+                                <div className={styles.lineItems}>
+                                    {items.map((item, index) => (
+                                        <div key={index} className={styles.lineItem}>
+                                            <div className={styles.lineItemNumber}>{index + 1}.</div>
+                                            <div className={styles.lineItemContent}>
+                                                <textarea
+                                                    className={styles.textarea}
+                                                    rows={2}
+                                                    placeholder="PROFESSIONAL FEE FOR: RECENT INTERFACE WITH EFCC AND CONCLUSION OF THE CASE"
+                                                    value={item.description}
+                                                    onChange={(e) => updateItem(index, 'description', e.target.value)}
+                                                    required
+                                                />
+                                                <input
+                                                    type="number"
+                                                    className={styles.input}
+                                                    placeholder="Amount (₦)"
+                                                    value={item.amount || ''}
+                                                    onChange={(e) => updateItem(index, 'amount', parseFloat(e.target.value) || 0)}
+                                                    required
+                                                    step="0.01"
+                                                />
+                                            </div>
+                                            {items.length > 1 && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => removeItem(index)}
+                                                    className={styles.removeItemBtn}
+                                                    title="Remove item"
+                                                >
+                                                    <Trash2 size={18} />
+                                                </button>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={addItem}
+                                    className={styles.addItemBtn}
+                                >
+                                    <Plus size={16} />
+                                    Add Line Item
+                                </button>
+                            </div>
+
+                            {/* Tax Configuration */}
+                            <div className={styles.formRow}>
+                                <div className={styles.formGroup}>
+                                    <label className={styles.formLabel}>VAT Rate (%)</label>
+                                    <input
+                                        type="number"
+                                        className={styles.input}
+                                        value={vatRate}
+                                        onChange={(e) => setVatRate(parseFloat(e.target.value) || 0)}
+                                        step="0.1"
+                                    />
+                                </div>
+                                <div className={styles.formGroup}>
+                                    <label className={styles.formLabel}>Security Charge (%)</label>
+                                    <input
+                                        type="number"
+                                        className={styles.input}
+                                        value={securityChargeRate}
+                                        onChange={(e) => setSecurityChargeRate(parseFloat(e.target.value) || 0)}
+                                        step="0.1"
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Totals Summary */}
+                            <div className={styles.totalsBox}>
+                                <div className={styles.totalRow}>
+                                    <span>Subtotal:</span>
+                                    <span>{formatCurrency(totals.subtotal)}</span>
+                                </div>
+                                <div className={styles.totalRow}>
+                                    <span>VAT ({vatRate}%):</span>
+                                    <span>{formatCurrency(totals.vat)}</span>
+                                </div>
+                                <div className={styles.totalRow}>
+                                    <span>Security Charges ({securityChargeRate}%):</span>
+                                    <span>{formatCurrency(totals.securityCharge)}</span>
+                                </div>
+                                <div className={`${styles.totalRow} ${styles.grandTotal}`}>
+                                    <span>TOTAL:</span>
+                                    <span>{formatCurrency(totals.total)}</span>
+                                </div>
+                            </div>
+
+                            {/* Notes */}
+                            <div className={styles.formGroup}>
+                                <label className={styles.formLabel}>Payment Instructions / Notes</label>
+                                <textarea
+                                    name="notes"
+                                    className={styles.textarea}
+                                    rows={2}
+                                    placeholder="Payment should be made in favour of..."
+                                />
                             </div>
 
                             <div className={styles.formActions}>
@@ -223,10 +317,19 @@ const InvoiceModal = ({ isOpen, onClose, clientName }: InvoiceModalProps) => {
                                     Cancel
                                 </button>
                                 <button type="submit" className={styles.submitBtn}>
+                                    <DollarSign size={18} />
                                     Create Invoice
                                 </button>
                             </div>
                         </form>
+                    )}
+
+                    {activeTab === 'list' && (
+                        <div className={styles.invoiceList}>
+                            <p style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '2rem' }}>
+                                Invoice list will be displayed here
+                            </p>
+                        </div>
                     )}
                 </div>
             </div>
