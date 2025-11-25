@@ -10,7 +10,7 @@ export default function BriefsPage() {
 
     return (
         <div className={styles.page}>
-            <BriefList />
+            <BriefList onUpload={() => setIsUploadModalOpen(true)} />
 
             <BriefUploadModal
                 isOpen={isUploadModalOpen}
