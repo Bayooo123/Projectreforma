@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
                     select: { name: true, email: true },
                 },
                 invoice: {
-                    select: { invoiceNumber: true, amount: true },
+                    select: { invoiceNumber: true, totalAmount: true },
                 },
             },
             orderBy: { date: 'desc' },
