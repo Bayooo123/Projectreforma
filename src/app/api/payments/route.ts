@@ -67,8 +67,11 @@ export async function POST(request: NextRequest) {
             });
 
             if (invoice) {
-                const totalPaid = invoice.payments.reduce((sum, p) => sum + p.amount, 0);
-                const newStatus = totalPaid >= invoice.amount ? 'paid' : 'pending';
+                const totalPaid = invoice.payments.reduce(
+                    (sum: number, p: { amount: number }) => sum + p.amount,
+                    0
+                );
+                const newStatus = totalPaid >= invoice.totalAmount ? 'paid' : 'pending';
 
                 await prisma.invoice.update({
                     where: { id: invoiceId },
