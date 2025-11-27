@@ -79,11 +79,11 @@ export default function AnalyticsPage() {
                             {/* Mock Line Chart Visualization */}
                             <div className={styles.lineChart}>
                                 <svg viewBox="0 0 300 100" className={styles.chartSvg}>
-                                    <path d="M0,80 Q50,20 100,60 T200,40 T300,10" fill="none" stroke="#C53030" strokeWidth="3" />
-                                    <circle cx="0" cy="80" r="4" fill="#C53030" />
-                                    <circle cx="100" cy="60" r="4" fill="#C53030" />
-                                    <circle cx="200" cy="40" r="4" fill="#C53030" />
-                                    <circle cx="300" cy="10" r="4" fill="#C53030" />
+                                    <path d="M0,80 Q50,20 100,60 T200,40 T300,10" fill="none" stroke="#2C3E50" strokeWidth="3" />
+                                    <circle cx="0" cy="80" r="4" fill="#2C3E50" />
+                                    <circle cx="100" cy="60" r="4" fill="#2C3E50" />
+                                    <circle cx="200" cy="40" r="4" fill="#2C3E50" />
+                                    <circle cx="300" cy="10" r="4" fill="#2C3E50" />
                                 </svg>
                             </div>
                             <div className={styles.chartLabels}>
@@ -94,12 +94,12 @@ export default function AnalyticsPage() {
                     <div className={styles.chartCard}>
                         <h3 className={styles.chartTitle}>Revenue by Top Clients</h3>
                         <div className={styles.donutChartContainer}>
-                            <div className={styles.donutChart}></div>
+                            <div className={styles.donutChart} style={{ background: 'conic-gradient(#2C3E50 0% 13%, #34495E 13% 30%, #10B981 30% 40%, #64748B 40% 64%, #E2E8F0 64% 100%)' }}></div>
                             <div className={styles.legend}>
-                                <div className={styles.legendItem}><span className={styles.dot} style={{ background: '#9B2C2C' }}></span> Shell (13%)</div>
-                                <div className={styles.legendItem}><span className={styles.dot} style={{ background: '#E53E3E' }}></span> Zenith (17%)</div>
-                                <div className={styles.legendItem}><span className={styles.dot} style={{ background: '#F56565' }}></span> MTN (10%)</div>
-                                <div className={styles.legendItem}><span className={styles.dot} style={{ background: '#FC8181' }}></span> Dangote (24%)</div>
+                                <div className={styles.legendItem}><span className={styles.dot} style={{ background: '#2C3E50' }}></span> Shell (13%)</div>
+                                <div className={styles.legendItem}><span className={styles.dot} style={{ background: '#34495E' }}></span> Zenith (17%)</div>
+                                <div className={styles.legendItem}><span className={styles.dot} style={{ background: '#10B981' }}></span> MTN (10%)</div>
+                                <div className={styles.legendItem}><span className={styles.dot} style={{ background: '#64748B' }}></span> Dangote (24%)</div>
                                 <div className={styles.legendItem}><span className={styles.dot} style={{ background: '#E2E8F0' }}></span> Others (36%)</div>
                             </div>
                         </div>
@@ -111,37 +111,53 @@ export default function AnalyticsPage() {
                     <div className={styles.chartCard}>
                         <h3 className={styles.chartTitle}>Active Matters Status</h3>
                         <div className={styles.pieChartContainer}>
-                            <div className={styles.pieChart}></div>
+                            <div className={styles.pieChart} style={{ background: 'conic-gradient(#2C3E50 0% 38%, #10B981 38% 70%, #F59E0B 70% 91%, #E2E8F0 91% 100%)' }}></div>
                             <div className={styles.legend}>
-                                <div className={styles.legendItem}><span className={styles.dot} style={{ background: '#9B2C2C' }}></span> Active-Trial (18)</div>
-                                <div className={styles.legendItem}><span className={styles.dot} style={{ background: '#F56565' }}></span> Active-Mention (15)</div>
-                                <div className={styles.legendItem}><span className={styles.dot} style={{ background: '#FC8181' }}></span> Pending (10)</div>
+                                <div className={styles.legendItem}><span className={styles.dot} style={{ background: '#2C3E50' }}></span> Active-Trial (18)</div>
+                                <div className={styles.legendItem}><span className={styles.dot} style={{ background: '#10B981' }}></span> Active-Mention (15)</div>
+                                <div className={styles.legendItem}><span className={styles.dot} style={{ background: '#F59E0B' }}></span> Pending (10)</div>
                                 <div className={styles.legendItem}><span className={styles.dot} style={{ background: '#E2E8F0' }}></span> Closed (4)</div>
                             </div>
                         </div>
                     </div>
                     <div className={styles.chartCard}>
+                        <h3 className={styles.chartTitle}>Matters by Practice Area</h3>
+                        <div className={styles.donutChartContainer}>
+                            <div className={styles.donutChart} style={{ background: 'conic-gradient(#2C3E50 0% 40%, #34495E 40% 65%, #10B981 65% 85%, #64748B 85% 100%)' }}></div>
+                            <div className={styles.legend}>
+                                <div className={styles.legendItem}><span className={styles.dot} style={{ background: '#2C3E50' }}></span> Litigation (40%)</div>
+                                <div className={styles.legendItem}><span className={styles.dot} style={{ background: '#34495E' }}></span> Corporate (25%)</div>
+                                <div className={styles.legendItem}><span className={styles.dot} style={{ background: '#10B981' }}></span> Property (20%)</div>
+                                <div className={styles.legendItem}><span className={styles.dot} style={{ background: '#64748B' }}></span> IP (15%)</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Charts Row 3 */}
+                <div className={styles.chartsGrid}>
+                    <div className={styles.chartCard}>
                         <h3 className={styles.chartTitle}>Court Visits This Month</h3>
                         <div className={styles.barChartContainer}>
                             <div className={styles.barRow}>
                                 <span className={styles.barLabel}>High Court Lagos</span>
-                                <div className={styles.barTrack}><div className={styles.barFill} style={{ width: '90%' }}></div></div>
+                                <div className={styles.barTrack}><div className={styles.barFill} style={{ width: '90%', background: '#2C3E50' }}></div></div>
                             </div>
                             <div className={styles.barRow}>
                                 <span className={styles.barLabel}>Federal High Court</span>
-                                <div className={styles.barTrack}><div className={styles.barFill} style={{ width: '70%' }}></div></div>
+                                <div className={styles.barTrack}><div className={styles.barFill} style={{ width: '70%', background: '#34495E' }}></div></div>
                             </div>
                             <div className={styles.barRow}>
                                 <span className={styles.barLabel}>Probate Registry</span>
-                                <div className={styles.barTrack}><div className={styles.barFill} style={{ width: '50%' }}></div></div>
+                                <div className={styles.barTrack}><div className={styles.barFill} style={{ width: '50%', background: '#10B981' }}></div></div>
                             </div>
                             <div className={styles.barRow}>
                                 <span className={styles.barLabel}>Lagos State HC</span>
-                                <div className={styles.barTrack}><div className={styles.barFill} style={{ width: '30%' }}></div></div>
+                                <div className={styles.barTrack}><div className={styles.barFill} style={{ width: '30%', background: '#64748B' }}></div></div>
                             </div>
                             <div className={styles.barRow}>
                                 <span className={styles.barLabel}>Magistrate Court</span>
-                                <div className={styles.barTrack}><div className={styles.barFill} style={{ width: '20%' }}></div></div>
+                                <div className={styles.barTrack}><div className={styles.barFill} style={{ width: '20%', background: '#94A3B8' }}></div></div>
                             </div>
                         </div>
                     </div>

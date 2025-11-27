@@ -47,8 +47,7 @@
 }
 
 .filterBtn.active {
-    background-color: #C53030;
-    /* Red accent */
+    background-color: var(--primary);
     color: white;
     font-weight: 600;
 }
@@ -57,7 +56,7 @@
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    background-color: #C53030;
+    background-color: var(--primary);
     color: white;
     border: none;
     padding: 0.6rem 1rem;
@@ -69,9 +68,8 @@
 
 /* Alert Banner */
 .alertBanner {
-    background-color: #FEFCBF;
-    /* Light Yellow */
-    border: 1px solid #F6E05E;
+    background-color: var(--warning-bg);
+    border: 1px solid var(--warning);
     border-radius: var(--radius-lg);
     padding: 1rem 1.5rem;
     display: flex;
@@ -87,7 +85,7 @@
 }
 
 .alertIcon {
-    color: #D69E2E;
+    color: var(--warning);
 }
 
 .alertText {
@@ -97,9 +95,9 @@
 }
 
 .viewDetailsBtn {
-    background-color: #ECC94B;
-    color: #744210;
-    border: none;
+    background-color: white;
+    color: var(--warning);
+    border: 1px solid var(--warning);
     padding: 0.5rem 1rem;
     border-radius: var(--radius-md);
     font-weight: 600;
@@ -131,8 +129,7 @@
 .metricValue {
     font-size: 2rem;
     font-weight: 700;
-    color: #C53030;
-    /* Red brand color */
+    color: var(--primary);
     margin-bottom: 0.5rem;
 }
 
@@ -148,7 +145,7 @@
 }
 
 .down {
-    color: #C53030;
+    color: var(--danger);
 }
 
 .neutral {
@@ -214,19 +211,19 @@
     width: 120px;
     height: 120px;
     border-radius: 50%;
-    border: 25px solid #C53030;
-    border-left-color: #FC8181;
-    border-bottom-color: #E2E8F0;
+    border: 25px solid var(--primary);
+    border-left-color: var(--primary-light);
+    border-bottom-color: var(--border);
 }
 
 .pieChart {
     width: 120px;
     height: 120px;
     border-radius: 50%;
-    background: conic-gradient(#9B2C2C 0% 40%,
-            #F56565 40% 70%,
-            #FC8181 70% 90%,
-            #E2E8F0 90% 100%);
+    background: conic-gradient(var(--primary) 0% 40%,
+            var(--success) 40% 70%,
+            var(--warning) 70% 90%,
+            var(--border) 90% 100%);
 }
 
 .legend {
@@ -271,29 +268,6 @@
 .barTrack {
     flex: 1;
     height: 20px;
-    background-color: #EDF2F7;
-    border-radius: 4px;
-    overflow: hidden;
-}
-
-.barFill {
-    height: 100%;
-    background-color: #C53030;
-}
-
-/* Tables */
-.sectionTitle {
-    font-size: 1rem;
-    font-weight: 600;
-    color: var(--text-primary);
-    margin-bottom: 0.75rem;
-}
-
-.tableCard {
-    background-color: white;
-    border-radius: var(--radius-lg);
-    padding: 1rem;
-    box-shadow: var(--shadow-sm);
     overflow-x: auto;
 }
 
@@ -315,7 +289,7 @@
 
 .amount {
     font-weight: 700;
-    color: #C53030;
+    color: var(--primary);
 }
 
 .status {
@@ -326,18 +300,18 @@
 }
 
 .paid {
-    background-color: #C6F6D5;
-    color: #2F855A;
+    background-color: var(--success-bg);
+    color: var(--success);
 }
 
 .partly {
-    background-color: #FEFCBF;
-    color: #D69E2E;
+    background-color: var(--warning-bg);
+    color: var(--warning);
 }
 
 .unpaid {
-    background-color: #FED7D7;
-    color: #C53030;
+    background-color: var(--danger-bg);
+    color: var(--danger);
 }
 
 @media (max-width: 1024px) {
