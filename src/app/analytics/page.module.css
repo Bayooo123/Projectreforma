@@ -314,10 +314,88 @@
     color: var(--danger);
 }
 
+/* Expense Calendar */
+.expenseCalendar {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.expenseDay {
+    background-color: var(--background);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 1rem;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.expenseDay:hover {
+    background-color: #FEE2E2;
+    border-color: #DC2626;
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+.expenseDayDate {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+.expenseDayAmount {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #DC2626;
+    margin-bottom: 0.25rem;
+}
+
+.expenseDayCount {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+}
+
+.noData {
+    text-align: center;
+    padding: 2rem;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+}
+
+.section {
+    margin-top: 1.5rem;
+}
+
+.sectionTitle {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 1rem;
+}
+
+.tableCard {
+    background-color: white;
+    border-radius: var(--radius-lg);
+    padding: 1.5rem;
+    box-shadow: var(--shadow-sm);
+}
+
+.barFill {
+    height: 100%;
+    border-radius: var(--radius-sm);
+    transition: width 0.3s ease;
+}
+
 @media (max-width: 1024px) {
 
     .metricsGrid,
     .chartsGrid {
         grid-template-columns: 1fr;
+    }
+
+    .expenseCalendar {
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
     }
 }

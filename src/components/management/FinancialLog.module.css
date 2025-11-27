@@ -1,99 +1,169 @@
-.card {
-    background-color: var(--background);
-    border: 1px solid var(--border);
+.container {
+    background-color: var(--surface);
     border-radius: var(--radius-lg);
-    box-shadow: var(--shadow-sm);
     padding: 1.5rem;
-    display: flex;
-    flex-direction: column;
+    box-shadow: var(--shadow-sm);
 }
 
 .header {
     display: flex;
     justify-content: space-between;
-    align-items: center;
+    align-items: flex-start;
     margin-bottom: 1.5rem;
 }
 
 .title {
-    font-size: 1.1rem;
+    font-size: 1.25rem;
     font-weight: 700;
     color: var(--text-primary);
+    margin-bottom: 0.25rem;
+}
+
+.subtitle {
+    font-size: var(--text-sm);
+    color: var(--text-secondary);
 }
 
 .addBtn {
-    background-color: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 50%;
-    width: 32px;
-    height: 32px;
     display: flex;
     align-items: center;
-    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.625rem 1rem;
+    background-color: var(--primary);
+    color: white;
+    border: none;
+    border-radius: var(--radius-md);
+    font-size: var(--text-sm);
+    font-weight: 600;
     cursor: pointer;
-    color: var(--text-primary);
     transition: all 0.2s;
 }
 
 .addBtn:hover {
-    background-color: var(--primary);
-    color: white;
-    border-color: var(--primary);
+    background-color: var(--primary-dark);
 }
 
-.list {
+.summary {
+    margin-bottom: 1.5rem;
+}
+
+.summaryCard {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    background-color: var(--background);
+    border-radius: var(--radius-md);
+}
+
+.summaryIcon {
+    width: 48px;
+    height: 48px;
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.summaryLabel {
+    font-size: var(--text-sm);
+    color: var(--text-secondary);
+    margin-bottom: 0.25rem;
+}
+
+.summaryValue {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.transactions {
     display: flex;
     flex-direction: column;
+    gap: 0.75rem;
+}
+
+.transaction {
+    display: flex;
+    align-items: center;
     gap: 1rem;
+    padding: 1rem;
+    background-color: var(--background);
+    border-radius: var(--radius-md);
+    transition: all 0.2s;
+}
+
+.transaction:hover {
+    background-color: var(--accent);
+}
+
+.transactionIcon {
+    width: 40px;
+    height: 40px;
+    border-radius: var(--radius-md);
+    background-color: var(--surface);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.expenseIcon {
+    color: #DC2626;
+}
+
+.transactionInfo {
     flex: 1;
 }
 
-.item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding-bottom: 1rem;
-    border-bottom: 1px solid var(--border);
-}
-
-.desc {
+.transactionDesc {
     font-weight: 600;
     color: var(--text-primary);
-    font-size: 0.95rem;
+    margin-bottom: 0.25rem;
 }
 
-.time {
-    font-size: 0.8rem;
+.transactionMeta {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: var(--text-sm);
     color: var(--text-secondary);
 }
 
-.amount {
-    font-family: monospace;
+.category {
+    padding: 0.125rem 0.5rem;
+    background-color: var(--surface);
+    border-radius: var(--radius-sm);
+    font-size: 0.75rem;
     font-weight: 600;
-    font-size: 1rem;
 }
 
-.income {
-    color: var(--success);
+.reference {
+    font-family: monospace;
 }
 
-.expense {
-    color: var(--danger);
+.transactionRight {
+    text-align: right;
 }
 
-.footer {
-    margin-top: 1rem;
-    padding-top: 1rem;
-    border-top: 2px dashed var(--border);
-}
-
-.totalRow {
-    display: flex;
-    justify-content: space-between;
+.amount {
     font-weight: 700;
-    font-size: 1.1rem;
+    font-size: 1rem;
+    margin-bottom: 0.25rem;
 }
 
-.positive {
-    color: var(--success);
+.amount.expense {
+    color: #DC2626;
+}
+
+.time {
+    font-size: var(--text-sm);
+    color: var(--text-secondary);
+}
+
+.loading,
+.empty {
+    text-align: center;
+    padding: 2rem;
+    color: var(--text-secondary);
+    font-size: var(--text-sm);
 }

@@ -1,10 +1,78 @@
 "use client";
 
-import { AlertTriangle, Download, ArrowUp } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { AlertTriangle, Download, ArrowUp, ArrowDown, TrendingDown } from 'lucide-react';
 import PasswordProtected from '@/components/auth/PasswordProtected';
+import ExpenseBreakdownModal from '@/components/analytics/ExpenseBreakdownModal';
 import styles from './page.module.css';
 
+interface Expense {
+    id: string;
+    category: string;
+    amount: number;
+    description: string;
+    date: string;
+    reference?: string;
+}
+
+interface ExpenseData {
+    expenses: Expense[];
+    aggregations: {
+        total: number;
+        count: number;
+        byCategory: Record<string, number>;
+        byDate: Record<string, { total: number; count: number; expenses: Expense[] }>;
+    };
+}
+
 export default function AnalyticsPage() {
+    const [filter, setFilter] = useState<'this-month' | 'last-month' | 'this-quarter'>('this-month');
+    const [expenseData, setExpenseData] = useState<ExpenseData | null>(null);
+    const [selectedDate, setSelectedDate] = useState<string | null>(null);
+    const [isModalOpen, setIsModalOpen] = useState(false);
+
+    useEffect(() => {
+        fetchExpenseData();
+    }, [filter]);
+
+    const fetchExpenseData = async () => {
+        try {
+            const response = await fetch(`/api/expenses?filter=${filter}`);
+            const data = await response.json();
+            if (data.success) {
+                setExpenseData(data.data);
+            }
+        } catch (error) {
+            console.error('Failed to fetch expense data:', error);
+        }
+    };
+
+    const formatCurrency = (amount: number) => {
+        return `₦${(amount / 100).toLocaleString()}`;
+    };
+
+    const handleDateClick = (date: string) => {
+        setSelectedDate(date);
+        setIsModalOpen(true);
+    };
+
+    const selectedExpenses = selectedDate && expenseData?.aggregations.byDate[selectedDate]
+        ? expenseData.aggregations.byDate[selectedDate].expenses
+        : [];
+
+    // Calculate expense metrics
+    const thisMonthTotal = expenseData?.aggregations.total || 0;
+    const expenseCount = expenseData?.aggregations.count || 0;
+
+    // Get top expense categories
+    const topCategories = expenseData?.aggregations.byCategory
+        ? Object.entries(expenseData.aggregations.byCategory)
+            .sort(([, a], [, b]) => b - a)
+            .slice(0, 5)
+        : [];
+
+    const totalCategoryAmount = topCategories.reduce((sum, [, amount]) => sum + amount, 0);
+
     return (
         <PasswordProtected password="12345678">
             <div className={styles.page}>
@@ -16,9 +84,24 @@ export default function AnalyticsPage() {
                     </div>
                     <div className={styles.actions}>
                         <div className={styles.dateFilters}>
-                            <button className={`${styles.filterBtn} ${styles.active}`}>This Month</button>
-                            <button className={styles.filterBtn}>This Quarter</button>
-                            <button className={styles.filterBtn}>This Year</button>
+                            <button
+                                className={`${styles.filterBtn} ${filter === 'this-month' ? styles.active : ''}`}
+                                onClick={() => setFilter('this-month')}
+                            >
+                                This Month
+                            </button>
+                            <button
+                                className={`${styles.filterBtn} ${filter === 'last-month' ? styles.active : ''}`}
+                                onClick={() => setFilter('last-month')}
+                            >
+                                Last Month
+                            </button>
+                            <button
+                                className={`${styles.filterBtn} ${filter === 'this-quarter' ? styles.active : ''}`}
+                                onClick={() => setFilter('this-quarter')}
+                            >
+                                This Quarter
+                            </button>
                         </div>
                         <button className={styles.downloadBtn}>
                             <Download size={16} />
@@ -56,10 +139,10 @@ export default function AnalyticsPage() {
                         </div>
                     </div>
                     <div className={styles.metricCard}>
-                        <h3 className={styles.metricLabel}>TOP 3 CLIENTS</h3>
-                        <div className={styles.metricValue}>45%</div>
+                        <h3 className={styles.metricLabel}>TOTAL EXPENSES</h3>
+                        <div className={styles.metricValue}>{formatCurrency(thisMonthTotal)}</div>
                         <div className={`${styles.metricChange} ${styles.down}`}>
-                            High concentration risk
+                            <TrendingDown size={12} /> {expenseCount} transactions
                         </div>
                     </div>
                     <div className={styles.metricCard}>
@@ -71,12 +154,11 @@ export default function AnalyticsPage() {
                     </div>
                 </div>
 
-                {/* Charts Row 1 */}
+                {/* Charts Row 1 - Revenue & Expenses */}
                 <div className={styles.chartsGrid}>
                     <div className={styles.chartCard}>
                         <h3 className={styles.chartTitle}>Monthly Revenue Trend</h3>
                         <div className={styles.chartPlaceholder}>
-                            {/* Mock Line Chart Visualization */}
                             <div className={styles.lineChart}>
                                 <svg viewBox="0 0 300 100" className={styles.chartSvg}>
                                     <path d="M0,80 Q50,20 100,60 T200,40 T300,10" fill="none" stroke="#2C3E50" strokeWidth="3" />
@@ -92,17 +174,56 @@ export default function AnalyticsPage() {
                         </div>
                     </div>
                     <div className={styles.chartCard}>
-                        <h3 className={styles.chartTitle}>Revenue by Top Clients</h3>
+                        <h3 className={styles.chartTitle}>Expense by Category</h3>
                         <div className={styles.donutChartContainer}>
-                            <div className={styles.donutChart} style={{ background: 'conic-gradient(#2C3E50 0% 13%, #34495E 13% 30%, #10B981 30% 40%, #64748B 40% 64%, #E2E8F0 64% 100%)' }}></div>
-                            <div className={styles.legend}>
-                                <div className={styles.legendItem}><span className={styles.dot} style={{ background: '#2C3E50' }}></span> Shell (13%)</div>
-                                <div className={styles.legendItem}><span className={styles.dot} style={{ background: '#34495E' }}></span> Zenith (17%)</div>
-                                <div className={styles.legendItem}><span className={styles.dot} style={{ background: '#10B981' }}></span> MTN (10%)</div>
-                                <div className={styles.legendItem}><span className={styles.dot} style={{ background: '#64748B' }}></span> Dangote (24%)</div>
-                                <div className={styles.legendItem}><span className={styles.dot} style={{ background: '#E2E8F0' }}></span> Others (36%)</div>
-                            </div>
+                            {topCategories.length > 0 ? (
+                                <>
+                                    <div className={styles.donutChart} style={{
+                                        background: generateConicGradient(topCategories, totalCategoryAmount)
+                                    }}></div>
+                                    <div className={styles.legend}>
+                                        {topCategories.map(([category, amount], index) => (
+                                            <div key={category} className={styles.legendItem}>
+                                                <span className={styles.dot} style={{ background: getCategoryColor(index) }}></span>
+                                                {category} ({Math.round((amount / totalCategoryAmount) * 100)}%)
+                                            </div>
+                                        ))}
+                                    </div>
+                                </>
+                            ) : (
+                                <div className={styles.noData}>No expense data available</div>
+                            )}
                         </div>
+                    </div>
+                </div>
+
+                {/* Daily Expense Calendar */}
+                <div className={styles.chartCard}>
+                    <h3 className={styles.chartTitle}>Daily Expenses - Click to View Breakdown</h3>
+                    <div className={styles.expenseCalendar}>
+                        {expenseData && Object.entries(expenseData.aggregations.byDate).length > 0 ? (
+                            Object.entries(expenseData.aggregations.byDate)
+                                .sort(([a], [b]) => new Date(b).getTime() - new Date(a).getTime())
+                                .map(([date, data]) => (
+                                    <div
+                                        key={date}
+                                        className={styles.expenseDay}
+                                        onClick={() => handleDateClick(date)}
+                                    >
+                                        <div className={styles.expenseDayDate}>
+                                            {new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                                        </div>
+                                        <div className={styles.expenseDayAmount}>
+                                            {formatCurrency(data.total)}
+                                        </div>
+                                        <div className={styles.expenseDayCount}>
+                                            {data.count} {data.count === 1 ? 'expense' : 'expenses'}
+                                        </div>
+                                    </div>
+                                ))
+                        ) : (
+                            <div className={styles.noData}>No expenses recorded for this period</div>
+                        )}
                     </div>
                 </div>
 
@@ -239,7 +360,31 @@ export default function AnalyticsPage() {
                         </table>
                     </div>
                 </div>
+
+                <ExpenseBreakdownModal
+                    isOpen={isModalOpen}
+                    onClose={() => setIsModalOpen(false)}
+                    date={selectedDate || ''}
+                    expenses={selectedExpenses}
+                />
             </div>
         </PasswordProtected>
     );
+}
+
+// Helper functions
+function getCategoryColor(index: number): string {
+    const colors = ['#2C3E50', '#34495E', '#10B981', '#64748B', '#94A3B8'];
+    return colors[index % colors.length];
+}
+
+function generateConicGradient(categories: [string, number][], total: number): string {
+    let currentPercent = 0;
+    const gradientParts = categories.map(([, amount], index) => {
+        const percent = (amount / total) * 100;
+        const start = currentPercent;
+        currentPercent += percent;
+        return `${getCategoryColor(index)} ${start}% ${currentPercent}%`;
+    });
+    return `conic-gradient(${gradientParts.join(', ')})`;
 }

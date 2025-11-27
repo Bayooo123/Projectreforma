@@ -1,5 +1,4 @@
 import ManagementTabs from '@/components/management/ManagementTabs';
-import StaffAttendance from '@/components/management/StaffAttendance';
 import FinancialLog from '@/components/management/FinancialLog';
 import styles from './page.module.css';
 import PasswordProtected from '@/components/auth/PasswordProtected';
@@ -15,8 +14,7 @@ export default function OfficePage() {
 
                 <ManagementTabs />
 
-                <div className={styles.grid}>
-                    <StaffAttendance />
+                <div className={styles.content}>
                     <FinancialLog />
                 </div>
             </div>

@@ -29,6 +29,7 @@ model Workspace {
   matters     Matter[]
   clients     Client[]
   briefs      Brief[]
+  expenses    Expense[]
 
   @@index([slug])
 }
@@ -315,4 +316,22 @@ model Payment {
 
   @@index([clientId])
   @@index([invoiceId])
+}
+
+model Expense {
+  id          String   @id @default(cuid())
+  workspaceId String
+  category    String   // 'Office Repairs' | 'Costs of Filing Processes' | 'Transportation to Court (Lawyers)' | 'Entertainment' | 'Local Fees' | 'Staff Salary' | 'Other'
+  amount      Int      // Amount in kobo/cents
+  description String
+  date        DateTime @default(now())
+  reference   String?  // Optional reference number
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
+  @@index([date])
+  @@index([category])
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { TrendingDown, Plus } from 'lucide-react';
 import ExpenseModal from './ExpenseModal';
 import styles from './FinancialLog.module.css';
@@ -10,31 +10,58 @@ interface Expense {
     category: string;
     amount: number;
     description: string;
-    date: Date;
+    date: string;
     reference?: string;
 }
 
-const MOCK_EXPENSES: Expense[] = [
-    { id: '1', category: 'Staff Salary', amount: 350000, description: 'Monthly salary - November', date: new Date('2025-11-24T10:30'), reference: 'SAL-NOV-2025' },
-    { id: '2', category: 'Office Repairs', amount: 45000, description: 'Air conditioning repair', date: new Date('2025-11-24T11:00') },
-    { id: '3', category: 'Costs of Filing Processes', amount: 25000, description: 'Court filing fees - 3 cases', date: new Date('2025-11-24T15:30') },
-    { id: '4', category: 'Transportation to Court (Lawyers)', amount: 15000, description: 'Court appearance - Ikeja High Court', date: new Date('2025-11-24T16:00') },
-    { id: '5', category: 'Entertainment', amount: 50000, description: 'Client lunch meeting', date: new Date('2025-11-23T14:00') },
-    { id: '6', category: 'Local Fees', amount: 8000, description: 'Administrative fees', date: new Date('2025-11-22T09:00') },
-];
-
 const FinancialLog = () => {
-    const [expenses] = useState<Expense[]>(MOCK_EXPENSES);
+    const [expenses, setExpenses] = useState<Expense[]>([]);
     const [isExpenseModalOpen, setIsExpenseModalOpen] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
+
+    const fetchExpenses = async () => {
+        try {
+            const response = await fetch('/api/expenses?filter=today');
+            const data = await response.json();
+
+            if (data.success) {
+                setExpenses(data.data.expenses);
+            }
+        } catch (error) {
+            console.error('Failed to fetch expenses:', error);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchExpenses();
+    }, []);
+
+    const handleExpenseAdded = () => {
+        fetchExpenses(); // Refresh the list
+    };
 
     const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
 
     const formatCurrency = (amount: number) => {
-        return `₦${amount.toLocaleString()}`;
+        // Amount is in kobo, convert to naira
+        return `₦${(amount / 100).toLocaleString()}`;
     };
 
-    const formatTime = (date: Date) => {
+    const formatTime = (dateString: string) => {
+        const date = new Date(dateString);
         return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+    };
+
+    const formatDate = () => {
+        const today = new Date();
+        return today.toLocaleDateString('en-US', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+        });
     };
 
     return (
@@ -42,7 +69,7 @@ const FinancialLog = () => {
             <div className={styles.header}>
                 <div>
                     <h2 className={styles.title}>Daily Expense Log</h2>
-                    <p className={styles.subtitle}>Administrative & operational expenses</p>
+                    <p className={styles.subtitle}>{formatDate()}</p>
                 </div>
                 <button className={styles.addBtn} onClick={() => setIsExpenseModalOpen(true)}>
                     <Plus size={16} />
@@ -63,36 +90,43 @@ const FinancialLog = () => {
             </div>
 
             <div className={styles.transactions}>
-                {expenses.map((expense) => (
-                    <div key={expense.id} className={styles.transaction}>
-                        <div className={styles.transactionIcon}>
-                            <TrendingDown size={16} className={styles.expenseIcon} />
-                        </div>
-                        <div className={styles.transactionInfo}>
-                            <p className={styles.transactionDesc}>{expense.description}</p>
-                            <div className={styles.transactionMeta}>
-                                <span className={styles.category}>{expense.category}</span>
-                                {expense.reference && (
-                                    <>
-                                        <span>•</span>
-                                        <span className={styles.reference}>{expense.reference}</span>
-                                    </>
-                                )}
+                {isLoading ? (
+                    <div className={styles.loading}>Loading expenses...</div>
+                ) : expenses.length === 0 ? (
+                    <div className={styles.empty}>No expenses recorded today</div>
+                ) : (
+                    expenses.map((expense) => (
+                        <div key={expense.id} className={styles.transaction}>
+                            <div className={styles.transactionIcon}>
+                                <TrendingDown size={16} className={styles.expenseIcon} />
+                            </div>
+                            <div className={styles.transactionInfo}>
+                                <p className={styles.transactionDesc}>{expense.description}</p>
+                                <div className={styles.transactionMeta}>
+                                    <span className={styles.category}>{expense.category}</span>
+                                    {expense.reference && (
+                                        <>
+                                            <span>•</span>
+                                            <span className={styles.reference}>{expense.reference}</span>
+                                        </>
+                                    )}
+                                </div>
+                            </div>
+                            <div className={styles.transactionRight}>
+                                <p className={`${styles.amount} ${styles.expense}`}>
+                                    -{formatCurrency(expense.amount)}
+                                </p>
+                                <p className={styles.time}>{formatTime(expense.date)}</p>
                             </div>
                         </div>
-                        <div className={styles.transactionRight}>
-                            <p className={`${styles.amount} ${styles.expense}`}>
-                                -{formatCurrency(expense.amount)}
-                            </p>
-                            <p className={styles.time}>{formatTime(expense.date)}</p>
-                        </div>
-                    </div>
-                ))}
+                    ))
+                )}
             </div>
 
             <ExpenseModal
                 isOpen={isExpenseModalOpen}
                 onClose={() => setIsExpenseModalOpen(false)}
+                onSuccess={handleExpenseAdded}
             />
         </div>
     );
