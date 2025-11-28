@@ -69,7 +69,7 @@ export async function POST(req: NextRequest) {
                 try {
                     // Add workspaceId to function arguments
                     const args = { ...functionCall.arguments, workspaceId };
-                    functionResult = await functionImpl(args);
+                    functionResult = await (functionImpl as any)(args);
 
                     // Generate response based on function result
                     const followUpResponse = await chatWithLex(
