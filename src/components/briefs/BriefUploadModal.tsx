@@ -1,7 +1,7 @@
 "use client";
 
 import { X, UploadCloud } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import styles from './BriefUploadModal.module.css';
 
 interface BriefUploadModalProps {
@@ -19,11 +19,80 @@ const BriefUploadModal = ({ isOpen, onClose }: BriefUploadModalProps) => {
     const [lawyer, setLawyer] = useState('');
     const [category, setCategory] = useState('');
     const [status, setStatus] = useState('');
+    const [selectedFile, setSelectedFile] = useState<File | null>(null);
+    const [isDragging, setIsDragging] = useState(false);
+
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
+    const handleFileSelect = (file: File) => {
+        // Check file type
+        const validTypes = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+        if (!validTypes.includes(file.type)) {
+            alert('Please upload a PDF or DOCX file');
+            return;
+        }
+
+        // Check file size (25MB max)
+        const maxSize = 25 * 1024 * 1024; // 25MB in bytes
+        if (file.size > maxSize) {
+            alert('File size must be less than 25MB');
+            return;
+        }
+
+        setSelectedFile(file);
+    };
+
+    const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            handleFileSelect(file);
+        }
+    };
+
+    const handleDropzoneClick = () => {
+        fileInputRef.current?.click();
+    };
+
+    const handleDragOver = (e: React.DragEvent) => {
+        e.preventDefault();
+        setIsDragging(true);
+    };
+
+    const handleDragLeave = (e: React.DragEvent) => {
+        e.preventDefault();
+        setIsDragging(false);
+    };
+
+    const handleDrop = (e: React.DragEvent) => {
+        e.preventDefault();
+        setIsDragging(false);
+
+        const file = e.dataTransfer.files?.[0];
+        if (file) {
+            handleFileSelect(file);
+        }
+    };
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        console.log({ briefNumber, briefName, clientName, lawyer, category, status });
+
+        if (!selectedFile) {
+            alert('Please select a file to upload');
+            return;
+        }
+
+        console.log({
+            briefNumber,
+            briefName,
+            clientName,
+            lawyer,
+            category,
+            status,
+            file: selectedFile.name
+        });
+
         alert('Brief uploaded successfully!');
+
         // Reset fields
         setBriefNumber('');
         setBriefName('');
@@ -31,6 +100,11 @@ const BriefUploadModal = ({ isOpen, onClose }: BriefUploadModalProps) => {
         setLawyer('');
         setCategory('');
         setStatus('');
+        setSelectedFile(null);
+        if (fileInputRef.current) {
+            fileInputRef.current.value = '';
+        }
+
         onClose();
     };
 
@@ -45,10 +119,34 @@ const BriefUploadModal = ({ isOpen, onClose }: BriefUploadModalProps) => {
                 </div>
 
                 <div className={styles.content}>
-                    <div className={styles.dropzone}>
+                    <div
+                        className={`${styles.dropzone} ${isDragging ? styles.dragging : ''} ${selectedFile ? styles.hasFile : ''}`}
+                        onClick={handleDropzoneClick}
+                        onDragOver={handleDragOver}
+                        onDragLeave={handleDragLeave}
+                        onDrop={handleDrop}
+                    >
+                        <input
+                            ref={fileInputRef}
+                            type="file"
+                            accept=".pdf,.docx"
+                            onChange={handleFileInputChange}
+                            style={{ display: 'none' }}
+                        />
                         <UploadCloud size={48} className={styles.uploadIcon} />
-                        <p className={styles.dropText}>Drag and drop your PDF here, or click to browse</p>
-                        <p className={styles.dropSubtext}>Supports PDF, DOCX (Max 25MB)</p>
+                        {selectedFile ? (
+                            <>
+                                <p className={styles.dropText}>✓ {selectedFile.name}</p>
+                                <p className={styles.dropSubtext}>
+                                    {(selectedFile.size / 1024 / 1024).toFixed(2)} MB - Click to change
+                                </p>
+                            </>
+                        ) : (
+                            <>
+                                <p className={styles.dropText}>Drag and drop your PDF here, or click to browse</p>
+                                <p className={styles.dropSubtext}>Supports PDF, DOCX (Max 25MB)</p>
+                            </>
+                        )}
                     </div>
 
                     <form className={styles.form} onSubmit={handleSubmit}>

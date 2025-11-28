@@ -79,12 +79,23 @@
     margin-bottom: 1.5rem;
     background-color: var(--surface);
     cursor: pointer;
-    transition: border-color 0.2s;
+    transition: all 0.2s;
 }
 
 .dropzone:hover {
     border-color: var(--primary);
     background-color: var(--primary-light);
+}
+
+.dropzone.dragging {
+    border-color: var(--primary);
+    background-color: var(--primary-light);
+    border-style: solid;
+}
+
+.dropzone.hasFile {
+    border-color: var(--success);
+    background-color: var(--success-bg);
 }
 
 .uploadIcon {
