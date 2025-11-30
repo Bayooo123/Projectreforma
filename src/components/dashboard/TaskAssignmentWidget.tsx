@@ -1,15 +1,32 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Send, Paperclip, User, Calendar } from 'lucide-react';
 import styles from './TaskAssignmentWidget.module.css';
 
-const STAFF = ['Kemi Adeniran', 'Adebayo Ogundimu', 'Bola Okafor', 'Chinedu Okeke'];
+
 
 const TaskAssignmentWidget = () => {
     const [task, setTask] = useState('');
     const [assignee, setAssignee] = useState('');
     const [dueDate, setDueDate] = useState('');
+    const [staff, setStaff] = useState<any[]>([]);
+
+    useEffect(() => {
+        const fetchUsers = async () => {
+            try {
+                const response = await fetch('/api/users');
+                if (response.ok) {
+                    const data = await response.json();
+                    setStaff(data);
+                }
+            } catch (error) {
+                console.error('Failed to fetch users:', error);
+            }
+        };
+
+        fetchUsers();
+    }, []);
 
     const handleAssign = () => {
         if (!task || !assignee) return;
@@ -45,7 +62,7 @@ const TaskAssignmentWidget = () => {
                                 onChange={(e) => setAssignee(e.target.value)}
                             >
                                 <option value="">Assign to...</option>
-                                {STAFF.map(s => <option key={s} value={s}>{s}</option>)}
+                                {staff.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                             </select>
                         </div>
 
