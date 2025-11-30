@@ -58,20 +58,29 @@ export async function chatWithLex(
             max_tokens: 500,
         });
 
+
         const choice = response.choices[0];
         const message = choice.message;
 
         // Check if tool was called
         if (message.tool_calls && message.tool_calls.length > 0) {
-            return {
-                message: message.content || '',
-                toolCalls: message.tool_calls.map(tc => ({
-                    id: tc.id,
-                    name: tc.function.name,
-                    arguments: JSON.parse(tc.function.arguments),
-                    result: null, // Will be filled by caller
-                })),
-            };
+            // Filter to only function tool calls (not custom tool calls)
+            const functionToolCalls = message.tool_calls.filter(
+                (tc): tc is typeof tc & { function: { name: string; arguments: string } } =>
+                    'function' in tc
+            );
+
+            if (functionToolCalls.length > 0) {
+                return {
+                    message: message.content || '',
+                    toolCalls: functionToolCalls.map(tc => ({
+                        id: tc.id,
+                        name: tc.function.name,
+                        arguments: JSON.parse(tc.function.arguments),
+                        result: null, // Will be filled by caller
+                    })),
+                };
+            }
         }
 
         return {
