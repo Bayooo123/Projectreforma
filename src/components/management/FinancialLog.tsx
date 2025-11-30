@@ -5,44 +5,47 @@ import { TrendingDown, Plus } from 'lucide-react';
 import ExpenseModal from './ExpenseModal';
 import styles from './FinancialLog.module.css';
 
-interface Expense {
+interface FinancialEntry {
     id: string;
+    type: 'expense' | 'income';
     category: string;
     amount: number;
     description: string;
     date: string;
     reference?: string;
+    status?: string;
 }
 
 const FinancialLog = () => {
-    const [expenses, setExpenses] = useState<Expense[]>([]);
+    const [entries, setEntries] = useState<FinancialEntry[]>([]);
     const [isExpenseModalOpen, setIsExpenseModalOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
 
-    const fetchExpenses = async () => {
+    const fetchEntries = async () => {
         try {
-            const response = await fetch('/api/expenses?filter=today');
-            const data = await response.json();
-
-            if (data.success) {
-                setExpenses(data.data.expenses);
+            const response = await fetch('/api/financials');
+            if (response.ok) {
+                const data = await response.json();
+                setEntries(data);
             }
         } catch (error) {
-            console.error('Failed to fetch expenses:', error);
+            console.error('Failed to fetch financials:', error);
         } finally {
             setIsLoading(false);
         }
     };
 
     useEffect(() => {
-        fetchExpenses();
+        fetchEntries();
     }, []);
 
     const handleExpenseAdded = () => {
-        fetchExpenses(); // Refresh the list
+        fetchEntries(); // Refresh the list
     };
 
-    const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
+    const totalExpenses = entries
+        .filter(e => e.type === 'expense')
+        .reduce((sum, e) => sum + e.amount, 0);
 
     const formatCurrency = (amount: number) => {
         // Amount is in kobo, convert to naira
@@ -91,32 +94,43 @@ const FinancialLog = () => {
 
             <div className={styles.transactions}>
                 {isLoading ? (
-                    <div className={styles.loading}>Loading expenses...</div>
-                ) : expenses.length === 0 ? (
-                    <div className={styles.empty}>No expenses recorded today</div>
+                    <div className={styles.loading}>Loading financials...</div>
+                ) : entries.length === 0 ? (
+                    <div className={styles.empty}>No transactions recorded</div>
                 ) : (
-                    expenses.map((expense) => (
-                        <div key={expense.id} className={styles.transaction}>
+                    entries.map((entry) => (
+                        <div key={entry.id} className={styles.transaction}>
                             <div className={styles.transactionIcon}>
-                                <TrendingDown size={16} className={styles.expenseIcon} />
+                                <TrendingDown
+                                    size={16}
+                                    className={entry.type === 'expense' ? styles.expenseIcon : styles.incomeIcon}
+                                    style={{ transform: entry.type === 'income' ? 'rotate(180deg)' : 'none', color: entry.type === 'income' ? '#16a34a' : undefined }}
+                                />
                             </div>
                             <div className={styles.transactionInfo}>
-                                <p className={styles.transactionDesc}>{expense.description}</p>
+                                <p className={styles.transactionDesc}>{entry.description}</p>
                                 <div className={styles.transactionMeta}>
-                                    <span className={styles.category}>{expense.category}</span>
-                                    {expense.reference && (
+                                    <span className={styles.category}>{entry.category}</span>
+                                    {entry.reference && (
                                         <>
                                             <span>•</span>
-                                            <span className={styles.reference}>{expense.reference}</span>
+                                            <span className={styles.reference}>{entry.reference}</span>
+                                        </>
+                                    )}
+                                    {entry.status && (
+                                        <>
+                                            <span>•</span>
+                                            <span className={styles.status}>{entry.status}</span>
                                         </>
                                     )}
                                 </div>
                             </div>
                             <div className={styles.transactionRight}>
-                                <p className={`${styles.amount} ${styles.expense}`}>
-                                    -{formatCurrency(expense.amount)}
+                                <p className={`${styles.amount} ${entry.type === 'expense' ? styles.expense : styles.income}`}
+                                    style={{ color: entry.type === 'income' ? '#16a34a' : undefined }}>
+                                    {entry.type === 'expense' ? '-' : '+'}{formatCurrency(entry.amount)}
                                 </p>
-                                <p className={styles.time}>{formatTime(expense.date)}</p>
+                                <p className={styles.time}>{formatTime(entry.date)}</p>
                             </div>
                         </div>
                     ))
