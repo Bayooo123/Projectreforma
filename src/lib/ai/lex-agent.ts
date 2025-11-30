@@ -5,15 +5,22 @@ const openai = new OpenAI({
 });
 
 export interface LexMessage {
-    role: 'user' | 'assistant' | 'system';
-    content: string;
-    functionCall?: {
-        name: string;
-        arguments: string;
-    };
+    role: 'user' | 'assistant' | 'system' | 'tool';
+    content: string | null;
+    tool_calls?: {
+        id: string;
+        type: 'function';
+        function: {
+            name: string;
+            arguments: string;
+        };
+    }[];
+    tool_call_id?: string;
+    name?: string;
 }
 
-export interface LexFunctionCall {
+export interface LexToolCall {
+    id: string;
     name: string;
     arguments: Record<string, any>;
     result: any;
@@ -31,7 +38,7 @@ Your capabilities include:
 
 You are NOT a legal research assistant. You do NOT provide legal advice. You help with operational and administrative tasks.
 
-When users ask you to perform actions, use the available functions to interact with the Reforma system.
+When users ask you to perform actions, use the available tools to interact with the Reforma system.
 
 Be concise, professional, and helpful. Use Nigerian English and understand local legal terminology.
 
@@ -39,20 +46,14 @@ Current date: ${new Date().toLocaleDateString('en-NG')}`;
 
 export async function chatWithLex(
     messages: LexMessage[],
-    availableFunctions: any[]
-): Promise<{ message: string; functionCalls?: LexFunctionCall[] }> {
+    availableTools: any[]
+): Promise<{ message: string; toolCalls?: LexToolCall[] }> {
     try {
         const response = await openai.chat.completions.create({
             model: 'gpt-4-turbo-preview',
-            messages: [
-                { role: 'system', content: LEX_SYSTEM_PROMPT },
-                ...messages.map(m => ({
-                    role: m.role,
-                    content: m.content,
-                })),
-            ],
-            functions: availableFunctions,
-            function_call: 'auto',
+            messages: messages as any,
+            tools: availableTools.length > 0 ? availableTools : undefined,
+            tool_choice: availableTools.length > 0 ? 'auto' : undefined,
             temperature: 0.7,
             max_tokens: 500,
         });
@@ -60,17 +61,16 @@ export async function chatWithLex(
         const choice = response.choices[0];
         const message = choice.message;
 
-        // Check if function was called
-        if (message.function_call) {
+        // Check if tool was called
+        if (message.tool_calls && message.tool_calls.length > 0) {
             return {
                 message: message.content || '',
-                functionCalls: [
-                    {
-                        name: message.function_call.name,
-                        arguments: JSON.parse(message.function_call.arguments),
-                        result: null, // Will be filled by caller
-                    },
-                ],
+                toolCalls: message.tool_calls.map(tc => ({
+                    id: tc.id,
+                    name: tc.function.name,
+                    arguments: JSON.parse(tc.function.arguments),
+                    result: null, // Will be filled by caller
+                })),
             };
         }
 
@@ -86,13 +86,13 @@ export async function chatWithLex(
 export async function generateLexResponse(
     userMessage: string,
     conversationHistory: LexMessage[],
-    availableFunctions: any[]
+    availableTools: any[]
 ): Promise<string> {
     const messages: LexMessage[] = [
         ...conversationHistory,
         { role: 'user', content: userMessage },
     ];
 
-    const response = await chatWithLex(messages, availableFunctions);
+    const response = await chatWithLex(messages, availableTools);
     return response.message;
 }
