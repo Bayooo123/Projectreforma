@@ -1,24 +1,38 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Search, Filter, MoreVertical, FileText, DollarSign } from 'lucide-react';
 import InvoiceModal from './InvoiceModal';
 import PaymentModal from './PaymentModal';
 import styles from './ClientList.module.css';
 
 // Mock Data
-const CLIENTS = [
-    { id: '1', name: 'Stellar Corporation', email: 'contact@stellar.com', company: 'Stellar Corp', industry: 'Tech', matters: 12, lastActivity: '2 hours ago', status: 'Active' },
-    { id: '2', name: 'Green Meadow Estates', email: 'info@greenmeadow.com', company: 'Green Meadow', industry: 'Real Estate', matters: 5, lastActivity: '1 day ago', status: 'Active' },
-    { id: '3', name: 'OmniTech Solutions', email: 'support@omnitech.com', company: 'OmniTech', industry: 'Tech', matters: 8, lastActivity: '3 days ago', status: 'Inactive' },
-    { id: '4', name: 'Maritime Logistics', email: 'ops@maritime.com', company: 'Maritime Log', industry: 'Logistics', matters: 15, lastActivity: '5 hours ago', status: 'Active' },
-    { id: '5', name: 'Phoenix Group', email: 'admin@phoenix.com', company: 'Phoenix Grp', industry: 'Finance', matters: 3, lastActivity: '1 week ago', status: 'Active' },
-];
+
 
 const ClientList = () => {
+    const [clients, setClients] = useState<any[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
     const [selectedClient, setSelectedClient] = useState<{ name: string; id: string } | null>(null);
     const [isInvoiceModalOpen, setIsInvoiceModalOpen] = useState(false);
     const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+
+    useEffect(() => {
+        const fetchClients = async () => {
+            try {
+                const response = await fetch('/api/clients');
+                if (response.ok) {
+                    const data = await response.json();
+                    setClients(data);
+                }
+            } catch (error) {
+                console.error('Failed to fetch clients:', error);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        fetchClients();
+    }, []);
 
     const handleCreateInvoice = (clientName: string, clientId: string) => {
         setSelectedClient({ name: clientName, id: clientId });
@@ -62,45 +76,55 @@ const ClientList = () => {
                         </tr>
                     </thead>
                     <tbody>
-                        {CLIENTS.map((client) => (
-                            <tr key={client.id}>
-                                <td className={styles.checkboxCell}><input type="checkbox" /></td>
-                                <td>
-                                    <div className={styles.clientInfo}>
-                                        <span className={styles.clientName}>{client.name}</span>
-                                        <span className={styles.clientEmail}>{client.email}</span>
-                                    </div>
-                                </td>
-                                <td>{client.company}</td>
-                                <td>{client.industry}</td>
-                                <td>{client.matters}</td>
-                                <td>{client.lastActivity}</td>
-                                <td>
-                                    <span className={`${styles.statusBadge} ${styles[client.status.toLowerCase()]}`}>{client.status}</span>
-                                </td>
-                                <td>
-                                    <div className={styles.actions}>
-                                        <button
-                                            className={styles.iconBtn}
-                                            title="Create Invoice"
-                                            onClick={() => handleCreateInvoice(client.name, client.id)}
-                                        >
-                                            <FileText size={18} />
-                                        </button>
-                                        <button
-                                            className={styles.iconBtn}
-                                            title="Record Payment"
-                                            onClick={() => handleRecordPayment(client.name, client.id)}
-                                        >
-                                            <DollarSign size={18} />
-                                        </button>
-                                        <button className={styles.iconBtn} title="More Options">
-                                            <MoreVertical size={18} />
-                                        </button>
-                                    </div>
-                                </td>
+                        {isLoading ? (
+                            <tr>
+                                <td colSpan={8} className={styles.loadingCell}>Loading clients...</td>
                             </tr>
-                        ))}
+                        ) : clients.length === 0 ? (
+                            <tr>
+                                <td colSpan={8} className={styles.emptyCell}>No clients found.</td>
+                            </tr>
+                        ) : (
+                            clients.map((client) => (
+                                <tr key={client.id}>
+                                    <td className={styles.checkboxCell}><input type="checkbox" /></td>
+                                    <td>
+                                        <div className={styles.clientInfo}>
+                                            <span className={styles.clientName}>{client.name}</span>
+                                            <span className={styles.clientEmail}>{client.email}</span>
+                                        </div>
+                                    </td>
+                                    <td>{client.company || '-'}</td>
+                                    <td>{client.industry || '-'}</td>
+                                    <td>{client.matterCount || 0}</td>
+                                    <td>{new Date(client.updatedAt).toLocaleDateString()}</td>
+                                    <td>
+                                        <span className={`${styles.statusBadge} ${styles[client.status.toLowerCase()]}`}>{client.status}</span>
+                                    </td>
+                                    <td>
+                                        <div className={styles.actions}>
+                                            <button
+                                                className={styles.iconBtn}
+                                                title="Create Invoice"
+                                                onClick={() => handleCreateInvoice(client.name, client.id)}
+                                            >
+                                                <FileText size={18} />
+                                            </button>
+                                            <button
+                                                className={styles.iconBtn}
+                                                title="Record Payment"
+                                                onClick={() => handleRecordPayment(client.name, client.id)}
+                                            >
+                                                <DollarSign size={18} />
+                                            </button>
+                                            <button className={styles.iconBtn} title="More Options">
+                                                <MoreVertical size={18} />
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            ))
+                        )}
                     </tbody>
                 </table>
             </div>

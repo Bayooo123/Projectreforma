@@ -1,61 +1,76 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 
-// GET /api/clients - List all clients
-export async function GET(request: NextRequest) {
+export async function GET(req: NextRequest) {
+    const session = await getServerSession(authOptions);
+    if (!session) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     try {
-        const { searchParams } = new URL(request.url);
-        const workspaceId = searchParams.get('workspaceId');
-
-        if (!workspaceId) {
-            return NextResponse.json({ error: 'workspaceId is required' }, { status: 400 });
-        }
-
         const clients = await prisma.client.findMany({
-            where: { workspaceId },
-            include: {
-                _count: {
-                    select: {
-                        matters: true,
-                        payments: true,
-                    },
-                },
+            where: {
+                workspaceId: session.user.workspaceId,
             },
-            orderBy: { createdAt: 'desc' },
+            include: {
+                matters: {
+                    select: {
+                        id: true,
+                        status: true,
+                    }
+                },
+                invoices: {
+                    select: {
+                        totalAmount: true,
+                        status: true,
+                    }
+                }
+            },
+            orderBy: {
+                createdAt: 'desc',
+            },
         });
 
-        return NextResponse.json(clients);
+        // Transform data to include computed fields
+        const transformedClients = clients.map(client => ({
+            ...client,
+            matterCount: client.matters.length,
+            activeMatterCount: client.matters.filter(m => m.status === 'active').length,
+            totalBilled: client.invoices.reduce((sum, inv) => sum + inv.totalAmount, 0),
+        }));
+
+        return NextResponse.json(transformedClients);
     } catch (error) {
         console.error('Error fetching clients:', error);
         return NextResponse.json({ error: 'Failed to fetch clients' }, { status: 500 });
     }
 }
 
-// POST /api/clients - Create a new client
-export async function POST(request: NextRequest) {
-    try {
-        const body = await request.json();
-        const { name, email, phone, company, industry, workspaceId } = body;
+export async function POST(req: NextRequest) {
+    const session = await getServerSession(authOptions);
+    if (!session) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
 
-        if (!name || !email || !workspaceId) {
-            return NextResponse.json(
-                { error: 'name, email, and workspaceId are required' },
-                { status: 400 }
-            );
-        }
+    try {
+        const body = await req.json();
+        const { name, email, phone, company, industry } = body;
 
         const client = await prisma.client.create({
             data: {
+                workspaceId: session.user.workspaceId,
                 name,
                 email,
                 phone,
                 company,
                 industry,
-                workspaceId,
+                status: 'active',
             },
         });
 
-        return NextResponse.json(client, { status: 201 });
+        return NextResponse.json(client);
     } catch (error) {
         console.error('Error creating client:', error);
         return NextResponse.json({ error: 'Failed to create client' }, { status: 500 });
