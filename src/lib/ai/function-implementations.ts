@@ -33,7 +33,7 @@ export async function getMatters(params: {
         where,
         include: {
             client: true,
-            assignedLawyers: { include: { user: true } },
+            assignedLawyer: true,
         },
         take: limit,
         orderBy: { createdAt: 'desc' },
@@ -43,11 +43,10 @@ export async function getMatters(params: {
         count: matters.length,
         matters: matters.map(m => ({
             id: m.id,
-            title: m.title,
+            title: m.name,
             client: m.client.name,
-            practiceArea: m.practiceArea,
             status: m.status,
-            assignedLawyers: m.assignedLawyers.map(al => al.user.name),
+            assignedLawyer: m.assignedLawyer.name,
             createdAt: m.createdAt,
         })),
     };
@@ -78,20 +77,21 @@ export async function createMatter(params: {
                 workspaceId,
                 name: clientName,
                 email: `${clientName.toLowerCase().replace(/\s+/g, '')}@placeholder.com`,
-                phone: '',
-                address: '',
             },
         });
     }
 
+    // Generate unique case number
+    const caseNumber = `CASE-${Date.now()}`;
+
     const matter = await prisma.matter.create({
         data: {
             workspaceId,
-            title,
+            name: title,
+            caseNumber,
             clientId: client.id,
-            practiceArea,
+            assignedLawyerId: client.id, // TODO: Find actual lawyer by name
             status,
-            description: description || '',
         },
         include: {
             client: true,
@@ -102,9 +102,8 @@ export async function createMatter(params: {
         success: true,
         matter: {
             id: matter.id,
-            title: matter.title,
+            name: matter.name,
             client: matter.client.name,
-            practiceArea: matter.practiceArea,
             status: matter.status,
         },
         message: `Matter "${title}" created successfully for ${clientName}`,
@@ -118,11 +117,10 @@ export async function updateMatter(params: {
     assignedLawyer?: string;
     description?: string;
 }) {
-    const { workspaceId, matterId, status, description } = params;
+    const { workspaceId, matterId, status } = params;
 
     const updates: any = {};
     if (status) updates.status = status;
-    if (description) updates.description = description;
 
     const matter = await prisma.matter.update({
         where: { id: matterId, workspaceId },
@@ -134,10 +132,10 @@ export async function updateMatter(params: {
         success: true,
         matter: {
             id: matter.id,
-            title: matter.title,
+            name: matter.name,
             status: matter.status,
         },
-        message: `Matter "${matter.title}" updated successfully`,
+        message: `Matter "${matter.name}" updated successfully`,
     };
 }
 
@@ -159,7 +157,7 @@ export async function deleteMatter(params: {
 
     return {
         success: true,
-        message: `Matter "${matter.title}" deleted successfully`,
+        message: `Matter "${matter.name}" deleted successfully`,
     };
 }
 
@@ -197,7 +195,6 @@ export async function getClients(params: {
             name: c.name,
             email: c.email,
             phone: c.phone,
-            address: c.address,
         })),
     };
 }
@@ -210,7 +207,7 @@ export async function createClient(params: {
     address?: string;
     type?: string;
 }) {
-    const { workspaceId, name, email, phone = '', address = '' } = params;
+    const { workspaceId, name, email, phone = '' } = params;
 
     const client = await prisma.client.create({
         data: {
@@ -218,7 +215,6 @@ export async function createClient(params: {
             name,
             email,
             phone,
-            address,
         },
     });
 
