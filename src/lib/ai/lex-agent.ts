@@ -1,8 +1,15 @@
 import OpenAI from 'openai';
 
-const openai = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY,
-});
+// Lazy initialization to avoid build-time errors
+let openaiClient: OpenAI | null = null;
+function getOpenAIClient() {
+    if (!openaiClient) {
+        openaiClient = new OpenAI({
+            apiKey: process.env.OPENAI_API_KEY,
+        });
+    }
+    return openaiClient;
+}
 
 export interface LexMessage {
     role: 'user' | 'assistant' | 'system' | 'tool';
@@ -49,6 +56,7 @@ export async function chatWithLex(
     availableTools: any[]
 ): Promise<{ message: string; toolCalls?: LexToolCall[] }> {
     try {
+        const openai = getOpenAIClient();
         const response = await openai.chat.completions.create({
             model: 'gpt-4-turbo-preview',
             messages: messages as any,
