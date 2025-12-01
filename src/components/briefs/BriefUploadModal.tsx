@@ -1,8 +1,9 @@
 "use client";
 
-import { X, UploadCloud } from 'lucide-react';
+import { X, UploadCloud, Loader } from 'lucide-react';
 import { useState } from 'react';
 import styles from './BriefUploadModal.module.css';
+import { createBrief } from '@/app/actions/briefs';
 
 interface BriefUploadModalProps {
     isOpen: boolean;
@@ -19,19 +20,47 @@ const BriefUploadModal = ({ isOpen, onClose }: BriefUploadModalProps) => {
     const [lawyer, setLawyer] = useState('');
     const [category, setCategory] = useState('');
     const [status, setStatus] = useState('');
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
-    const handleSubmit = (e: React.FormEvent) => {
+    // Hardcoded IDs for now
+    const WORKSPACE_ID = "workspace-id-123";
+    const CLIENT_ID = "client-id-123"; // Should be selected from a list or created
+    const LAWYER_ID = "lawyer-id-123"; // Should be selected from a list
+
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        console.log({ briefNumber, briefName, clientName, lawyer, category, status });
-        alert('Brief uploaded successfully!');
-        // Reset fields
-        setBriefNumber('');
-        setBriefName('');
-        setClientName('');
-        setLawyer('');
-        setCategory('');
-        setStatus('');
-        onClose();
+        setIsSubmitting(true);
+
+        try {
+            const result = await createBrief({
+                briefNumber,
+                name: briefName,
+                clientId: CLIENT_ID, // In a real app, we'd look up the client ID or create one
+                lawyerId: LAWYER_ID, // We'd map the selected lawyer name to an ID
+                workspaceId: WORKSPACE_ID,
+                category,
+                status: status || 'active',
+            });
+
+            if (result.success) {
+                alert('Brief uploaded successfully!');
+                // Reset fields
+                setBriefNumber('');
+                setBriefName('');
+                setClientName('');
+                setLawyer('');
+                setCategory('');
+                setStatus('');
+                onClose();
+            } else {
+                alert('Failed to upload brief: ' + result.error);
+            }
+        } catch (error) {
+            console.error('Error uploading brief:', error);
+            alert('An error occurred.');
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     return (
@@ -61,6 +90,7 @@ const BriefUploadModal = ({ isOpen, onClose }: BriefUploadModalProps) => {
                                     placeholder="e.g. 001"
                                     value={briefNumber}
                                     onChange={e => setBriefNumber(e.target.value)}
+                                    required
                                 />
                             </div>
                             <div className={styles.formGroup}>
@@ -71,6 +101,7 @@ const BriefUploadModal = ({ isOpen, onClose }: BriefUploadModalProps) => {
                                     placeholder="e.g. Motion for Bail"
                                     value={briefName}
                                     onChange={e => setBriefName(e.target.value)}
+                                    required
                                 />
                             </div>
                         </div>
@@ -83,6 +114,7 @@ const BriefUploadModal = ({ isOpen, onClose }: BriefUploadModalProps) => {
                                 placeholder="e.g. Stellar Corporation"
                                 value={clientName}
                                 onChange={e => setClientName(e.target.value)}
+                                required
                             />
                         </div>
 
@@ -92,6 +124,7 @@ const BriefUploadModal = ({ isOpen, onClose }: BriefUploadModalProps) => {
                                 className={styles.select}
                                 value={lawyer}
                                 onChange={e => setLawyer(e.target.value)}
+                                required
                             >
                                 <option value="">Select Lawyer...</option>
                                 <option>Professor Abiola Sanni SAN</option>
@@ -115,6 +148,7 @@ const BriefUploadModal = ({ isOpen, onClose }: BriefUploadModalProps) => {
                                     className={styles.select}
                                     value={category}
                                     onChange={e => setCategory(e.target.value)}
+                                    required
                                 >
                                     <option value="">Select Category...</option>
                                     <option>Litigation</option>
@@ -142,8 +176,17 @@ const BriefUploadModal = ({ isOpen, onClose }: BriefUploadModalProps) => {
                         </div>
 
                         <div className={styles.footer}>
-                            <button type="button" onClick={onClose} className={styles.cancelBtn}>Cancel</button>
-                            <button type="submit" className={styles.submitBtn}>Upload Brief</button>
+                            <button type="button" onClick={onClose} className={styles.cancelBtn} disabled={isSubmitting}>Cancel</button>
+                            <button type="submit" className={styles.submitBtn} disabled={isSubmitting}>
+                                {isSubmitting ? (
+                                    <>
+                                        <Loader size={16} className="animate-spin mr-2" />
+                                        Uploading...
+                                    </>
+                                ) : (
+                                    'Upload Brief'
+                                )}
+                            </button>
                         </div>
                     </form>
                 </div>

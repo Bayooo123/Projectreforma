@@ -1,17 +1,20 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { FileText, Image as ImageIcon, FileCheck, Upload, Download, Eye, Loader } from 'lucide-react';
 import styles from './DocumentList.module.css';
+import { getDocuments, createDocument } from '@/app/actions/documents';
+import type { PutBlobResult } from '@vercel/blob';
 
 interface Document {
     id: string;
     name: string;
-    type: 'pdf' | 'docx' | 'image' | 'scan';
+    type: string;
     size: number;
     uploadedAt: Date;
-    ocrStatus?: 'pending' | 'processing' | 'completed' | 'failed';
+    ocrStatus?: string;
     ocrText?: string;
+    url?: string;
 }
 
 interface DocumentListProps {
@@ -19,54 +22,34 @@ interface DocumentListProps {
     onDocumentClick: (document: Document) => void;
 }
 
-const MOCK_DOCUMENTS: Document[] = [
-    {
-        id: '1',
-        name: 'Motion for Bail.pdf',
-        type: 'pdf',
-        size: 2400000,
-        uploadedAt: new Date('2025-10-15'),
-        ocrStatus: 'completed',
-    },
-    {
-        id: '2',
-        name: 'Affidavit of Facts.pdf',
-        type: 'scan',
-        size: 1800000,
-        uploadedAt: new Date('2025-10-14'),
-        ocrStatus: 'processing',
-    },
-    {
-        id: '3',
-        name: 'Evidence Photo 1.jpg',
-        type: 'image',
-        size: 450000,
-        uploadedAt: new Date('2025-10-13'),
-        ocrStatus: 'completed',
-    },
-    {
-        id: '4',
-        name: 'Court Order.pdf',
-        type: 'pdf',
-        size: 980000,
-        uploadedAt: new Date('2025-10-12'),
-    },
-    {
-        id: '5',
-        name: 'Written Address.docx',
-        type: 'docx',
-        size: 320000,
-        uploadedAt: new Date('2025-10-11'),
-    },
-];
-
 const DocumentList = ({ briefId, onDocumentClick }: DocumentListProps) => {
-    const [documents] = useState<Document[]>(MOCK_DOCUMENTS);
+    const [documents, setDocuments] = useState<Document[]>([]);
     const [uploadProgress, setUploadProgress] = useState(0);
     const [isUploading, setIsUploading] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
 
-    // briefId will be used when integrating with database
-    console.log('Brief ID:', briefId);
+    useEffect(() => {
+        const fetchDocuments = async () => {
+            if (!briefId) return;
+            setIsLoading(true);
+            try {
+                const data = await getDocuments(briefId);
+                // Map Prisma documents to UI documents
+                const mappedDocs = data.map(doc => ({
+                    ...doc,
+                    type: doc.type as any, // Cast type
+                    ocrStatus: doc.ocrStatus as any,
+                }));
+                setDocuments(mappedDocs);
+            } catch (error) {
+                console.error("Failed to fetch documents", error);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        fetchDocuments();
+    }, [briefId]);
 
     const formatFileSize = (bytes: number) => {
         if (bytes < 1024) return bytes + ' B';
@@ -75,27 +58,22 @@ const DocumentList = ({ briefId, onDocumentClick }: DocumentListProps) => {
     };
 
     const getFileIcon = (type: string) => {
-        switch (type) {
-            case 'image':
-                return <ImageIcon size={20} />;
-            case 'scan':
-                return <FileCheck size={20} />;
-            default:
-                return <FileText size={20} />;
-        }
+        if (type.includes('image')) return <ImageIcon size={20} />;
+        if (type.includes('scan')) return <FileCheck size={20} />;
+        return <FileText size={20} />;
     };
 
     const getOCRStatusBadge = (status?: string) => {
         if (!status) return null;
 
-        const badges = {
+        const badges: Record<string, { text: string, className: string }> = {
             pending: { text: 'OCR Pending', className: styles.ocrPending },
             processing: { text: 'Processing OCR...', className: styles.ocrProcessing },
             completed: { text: 'OCR Complete', className: styles.ocrCompleted },
             failed: { text: 'OCR Failed', className: styles.ocrFailed },
         };
 
-        const badge = badges[status as keyof typeof badges];
+        const badge = badges[status];
         if (!badge) return null;
 
         return (
@@ -111,15 +89,56 @@ const DocumentList = ({ briefId, onDocumentClick }: DocumentListProps) => {
         if (!files || files.length === 0) return;
 
         setIsUploading(true);
-        // TODO: Implement actual upload with OCR processing
-        // For now, just simulate upload
-        for (let i = 0; i <= 100; i += 10) {
-            await new Promise(resolve => setTimeout(resolve, 100));
-            setUploadProgress(i);
+        setUploadProgress(10);
+
+        try {
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+
+                // 1. Upload to Vercel Blob
+                const response = await fetch(
+                    `/api/upload?filename=${file.name}`,
+                    {
+                        method: 'POST',
+                        body: file,
+                    },
+                );
+
+                if (!response.ok) throw new Error('Upload failed');
+
+                const newBlob = (await response.json()) as PutBlobResult;
+                setUploadProgress(50);
+
+                // 2. Create Document record in DB
+                const result = await createDocument({
+                    name: file.name,
+                    url: newBlob.url,
+                    type: file.type.includes('image') ? 'image' : 'pdf', // Simple type detection
+                    size: file.size,
+                    briefId: briefId,
+                });
+
+                if (result.success && result.document) {
+                    setDocuments(prev => [{
+                        ...result.document!,
+                        type: result.document!.type as any,
+                        ocrStatus: result.document!.ocrStatus as any
+                    }, ...prev]);
+                }
+            }
+            setUploadProgress(100);
+        } catch (error) {
+            console.error('Upload error:', error);
+            alert('Failed to upload file');
+        } finally {
+            setIsUploading(false);
+            setUploadProgress(0);
         }
-        setIsUploading(false);
-        setUploadProgress(0);
     };
+
+    if (isLoading) {
+        return <div className="p-4 text-center text-gray-500">Loading documents...</div>;
+    }
 
     return (
         <div className={styles.container}>
@@ -151,34 +170,45 @@ const DocumentList = ({ briefId, onDocumentClick }: DocumentListProps) => {
             )}
 
             <div className={styles.documentList}>
-                {documents.map((doc) => (
-                    <div
-                        key={doc.id}
-                        className={styles.documentItem}
-                        onClick={() => onDocumentClick(doc)}
-                    >
-                        <div className={styles.documentIcon}>
-                            {getFileIcon(doc.type)}
-                        </div>
-                        <div className={styles.documentInfo}>
-                            <div className={styles.documentName}>{doc.name}</div>
-                            <div className={styles.documentMeta}>
-                                <span>{formatFileSize(doc.size)}</span>
-                                <span>•</span>
-                                <span>{doc.uploadedAt.toLocaleDateString()}</span>
-                                {getOCRStatusBadge(doc.ocrStatus)}
+                {documents.length === 0 ? (
+                    <div className="text-center py-8 text-gray-500">No documents yet.</div>
+                ) : (
+                    documents.map((doc) => (
+                        <div
+                            key={doc.id}
+                            className={styles.documentItem}
+                            onClick={() => onDocumentClick(doc)}
+                        >
+                            <div className={styles.documentIcon}>
+                                {getFileIcon(doc.type)}
+                            </div>
+                            <div className={styles.documentInfo}>
+                                <div className={styles.documentName}>{doc.name}</div>
+                                <div className={styles.documentMeta}>
+                                    <span>{formatFileSize(doc.size)}</span>
+                                    <span>•</span>
+                                    <span>{new Date(doc.uploadedAt).toLocaleDateString()}</span>
+                                    {getOCRStatusBadge(doc.ocrStatus)}
+                                </div>
+                            </div>
+                            <div className={styles.documentActions}>
+                                <button className={styles.actionBtn} title="Preview">
+                                    <Eye size={16} />
+                                </button>
+                                <a
+                                    href={doc.url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className={styles.actionBtn}
+                                    title="Download"
+                                    onClick={(e) => e.stopPropagation()}
+                                >
+                                    <Download size={16} />
+                                </a>
                             </div>
                         </div>
-                        <div className={styles.documentActions}>
-                            <button className={styles.actionBtn} title="Preview">
-                                <Eye size={16} />
-                            </button>
-                            <button className={styles.actionBtn} title="Download">
-                                <Download size={16} />
-                            </button>
-                        </div>
-                    </div>
-                ))}
+                    ))
+                )}
             </div>
         </div>
     );

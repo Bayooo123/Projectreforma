@@ -212,11 +212,31 @@ model Brief {
   matter        Matter?        @relation(fields: [matterId], references: [id])
   lawyer        User           @relation(fields: [lawyerId], references: [id])
   notifications Notification[]
+  documents     Document[]
 
   @@index([lawyerId])
   @@index([workspaceId])
   @@index([dueDate])
   @@index([status])
+}
+
+model Document {
+  id          String   @id @default(cuid())
+  name        String
+  url         String
+  type        String   // 'pdf', 'docx', etc.
+  size        Int
+  briefId     String
+  uploadedAt  DateTime @default(now())
+  ocrStatus   String   @default("pending") // 'pending' | 'processing' | 'completed' | 'failed'
+  ocrText     String?  // Removed @db.Text as it might not be needed or specific to postgres, but usually string is fine. Prisma Text is String. In Postgres String is text.
+                       // Actually @db.Text is useful for large text. Let's keep it if valid or just String.
+                       // In Prisma schema for postgres, String is usually text. But for very large content, sometimes explicit mapping is good.
+                       // Let's just use String for now, standard Prisma.
+  
+  brief       Brief    @relation(fields: [briefId], references: [id], onDelete: Cascade)
+  
+  @@index([briefId])
 }
 
 model Client {

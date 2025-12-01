@@ -1,23 +1,52 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Search, Filter, MoreVertical, Plus, Trash2, UserPlus, Eye, Briefcase } from 'lucide-react';
+import { Search, Filter, MoreVertical, Plus, Trash2, UserPlus, Eye, Briefcase, Loader } from 'lucide-react';
 import styles from './BriefList.module.css';
-
-// Mock Data matching the screenshot fields
-const MOCK_BRIEFS: any[] = [];
+import { getBriefs } from '@/app/actions/briefs';
 
 interface BriefListProps {
     onUpload: () => void;
 }
 
 const BriefList = ({ onUpload }: BriefListProps) => {
+    const [briefs, setBriefs] = useState<any[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
     const [activeActionId, setActiveActionId] = useState<string | null>(null);
+
+    // Hardcoded workspace ID for now - should come from context/auth
+    const WORKSPACE_ID = "workspace-id-123";
+
+    useEffect(() => {
+        const fetchBriefs = async () => {
+            setIsLoading(true);
+            try {
+                const data = await getBriefs(WORKSPACE_ID);
+                setBriefs(data);
+            } catch (error) {
+                console.error("Failed to fetch briefs", error);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        fetchBriefs();
+    }, []);
 
     const toggleActions = (id: string) => {
         setActiveActionId(activeActionId === id ? null : id);
     };
+
+    if (isLoading) {
+        return (
+            <div className={styles.container}>
+                <div className="flex justify-center items-center h-64">
+                    <Loader className="animate-spin text-gray-500" size={32} />
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className={styles.container}>
@@ -47,7 +76,7 @@ const BriefList = ({ onUpload }: BriefListProps) => {
                 </button>
             </div>
 
-            {MOCK_BRIEFS.length === 0 ? (
+            {briefs.length === 0 ? (
                 <div className={styles.emptyState}>
                     <div className={styles.emptyIcon}>
                         <Briefcase size={48} />
@@ -76,7 +105,7 @@ const BriefList = ({ onUpload }: BriefListProps) => {
                             </tr>
                         </thead>
                         <tbody>
-                            {MOCK_BRIEFS.map((brief) => (
+                            {briefs.map((brief) => (
                                 <tr key={brief.id}>
                                     <td className={styles.checkboxCell}><input type="checkbox" /></td>
                                     <td className={styles.briefNumber}>{brief.briefNumber}</td>
@@ -88,10 +117,10 @@ const BriefList = ({ onUpload }: BriefListProps) => {
                                             <span className={styles.briefRef}>{brief.ref}</span>
                                         </div>
                                     </td>
-                                    <td className={styles.clientName}>{brief.client}</td>
-                                    <td className={styles.lawyerName}>{brief.lawyer}</td>
+                                    <td className={styles.clientName}>{brief.client?.name || 'Unknown Client'}</td>
+                                    <td className={styles.lawyerName}>{brief.lawyer?.name || 'Unassigned'}</td>
                                     <td>{brief.category}</td>
-                                    <td className={styles.dateCell}>{brief.dueDate}</td>
+                                    <td className={styles.dateCell}>{brief.dueDate ? new Date(brief.dueDate).toLocaleDateString() : '-'}</td>
                                     <td>
                                         <span className={`${styles.statusBadge} ${styles[brief.status.toLowerCase()]}`}>
                                             <span className={styles.statusDot}></span>
