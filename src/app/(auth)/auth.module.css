@@ -1,7 +1,7 @@
 .authContainer {
     display: flex;
     min-height: 100vh;
-    background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+    background: linear-gradient(135deg, #003839 0%, #014D4E 100%);
 }
 
 .brandingSide {
@@ -21,7 +21,7 @@
     left: -50%;
     width: 200%;
     height: 200%;
-    background: radial-gradient(circle, rgba(59, 130, 246, 0.1) 0%, transparent 70%);
+    background: radial-gradient(circle, rgba(79, 209, 197, 0.1) 0%, transparent 70%);
     animation: pulse 15s ease-in-out infinite;
 }
 
@@ -50,7 +50,7 @@
 .logoIcon {
     width: 2.5rem;
     height: 2.5rem;
-    color: #3b82f6;
+    color: #4FD1C5;
 }
 
 .logoText {
@@ -95,7 +95,7 @@
 .featureIcon {
     width: 1.5rem;
     height: 1.5rem;
-    color: #3b82f6;
+    color: #4FD1C5;
     flex-shrink: 0;
     margin-top: 0.25rem;
 }
@@ -151,14 +151,14 @@
 }
 
 .formSubtitle a {
-    color: #3b82f6;
+    color: #014D4E;
     font-weight: 600;
     text-decoration: none;
     transition: color 0.2s;
 }
 
 .formSubtitle a:hover {
-    color: #2563eb;
+    color: #026364;
 }
 
 .form {
@@ -193,8 +193,8 @@
 .input:focus,
 .select:focus {
     outline: none;
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    border-color: #014D4E;
+    box-shadow: 0 0 0 3px rgba(1, 77, 78, 0.1);
 }
 
 .input::placeholder {
@@ -219,7 +219,7 @@
 .submitButton {
     width: 100%;
     padding: 0.875rem 1.5rem;
-    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    background: linear-gradient(135deg, #014D4E 0%, #026364 100%);
     color: white;
     border: none;
     border-radius: 0.5rem;
@@ -263,14 +263,14 @@
 }
 
 .footerLink {
-    color: #3b82f6;
+    color: #014D4E;
     font-size: 0.875rem;
     text-decoration: none;
     transition: color 0.2s;
 }
 
 .footerLink:hover {
-    color: #2563eb;
+    color: #026364;
 }
 
 .terms {
