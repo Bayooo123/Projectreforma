@@ -9,6 +9,9 @@ import bcrypt from "bcryptjs"
 async function getUser(email: string) {
     try {
         const user = await prisma.user.findUnique({ where: { email } });
+        if (!user) {
+            console.log(`User not found for email: ${email}`);
+        }
         return user;
     } catch (error) {
         console.error('Failed to fetch user:', error);

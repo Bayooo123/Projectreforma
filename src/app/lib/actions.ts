@@ -42,6 +42,17 @@ export async function register(
         return 'Please fill in all fields.';
     }
 
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+        return 'Please enter a valid email address.';
+    }
+
+    // Validate password strength
+    if (password.length < 8) {
+        return 'Password must be at least 8 characters long.';
+    }
+
     // Validate admin roles
     const ADMIN_ROLES = [
         'Practice Manager',
@@ -104,9 +115,20 @@ export async function register(
         });
 
     } catch (error) {
+        console.error('Registration error:', error);
+
         if (error instanceof Error) {
+            // Handle specific error types
+            if (error.message.includes('User already exists')) {
+                return 'An account with this email already exists.';
+            }
+            if (error.message.includes('NEXT_REDIRECT')) {
+                // This is expected - NextAuth throws this for redirects
+                throw error;
+            }
             return error.message;
         }
-        return 'Failed to create account.';
+
+        return 'Failed to create account. Please try again.';
     }
 }

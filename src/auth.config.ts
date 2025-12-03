@@ -18,9 +18,11 @@ export const authConfig = {
                 if (isLoggedIn) return true;
                 return false; // Redirect unauthenticated users to login page
             } else if (isLoggedIn) {
-                // Redirect logged-in users away from login/register pages
+                // Redirect logged-in users away from login/register pages to dashboard
                 if (nextUrl.pathname === '/login' || nextUrl.pathname === '/register') {
-                    return Response.redirect(new URL('/', nextUrl));
+                    // Don't use Response.redirect - just return true and let Next.js handle it
+                    // The middleware will handle the actual redirect
+                    return true;
                 }
             }
             return true;
