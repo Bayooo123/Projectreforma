@@ -32,10 +32,26 @@ export async function register(
     const name = formData.get('name') as string;
     const email = formData.get('email') as string;
     const password = formData.get('password') as string;
+    const phone = formData.get('phone') as string;
     const firmName = formData.get('firmName') as string;
+    const role = formData.get('role') as string;
 
-    if (!name || !email || !password || !firmName) {
+    // Validate required fields
+    if (!name || !email || !password || !phone || !firmName || !role) {
         return 'Please fill in all fields.';
+    }
+
+    // Validate admin roles
+    const ADMIN_ROLES = [
+        'Practice Manager',
+        'Head of Chambers',
+        'Deputy Head of Chambers',
+        'Managing Partner',
+        'Managing Associate',
+    ];
+
+    if (!ADMIN_ROLES.includes(role)) {
+        return 'Invalid role. Only senior management can create a firm workspace.';
     }
 
     try {
@@ -56,6 +72,7 @@ export async function register(
                     name,
                     email,
                     password: hashedPassword,
+                    phone,
                 },
             });
 
@@ -69,12 +86,12 @@ export async function register(
                 },
             });
 
-            // Create Membership (Owner)
+            // Create Membership with specified role
             await tx.workspaceMember.create({
                 data: {
                     userId: user.id,
                     workspaceId: workspace.id,
-                    role: 'owner',
+                    role: role,
                 },
             });
         });
