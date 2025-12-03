@@ -6,13 +6,13 @@ import styles from './DocumentList.module.css';
 import { getDocuments, createDocument } from '@/app/actions/documents';
 import type { PutBlobResult } from '@vercel/blob';
 
-interface Document {
+export interface Document {
     id: string;
     name: string;
-    type: string;
+    type: 'pdf' | 'docx' | 'image' | 'scan';
     size: number;
     uploadedAt: Date;
-    ocrStatus?: string;
+    ocrStatus?: 'pending' | 'processing' | 'completed' | 'failed';
     ocrText?: string;
     url?: string;
 }
@@ -35,10 +35,10 @@ const DocumentList = ({ briefId, onDocumentClick }: DocumentListProps) => {
             try {
                 const data = await getDocuments(briefId);
                 // Map Prisma documents to UI documents
-                const mappedDocs = data.map(doc => ({
+                const mappedDocs: Document[] = data.map(doc => ({
                     ...doc,
-                    type: doc.type as any, // Cast type
-                    ocrStatus: doc.ocrStatus as any,
+                    type: doc.type as Document['type'],
+                    ocrStatus: doc.ocrStatus as Document['ocrStatus'],
                 }));
                 setDocuments(mappedDocs);
             } catch (error) {
@@ -119,11 +119,12 @@ const DocumentList = ({ briefId, onDocumentClick }: DocumentListProps) => {
                 });
 
                 if (result.success && result.document) {
-                    setDocuments(prev => [{
+                    const newDoc: Document = {
                         ...result.document!,
-                        type: result.document!.type as any,
-                        ocrStatus: result.document!.ocrStatus as any
-                    }, ...prev]);
+                        type: result.document!.type as Document['type'],
+                        ocrStatus: result.document!.ocrStatus as Document['ocrStatus'],
+                    };
+                    setDocuments(prev => [newDoc, ...prev]);
                 }
             }
             setUploadProgress(100);

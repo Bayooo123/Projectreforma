@@ -3,19 +3,11 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, Clock, Tag, Search } from 'lucide-react';
-import DocumentList from '@/components/briefs/DocumentList';
+import DocumentList, { Document } from '@/components/briefs/DocumentList';
 import DocumentViewer from '@/components/briefs/DocumentViewer';
 import styles from './page.module.css';
 
-interface Document {
-    id: string;
-    name: string;
-    type: 'pdf' | 'docx' | 'image' | 'scan';
-    size: number;
-    uploadedAt: Date;
-    ocrStatus?: 'pending' | 'processing' | 'completed' | 'failed';
-    ocrText?: string;
-}
+
 
 export default function BriefDetailPage() {
     const [selectedDocument, setSelectedDocument] = useState<Document | null>(null);

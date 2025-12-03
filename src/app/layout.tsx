@@ -11,16 +11,21 @@ export const metadata: Metadata = {
   description: "Intelligent digital operating system for law firms",
 };
 
-export default function RootLayout({
+import { auth } from "@/auth";
+
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const session = await auth();
+  const user = session?.user;
+
   return (
     <html lang="en">
       <body className={inter.variable}>
         <div className="flex">
-          <Sidebar />
+          <Sidebar user={user} />
           <main style={{ marginLeft: '260px', width: 'calc(100% - 260px)', minHeight: '100vh' }}>
             <Header />
             <div className="container" style={{ padding: '2rem' }}>

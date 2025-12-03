@@ -13,8 +13,17 @@ import {
   LogOut
 } from 'lucide-react';
 import styles from './Sidebar.module.css';
+import { signOut } from 'next-auth/react'; // Use client-side signOut
 
-const Sidebar = () => {
+interface SidebarProps {
+  user?: {
+    name?: string | null;
+    email?: string | null;
+    image?: string | null;
+  };
+}
+
+const Sidebar = ({ user }: SidebarProps) => {
   const pathname = usePathname();
 
   const navItems = [
@@ -24,7 +33,6 @@ const Sidebar = () => {
     { name: 'Client Manager', href: '/management/clients', icon: Users },
     { name: 'Officer Manager', href: '/management/office', icon: Briefcase },
     { name: 'Analytics', href: '/analytics', icon: BarChart2 },
-
   ];
 
   const isActive = (path: string) => {
@@ -60,7 +68,23 @@ const Sidebar = () => {
           <HelpCircle size={20} className={styles.navIcon} />
           <span className={styles.navText}>Help</span>
         </Link>
-        <button className={styles.footerLink}>
+
+        {user && (
+          <div className={styles.userInfo}>
+            <div className={styles.userAvatar}>
+              {user.name?.[0] || 'U'}
+            </div>
+            <div className={styles.userDetails}>
+              <span className={styles.userName}>{user.name || 'User'}</span>
+              <span className={styles.userEmail}>{user.email || ''}</span>
+            </div>
+          </div>
+        )}
+
+        <button
+          className={styles.footerLink}
+          onClick={() => signOut({ callbackUrl: '/login' })}
+        >
           <LogOut size={20} className={styles.navIcon} />
           <span className={styles.navText}>Log out</span>
         </button>
