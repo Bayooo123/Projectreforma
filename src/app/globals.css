@@ -1,3 +1,7 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 :root {
   /* Brand Colors - Dark Slate Theme */
   --primary: #2C3E50;
