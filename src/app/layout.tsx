@@ -40,7 +40,7 @@ export default async function RootLayout({
           <div className="flex">
             <Sidebar user={user} />
             <main style={{ marginLeft: '260px', width: 'calc(100% - 260px)', minHeight: '100vh' }}>
-              <Header user={user} workspace={workspace} />
+              <Header user={user} workspace={workspace ?? undefined} />
               <div className="container" style={{ padding: '2rem' }}>
                 {children}
               </div>
