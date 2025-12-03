@@ -14,11 +14,5 @@ export default function AuthLayout({
 }: {
     children: React.ReactNode;
 }) {
-    return (
-        <html lang="en">
-            <body className={inter.variable}>
-                {children}
-            </body>
-        </html>
-    );
+    return children;
 }
