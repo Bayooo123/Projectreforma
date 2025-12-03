@@ -39,6 +39,7 @@ const DocumentList = ({ briefId, onDocumentClick }: DocumentListProps) => {
                     ...doc,
                     type: doc.type as Document['type'],
                     ocrStatus: doc.ocrStatus as Document['ocrStatus'],
+                    ocrText: doc.ocrText ?? undefined, // Convert null to undefined
                 }));
                 setDocuments(mappedDocs);
             } catch (error) {
@@ -123,6 +124,7 @@ const DocumentList = ({ briefId, onDocumentClick }: DocumentListProps) => {
                         ...result.document!,
                         type: result.document!.type as Document['type'],
                         ocrStatus: result.document!.ocrStatus as Document['ocrStatus'],
+                        ocrText: result.document!.ocrText ?? undefined, // Convert null to undefined
                     };
                     setDocuments(prev => [newDoc, ...prev]);
                 }
