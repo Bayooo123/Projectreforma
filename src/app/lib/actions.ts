@@ -5,6 +5,7 @@ import { AuthError } from 'next-auth';
 import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
 import { nanoid } from 'nanoid';
+import { redirect } from 'next/navigation';
 
 export async function authenticate(
     prevState: string | undefined,
@@ -96,8 +97,11 @@ export async function register(
             });
         });
 
-        // 3. Sign in the user
-        await signIn('credentials', formData);
+        // 3. Sign in the user and redirect to onboarding
+        await signIn('credentials', {
+            ...Object.fromEntries(formData),
+            redirectTo: '/onboarding',
+        });
 
     } catch (error) {
         if (error instanceof Error) {

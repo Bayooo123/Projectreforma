@@ -1,0 +1,23 @@
+.container {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #f5f7fa 0%, #e8eef5 100%);
+}
+
+.content {
+    text-align: center;
+    padding: 2rem;
+}
+
+.content h1 {
+    color: #1e3a5f;
+    font-size: 2rem;
+    margin-bottom: 1rem;
+}
+
+.content p {
+    color: #4a5568;
+    font-size: 1.125rem;
+}
