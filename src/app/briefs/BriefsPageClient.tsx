@@ -11,10 +11,17 @@ interface BriefsPageClientProps {
 
 export default function BriefsPageClient({ workspaceId }: BriefsPageClientProps) {
     const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+    const [refreshKey, setRefreshKey] = useState(0);
+
+    const handleBriefCreated = () => {
+        setRefreshKey(prev => prev + 1); // Trigger refresh
+        setIsUploadModalOpen(false);
+    };
 
     return (
         <div className={styles.page}>
             <BriefList
+                key={refreshKey}
                 onUpload={() => setIsUploadModalOpen(true)}
                 workspaceId={workspaceId}
             />
@@ -22,6 +29,7 @@ export default function BriefsPageClient({ workspaceId }: BriefsPageClientProps)
             <BriefUploadModal
                 isOpen={isUploadModalOpen}
                 onClose={() => setIsUploadModalOpen(false)}
+                onSuccess={handleBriefCreated}
                 workspaceId={workspaceId}
             />
         </div>
