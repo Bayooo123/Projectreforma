@@ -1,13 +1,12 @@
 import { Plus, Download } from 'lucide-react';
-import { getServerSession } from 'next-auth';
 import { redirect } from 'next/navigation';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
 import ClientsPageClient from './ClientsPageClient';
 import styles from './page.module.css';
 
 export default async function ClientsPage() {
-    const session = await getServerSession(authOptions);
+    const session = await auth();
 
     if (!session?.user?.email) {
         redirect('/auth/signin');
