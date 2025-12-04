@@ -1,43 +1,41 @@
-"use client";
+import { auth } from '@/auth';
+import { redirect } from 'next/navigation';
+import { getCurrentUserWithWorkspace } from '@/lib/workspace';
+import { getMattersForMonth } from '@/lib/matters';
+import CalendarClient from './CalendarClient';
 
-import { useState } from 'react';
-import { Plus } from 'lucide-react';
-import CalendarGrid from '@/components/calendar/CalendarGrid';
-import AddMatterModal from '@/components/calendar/AddMatterModal';
-import MatterDetailModal from '@/components/calendar/MatterDetailModal';
-import styles from './page.module.css';
+export default async function CalendarPage() {
+    const session = await auth();
 
-export default function CalendarPage() {
-    const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-    const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+    if (!session?.user) {
+        redirect('/login');
+    }
+
+    // Get workspace
+    const data = await getCurrentUserWithWorkspace();
+
+    if (!data?.workspace) {
+        return (
+            <div style={{ padding: '2rem', textAlign: 'center' }}>
+                <h2>No Workspace Found</h2>
+                <p>Please create a workspace first.</p>
+            </div>
+        );
+    }
+
+    // Get current month's matters
+    const now = new Date();
+    const matters = await getMattersForMonth(
+        data.workspace.id,
+        now.getFullYear(),
+        now.getMonth()
+    );
 
     return (
-        <div className={styles.page}>
-            <div className={styles.header}>
-                <div>
-                    <h1 className={styles.title}>Litigation tracker</h1>
-                    <p className={styles.subtitle}>Track court dates and case proceedings</p>
-                </div>
-                <button
-                    className={styles.addBtn}
-                    onClick={() => setIsAddModalOpen(true)}
-                >
-                    <Plus size={18} />
-                    <span>Add matter</span>
-                </button>
-            </div>
-
-            <CalendarGrid onEventClick={() => setIsDetailModalOpen(true)} />
-
-            <AddMatterModal
-                isOpen={isAddModalOpen}
-                onClose={() => setIsAddModalOpen(false)}
-            />
-
-            <MatterDetailModal
-                isOpen={isDetailModalOpen}
-                onClose={() => setIsDetailModalOpen(false)}
-            />
-        </div>
+        <CalendarClient
+            initialMatters={matters}
+            workspaceId={data.workspace.id}
+            userId={session.user.id!}
+        />
     );
 }
