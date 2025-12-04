@@ -1,32 +1,39 @@
 import { Plus, Download } from 'lucide-react';
-import ClientList from '@/components/management/ClientList';
-import ClientStats from '@/components/management/ClientStats';
+import { getServerSession } from 'next-auth';
+import { redirect } from 'next/navigation';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { prisma } from '@/lib/prisma';
+import ClientsPageClient from './ClientsPageClient';
 import styles from './page.module.css';
-import PasswordProtected from '@/components/auth/PasswordProtected';
 
-export default function ClientsPage() {
+export default async function ClientsPage() {
+    const session = await getServerSession(authOptions);
+
+    if (!session?.user?.email) {
+        redirect('/auth/signin');
+    }
+
+    // Get user's workspace
+    const user = await prisma.user.findUnique({
+        where: { email: session.user.email },
+        include: {
+            workspaces: {
+                include: {
+                    workspace: true,
+                },
+            },
+        },
+    });
+
+    if (!user || user.workspaces.length === 0) {
+        redirect('/onboarding');
+    }
+
+    const workspace = user.workspaces[0].workspace;
+
     return (
-        <PasswordProtected password="12345678"><div className={styles.page}>
-            <div className={styles.header}>
-                <div>
-                    <h1 className={styles.title}>Clients</h1>
-                    <p className={styles.subtitle}>Manage and collaborate on legal documents</p>
-                </div>
-                <div className={styles.actions}>
-                    <button className={styles.exportBtn}>
-                        <Download size={18} />
-                        <span>Export Data</span>
-                    </button>
-                    <button className={styles.addBtn}>
-                        <Plus size={18} />
-                        <span>Add New Client</span>
-                    </button>
-                </div>
-            </div>
-
-            <ClientStats />
-
-            <ClientList />
-        </div></PasswordProtected>
+        <div className={styles.page}>
+            <ClientsPageClient workspaceId={workspace.id} userId={user.id} />
+        </div>
     );
 }
