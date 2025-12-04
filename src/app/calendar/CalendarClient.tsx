@@ -49,6 +49,31 @@ export default function CalendarClient({
     const [selectedMatter, setSelectedMatter] = useState<Matter | null>(null);
     const [isLoadingMonth, setIsLoadingMonth] = useState(false);
 
+    // Search and filter state
+    const [searchQuery, setSearchQuery] = useState('');
+    const [statusFilter, setStatusFilter] = useState<string>('all');
+
+    // Filter matters based on search and status
+    const filteredMatters = matters.filter(matter => {
+        // Search filter
+        if (searchQuery) {
+            const query = searchQuery.toLowerCase();
+            const matchesSearch =
+                matter.name.toLowerCase().includes(query) ||
+                matter.caseNumber.toLowerCase().includes(query) ||
+                matter.client?.name.toLowerCase().includes(query) ||
+                matter.court?.toLowerCase().includes(query);
+            if (!matchesSearch) return false;
+        }
+
+        // Status filter
+        if (statusFilter !== 'all' && matter.status !== statusFilter) {
+            return false;
+        }
+
+        return true;
+    });
+
     // Fetch matters when month changes
     useEffect(() => {
         const fetchMatters = async () => {
@@ -110,17 +135,38 @@ export default function CalendarClient({
                     <h1 className={styles.title}>Litigation tracker</h1>
                     <p className={styles.subtitle}>Track court dates and case proceedings</p>
                 </div>
-                <button
-                    className={styles.addBtn}
-                    onClick={() => setIsAddModalOpen(true)}
-                >
-                    <Plus size={18} />
-                    <span>Add matter</span>
-                </button>
+                <div className={styles.headerActions}>
+                    <div className={styles.searchWrapper}>
+                        <input
+                            type="text"
+                            placeholder="Search matters..."
+                            className={styles.searchInput}
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                        />
+                    </div>
+                    <select
+                        className={styles.filterSelect}
+                        value={statusFilter}
+                        onChange={(e) => setStatusFilter(e.target.value)}
+                    >
+                        <option value="all">All Status</option>
+                        <option value="active">Active</option>
+                        <option value="inactive">Inactive</option>
+                        <option value="closed">Closed</option>
+                    </select>
+                    <button
+                        className={styles.addBtn}
+                        onClick={() => setIsAddModalOpen(true)}
+                    >
+                        <Plus size={18} />
+                        <span>Add matter</span>
+                    </button>
+                </div>
             </div>
 
             <CalendarGrid
-                matters={matters}
+                matters={filteredMatters}
                 currentDate={currentDate}
                 onDateChange={setCurrentDate}
                 onEventClick={handleEventClick}

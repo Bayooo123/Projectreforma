@@ -22,6 +22,52 @@
     color: var(--text-secondary);
 }
 
+.headerActions {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.searchWrapper {
+    position: relative;
+}
+
+.searchInput {
+    padding: 0.625rem 1rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background-color: var(--surface);
+    color: var(--text-primary);
+    font-size: var(--text-sm);
+    width: 250px;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.searchInput:focus {
+    border-color: var(--primary);
+}
+
+.searchInput::placeholder {
+    color: var(--text-secondary);
+}
+
+.filterSelect {
+    padding: 0.625rem 1rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background-color: var(--surface);
+    color: var(--text-primary);
+    font-size: var(--text-sm);
+    cursor: pointer;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.filterSelect:focus {
+    border-color: var(--primary);
+}
+
 .addBtn {
     display: flex;
     align-items: center;

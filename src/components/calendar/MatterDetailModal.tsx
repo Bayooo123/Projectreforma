@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from 'react';
-import { X, Calendar, User, MapPin, FileText, AlertCircle, Loader, Building } from 'lucide-react';
-import { adjournMatter, addMatterNote } from '@/app/actions/matters';
+import { X, Calendar, User, MapPin, FileText, AlertCircle, Loader, Building, Edit, Trash2 } from 'lucide-react';
+import { adjournMatter, addMatterNote, updateMatter, deleteMatter } from '@/app/actions/matters';
 import styles from './MatterDetailModal.module.css';
 
 interface Matter {
@@ -35,6 +35,8 @@ const MatterDetailModal = ({ isOpen, onClose, matter, userId }: MatterDetailModa
     const [adjournedFor, setAdjournedFor] = useState('');
     const [proceedings, setProceedings] = useState('');
     const [observations, setObservations] = useState('');
+    const [isEditMode, setIsEditMode] = useState(false);
+    const [editedMatter, setEditedMatter] = useState(matter);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     if (!isOpen) return null;
@@ -92,17 +94,103 @@ const MatterDetailModal = ({ isOpen, onClose, matter, userId }: MatterDetailModa
         });
     };
 
+    const handleEdit = () => {
+        setIsEditMode(true);
+        setEditedMatter(matter);
+    };
+
+    const handleSaveEdit = async () => {
+        setIsSubmitting(true);
+        try {
+            const result = await updateMatter(
+                matter.id,
+                {
+                    name: editedMatter.name,
+                    court: editedMatter.court,
+                    judge: editedMatter.judge,
+                },
+                userId
+            );
+
+            if (result.success) {
+                alert('Matter updated successfully!');
+                setIsEditMode(false);
+                onClose();
+            } else {
+                alert('Failed to update matter: ' + result.error);
+            }
+        } catch (error) {
+            console.error('Error updating matter:', error);
+            alert('An error occurred while updating');
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    const handleDelete = async () => {
+        if (!confirm(`Are you sure you want to delete "${matter.name}"? This action cannot be undone.`)) {
+            return;
+        }
+
+        setIsSubmitting(true);
+        try {
+            const result = await deleteMatter(matter.id);
+
+            if (result.success) {
+                alert('Matter deleted successfully!');
+                onClose();
+            } else {
+                alert('Failed to delete matter: ' + result.error);
+            }
+        } catch (error) {
+            console.error('Error deleting matter:', error);
+            alert('An error occurred while deleting');
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
     return (
         <div className={styles.overlay}>
             <div className={styles.modal}>
                 <div className={styles.header}>
                     <div>
-                        <h2 className={styles.title}>{matter.name}</h2>
+                        {isEditMode ? (
+                            <input
+                                type="text"
+                                className={styles.titleInput}
+                                value={editedMatter.name}
+                                onChange={(e) => setEditedMatter({ ...editedMatter, name: e.target.value })}
+                            />
+                        ) : (
+                            <h2 className={styles.title}>{matter.name}</h2>
+                        )}
                         <span className={styles.subtitle}>{matter.caseNumber}</span>
                     </div>
-                    <button onClick={onClose} className={styles.closeBtn} disabled={isSubmitting}>
-                        <X size={20} />
-                    </button>
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        {!isEditMode ? (
+                            <>
+                                <button onClick={handleEdit} className={styles.editBtn} disabled={isSubmitting}>
+                                    <Edit size={16} />
+                                </button>
+                                <button onClick={handleDelete} className={styles.deleteBtn} disabled={isSubmitting}>
+                                    <Trash2 size={16} />
+                                </button>
+                            </>
+                        ) : (
+                            <>
+                                <button onClick={handleSaveEdit} className={styles.saveBtn} disabled={isSubmitting}>
+                                    {isSubmitting ? <Loader size={16} className="animate-spin" /> : 'Save'}
+                                </button>
+                                <button onClick={() => setIsEditMode(false)} className={styles.cancelEditBtn} disabled={isSubmitting}>
+                                    Cancel
+                                </button>
+                            </>
+                        )}
+                        <button onClick={onClose} className={styles.closeBtn} disabled={isSubmitting}>
+                            <X size={20} />
+                        </button>
+                    </div>
                 </div>
 
                 <div className={styles.content}>
