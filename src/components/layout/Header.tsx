@@ -3,31 +3,25 @@
 import { useState } from 'react';
 import { Search, Bell, ChevronDown } from 'lucide-react';
 import NotificationPopover from './NotificationPopover';
+import UserProfileMenu from './UserProfileMenu';
 import styles from './Header.module.css';
 
 interface HeaderProps {
     user?: {
         name?: string | null;
         email?: string | null;
+        image?: string | null;
     };
     workspace?: {
-        name?: string;
-    };
+        id: string;
+        name: string;
+        role: string;
+        isOwner: boolean;
+    } | null;
 }
 
 const Header = ({ user, workspace }: HeaderProps) => {
     const [showNotifications, setShowNotifications] = useState(false);
-
-    // Get initials from name
-    const getInitials = (name?: string | null) => {
-        if (!name) return 'U';
-        return name
-            .split(' ')
-            .map(n => n[0])
-            .join('')
-            .toUpperCase()
-            .slice(0, 2);
-    };
 
     // Get workspace initials
     const getWorkspaceInitials = (name?: string) => {
@@ -75,19 +69,9 @@ const Header = ({ user, workspace }: HeaderProps) => {
                     {showNotifications && <NotificationPopover />}
                 </div>
 
-                <div className={styles.profile}>
-                    <div className={styles.avatar}>
-                        {getInitials(user?.name)}
-                    </div>
-                    <div className={styles.userInfo}>
-                        <span className={styles.userName}>
-                            {user?.name || 'User'}
-                        </span>
-                        <span className={styles.userRole}>
-                            {user?.email || ''}
-                        </span>
-                    </div>
-                </div>
+                {user && (
+                    <UserProfileMenu user={user} workspace={workspace} />
+                )}
             </div>
         </header>
     );

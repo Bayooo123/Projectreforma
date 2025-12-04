@@ -1,0 +1,182 @@
+.profileMenuContainer {
+    position: relative;
+}
+
+.profileButton {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 12px;
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.profileButton:hover {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+.avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: 600;
+    font-size: 14px;
+    overflow: hidden;
+}
+
+.avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.userInfo {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+}
+
+.userName {
+    font-size: 14px;
+    font-weight: 500;
+    color: #1a1a1a;
+}
+
+.userRole {
+    font-size: 12px;
+    color: #666;
+}
+
+.chevron {
+    color: #666;
+    transition: transform 0.2s ease;
+}
+
+.chevronOpen {
+    transform: rotate(180deg);
+}
+
+.dropdown {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    width: 280px;
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+    z-index: 1000;
+    animation: slideDown 0.2s ease;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.dropdownHeader {
+    padding: 16px;
+}
+
+.dropdownUserInfo {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-bottom: 12px;
+}
+
+.dropdownUserName {
+    font-size: 15px;
+    font-weight: 600;
+    color: #1a1a1a;
+}
+
+.dropdownUserEmail {
+    font-size: 13px;
+    color: #666;
+}
+
+.workspaceInfo {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 10px;
+    background: #f9fafb;
+    border-radius: 8px;
+}
+
+.workspaceName {
+    font-size: 13px;
+    font-weight: 500;
+    color: #1a1a1a;
+}
+
+.workspaceRole {
+    font-size: 12px;
+    color: #666;
+    text-transform: capitalize;
+}
+
+.dropdownDivider {
+    height: 1px;
+    background: #e5e7eb;
+    margin: 0;
+}
+
+.dropdownMenu {
+    padding: 8px;
+}
+
+.menuItem {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    padding: 10px 12px;
+    background: transparent;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    color: #1a1a1a;
+    transition: all 0.15s ease;
+    text-align: left;
+}
+
+.menuItem:hover {
+    background: #f3f4f6;
+}
+
+.menuItem svg {
+    color: #666;
+    flex-shrink: 0;
+}
+
+.menuItemDanger {
+    color: #dc2626;
+}
+
+.menuItemDanger:hover {
+    background: #fef2f2;
+}
+
+.menuItemDanger svg {
+    color: #dc2626;
+}

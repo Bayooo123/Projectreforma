@@ -4,7 +4,7 @@ import "./globals.css";
 import Sidebar from "@/components/layout/Sidebar";
 import Header from "@/components/layout/Header";
 import { auth } from "@/auth";
-import { prisma } from "@/lib/prisma";
+import { getCurrentUserWithWorkspace } from "@/lib/workspace";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
@@ -21,15 +21,11 @@ export default async function RootLayout({
   const session = await auth();
   const user = session?.user;
 
-  // Fetch user's primary workspace if authenticated
-  let workspace = null;
+  // Fetch user's workspace with owner info if authenticated
+  let workspaceData = null;
   if (user?.id) {
-    const membership = await prisma.workspaceMember.findFirst({
-      where: { userId: user.id },
-      include: { workspace: true },
-      orderBy: { joinedAt: 'asc' }, // Get first workspace they joined
-    });
-    workspace = membership?.workspace;
+    const data = await getCurrentUserWithWorkspace();
+    workspaceData = data?.workspace;
   }
 
   return (
@@ -40,7 +36,7 @@ export default async function RootLayout({
           <div className="flex">
             <Sidebar user={user} />
             <main style={{ marginLeft: '260px', width: 'calc(100% - 260px)', minHeight: '100vh' }}>
-              <Header user={user} workspace={workspace ?? undefined} />
+              <Header user={user} workspace={workspaceData ?? undefined} />
               <div className="container" style={{ padding: '2rem' }}>
                 {children}
               </div>
