@@ -1,12 +1,20 @@
 "use client";
 
-import { useState } from 'react';
-import { X, Plus, Trash2, FileText, DollarSign } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { X, Plus, Trash2, FileText, DollarSign, Loader } from 'lucide-react';
+import { createInvoice, generateInvoiceNumber, getClientMatters } from '@/app/actions/invoices';
 import styles from './InvoiceModal.module.css';
 
 interface InvoiceItem {
     description: string;
     amount: number;
+    quantity: number;
+}
+
+interface Matter {
+    id: string;
+    name: string;
+    caseNumber: string;
 }
 
 interface InvoiceModalProps {
@@ -14,18 +22,42 @@ interface InvoiceModalProps {
     onClose: () => void;
     clientName: string;
     clientId: string;
+    workspaceId: string;
 }
 
-const InvoiceModal = ({ isOpen, onClose, clientName, clientId }: InvoiceModalProps) => {
+const InvoiceModal = ({ isOpen, onClose, clientName, clientId, workspaceId }: InvoiceModalProps) => {
     const [activeTab, setActiveTab] = useState<'create' | 'list'>('create');
-    const [items, setItems] = useState<InvoiceItem[]>([{ description: '', amount: 0 }]);
+    const [items, setItems] = useState<InvoiceItem[]>([{ description: '', amount: 0, quantity: 1 }]);
     const [vatRate, setVatRate] = useState(7.5);
     const [securityChargeRate, setSecurityChargeRate] = useState(1.0);
+    const [invoiceNumber, setInvoiceNumber] = useState('');
+    const [matters, setMatters] = useState<Matter[]>([]);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isLoadingMatters, setIsLoadingMatters] = useState(false);
+
+    // Generate invoice number and fetch matters when modal opens
+    useEffect(() => {
+        if (isOpen && clientId) {
+            // Generate invoice number
+            generateInvoiceNumber(workspaceId).then(number => {
+                setInvoiceNumber(number);
+            });
+
+            // Fetch client matters
+            setIsLoadingMatters(true);
+            getClientMatters(clientId).then(result => {
+                if (result.success && result.data) {
+                    setMatters(result.data);
+                }
+                setIsLoadingMatters(false);
+            });
+        }
+    }, [isOpen, clientId, workspaceId]);
 
     if (!isOpen) return null;
 
     const addItem = () => {
-        setItems([...items, { description: '', amount: 0 }]);
+        setItems([...items, { description: '', amount: 0, quantity: 1 }]);
     };
 
     const removeItem = (index: number) => {
@@ -34,14 +66,14 @@ const InvoiceModal = ({ isOpen, onClose, clientName, clientId }: InvoiceModalPro
         }
     };
 
-    const updateItem = (index: number, field: 'description' | 'amount', value: string | number) => {
+    const updateItem = (index: number, field: keyof InvoiceItem, value: string | number) => {
         const newItems = [...items];
         newItems[index] = { ...newItems[index], [field]: value };
         setItems(newItems);
     };
 
     const calculateTotals = () => {
-        const subtotal = items.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+        const subtotal = items.reduce((sum, item) => sum + (Number(item.amount) * Number(item.quantity) || 0), 0);
         const vat = subtotal * (vatRate / 100);
         const securityCharge = subtotal * (securityChargeRate / 100);
         const total = subtotal + vat + securityCharge;
@@ -57,58 +89,57 @@ const InvoiceModal = ({ isOpen, onClose, clientName, clientId }: InvoiceModalPro
         e.preventDefault();
         const formData = new FormData(e.currentTarget);
 
-        const { subtotal, vat, securityCharge, total } = calculateTotals();
+        setIsSubmitting(true);
 
         try {
-            const response = await fetch('/api/invoices', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    invoiceNumber: formData.get('invoiceNumber'),
-                    clientId,
-                    matterId: formData.get('matterId') || null,
-                    dueDate: formData.get('dueDate') || null,
-                    billToName: formData.get('billToName'),
-                    billToAddress: formData.get('billToAddress'),
-                    billToCity: formData.get('billToCity'),
-                    billToState: formData.get('billToState'),
-                    attentionTo: formData.get('attentionTo'),
-                    notes: formData.get('notes'),
-                    items: items.map(item => ({
-                        description: item.description,
-                        amount: Math.round(Number(item.amount) * 100), // Convert to kobo
-                    })),
-                    vatRate,
-                    securityChargeRate,
-                }),
+            const result = await createInvoice({
+                clientId,
+                matterId: formData.get('matterId') as string || undefined,
+                billToName: formData.get('billToName') as string,
+                billToAddress: formData.get('billToAddress') as string || undefined,
+                billToCity: formData.get('billToCity') as string || undefined,
+                billToState: formData.get('billToState') as string || undefined,
+                attentionTo: formData.get('attentionTo') as string || undefined,
+                notes: formData.get('notes') as string || undefined,
+                dueDate: formData.get('dueDate') ? new Date(formData.get('dueDate') as string) : undefined,
+                items: items.map((item, index) => ({
+                    description: item.description,
+                    amount: Math.round(Number(item.amount) * 100), // Convert to kobo
+                    quantity: Number(item.quantity),
+                    order: index,
+                })),
+                vatRate,
+                securityChargeRate,
             });
 
-            if (response.ok) {
-                alert('Invoice created successfully!');
+            if (result.success) {
+                alert(`Invoice ${invoiceNumber} created successfully!`);
+                // Reset form
+                setItems([{ description: '', amount: 0, quantity: 1 }]);
                 e.currentTarget.reset();
-                setItems([{ description: '', amount: 0 }]);
                 onClose();
             } else {
-                const error = await response.json();
-                alert(`Error: ${error.error}`);
+                alert(`Error: ${result.error}`);
             }
         } catch (error) {
             console.error('Error creating invoice:', error);
             alert('Failed to create invoice');
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
     const totals = calculateTotals();
 
     return (
-        <div className={styles.overlay}>
-            <div className={styles.modal}>
+        <div className={styles.overlay} onClick={onClose}>
+            <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
                 <div className={styles.header}>
                     <div>
                         <h2 className={styles.title}>Invoice Management</h2>
                         <p className={styles.subtitle}>{clientName}</p>
                     </div>
-                    <button onClick={onClose} className={styles.closeBtn}>
+                    <button onClick={onClose} className={styles.closeBtn} disabled={isSubmitting}>
                         <X size={20} />
                     </button>
                 </div>
@@ -117,6 +148,7 @@ const InvoiceModal = ({ isOpen, onClose, clientName, clientId }: InvoiceModalPro
                     <button
                         className={`${styles.tab} ${activeTab === 'create' ? styles.tabActive : ''}`}
                         onClick={() => setActiveTab('create')}
+                        disabled={isSubmitting}
                     >
                         <Plus size={16} />
                         Create Invoice
@@ -124,6 +156,7 @@ const InvoiceModal = ({ isOpen, onClose, clientName, clientId }: InvoiceModalPro
                     <button
                         className={`${styles.tab} ${activeTab === 'list' ? styles.tabActive : ''}`}
                         onClick={() => setActiveTab('list')}
+                        disabled={isSubmitting}
                     >
                         <FileText size={16} />
                         View Invoices
@@ -139,10 +172,10 @@ const InvoiceModal = ({ isOpen, onClose, clientName, clientId }: InvoiceModalPro
                                     <label className={styles.formLabel}>Invoice Number</label>
                                     <input
                                         type="text"
-                                        name="invoiceNumber"
                                         className={styles.input}
-                                        placeholder="INV-2025-001"
-                                        required
+                                        value={invoiceNumber}
+                                        disabled
+                                        style={{ backgroundColor: 'var(--background)', cursor: 'not-allowed' }}
                                     />
                                 </div>
                                 <div className={styles.formGroup}>
@@ -151,19 +184,40 @@ const InvoiceModal = ({ isOpen, onClose, clientName, clientId }: InvoiceModalPro
                                         type="date"
                                         name="dueDate"
                                         className={styles.input}
+                                        disabled={isSubmitting}
                                     />
                                 </div>
                             </div>
 
+                            {/* Matter Selection */}
+                            {matters.length > 0 && (
+                                <div className={styles.formGroup}>
+                                    <label className={styles.formLabel}>Link to Matter (Optional)</label>
+                                    <select
+                                        name="matterId"
+                                        className={styles.input}
+                                        disabled={isSubmitting || isLoadingMatters}
+                                    >
+                                        <option value="">No matter selected</option>
+                                        {matters.map(matter => (
+                                            <option key={matter.id} value={matter.id}>
+                                                {matter.caseNumber} - {matter.name}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+                            )}
+
                             {/* Bill To Information */}
                             <div className={styles.formGroup}>
-                                <label className={styles.formLabel}>Bill To (Name/Company)</label>
+                                <label className={styles.formLabel}>Bill To (Name/Company) *</label>
                                 <input
                                     type="text"
                                     name="billToName"
                                     className={styles.input}
                                     placeholder="The Managing Director, Arete Protea Global Services Ltd"
                                     required
+                                    disabled={isSubmitting}
                                 />
                             </div>
 
@@ -174,6 +228,7 @@ const InvoiceModal = ({ isOpen, onClose, clientName, clientId }: InvoiceModalPro
                                     name="billToAddress"
                                     className={styles.input}
                                     placeholder="47b Royal Palm Drive, Osborne Foreshore Estate"
+                                    disabled={isSubmitting}
                                 />
                             </div>
 
@@ -185,6 +240,7 @@ const InvoiceModal = ({ isOpen, onClose, clientName, clientId }: InvoiceModalPro
                                         name="billToCity"
                                         className={styles.input}
                                         placeholder="Lagos"
+                                        disabled={isSubmitting}
                                     />
                                 </div>
                                 <div className={styles.formGroup}>
@@ -194,6 +250,7 @@ const InvoiceModal = ({ isOpen, onClose, clientName, clientId }: InvoiceModalPro
                                         name="billToState"
                                         className={styles.input}
                                         placeholder="Phase 2, Ikoyi"
+                                        disabled={isSubmitting}
                                     />
                                 </div>
                             </div>
@@ -205,6 +262,7 @@ const InvoiceModal = ({ isOpen, onClose, clientName, clientId }: InvoiceModalPro
                                     name="attentionTo"
                                     className={styles.input}
                                     placeholder="Sven Hanson"
+                                    disabled={isSubmitting}
                                 />
                             </div>
 
@@ -223,16 +281,31 @@ const InvoiceModal = ({ isOpen, onClose, clientName, clientId }: InvoiceModalPro
                                                     value={item.description}
                                                     onChange={(e) => updateItem(index, 'description', e.target.value)}
                                                     required
+                                                    disabled={isSubmitting}
                                                 />
-                                                <input
-                                                    type="number"
-                                                    className={styles.input}
-                                                    placeholder="Amount (₦)"
-                                                    value={item.amount || ''}
-                                                    onChange={(e) => updateItem(index, 'amount', parseFloat(e.target.value) || 0)}
-                                                    required
-                                                    step="0.01"
-                                                />
+                                                <div className={styles.formRow}>
+                                                    <input
+                                                        type="number"
+                                                        className={styles.input}
+                                                        placeholder="Amount (₦)"
+                                                        value={item.amount || ''}
+                                                        onChange={(e) => updateItem(index, 'amount', parseFloat(e.target.value) || 0)}
+                                                        required
+                                                        step="0.01"
+                                                        disabled={isSubmitting}
+                                                    />
+                                                    <input
+                                                        type="number"
+                                                        className={styles.input}
+                                                        placeholder="Qty"
+                                                        value={item.quantity || 1}
+                                                        onChange={(e) => updateItem(index, 'quantity', parseInt(e.target.value) || 1)}
+                                                        required
+                                                        min="1"
+                                                        disabled={isSubmitting}
+                                                        style={{ maxWidth: '100px' }}
+                                                    />
+                                                </div>
                                             </div>
                                             {items.length > 1 && (
                                                 <button
@@ -240,6 +313,7 @@ const InvoiceModal = ({ isOpen, onClose, clientName, clientId }: InvoiceModalPro
                                                     onClick={() => removeItem(index)}
                                                     className={styles.removeItemBtn}
                                                     title="Remove item"
+                                                    disabled={isSubmitting}
                                                 >
                                                     <Trash2 size={18} />
                                                 </button>
@@ -251,6 +325,7 @@ const InvoiceModal = ({ isOpen, onClose, clientName, clientId }: InvoiceModalPro
                                     type="button"
                                     onClick={addItem}
                                     className={styles.addItemBtn}
+                                    disabled={isSubmitting}
                                 >
                                     <Plus size={16} />
                                     Add Line Item
@@ -267,6 +342,7 @@ const InvoiceModal = ({ isOpen, onClose, clientName, clientId }: InvoiceModalPro
                                         value={vatRate}
                                         onChange={(e) => setVatRate(parseFloat(e.target.value) || 0)}
                                         step="0.1"
+                                        disabled={isSubmitting}
                                     />
                                 </div>
                                 <div className={styles.formGroup}>
@@ -277,6 +353,7 @@ const InvoiceModal = ({ isOpen, onClose, clientName, clientId }: InvoiceModalPro
                                         value={securityChargeRate}
                                         onChange={(e) => setSecurityChargeRate(parseFloat(e.target.value) || 0)}
                                         step="0.1"
+                                        disabled={isSubmitting}
                                     />
                                 </div>
                             </div>
@@ -309,16 +386,26 @@ const InvoiceModal = ({ isOpen, onClose, clientName, clientId }: InvoiceModalPro
                                     className={styles.textarea}
                                     rows={2}
                                     placeholder="Payment should be made in favour of..."
+                                    disabled={isSubmitting}
                                 />
                             </div>
 
                             <div className={styles.formActions}>
-                                <button type="button" className={styles.cancelBtn} onClick={onClose}>
+                                <button type="button" className={styles.cancelBtn} onClick={onClose} disabled={isSubmitting}>
                                     Cancel
                                 </button>
-                                <button type="submit" className={styles.submitBtn}>
-                                    <DollarSign size={18} />
-                                    Create Invoice
+                                <button type="submit" className={styles.submitBtn} disabled={isSubmitting}>
+                                    {isSubmitting ? (
+                                        <>
+                                            <Loader size={18} className="spin" />
+                                            Creating...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <DollarSign size={18} />
+                                            Create Invoice
+                                        </>
+                                    )}
                                 </button>
                             </div>
                         </form>

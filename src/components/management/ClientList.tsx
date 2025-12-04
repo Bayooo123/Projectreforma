@@ -207,6 +207,7 @@ const ClientList = ({ workspaceId }: ClientListProps) => {
                 onClose={() => setIsInvoiceModalOpen(false)}
                 clientName={selectedClient?.name || ''}
                 clientId={selectedClient?.id || ''}
+                workspaceId={workspaceId}
             />
             <PaymentModal
                 isOpen={isPaymentModalOpen}
