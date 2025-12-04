@@ -106,8 +106,8 @@ const MatterDetailModal = ({ isOpen, onClose, matter, userId }: MatterDetailModa
                 matter.id,
                 {
                     name: editedMatter.name,
-                    court: editedMatter.court,
-                    judge: editedMatter.judge,
+                    court: editedMatter.court || undefined,
+                    judge: editedMatter.judge || undefined,
                 },
                 userId
             );
