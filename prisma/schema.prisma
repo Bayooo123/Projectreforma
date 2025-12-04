@@ -23,13 +23,15 @@ model Workspace {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  owner       User              @relation("WorkspaceOwner", fields: [ownerId], references: [id])
+  owner       User                  @relation("WorkspaceOwner", fields: [ownerId], references: [id])
   members     WorkspaceMember[]
   invitations Invitation[]
   matters     Matter[]
   clients     Client[]
   briefs      Brief[]
   expenses    Expense[]
+  tasks       Task[]
+  emailConfig WorkspaceEmailConfig?
 
   @@index([slug])
 }
@@ -89,6 +91,8 @@ model User {
   activityLogs         MatterActivityLog[]
   clientCommunications ClientCommunication[]
   briefs               Brief[]
+  assignedTasks        Task[]              @relation("AssignedTasks")
+  createdTasks         Task[]              @relation("CreatedTasks")
 
   @@index([email])
 }
@@ -197,6 +201,7 @@ model Matter {
   notifications        Notification[]
   briefs               Brief[]
   invoices             Invoice[]
+  tasks                Task[]
 
   @@index([assignedLawyerId])
   @@index([workspaceId])
@@ -258,6 +263,7 @@ model Brief {
   lawyer        User           @relation(fields: [lawyerId], references: [id])
   notifications Notification[]
   documents     Document[]
+  tasks         Task[]
 
   @@index([lawyerId])
   @@index([workspaceId])
@@ -266,35 +272,32 @@ model Brief {
 }
 
 model Document {
-  id          String   @id @default(cuid())
-  name        String
-  url         String
-  type        String   // 'pdf', 'docx', etc.
-  size        Int
-  briefId     String
-  uploadedAt  DateTime @default(now())
-  ocrStatus   String   @default("pending") // 'pending' | 'processing' | 'completed' | 'failed'
-  ocrText     String?  // Removed @db.Text as it might not be needed or specific to postgres, but usually string is fine. Prisma Text is String. In Postgres String is text.
-                       // Actually @db.Text is useful for large text. Let's keep it if valid or just String.
-                       // In Prisma schema for postgres, String is usually text. But for very large content, sometimes explicit mapping is good.
-                       // Let's just use String for now, standard Prisma.
+  id         String   @id @default(cuid())
+  name       String
+  url        String
+  type       String   // 'pdf', 'docx', etc.
+  size       Int
+  briefId    String
+  uploadedAt DateTime @default(now())
+  ocrStatus  String   @default("pending") // 'pending' | 'processing' | 'completed' | 'failed'
+  ocrText    String?
   
-  brief       Brief    @relation(fields: [briefId], references: [id], onDelete: Cascade)
+  brief Brief @relation(fields: [briefId], references: [id], onDelete: Cascade)
   
   @@index([briefId])
 }
 
 model Client {
-  id         String    @id @default(cuid())
-  name       String
-  email      String    @unique
-  phone      String?
-  company    String?
-  industry   String?
-  status     String    @default("active") // 'active' | 'inactive'
+  id          String    @id @default(cuid())
+  name        String
+  email       String    @unique
+  phone       String?
+  company     String?
+  industry    String?
+  status      String    @default("active") // 'active' | 'inactive'
   workspaceId String
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
   workspace            Workspace             @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   matters              Matter[]
@@ -319,30 +322,30 @@ model Invoice {
   status        String   @default("pending") // 'paid' | 'pending' | 'overdue'
   
   // Bill To Information
-  billToName        String
-  billToAddress     String?
-  billToCity        String?
-  billToState       String?
+  billToName    String
+  billToAddress String?
+  billToCity    String?
+  billToState   String?
   
   // Additional Fields
-  attentionTo       String?  // e.g., "Sven Hanson"
-  notes             String?  // Additional notes or payment instructions
+  attentionTo   String? // e.g., "Sven Hanson"
+  notes         String? // Additional notes or payment instructions
   
   // Amounts (stored in kobo/cents)
-  subtotal          Int      @default(0)
-  vatRate           Float    @default(7.5) // VAT percentage
-  vatAmount         Int      @default(0)
-  securityChargeRate Float   @default(1.0) // Security charge percentage
+  subtotal             Int   @default(0)
+  vatRate              Float @default(7.5) // VAT percentage
+  vatAmount            Int   @default(0)
+  securityChargeRate   Float @default(1.0) // Security charge percentage
   securityChargeAmount Int   @default(0)
-  totalAmount       Int      @default(0)
+  totalAmount          Int   @default(0)
   
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  client       Client        @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  matter       Matter?       @relation(fields: [matterId], references: [id])
-  payments     Payment[]
-  items        InvoiceItem[] // Line items
+  client   Client        @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  matter   Matter?       @relation(fields: [matterId], references: [id])
+  payments Payment[]
+  items    InvoiceItem[] // Line items
 
   @@index([clientId])
   @@index([matterId])
@@ -351,17 +354,17 @@ model Invoice {
 }
 
 model InvoiceItem {
-  id          String  @id @default(cuid())
+  id          String @id @default(cuid())
   invoiceId   String
   
-  description String  // e.g., "PROFESSIONAL FEE FOR: RECENT INTERFACE WITH EFCC..."
-  amount      Int     // Amount in kobo/cents
-  quantity    Int     @default(1)
-  order       Int     @default(0) // For ordering items
+  description String // e.g., "PROFESSIONAL FEE FOR: RECENT INTERFACE WITH EFCC..."
+  amount      Int    // Amount in kobo/cents
+  quantity    Int    @default(1)
+  order       Int    @default(0) // For ordering items
   
-  createdAt   DateTime @default(now())
+  createdAt DateTime @default(now())
   
-  invoice     Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
   
   @@index([invoiceId])
 }
@@ -398,5 +401,61 @@ model Expense {
 
   @@index([workspaceId])
   @@index([date])
-  @@index([category])
+}
+
+// ============================================
+// TASK MANAGEMENT MODELS
+// ============================================
+
+model Task {
+  id           String    @id @default(cuid())
+  title        String
+  description  String?
+  assignedToId String?
+  assignedById String
+  workspaceId  String
+  matterId     String?
+  briefId      String?
+  priority     String    @default("medium") // 'low' | 'medium' | 'high' | 'urgent'
+  status       String    @default("pending") // 'pending' | 'in_progress' | 'completed' | 'cancelled'
+  dueDate      DateTime?
+  completedAt  DateTime?
+  
+  // Email parsing fields
+  source       String  @default("manual") // 'manual' | 'email' | 'integration'
+  sourceEmail  String? // Email address that sent the task
+  emailSubject String? // Original email subject
+  emailBody    String? @db.Text // Original email body
+  aiConfidence Int?    // AI parsing confidence (0-100)
+  
+  // Metadata
+  requirements Json? // Array of requirements
+  attachments  Json? // Array of attachment URLs
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Relations
+  assignedTo User?      @relation("AssignedTasks", fields: [assignedToId], references: [id])
+  assignedBy User       @relation("CreatedTasks", fields: [assignedById], references: [id])
+  workspace  Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  matter     Matter?    @relation(fields: [matterId], references: [id])
+  brief      Brief?     @relation(fields: [briefId], references: [id])
+  
+  @@index([assignedToId, status, dueDate])
+  @@index([workspaceId, status])
+  @@index([sourceEmail])
+  @@index([dueDate])
+}
+
+model WorkspaceEmailConfig {
+  id               String   @id @default(cuid())
+  workspaceId      String   @unique
+  emailAddress     String   @unique // tasks-[workspace-id]@reforma.app
+  isActive         Boolean  @default(true)
+  emailIntegration Json?    // OAuth tokens for Gmail/Outlook (future)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 }
