@@ -6,8 +6,25 @@ import styles from './CalendarGrid.module.css';
 
 interface Matter {
     id: string;
+    caseNumber: string;
     name: string;
+    clientId: string;
+    assignedLawyerId: string;
+    workspaceId: string;
+    court: string | null;
+    judge: string | null;
+    status: string;
     nextCourtDate: Date | null;
+    createdAt: Date;
+    updatedAt: Date;
+    client: {
+        id: string;
+        name: string;
+    };
+    assignedLawyer: {
+        id: string;
+        name: string | null;
+    };
 }
 
 interface CalendarGridProps {
