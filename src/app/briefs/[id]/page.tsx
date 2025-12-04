@@ -1,77 +1,35 @@
-"use client";
+import { auth } from '@/auth';
+import { redirect } from 'next/navigation';
+import { getBriefById } from '@/app/actions/briefs';
+import BriefDetailClient from './BriefDetailClient';
 
-import { useState } from 'react';
-import Link from 'next/link';
-import { ArrowLeft, Clock, Tag, Search } from 'lucide-react';
-import DocumentList, { Document } from '@/components/briefs/DocumentList';
-import DocumentViewer from '@/components/briefs/DocumentViewer';
-import styles from './page.module.css';
+interface BriefDetailPageProps {
+    params: {
+        id: string;
+    };
+}
 
+export default async function BriefDetailPage({ params }: BriefDetailPageProps) {
+    const session = await auth();
 
+    if (!session?.user) {
+        redirect('/login');
+    }
 
-export default function BriefDetailPage() {
-    const [selectedDocument, setSelectedDocument] = useState<Document | null>(null);
+    // Fetch brief data
+    const brief = await getBriefById(params.id);
 
-    return (
-        <div className={styles.page}>
-            <div className={styles.header}>
-                <div className={styles.topRow}>
-                    <Link href="/briefs" className={styles.backLink}>
-                        <ArrowLeft size={18} />
-                        <span>Back to Briefs</span>
-                    </Link>
-                    <div className={styles.searchWrapper}>
-                        <Search size={16} className={styles.searchIcon} />
-                        <input type="text" placeholder="Search in documents..." className={styles.searchInput} />
-                    </div>
-                </div>
-
-                <div className={styles.titleRow}>
-                    <h1 className={styles.title}>State v. Johnson</h1>
-                    <span className={styles.statusBadge}>Active</span>
-                </div>
-
-                <div className={styles.metaRow}>
-                    <div className={styles.metaItem}>
-                        <span className={styles.metaLabel}>Brief Number:</span>
-                        <span className={styles.metaValue}>BR-2025-001</span>
-                    </div>
-                    <div className={styles.metaItem}>
-                        <Tag size={14} className={styles.metaIcon} />
-                        <span className={styles.metaValue}>Litigation</span>
-                    </div>
-                    <div className={styles.metaItem}>
-                        <Clock size={14} className={styles.metaIcon} />
-                        <span className={styles.metaValue}>Last updated 2 hours ago</span>
-                    </div>
-                </div>
-
-                <div className={styles.descriptionBox}>
-                    <h3 className={styles.descriptionTitle}>Description</h3>
-                    <p className={styles.descriptionText}>
-                        Criminal defense matter. Defendant charged with fraud. Currently preparing motion for bail and gathering evidence for trial.
-                    </p>
-                </div>
+    if (!brief) {
+        return (
+            <div style={{ padding: '2rem', textAlign: 'center' }}>
+                <h2>Brief Not Found</h2>
+                <p>The brief you're looking for doesn't exist or you don't have access to it.</p>
+                <a href="/briefs" style={{ color: '#667eea', textDecoration: 'underline' }}>
+                    Back to Briefs
+                </a>
             </div>
+        );
+    }
 
-            <div className={styles.content}>
-                {selectedDocument ? (
-                    <div>
-                        <button
-                            onClick={() => setSelectedDocument(null)}
-                            className={styles.backToListBtn}
-                        >
-                            <ArrowLeft size={16} /> Back to Documents
-                        </button>
-                        <DocumentViewer document={selectedDocument} />
-                    </div>
-                ) : (
-                    <DocumentList
-                        briefId="1"
-                        onDocumentClick={setSelectedDocument}
-                    />
-                )}
-            </div>
-        </div>
-    );
+    return <BriefDetailClient brief={brief} />;
 }

@@ -16,6 +16,7 @@ const BriefList = ({ onUpload, workspaceId }: BriefListProps) => {
     const [isLoading, setIsLoading] = useState(true);
     const [activeActionId, setActiveActionId] = useState<string | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
+    const [statusFilter, setStatusFilter] = useState<string>('all');
 
     useEffect(() => {
         if (workspaceId) {
@@ -38,6 +39,25 @@ const BriefList = ({ onUpload, workspaceId }: BriefListProps) => {
     const toggleActions = (id: string) => {
         setActiveActionId(activeActionId === id ? null : id);
     };
+
+    // Filter briefs based on search and status
+    const filteredBriefs = briefs.filter(brief => {
+        // Search filter
+        if (searchQuery) {
+            const query = searchQuery.toLowerCase();
+            const matchesSearch =
+                brief.name.toLowerCase().includes(query) ||
+                brief.briefNumber.toLowerCase().includes(query) ||
+                brief.client?.name.toLowerCase().includes(query) ||
+                brief.category.toLowerCase().includes(query);
+            if (!matchesSearch) return false;
+        }
+        // Status filter
+        if (statusFilter !== 'all' && brief.status.toLowerCase() !== statusFilter) {
+            return false;
+        }
+        return true;
+    });
 
     if (isLoading) {
         return (
@@ -67,8 +87,10 @@ const BriefList = ({ onUpload, workspaceId }: BriefListProps) => {
                     <Search size={18} className={styles.searchIcon} />
                     <input
                         type="text"
-                        placeholder="Search"
+                        placeholder="Search briefs..."
                         className={styles.searchInput}
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
                     />
                 </div>
                 <button className={styles.sortBtn}>
@@ -77,7 +99,7 @@ const BriefList = ({ onUpload, workspaceId }: BriefListProps) => {
                 </button>
             </div>
 
-            {briefs.length === 0 ? (
+            {filteredBriefs.length === 0 ? (
                 <div className={styles.emptyState}>
                     <div className={styles.emptyIcon}>
                         <Briefcase size={48} />
@@ -106,7 +128,7 @@ const BriefList = ({ onUpload, workspaceId }: BriefListProps) => {
                             </tr>
                         </thead>
                         <tbody>
-                            {briefs.map((brief) => (
+                            {filteredBriefs.map((brief) => (
                                 <tr key={brief.id}>
                                     <td className={styles.checkboxCell}><input type="checkbox" /></td>
                                     <td className={styles.briefNumber}>{brief.briefNumber}</td>

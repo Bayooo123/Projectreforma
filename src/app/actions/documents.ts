@@ -38,9 +38,24 @@ export async function createDocument(data: {
             },
         });
         revalidatePath(`/briefs/${data.briefId}`);
+        revalidatePath('/briefs');
         return { success: true, document };
     } catch (error) {
         console.error('Error creating document:', error);
         return { success: false, error: 'Failed to create document' };
+    }
+}
+
+export async function deleteDocument(id: string, briefId: string) {
+    try {
+        await prisma.document.delete({
+            where: { id },
+        });
+        revalidatePath(`/briefs/${briefId}`);
+        revalidatePath('/briefs');
+        return { success: true };
+    } catch (error) {
+        console.error('Error deleting document:', error);
+        return { success: false, error: 'Failed to delete document' };
     }
 }
