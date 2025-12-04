@@ -1,6 +1,13 @@
 import { Resend } from 'resend';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+// Lazy initialize Resend client to avoid build-time errors
+let resendClient: Resend | null = null;
+const getResendClient = () => {
+    if (!resendClient && process.env.RESEND_API_KEY) {
+        resendClient = new Resend(process.env.RESEND_API_KEY);
+    }
+    return resendClient;
+};
 
 // Test mode flag - true when API key is not configured
 const isTestMode = !process.env.RESEND_API_KEY || process.env.RESEND_API_KEY === 're_YOUR_API_KEY_HERE';
@@ -45,6 +52,12 @@ export async function sendInvitationEmail({
 
     // PRODUCTION MODE: Send actual email
     try {
+        const resend = getResendClient();
+
+        if (!resend) {
+            throw new Error('Resend client not initialized. Please configure RESEND_API_KEY.');
+        }
+
         const { data, error } = await resend.emails.send({
             from: process.env.RESEND_FROM_EMAIL || 'Reforma <onboarding@reforma.app>',
             to: [to],
