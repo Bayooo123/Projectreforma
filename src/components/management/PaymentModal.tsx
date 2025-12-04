@@ -1,7 +1,8 @@
 "use client";
 
-import { X, DollarSign, Calendar } from 'lucide-react';
-import { useState } from 'react';
+import { X, DollarSign, Calendar, Loader, FileText } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { createPayment, getPaymentsByClient, getClientInvoices } from '@/app/actions/payments';
 import styles from './InvoiceModal.module.css';
 
 interface Payment {
@@ -9,121 +10,312 @@ interface Payment {
     amount: number;
     date: Date;
     method: string;
-    reference: string;
+    reference: string | null;
+    invoice: {
+        invoiceNumber: string;
+        totalAmount: number;
+    } | null;
+}
+
+interface Invoice {
+    id: string;
+    invoiceNumber: string;
+    totalAmount: number;
+    status: string;
+    dueDate: Date | null;
 }
 
 interface PaymentModalProps {
     isOpen: boolean;
     onClose: () => void;
     clientName: string;
+    clientId: string;
 }
 
-const PaymentModal = ({ isOpen, onClose, clientName }: PaymentModalProps) => {
+const PAYMENT_METHODS = [
+    'Bank Transfer',
+    'Cash',
+    'Cheque',
+    'Card',
+    'Mobile Money',
+    'Other',
+];
+
+const PaymentModal = ({ isOpen, onClose, clientName, clientId }: PaymentModalProps) => {
     const [payments, setPayments] = useState<Payment[]>([]);
-    const [activeTab, setActiveTab] = useState<'list' | 'create'>('list');
+    const [invoices, setInvoices] = useState<Invoice[]>([]);
+    const [activeTab, setActiveTab] = useState<'list' | 'create'>('create');
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
+
+    useEffect(() => {
+        if (isOpen && clientId) {
+            fetchData();
+        }
+    }, [isOpen, clientId]);
+
+    const fetchData = async () => {
+        setIsLoading(true);
+        try {
+            const [paymentsResult, invoicesResult] = await Promise.all([
+                getPaymentsByClient(clientId),
+                getClientInvoices(clientId),
+            ]);
+
+            if (paymentsResult.success && paymentsResult.data) {
+                setPayments(paymentsResult.data);
+            }
+
+            if (invoicesResult.success && invoicesResult.data) {
+                setInvoices(invoicesResult.data);
+            }
+        } catch (error) {
+            console.error('Error fetching data:', error);
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
     if (!isOpen) return null;
 
-    const formatCurrency = (amount: number) => `₦${amount.toLocaleString()}`;
+    const formatCurrency = (amount: number) => {
+        // Amount is in kobo, convert to naira
+        return `₦${(amount / 100).toLocaleString()}`;
+    };
+
+    const formatDate = (date: Date) => {
+        return new Date(date).toLocaleDateString('en-NG', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+        });
+    };
 
     const handleCreatePayment = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
-        const form = e.currentTarget;
-        const amount = Number((form.elements.namedItem('amount') as HTMLInputElement).value);
-        const method = (form.elements.namedItem('method') as HTMLInputElement).value;
-        const reference = (form.elements.namedItem('reference') as HTMLInputElement).value;
+        const formData = new FormData(e.currentTarget);
+
+        setIsSubmitting(true);
 
         try {
-            const response = await fetch('/api/payments', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    clientId: clientName,
-                    amount,
-                    method,
-                    reference,
-                }),
+            const amount = parseFloat(formData.get('amount') as string);
+            const invoiceId = formData.get('invoiceId') as string;
+
+            const result = await createPayment({
+                clientId,
+                invoiceId: invoiceId || undefined,
+                amount: Math.round(amount * 100), // Convert to kobo
+                method: formData.get('method') as string,
+                reference: formData.get('reference') as string || undefined,
+                date: formData.get('date') ? new Date(formData.get('date') as string) : undefined,
             });
 
-            if (response.ok) {
-                const newPayment = await response.json();
-                setPayments([...payments, newPayment]);
-                alert('Payment recorded successfully');
-                form.reset();
+            if (result.success) {
+                alert('Payment recorded successfully!');
+                e.currentTarget.reset();
+                await fetchData(); // Refresh data
                 setActiveTab('list');
             } else {
-                const error = await response.json();
-                alert(`Error: ${error.error}`);
+                alert(`Error: ${result.error}`);
             }
         } catch (error) {
             console.error('Error recording payment:', error);
             alert('Failed to record payment');
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
     return (
-        <div className={styles.overlay}>
-            <div className={styles.modal}>
+        <div className={styles.overlay} onClick={onClose}>
+            <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
                 <div className={styles.header}>
-                    <h2 className={styles.title}>Payments for {clientName}</h2>
-                    <button onClick={onClose} className={styles.closeBtn}>
+                    <div>
+                        <h2 className={styles.title}>Payments</h2>
+                        <p className={styles.subtitle}>{clientName}</p>
+                    </div>
+                    <button onClick={onClose} className={styles.closeBtn} disabled={isSubmitting}>
                         <X size={20} />
                     </button>
                 </div>
+
                 <div className={styles.tabs}>
-                    <button
-                        className={`${styles.tab} ${activeTab === 'list' ? styles.tabActive : ''}`}
-                        onClick={() => setActiveTab('list')}
-                    >
-                        Payments ({payments.length})
-                    </button>
                     <button
                         className={`${styles.tab} ${activeTab === 'create' ? styles.tabActive : ''}`}
                         onClick={() => setActiveTab('create')}
+                        disabled={isSubmitting}
                     >
+                        <DollarSign size={16} />
                         Record Payment
                     </button>
+                    <button
+                        className={`${styles.tab} ${activeTab === 'list' ? styles.tabActive : ''}`}
+                        onClick={() => setActiveTab('list')}
+                        disabled={isSubmitting}
+                    >
+                        <FileText size={16} />
+                        Payment History ({payments.length})
+                    </button>
                 </div>
+
                 <div className={styles.content}>
-                    {activeTab === 'list' && (
-                        <div className={styles.paymentList}>
-                            {payments.map(p => (
-                                <div key={p.id} className={styles.paymentCard}>
-                                    <div className={styles.paymentIcon}>
-                                        <DollarSign size={20} />
-                                    </div>
-                                    <div className={styles.paymentInfo}>
-                                        <h3 className={styles.paymentAmount}>{formatCurrency(p.amount)}</h3>
-                                        <p className={styles.paymentMethod}>{p.method}</p>
-                                        <p className={styles.paymentRef}>Ref: {p.reference}</p>
-                                    </div>
-                                    <div className={styles.paymentDate}>
-                                        <Calendar size={14} />
-                                        {p.date.toLocaleDateString()}
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    )}
                     {activeTab === 'create' && (
                         <form className={styles.createForm} onSubmit={handleCreatePayment}>
                             <div className={styles.formGroup}>
-                                <label className={styles.formLabel}>Amount (₦)</label>
-                                <input name="amount" type="number" className={styles.input} placeholder="500000" required />
+                                <label className={styles.formLabel}>Amount (₦) *</label>
+                                <input
+                                    name="amount"
+                                    type="number"
+                                    className={styles.input}
+                                    placeholder="500000.00"
+                                    required
+                                    step="0.01"
+                                    disabled={isSubmitting}
+                                />
                             </div>
+
                             <div className={styles.formGroup}>
-                                <label className={styles.formLabel}>Method</label>
-                                <input name="method" type="text" className={styles.input} placeholder="Bank Transfer" required />
+                                <label className={styles.formLabel}>Payment Method *</label>
+                                <select
+                                    name="method"
+                                    className={styles.input}
+                                    required
+                                    disabled={isSubmitting}
+                                >
+                                    <option value="">Select method...</option>
+                                    {PAYMENT_METHODS.map(method => (
+                                        <option key={method} value={method}>
+                                            {method}
+                                        </option>
+                                    ))}
+                                </select>
                             </div>
+
+                            {invoices.length > 0 && (
+                                <div className={styles.formGroup}>
+                                    <label className={styles.formLabel}>Link to Invoice (Optional)</label>
+                                    <select
+                                        name="invoiceId"
+                                        className={styles.input}
+                                        disabled={isSubmitting}
+                                    >
+                                        <option value="">No invoice selected</option>
+                                        {invoices.map(invoice => (
+                                            <option key={invoice.id} value={invoice.id}>
+                                                {invoice.invoiceNumber} - {formatCurrency(invoice.totalAmount)} ({invoice.status})
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+                            )}
+
                             <div className={styles.formGroup}>
-                                <label className={styles.formLabel}>Reference</label>
-                                <input name="reference" type="text" className={styles.input} placeholder="TRF/2025/10001" required />
+                                <label className={styles.formLabel}>Payment Reference</label>
+                                <input
+                                    name="reference"
+                                    type="text"
+                                    className={styles.input}
+                                    placeholder="TRF/2025/10001"
+                                    disabled={isSubmitting}
+                                />
                             </div>
+
+                            <div className={styles.formGroup}>
+                                <label className={styles.formLabel}>Payment Date</label>
+                                <input
+                                    name="date"
+                                    type="date"
+                                    className={styles.input}
+                                    defaultValue={new Date().toISOString().split('T')[0]}
+                                    disabled={isSubmitting}
+                                />
+                            </div>
+
                             <div className={styles.formActions}>
-                                <button type="button" onClick={onClose} className={styles.cancelBtn}>Cancel</button>
-                                <button type="submit" className={styles.submitBtn}>Record Payment</button>
+                                <button
+                                    type="button"
+                                    onClick={onClose}
+                                    className={styles.cancelBtn}
+                                    disabled={isSubmitting}
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    className={styles.submitBtn}
+                                    disabled={isSubmitting}
+                                >
+                                    {isSubmitting ? (
+                                        <>
+                                            <Loader size={16} className="spin" />
+                                            Recording...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <DollarSign size={16} />
+                                            Record Payment
+                                        </>
+                                    )}
+                                </button>
                             </div>
                         </form>
+                    )}
+
+                    {activeTab === 'list' && (
+                        <div className={styles.invoiceList}>
+                            {isLoading ? (
+                                <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>
+                                    <Loader size={32} className="spin" />
+                                    <p>Loading payments...</p>
+                                </div>
+                            ) : payments.length === 0 ? (
+                                <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>
+                                    <p>No payments recorded yet</p>
+                                </div>
+                            ) : (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                                    {payments.map(payment => (
+                                        <div
+                                            key={payment.id}
+                                            style={{
+                                                padding: '1rem',
+                                                border: '1px solid var(--border)',
+                                                borderRadius: 'var(--radius-md)',
+                                                backgroundColor: 'var(--background)',
+                                            }}
+                                        >
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
+                                                <div>
+                                                    <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--primary)', marginBottom: '0.25rem' }}>
+                                                        {formatCurrency(payment.amount)}
+                                                    </h3>
+                                                    <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
+                                                        {payment.method}
+                                                    </p>
+                                                </div>
+                                                <div style={{ textAlign: 'right' }}>
+                                                    <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                                                        <Calendar size={14} />
+                                                        {formatDate(payment.date)}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            {payment.reference && (
+                                                <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>
+                                                    Ref: {payment.reference}
+                                                </p>
+                                            )}
+                                            {payment.invoice && (
+                                                <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                                                    <FileText size={14} />
+                                                    Linked to {payment.invoice.invoiceNumber}
+                                                </p>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
                     )}
                 </div>
             </div>
