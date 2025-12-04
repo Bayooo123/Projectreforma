@@ -1,21 +1,26 @@
-"use client";
+import { auth } from '@/auth';
+import { redirect } from 'next/navigation';
+import { getCurrentUserWithWorkspace } from '@/lib/workspace';
+import BriefsPageClient from './BriefsPageClient';
 
-import { useState } from 'react';
-import BriefList from '@/components/briefs/BriefList';
-import BriefUploadModal from '@/components/briefs/BriefUploadModal';
-import styles from './page.module.css';
+export default async function BriefsPage() {
+    const session = await auth();
 
-export default function BriefsPage() {
-    const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+    if (!session?.user) {
+        redirect('/login');
+    }
 
-    return (
-        <div className={styles.page}>
-            <BriefList onUpload={() => setIsUploadModalOpen(true)} />
+    // Get workspace
+    const data = await getCurrentUserWithWorkspace();
 
-            <BriefUploadModal
-                isOpen={isUploadModalOpen}
-                onClose={() => setIsUploadModalOpen(false)}
-            />
-        </div>
-    );
+    if (!data?.workspace) {
+        return (
+            <div style={{ padding: '2rem', textAlign: 'center' }}>
+                <h2>No Workspace Found</h2>
+                <p>Please create a workspace first.</p>
+            </div>
+        );
+    }
+
+    return <BriefsPageClient workspaceId={data.workspace.id} />;
 }

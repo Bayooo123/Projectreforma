@@ -8,31 +8,32 @@ import { getBriefs } from '@/app/actions/briefs';
 
 interface BriefListProps {
     onUpload: () => void;
+    workspaceId: string;
 }
 
-const BriefList = ({ onUpload }: BriefListProps) => {
+const BriefList = ({ onUpload, workspaceId }: BriefListProps) => {
     const [briefs, setBriefs] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [activeActionId, setActiveActionId] = useState<string | null>(null);
-
-    // Hardcoded workspace ID for now - should come from context/auth
-    const WORKSPACE_ID = "workspace-id-123";
+    const [searchQuery, setSearchQuery] = useState('');
 
     useEffect(() => {
-        const fetchBriefs = async () => {
-            setIsLoading(true);
-            try {
-                const data = await getBriefs(WORKSPACE_ID);
-                setBriefs(data);
-            } catch (error) {
-                console.error("Failed to fetch briefs", error);
-            } finally {
-                setIsLoading(false);
-            }
-        };
+        if (workspaceId) {
+            fetchBriefs();
+        }
+    }, [workspaceId]);
 
-        fetchBriefs();
-    }, []);
+    const fetchBriefs = async () => {
+        setIsLoading(true);
+        try {
+            const data = await getBriefs(workspaceId);
+            setBriefs(data);
+        } catch (error) {
+            console.error("Failed to fetch briefs", error);
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
     const toggleActions = (id: string) => {
         setActiveActionId(activeActionId === id ? null : id);
