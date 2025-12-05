@@ -25,12 +25,14 @@ const BriefList = ({ onUpload, workspaceId }: BriefListProps) => {
     }, [workspaceId]);
 
     const fetchBriefs = async () => {
+        console.log('[BriefList] Fetching briefs for workspace:', workspaceId);
         setIsLoading(true);
         try {
             const data = await getBriefs(workspaceId);
+            console.log('[BriefList] Received briefs:', data.length);
             setBriefs(data);
         } catch (error) {
-            console.error("Failed to fetch briefs", error);
+            console.error("[BriefList] Failed to fetch briefs", error);
         } finally {
             setIsLoading(false);
         }

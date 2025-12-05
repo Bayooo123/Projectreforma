@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache';
 
 export async function getBriefs(workspaceId: string) {
     try {
+        console.log('[getBriefs] Fetching briefs for workspace:', workspaceId);
         const briefs = await prisma.brief.findMany({
             where: {
                 workspaceId,
@@ -44,6 +45,7 @@ export async function getBriefs(workspaceId: string) {
                 updatedAt: 'desc',
             },
         });
+        console.log('[getBriefs] Found', briefs.length, 'briefs');
         return briefs;
     } catch (error) {
         console.error('Error fetching briefs:', error);
@@ -93,6 +95,7 @@ export async function createBrief(data: {
     description?: string;
 }) {
     try {
+        console.log('[createBrief] Creating brief:', data);
         const brief = await prisma.brief.create({
             data: {
                 briefNumber: data.briefNumber,
@@ -116,6 +119,7 @@ export async function createBrief(data: {
                 },
             },
         });
+        console.log('[createBrief] Brief created successfully:', brief.id);
         revalidatePath('/briefs');
         return { success: true, brief };
     } catch (error) {
