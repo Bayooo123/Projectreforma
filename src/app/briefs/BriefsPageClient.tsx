@@ -14,9 +14,14 @@ export default function BriefsPageClient({ workspaceId }: BriefsPageClientProps)
     const [refreshTrigger, setRefreshTrigger] = useState(0);
 
     const handleBriefCreated = () => {
+        console.log('[BriefsPageClient] handleBriefCreated called');
+        console.log('[BriefsPageClient] Current refreshTrigger:', refreshTrigger);
         setIsUploadModalOpen(false);
         // Trigger refresh by changing the key
-        setRefreshTrigger(prev => prev + 1);
+        setRefreshTrigger(prev => {
+            console.log('[BriefsPageClient] Incrementing refreshTrigger from', prev, 'to', prev + 1);
+            return prev + 1;
+        });
     };
 
     return (

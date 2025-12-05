@@ -126,6 +126,7 @@ const BriefUploadModal = ({ isOpen, onClose, onSuccess, workspaceId }: BriefUplo
             });
 
             if (result.success) {
+                console.log('[BriefUploadModal] Brief created successfully!', result.brief);
                 // Reset form
                 setBriefName('');
                 setSelectedClientId('');
@@ -138,7 +139,9 @@ const BriefUploadModal = ({ isOpen, onClose, onSuccess, workspaceId }: BriefUplo
                 alert('Brief created successfully!');
 
                 // Call onSuccess to trigger refresh
+                console.log('[BriefUploadModal] Calling onSuccess callback');
                 onSuccess();
+                console.log('[BriefUploadModal] onSuccess callback completed');
             } else {
                 alert('Failed to create brief: ' + result.error);
             }
