@@ -9,6 +9,7 @@ import { getClientsForWorkspace, getLawyersForWorkspace, generateBriefNumber, cr
 interface BriefUploadModalProps {
     isOpen: boolean;
     onClose: () => void;
+    onSuccess: () => void; // NEW: Callback when brief is created
     workspaceId: string;
 }
 
@@ -26,7 +27,7 @@ interface Lawyer {
     role: string;
 }
 
-const BriefUploadModal = ({ isOpen, onClose, workspaceId }: BriefUploadModalProps) => {
+const BriefUploadModal = ({ isOpen, onClose, onSuccess, workspaceId }: BriefUploadModalProps) => {
     // Form state
     const [briefNumber, setBriefNumber] = useState('');
     const [briefName, setBriefName] = useState('');
@@ -132,10 +133,12 @@ const BriefUploadModal = ({ isOpen, onClose, workspaceId }: BriefUploadModalProp
                 setCategory('');
                 setStatus('active');
                 setDescription('');
-                onClose();
 
                 // Show success message
                 alert('Brief created successfully!');
+
+                // Call onSuccess to trigger refresh
+                onSuccess();
             } else {
                 alert('Failed to create brief: ' + result.error);
             }
