@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import BriefList from '@/components/briefs/BriefList';
 import BriefUploadModal from '@/components/briefs/BriefUploadModal';
 import styles from './page.module.css';
@@ -11,17 +11,21 @@ interface BriefsPageClientProps {
 
 export default function BriefsPageClient({ workspaceId }: BriefsPageClientProps) {
     const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
-    const [refreshKey, setRefreshKey] = useState(0);
+    const briefListRef = useRef<{ refresh: () => void }>(null);
 
     const handleBriefCreated = () => {
-        setRefreshKey(prev => prev + 1); // Trigger refresh
+        console.log('[BriefsPageClient] Brief created, refreshing list');
         setIsUploadModalOpen(false);
+        // Call refresh method on BriefList
+        if (briefListRef.current) {
+            briefListRef.current.refresh();
+        }
     };
 
     return (
         <div className={styles.page}>
             <BriefList
-                key={refreshKey}
+                ref={briefListRef}
                 onUpload={() => setIsUploadModalOpen(true)}
                 workspaceId={workspaceId}
             />
