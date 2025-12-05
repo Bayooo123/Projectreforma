@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { X, UploadCloud, Loader, Plus } from 'lucide-react';
 import { useState, useEffect } from 'react';
@@ -9,7 +9,6 @@ import { getClientsForWorkspace, getLawyersForWorkspace, generateBriefNumber, cr
 interface BriefUploadModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onSuccess: () => void;
     workspaceId: string;
 }
 
@@ -27,7 +26,7 @@ interface Lawyer {
     role: string;
 }
 
-const BriefUploadModal = ({ isOpen, onClose, onSuccess, workspaceId }: BriefUploadModalProps) => {
+const BriefUploadModal = ({ isOpen, onClose, workspaceId }: BriefUploadModalProps) => {
     // Form state
     const [briefNumber, setBriefNumber] = useState('');
     const [briefName, setBriefName] = useState('');
@@ -133,12 +132,10 @@ const BriefUploadModal = ({ isOpen, onClose, onSuccess, workspaceId }: BriefUplo
                 setCategory('');
                 setStatus('active');
                 setDescription('');
+                onClose();
 
                 // Show success message
                 alert('Brief created successfully!');
-
-                // Call onSuccess to refresh the list
-                onSuccess();
             } else {
                 alert('Failed to create brief: ' + result.error);
             }
