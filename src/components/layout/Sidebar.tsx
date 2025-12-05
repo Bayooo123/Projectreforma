@@ -64,7 +64,7 @@ const Sidebar = ({ user }: SidebarProps) => {
       </nav>
 
       <div className={styles.footer}>
-        <Link href="/help" className={styles.footerLink}>
+        <Link href="#" className={styles.footerLink} onClick={(e) => e.preventDefault()}>
           <HelpCircle size={20} className={styles.navIcon} />
           <span className={styles.navText}>Help</span>
         </Link>
