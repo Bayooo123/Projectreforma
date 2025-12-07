@@ -29,15 +29,9 @@ export default function BriefsPageClient({ workspaceId }: BriefsPageClientProps)
         console.log('[BriefsPageClient] Calling router.refresh()');
         router.refresh();
 
-        // Sync with server after a longer delay to ensure database has committed
-        if (briefListRef.current) {
-            console.log('[BriefsPageClient] Scheduling delayed server sync');
-            setTimeout(async () => {
-                console.log('[BriefsPageClient] Starting server sync');
-                await briefListRef.current?.refresh();
-                console.log('[BriefsPageClient] Server sync completed');
-            }, 2000); // Increased to 2 seconds to give database time to commit
-        }
+        // DO NOT sync with server - rely on optimistic update
+        // The brief is already in the database, it will show on next page load
+        console.log('[BriefsPageClient] Brief added optimistically, will sync on next page navigation');
     };
 
     return (
