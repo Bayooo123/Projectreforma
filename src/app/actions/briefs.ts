@@ -49,63 +49,76 @@ export async function createBrief(data: {
             return { success: false, error: 'Brief number is required' };
         }
 
-        // Check if briefNumber already exists
-        const existing = await prisma.brief.findUnique({
-            where: { briefNumber: data.briefNumber }
-        });
+        // Use explicit transaction to ensure atomic operation
+        const result = await prisma.$transaction(async (tx) => {
+            console.log('[createBrief] Starting database transaction...');
 
-        if (existing) {
-            console.error('[createBrief] ERROR: Brief number already exists:', data.briefNumber);
-            return { success: false, error: `Brief number "${data.briefNumber}" already exists. Please use a different number.` };
-        }
+            // Check if briefNumber already exists
+            const existing = await tx.brief.findUnique({
+                where: { briefNumber: data.briefNumber }
+            });
 
-        console.log('[createBrief] Brief number is unique, proceeding with creation...');
+            if (existing) {
+                console.error('[createBrief] ERROR: Brief number already exists:', data.briefNumber);
+                throw new Error(`Brief number "${data.briefNumber}" already exists. Please use a different number.`);
+            }
 
-        const brief = await prisma.brief.create({
-            data: {
-                briefNumber: data.briefNumber,
-                name: data.name,
-                clientId: data.clientId,
-                lawyerId: data.lawyerId,
-                workspaceId: data.workspaceId,
-                category: data.category,
-                status: data.status,
-                dueDate: data.dueDate,
-                description: data.description,
-            },
-            include: {
-                client: true,
-                lawyer: {
-                    select: {
-                        id: true,
-                        name: true,
-                        email: true,
+            console.log('[createBrief] Brief number is unique, proceeding with creation...');
+
+            const brief = await tx.brief.create({
+                data: {
+                    briefNumber: data.briefNumber,
+                    name: data.name,
+                    clientId: data.clientId,
+                    lawyerId: data.lawyerId,
+                    workspaceId: data.workspaceId,
+                    category: data.category,
+                    status: data.status,
+                    dueDate: data.dueDate,
+                    description: data.description,
+                },
+                include: {
+                    client: true,
+                    lawyer: {
+                        select: {
+                            id: true,
+                            name: true,
+                            email: true,
+                        },
                     },
                 },
-            },
+            });
+
+            console.log('[createBrief] ✅ Brief created in transaction!');
+            console.log('[createBrief] Brief ID:', brief.id);
+            console.log('[createBrief] Brief Number:', brief.briefNumber);
+            console.log('[createBrief] Brief Name:', brief.name);
+
+            return brief;
+        }, {
+            maxWait: 5000, // Maximum time to wait for a transaction slot (ms)
+            timeout: 10000, // Maximum time the transaction can run (ms)
         });
 
-        console.log('[createBrief] ✅ Brief created successfully!');
-        console.log('[createBrief] Brief ID:', brief.id);
-        console.log('[createBrief] Brief Number:', brief.briefNumber);
-        console.log('[createBrief] Brief Name:', brief.name);
+        console.log('[createBrief] ✅ Transaction committed successfully!');
 
-        // Verify the brief was actually saved
+        // Verify the brief was actually saved (outside transaction)
         const verification = await prisma.brief.findUnique({
-            where: { id: brief.id }
+            where: { id: result.id }
         });
 
         if (verification) {
             console.log('[createBrief] ✅ VERIFICATION: Brief exists in database');
         } else {
             console.error('[createBrief] ❌ VERIFICATION FAILED: Brief not found in database!');
+            throw new Error('Brief was not persisted to database');
         }
 
         console.log('[createBrief] Calling revalidatePath("/briefs")');
         revalidatePath('/briefs');
 
         console.log('[createBrief] ========== END ==========');
-        return { success: true, brief };
+        return { success: true, brief: result };
     } catch (error: any) {
         console.error('[createBrief] ========== ERROR ==========');
         console.error('[createBrief] Error type:', error.constructor.name);
