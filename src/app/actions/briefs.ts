@@ -1,86 +1,31 @@
 'use server';
-
-import { prisma } from '@/lib/prisma';
-import { revalidatePath } from 'next/cache';
-
-export async function getBriefs(workspaceId: string) {
-    try {
-        console.log('[getBriefs] Fetching briefs for workspace:', workspaceId);
-        const briefs = await prisma.brief.findMany({
-            where: {
-                workspaceId,
-            },
-            include: {
-                client: {
-                    select: {
-                        id: true,
-                        name: true,
-                        email: true,
-                    },
-                },
-                lawyer: {
-                    select: {
-                        id: true,
-                        name: true,
-                        email: true,
-                    },
-                },
-                documents: {
-                    select: {
-                        id: true,
-                        name: true,
-                        url: true,
-                        type: true,
-                        size: true,
-                        uploadedAt: true,
-                    },
-                },
-                _count: {
-                    select: {
-                        documents: true,
-                    },
+try {
+    const brief = await prisma.brief.findUnique({
+        where: { id },
+        include: {
+            client: true,
+            lawyer: {
+                select: {
+                    id: true,
+                    name: true,
+                    email: true,
                 },
             },
-            orderBy: {
-                updatedAt: 'desc',
+            matter: true,
+            documents: true,
+            workspace: {
+                select: {
+                    id: true,
+                    name: true,
+                },
             },
-        });
-        console.log('[getBriefs] Found', briefs.length, 'briefs');
-        return briefs;
-    } catch (error) {
-        console.error('Error fetching briefs:', error);
-        return [];
-    }
+        },
+    });
+    return brief;
+} catch (error) {
+    console.error('Error fetching brief:', error);
+    return null;
 }
-
-export async function getBriefById(id: string) {
-    try {
-        const brief = await prisma.brief.findUnique({
-            where: { id },
-            include: {
-                client: true,
-                lawyer: {
-                    select: {
-                        id: true,
-                        name: true,
-                        email: true,
-                    },
-                },
-                matter: true,
-                documents: true,
-                workspace: {
-                    select: {
-                        id: true,
-                        name: true,
-                    },
-                },
-            },
-        });
-        return brief;
-    } catch (error) {
-        console.error('Error fetching brief:', error);
-        return null;
-    }
 }
 
 export async function createBrief(data: {
@@ -95,7 +40,27 @@ export async function createBrief(data: {
     description?: string;
 }) {
     try {
-        console.log('[createBrief] Creating brief:', data);
+        console.log('[createBrief] ========== START ==========');
+        console.log('[createBrief] Creating brief with data:', JSON.stringify(data, null, 2));
+
+        // Validate briefNumber is provided
+        if (!data.briefNumber || data.briefNumber.trim() === '') {
+            console.error('[createBrief] ERROR: Brief number is empty!');
+            return { success: false, error: 'Brief number is required' };
+        }
+
+        // Check if briefNumber already exists
+        const existing = await prisma.brief.findUnique({
+            where: { briefNumber: data.briefNumber }
+        });
+
+        if (existing) {
+            console.error('[createBrief] ERROR: Brief number already exists:', data.briefNumber);
+            return { success: false, error: `Brief number "${data.briefNumber}" already exists. Please use a different number.` };
+        }
+
+        console.log('[createBrief] Brief number is unique, proceeding with creation...');
+
         const brief = await prisma.brief.create({
             data: {
                 briefNumber: data.briefNumber,
@@ -119,12 +84,42 @@ export async function createBrief(data: {
                 },
             },
         });
-        console.log('[createBrief] Brief created successfully:', brief.id);
+
+        console.log('[createBrief] ✅ Brief created successfully!');
+        console.log('[createBrief] Brief ID:', brief.id);
+        console.log('[createBrief] Brief Number:', brief.briefNumber);
+        console.log('[createBrief] Brief Name:', brief.name);
+
+        // Verify the brief was actually saved
+        const verification = await prisma.brief.findUnique({
+            where: { id: brief.id }
+        });
+
+        if (verification) {
+            console.log('[createBrief] ✅ VERIFICATION: Brief exists in database');
+        } else {
+            console.error('[createBrief] ❌ VERIFICATION FAILED: Brief not found in database!');
+        }
+
+        console.log('[createBrief] Calling revalidatePath("/briefs")');
         revalidatePath('/briefs');
+
+        console.log('[createBrief] ========== END ==========');
         return { success: true, brief };
-    } catch (error) {
-        console.error('Error creating brief:', error);
-        return { success: false, error: 'Failed to create brief' };
+    } catch (error: any) {
+        console.error('[createBrief] ========== ERROR ==========');
+        console.error('[createBrief] Error type:', error.constructor.name);
+        console.error('[createBrief] Error message:', error.message);
+        console.error('[createBrief] Error code:', error.code);
+        console.error('[createBrief] Full error:', error);
+        console.error('[createBrief] ========== ERROR END ==========');
+
+        // Handle Prisma unique constraint error
+        if (error.code === 'P2002') {
+            return { success: false, error: 'Brief number already exists. Please use a different number.' };
+        }
+
+        return { success: false, error: 'Failed to create brief: ' + error.message };
     }
 }
 
