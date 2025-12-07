@@ -1,7 +1,7 @@
 ﻿"use client";
 
-import { useState } from 'react';
-import BriefList from '@/components/briefs/BriefList';
+import { useState, useRef } from 'react';
+import BriefList, { BriefListRef } from '@/components/briefs/BriefList';
 import BriefUploadModal from '@/components/briefs/BriefUploadModal';
 import styles from './page.module.css';
 
@@ -11,23 +11,26 @@ interface BriefsPageClientProps {
 
 export default function BriefsPageClient({ workspaceId }: BriefsPageClientProps) {
     const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
-    const [refreshTrigger, setRefreshTrigger] = useState(0);
+    const briefListRef = useRef<BriefListRef>(null);
 
-    const handleBriefCreated = () => {
+    const handleBriefCreated = async () => {
         console.log('[BriefsPageClient] handleBriefCreated called');
-        console.log('[BriefsPageClient] Current refreshTrigger:', refreshTrigger);
         setIsUploadModalOpen(false);
-        // Trigger refresh by changing the key
-        setRefreshTrigger(prev => {
-            console.log('[BriefsPageClient] Incrementing refreshTrigger from', prev, 'to', prev + 1);
-            return prev + 1;
-        });
+
+        // Directly call refresh on the BriefList component
+        if (briefListRef.current) {
+            console.log('[BriefsPageClient] Calling refresh on BriefList');
+            await briefListRef.current.refresh();
+            console.log('[BriefsPageClient] Refresh completed');
+        } else {
+            console.warn('[BriefsPageClient] briefListRef.current is null');
+        }
     };
 
     return (
         <div className={styles.page}>
             <BriefList
-                key={refreshTrigger} // Force re-mount when this changes
+                ref={briefListRef}
                 onUpload={() => setIsUploadModalOpen(true)}
                 workspaceId={workspaceId}
             />

@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, forwardRef, useImperativeHandle } from 'react';
 import Link from 'next/link';
 import { Search, Filter, MoreVertical, Plus, Trash2, UserPlus, Eye, Briefcase, Loader } from 'lucide-react';
 import styles from './BriefList.module.css';
@@ -11,7 +11,11 @@ interface BriefListProps {
     workspaceId: string;
 }
 
-const BriefList = ({ onUpload, workspaceId }: BriefListProps) => {
+export interface BriefListRef {
+    refresh: () => Promise<void>;
+}
+
+const BriefList = forwardRef<BriefListRef, BriefListProps>(({ onUpload, workspaceId }, ref) => {
     const [briefs, setBriefs] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [activeActionId, setActiveActionId] = useState<string | null>(null);
@@ -27,7 +31,9 @@ const BriefList = ({ onUpload, workspaceId }: BriefListProps) => {
     const fetchBriefs = async () => {
         setIsLoading(true);
         try {
+            console.log('[BriefList] Fetching briefs for workspace:', workspaceId);
             const data = await getBriefs(workspaceId);
+            console.log('[BriefList] Fetched', data.length, 'briefs');
             setBriefs(data);
         } catch (error) {
             console.error("Failed to fetch briefs", error);
@@ -35,6 +41,14 @@ const BriefList = ({ onUpload, workspaceId }: BriefListProps) => {
             setIsLoading(false);
         }
     };
+
+    // Expose refresh method to parent component
+    useImperativeHandle(ref, () => ({
+        refresh: async () => {
+            console.log('[BriefList] Refresh called via ref');
+            await fetchBriefs();
+        }
+    }));
 
     const toggleActions = (id: string) => {
         setActiveActionId(activeActionId === id ? null : id);
@@ -179,6 +193,8 @@ const BriefList = ({ onUpload, workspaceId }: BriefListProps) => {
             )}
         </div>
     );
-};
+});
+
+BriefList.displayName = 'BriefList';
 
 export default BriefList;
