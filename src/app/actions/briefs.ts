@@ -1,31 +1,98 @@
 'use server';
-try {
-    const brief = await prisma.brief.findUnique({
-        where: { id },
-        include: {
-            client: true,
-            lawyer: {
-                select: {
-                    id: true,
-                    name: true,
-                    email: true,
+
+import { prisma } from '@/lib/prisma';
+import { revalidatePath } from 'next/cache';
+
+export async function getBriefs(workspaceId: string) {
+    try {
+        console.log('[getBriefs] ========== START ==========');
+        console.log('[getBriefs] Fetching briefs for workspace:', workspaceId);
+
+        const briefs = await prisma.brief.findMany({
+            where: {
+                workspaceId,
+            },
+            include: {
+                client: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true,
+                    },
+                },
+                lawyer: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true,
+                    },
+                },
+                documents: {
+                    select: {
+                        id: true,
+                        name: true,
+                        url: true,
+                        type: true,
+                        size: true,
+                        uploadedAt: true,
+                    },
+                },
+                _count: {
+                    select: {
+                        documents: true,
+                    },
                 },
             },
-            matter: true,
-            documents: true,
-            workspace: {
-                select: {
-                    id: true,
-                    name: true,
-                },
+            orderBy: {
+                updatedAt: 'desc',
             },
-        },
-    });
-    return brief;
-} catch (error) {
-    console.error('Error fetching brief:', error);
-    return null;
+        });
+
+        console.log('[getBriefs] ✅ Found', briefs.length, 'briefs');
+        if (briefs.length > 0) {
+            console.log('[getBriefs] Brief IDs:', briefs.map(b => b.id));
+            console.log('[getBriefs] Brief Numbers:', briefs.map(b => b.briefNumber));
+            console.log('[getBriefs] Brief Names:', briefs.map(b => b.name));
+        }
+        console.log('[getBriefs] ========== END ==========');
+
+        return briefs;
+    } catch (error) {
+        console.error('[getBriefs] ========== ERROR ==========');
+        console.error('[getBriefs] Error fetching briefs:', error);
+        console.error('[getBriefs] ========== ERROR END ==========');
+        return [];
+    }
 }
+
+export async function getBriefById(id: string) {
+    try {
+        const brief = await prisma.brief.findUnique({
+            where: { id },
+            include: {
+                client: true,
+                lawyer: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true,
+                    },
+                },
+                matter: true,
+                documents: true,
+                workspace: {
+                    select: {
+                        id: true,
+                        name: true,
+                    },
+                },
+            },
+        });
+        return brief;
+    } catch (error) {
+        console.error('Error fetching brief:', error);
+        return null;
+    }
 }
 
 export async function createBrief(data: {
