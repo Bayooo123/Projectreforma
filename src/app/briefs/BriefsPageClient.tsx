@@ -15,21 +15,28 @@ export default function BriefsPageClient({ workspaceId }: BriefsPageClientProps)
     const briefListRef = useRef<BriefListRef>(null);
     const router = useRouter();
 
-    const handleBriefCreated = async () => {
-        console.log('[BriefsPageClient] handleBriefCreated called');
+    const handleBriefCreated = async (newBrief?: any) => {
+        console.log('[BriefsPageClient] handleBriefCreated called with brief:', newBrief);
         setIsUploadModalOpen(false);
+
+        // Optimistic update: Add the brief to the list immediately
+        if (newBrief && briefListRef.current) {
+            console.log('[BriefsPageClient] Adding brief optimistically');
+            briefListRef.current.addBriefOptimistically(newBrief);
+        }
 
         // Force Next.js to invalidate all caches and re-fetch data
         console.log('[BriefsPageClient] Calling router.refresh()');
         router.refresh();
 
-        // Also directly call refresh on the BriefList component
+        // Also directly call refresh on the BriefList component to sync with server
         if (briefListRef.current) {
-            console.log('[BriefsPageClient] Calling refresh on BriefList');
-            await briefListRef.current.refresh();
-            console.log('[BriefsPageClient] Refresh completed');
-        } else {
-            console.warn('[BriefsPageClient] briefListRef.current is null');
+            console.log('[BriefsPageClient] Scheduling delayed refresh');
+            // Small delay to ensure server has processed the creation
+            setTimeout(async () => {
+                await briefListRef.current?.refresh();
+                console.log('[BriefsPageClient] Delayed refresh completed');
+            }, 500);
         }
     };
 

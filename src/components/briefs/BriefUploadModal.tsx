@@ -9,7 +9,7 @@ import { getClientsForWorkspace, getLawyersForWorkspace, generateBriefNumber, cr
 interface BriefUploadModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onSuccess: () => void; // NEW: Callback when brief is created
+    onSuccess: (brief?: any) => void; // Pass the created brief for optimistic updates
     workspaceId: string;
 }
 
@@ -138,9 +138,9 @@ const BriefUploadModal = ({ isOpen, onClose, onSuccess, workspaceId }: BriefUplo
                 // Show success message
                 alert('Brief created successfully!');
 
-                // Call onSuccess to trigger refresh
-                console.log('[BriefUploadModal] Calling onSuccess callback');
-                onSuccess();
+                // Call onSuccess to trigger refresh with the new brief data
+                console.log('[BriefUploadModal] Calling onSuccess callback with brief data');
+                onSuccess(result.brief);
                 console.log('[BriefUploadModal] onSuccess callback completed');
             } else {
                 alert('Failed to create brief: ' + result.error);

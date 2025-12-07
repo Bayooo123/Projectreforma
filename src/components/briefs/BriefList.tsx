@@ -13,6 +13,7 @@ interface BriefListProps {
 
 export interface BriefListRef {
     refresh: () => Promise<void>;
+    addBriefOptimistically: (brief: any) => void;
 }
 
 const BriefList = forwardRef<BriefListRef, BriefListProps>(({ onUpload, workspaceId }, ref) => {
@@ -47,6 +48,10 @@ const BriefList = forwardRef<BriefListRef, BriefListProps>(({ onUpload, workspac
         refresh: async () => {
             console.log('[BriefList] Refresh called via ref');
             await fetchBriefs();
+        },
+        addBriefOptimistically: (brief: any) => {
+            console.log('[BriefList] Adding brief optimistically:', brief);
+            setBriefs(prevBriefs => [brief, ...prevBriefs]);
         }
     }));
 
