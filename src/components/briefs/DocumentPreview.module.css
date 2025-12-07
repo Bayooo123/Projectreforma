@@ -1,0 +1,244 @@
+.overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 2rem;
+}
+
+.modal {
+    background: white;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 1200px;
+    height: 90vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    position: relative;
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.5rem;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.titleSection {
+    flex: 1;
+    min-width: 0;
+}
+
+.title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #1a202c;
+    margin: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.downloadButton,
+.closeButton {
+    padding: 0.5rem;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    border-radius: 6px;
+    color: #4a5568;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.downloadButton:hover,
+.closeButton:hover {
+    background: #f7fafc;
+    color: #667eea;
+}
+
+.content {
+    flex: 1;
+    overflow: auto;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f7fafc;
+}
+
+.loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem;
+    color: #718096;
+    font-size: 1.125rem;
+}
+
+.error {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem;
+    color: #e53e3e;
+    font-size: 1.125rem;
+}
+
+/* PDF Styles */
+.pdfContainer {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    height: 100%;
+    padding: 2rem;
+}
+
+.pdfPage {
+    max-width: 100%;
+    height: auto;
+}
+
+.pdfControls {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-top: 1rem;
+    padding: 0.75rem 1.5rem;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.pdfButton {
+    padding: 0.5rem 1rem;
+    background: #667eea;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: background 0.2s;
+}
+
+.pdfButton:hover:not(:disabled) {
+    background: #5568d3;
+}
+
+.pdfButton:disabled {
+    background: #cbd5e0;
+    cursor: not-allowed;
+}
+
+.pageInfo {
+    color: #4a5568;
+    font-weight: 500;
+}
+
+/* Image Styles */
+.imageContainer {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    padding: 2rem;
+}
+
+.image {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    border-radius: 8px;
+}
+
+/* DOCX Styles */
+.docxContainer {
+    width: 100%;
+    height: 100%;
+}
+
+.iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+}
+
+/* Unsupported */
+.unsupported {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    padding: 3rem;
+    color: #718096;
+}
+
+.downloadLink {
+    padding: 0.75rem 1.5rem;
+    background: #667eea;
+    color: white;
+    text-decoration: none;
+    border-radius: 6px;
+    font-weight: 500;
+    transition: background 0.2s;
+}
+
+.downloadLink:hover {
+    background: #5568d3;
+}
+
+/* Navigation */
+.navigation {
+    position: absolute;
+    top: 50%;
+    left: 0;
+    right: 0;
+    display: flex;
+    justify-content: space-between;
+    padding: 0 1rem;
+    pointer-events: none;
+}
+
+.navButton {
+    pointer-events: all;
+    padding: 1rem;
+    background: white;
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #4a5568;
+}
+
+.navButton:hover:not(:disabled) {
+    background: #667eea;
+    color: white;
+    transform: scale(1.1);
+}
+
+.navButton:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}

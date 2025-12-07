@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, Clock, Tag, User, Building, Calendar, Upload, Loader, FileText, Trash2, Edit } from 'lucide-react';
 import DocumentUpload from '@/components/briefs/DocumentUpload';
+import DocumentPreview from '@/components/briefs/DocumentPreview';
 import styles from './page.module.css';
 
 interface Brief {
@@ -47,6 +48,7 @@ interface BriefDetailClientProps {
 
 export default function BriefDetailClient({ brief }: BriefDetailClientProps) {
     const [documents, setDocuments] = useState(brief.documents);
+    const [previewDocument, setPreviewDocument] = useState<typeof documents[0] | null>(null);
 
     const refreshDocuments = async () => {
         // Refresh documents from server
@@ -59,6 +61,25 @@ export default function BriefDetailClient({ brief }: BriefDetailClientProps) {
         } catch (error) {
             console.error('Error refreshing documents:', error);
         }
+    };
+
+    const handleNavigateDocument = (direction: 'prev' | 'next') => {
+        if (!previewDocument) return;
+        const currentIndex = documents.findIndex(d => d.id === previewDocument.id);
+        if (direction === 'prev' && currentIndex > 0) {
+            setPreviewDocument(documents[currentIndex - 1]);
+        } else if (direction === 'next' && currentIndex < documents.length - 1) {
+            setPreviewDocument(documents[currentIndex + 1]);
+        }
+    };
+
+    const getNavigationState = () => {
+        if (!previewDocument) return { prev: false, next: false };
+        const currentIndex = documents.findIndex(d => d.id === previewDocument.id);
+        return {
+            prev: currentIndex > 0,
+            next: currentIndex < documents.length - 1
+        };
     };
 
     const formatFileSize = (bytes: number) => {
@@ -199,14 +220,12 @@ export default function BriefDetailClient({ brief }: BriefDetailClientProps) {
                                     </div>
                                 </div>
                                 <div className={styles.documentActions}>
-                                    <a
-                                        href={doc.url}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
+                                    <button
+                                        onClick={() => setPreviewDocument(doc)}
                                         className={styles.viewBtn}
                                     >
                                         View
-                                    </a>
+                                    </button>
                                     <button className={styles.deleteBtn}>
                                         <Trash2 size={16} />
                                     </button>
@@ -216,6 +235,13 @@ export default function BriefDetailClient({ brief }: BriefDetailClientProps) {
                     </div>
                 )}
             </div>
+
+            <DocumentPreview
+                document={previewDocument}
+                onClose={() => setPreviewDocument(null)}
+                onNavigate={handleNavigateDocument}
+                canNavigate={getNavigationState()}
+            />
         </div>
     );
 }

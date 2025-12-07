@@ -1,0 +1,174 @@
+"use client";
+
+import { useState } from 'react';
+import { X, Download, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Document, Page, pdfjs } from 'react-pdf';
+import 'react-pdf/dist/Page/AnnotationLayer.css';
+import 'react-pdf/dist/Page/TextLayer.css';
+import styles from './DocumentPreview.module.css';
+
+// Configure PDF.js worker
+pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
+
+interface DocumentPreviewProps {
+    document: {
+        id: string;
+        name: string;
+        url: string;
+        type: string;
+    } | null;
+    onClose: () => void;
+    onNavigate?: (direction: 'prev' | 'next') => void;
+    canNavigate?: { prev: boolean; next: boolean };
+}
+
+export default function DocumentPreview({ document, onClose, onNavigate, canNavigate }: DocumentPreviewProps) {
+    const [numPages, setNumPages] = useState<number>(0);
+    const [pageNumber, setPageNumber] = useState<number>(1);
+    const [loading, setLoading] = useState(true);
+
+    if (!document) return null;
+
+    const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
+        setNumPages(numPages);
+        setLoading(false);
+    };
+
+    const getFileExtension = (filename: string) => {
+        return filename.split('.').pop()?.toLowerCase() || '';
+    };
+
+    const renderPreview = () => {
+        const extension = getFileExtension(document.name);
+
+        // PDF Preview
+        if (extension === 'pdf') {
+            return (
+                <div className={styles.pdfContainer}>
+                    <Document
+                        file={document.url}
+                        onLoadSuccess={onDocumentLoadSuccess}
+                        loading={<div className={styles.loading}>Loading PDF...</div>}
+                        error={<div className={styles.error}>Failed to load PDF</div>}
+                    >
+                        <Page
+                            pageNumber={pageNumber}
+                            renderTextLayer={true}
+                            renderAnnotationLayer={true}
+                            className={styles.pdfPage}
+                        />
+                    </Document>
+                    {numPages > 1 && (
+                        <div className={styles.pdfControls}>
+                            <button
+                                onClick={() => setPageNumber(Math.max(1, pageNumber - 1))}
+                                disabled={pageNumber <= 1}
+                                className={styles.pdfButton}
+                            >
+                                Previous
+                            </button>
+                            <span className={styles.pageInfo}>
+                                Page {pageNumber} of {numPages}
+                            </span>
+                            <button
+                                onClick={() => setPageNumber(Math.min(numPages, pageNumber + 1))}
+                                disabled={pageNumber >= numPages}
+                                className={styles.pdfButton}
+                            >
+                                Next
+                            </button>
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        // Image Preview
+        if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].includes(extension)) {
+            return (
+                <div className={styles.imageContainer}>
+                    <img
+                        src={document.url}
+                        alt={document.name}
+                        className={styles.image}
+                        onLoad={() => setLoading(false)}
+                    />
+                </div>
+            );
+        }
+
+        // DOCX Preview (using Google Docs Viewer)
+        if (['doc', 'docx'].includes(extension)) {
+            return (
+                <div className={styles.docxContainer}>
+                    <iframe
+                        src={`https://docs.google.com/gview?url=${encodeURIComponent(document.url)}&embedded=true`}
+                        className={styles.iframe}
+                        onLoad={() => setLoading(false)}
+                    />
+                </div>
+            );
+        }
+
+        // Fallback for unsupported types
+        return (
+            <div className={styles.unsupported}>
+                <p>Preview not available for this file type</p>
+                <a href={document.url} download className={styles.downloadLink}>
+                    Download to view
+                </a>
+            </div>
+        );
+    };
+
+    return (
+        <div className={styles.overlay} onClick={onClose}>
+            <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
+                <div className={styles.header}>
+                    <div className={styles.titleSection}>
+                        <h3 className={styles.title}>{document.name}</h3>
+                    </div>
+                    <div className={styles.actions}>
+                        <a
+                            href={document.url}
+                            download
+                            className={styles.downloadButton}
+                            title="Download"
+                        >
+                            <Download size={20} />
+                        </a>
+                        <button onClick={onClose} className={styles.closeButton} title="Close">
+                            <X size={20} />
+                        </button>
+                    </div>
+                </div>
+
+                <div className={styles.content}>
+                    {loading && <div className={styles.loading}>Loading...</div>}
+                    {renderPreview()}
+                </div>
+
+                {onNavigate && canNavigate && (
+                    <div className={styles.navigation}>
+                        <button
+                            onClick={() => onNavigate('prev')}
+                            disabled={!canNavigate.prev}
+                            className={styles.navButton}
+                            title="Previous document"
+                        >
+                            <ChevronLeft size={24} />
+                        </button>
+                        <button
+                            onClick={() => onNavigate('next')}
+                            disabled={!canNavigate.next}
+                            className={styles.navButton}
+                            title="Next document"
+                        >
+                            <ChevronRight size={24} />
+                        </button>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+}
