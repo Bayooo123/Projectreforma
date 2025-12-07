@@ -58,15 +58,13 @@ const BriefUploadModal = ({ isOpen, onClose, onSuccess, workspaceId }: BriefUplo
     const loadData = async () => {
         setIsLoadingData(true);
         try {
-            const [clientsData, lawyersData, generatedNumber] = await Promise.all([
+            const [clientsData, lawyersData] = await Promise.all([
                 getClientsForWorkspace(workspaceId),
                 getLawyersForWorkspace(workspaceId),
-                generateBriefNumber(workspaceId),
             ]);
 
             setClients(clientsData);
             setLawyers(lawyersData);
-            setBriefNumber(generatedNumber);
         } catch (error) {
             console.error('Error loading data:', error);
             alert('Failed to load clients and lawyers');
@@ -180,16 +178,15 @@ const BriefUploadModal = ({ isOpen, onClose, onSuccess, workspaceId }: BriefUplo
                         <form className={styles.form} onSubmit={handleSubmit}>
                             <div className={styles.row}>
                                 <div className={styles.formGroup}>
-                                    <label className={styles.label}>Brief Number</label>
+                                    <label className={styles.label}>Brief Number *</label>
                                     <input
                                         type="text"
                                         className={styles.input}
+                                        placeholder="e.g. BR-2024-001"
                                         value={briefNumber}
                                         onChange={e => setBriefNumber(e.target.value)}
                                         required
-                                        disabled
                                     />
-                                    <p className={styles.hint}>Auto-generated</p>
                                 </div>
                                 <div className={styles.formGroup}>
                                     <label className={styles.label}>Brief Name *</label>
