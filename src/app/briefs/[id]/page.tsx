@@ -16,8 +16,23 @@ export default async function BriefDetailPage({ params }: BriefDetailPageProps) 
         redirect('/login');
     }
 
-    // Fetch brief data
-    const brief = await getBriefById(params.id);
+    // Retry logic to handle race condition with optimistic updates
+    let brief = null;
+    const maxRetries = 3;
+    const retryDelay = 500; // ms
+
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        brief = await getBriefById(params.id);
+
+        if (brief) {
+            break; // Brief found, exit retry loop
+        }
+
+        if (attempt < maxRetries) {
+            // Wait before retrying (except on last attempt)
+            await new Promise(resolve => setTimeout(resolve, retryDelay));
+        }
+    }
 
     if (!brief) {
         return (
