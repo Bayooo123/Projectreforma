@@ -25,18 +25,18 @@ export default function BriefsPageClient({ workspaceId }: BriefsPageClientProps)
             briefListRef.current.addBriefOptimistically(newBrief);
         }
 
-        // Force Next.js to invalidate all caches and re-fetch data
+        // Force Next.js to invalidate all caches for next navigation
         console.log('[BriefsPageClient] Calling router.refresh()');
         router.refresh();
 
-        // Also directly call refresh on the BriefList component to sync with server
+        // Sync with server after a longer delay to ensure database has committed
         if (briefListRef.current) {
-            console.log('[BriefsPageClient] Scheduling delayed refresh');
-            // Small delay to ensure server has processed the creation
+            console.log('[BriefsPageClient] Scheduling delayed server sync');
             setTimeout(async () => {
+                console.log('[BriefsPageClient] Starting server sync');
                 await briefListRef.current?.refresh();
-                console.log('[BriefsPageClient] Delayed refresh completed');
-            }, 500);
+                console.log('[BriefsPageClient] Server sync completed');
+            }, 2000); // Increased to 2 seconds to give database time to commit
         }
     };
 
