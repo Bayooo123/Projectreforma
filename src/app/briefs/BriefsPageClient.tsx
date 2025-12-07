@@ -1,6 +1,7 @@
 ﻿"use client";
 
 import { useState, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import BriefList, { BriefListRef } from '@/components/briefs/BriefList';
 import BriefUploadModal from '@/components/briefs/BriefUploadModal';
 import styles from './page.module.css';
@@ -12,12 +13,17 @@ interface BriefsPageClientProps {
 export default function BriefsPageClient({ workspaceId }: BriefsPageClientProps) {
     const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
     const briefListRef = useRef<BriefListRef>(null);
+    const router = useRouter();
 
     const handleBriefCreated = async () => {
         console.log('[BriefsPageClient] handleBriefCreated called');
         setIsUploadModalOpen(false);
 
-        // Directly call refresh on the BriefList component
+        // Force Next.js to invalidate all caches and re-fetch data
+        console.log('[BriefsPageClient] Calling router.refresh()');
+        router.refresh();
+
+        // Also directly call refresh on the BriefList component
         if (briefListRef.current) {
             console.log('[BriefsPageClient] Calling refresh on BriefList');
             await briefListRef.current.refresh();
