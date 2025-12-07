@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, Clock, Tag, User, Building, Calendar, Upload, Loader, FileText, Trash2, Edit } from 'lucide-react';
-import { createDocument } from '@/app/actions/documents';
+import DocumentUpload from '@/components/briefs/DocumentUpload';
 import styles from './page.module.css';
 
 interface Brief {
@@ -47,67 +47,17 @@ interface BriefDetailClientProps {
 
 export default function BriefDetailClient({ brief }: BriefDetailClientProps) {
     const [documents, setDocuments] = useState(brief.documents);
-    const [isUploading, setIsUploading] = useState(false);
-    const [uploadProgress, setUploadProgress] = useState('');
 
-    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
-
-        // Validate file type
-        const validTypes = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
-        if (!validTypes.includes(file.type)) {
-            alert('Please upload a PDF or DOCX file');
-            return;
-        }
-
-        // Validate file size (25MB)
-        if (file.size > 25 * 1024 * 1024) {
-            alert('File size must be less than 25MB');
-            return;
-        }
-
-        setIsUploading(true);
-        setUploadProgress('Uploading file...');
-
+    const refreshDocuments = async () => {
+        // Refresh documents from server
         try {
-            // Upload to Vercel Blob
-            const response = await fetch(`/api/upload?filename=${encodeURIComponent(file.name)}`, {
-                method: 'POST',
-                body: file,
-            });
-
-            if (!response.ok) {
-                throw new Error('Upload failed');
-            }
-
-            const blob = await response.json();
-
-            setUploadProgress('Saving to database...');
-
-            // Save to database
-            const result = await createDocument({
-                name: file.name,
-                url: blob.url,
-                type: file.type,
-                size: file.size,
-                briefId: brief.id,
-            });
-
-            if (result.success && result.document) {
-                setDocuments([result.document, ...documents]);
-                alert('Document uploaded successfully!');
-            } else {
-                alert('Failed to save document');
+            const response = await fetch(`/api/briefs/${brief.id}/documents`);
+            if (response.ok) {
+                const docs = await response.json();
+                setDocuments(docs);
             }
         } catch (error) {
-            console.error('Error uploading document:', error);
-            alert('Failed to upload document');
-        } finally {
-            setIsUploading(false);
-            setUploadProgress('');
-            // Reset file input
-            e.target.value = '';
+            console.error('Error refreshing documents:', error);
         }
     };
 
@@ -217,30 +167,12 @@ export default function BriefDetailClient({ brief }: BriefDetailClientProps) {
             </div>
 
             <div className={styles.content}>
+                <DocumentUpload briefId={brief.id} onUploadComplete={refreshDocuments} />
+
                 <div className={styles.documentsHeader}>
                     <h2 className={styles.documentsTitle}>
                         Documents ({documents.length})
                     </h2>
-                    <label className={styles.uploadBtn}>
-                        <input
-                            type="file"
-                            accept=".pdf,.docx"
-                            onChange={handleFileUpload}
-                            disabled={isUploading}
-                            style={{ display: 'none' }}
-                        />
-                        {isUploading ? (
-                            <>
-                                <Loader size={16} className="animate-spin" />
-                                {uploadProgress}
-                            </>
-                        ) : (
-                            <>
-                                <Upload size={16} />
-                                Upload Document
-                            </>
-                        )}
-                    </label>
                 </div>
 
                 {documents.length === 0 ? (
