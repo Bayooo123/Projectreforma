@@ -94,11 +94,11 @@ export default function DocumentUpload({ briefId, onUploadComplete }: DocumentUp
                                 multiple
                                 onChange={handleFileInput}
                                 className={styles.fileInput}
-                                accept=".pdf,.doc,.docx,.txt"
+                                accept=".pdf,.doc,.docx,.txt,.ppt,.pptx"
                             />
                             Browse Files
                         </label>
-                        <p className={styles.hint}>Supported: PDF, DOC, DOCX, TXT</p>
+                        <p className={styles.hint}>Supported: PDF, DOC, DOCX, PPT, PPTX, TXT</p>
                     </>
                 )}
             </div>
