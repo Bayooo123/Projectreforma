@@ -69,18 +69,6 @@ const Sidebar = ({ user }: SidebarProps) => {
           <span className={styles.navText}>Help</span>
         </Link>
 
-        {user && (
-          <div className={styles.userInfo}>
-            <div className={styles.userAvatar}>
-              {user.name?.[0] || 'U'}
-            </div>
-            <div className={styles.userDetails}>
-              <span className={styles.userName}>{user.name || 'User'}</span>
-              <span className={styles.userEmail}>{user.email || ''}</span>
-            </div>
-          </div>
-        )}
-
         <button
           className={styles.footerLink}
           onClick={() => signOut({ callbackUrl: '/login' })}
@@ -88,6 +76,17 @@ const Sidebar = ({ user }: SidebarProps) => {
           <LogOut size={20} className={styles.navIcon} />
           <span className={styles.navText}>Log out</span>
         </button>
+
+        {user && (
+          <div className={styles.userInfo}>
+            <div className={styles.userAvatar}>
+              {user.name?.[0] || 'U'}
+            </div>
+            <div className={styles.userDetails}>
+              <span className={styles.userName}>{user.name || 'User'}</span>
+            </div>
+          </div>
+        )}
       </div>
     </aside>
   );
