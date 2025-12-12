@@ -103,6 +103,24 @@ const BriefList = forwardRef<BriefListRef, BriefListProps>(({ onUpload, workspac
                 </button>
             </div>
 
+            {/* DEBUG PANEL - REMOVE AFTER FIXING */}
+            <div style={{
+                padding: '1rem',
+                background: '#f0f9ff',
+                border: '1px solid #bae6fd',
+                borderRadius: '8px',
+                marginBottom: '1rem',
+                fontSize: '12px',
+                fontFamily: 'monospace'
+            }}>
+                <h3 style={{ fontWeight: 'bold', marginBottom: '0.5rem' }}>🔍 DEBUG PANEL</h3>
+                <p><strong>Current Workspace ID:</strong> {workspaceId}</p>
+                <p><strong>Briefs Fetched:</strong> {briefs.length}</p>
+                <p><strong>Is Loading:</strong> {isLoading ? 'Yes' : 'No'}</p>
+                <p><strong>First Brief (Raw):</strong> {briefs.length > 0 ? JSON.stringify(briefs[0], null, 2) : 'None'}</p>
+            </div>
+            {/* END DEBUG PANEL */}
+
             <div className={styles.toolbar}>
                 <div className={styles.searchWrapper}>
                     <Search size={18} className={styles.searchIcon} />
