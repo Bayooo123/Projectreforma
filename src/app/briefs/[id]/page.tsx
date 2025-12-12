@@ -3,6 +3,8 @@ import { redirect } from 'next/navigation';
 import { getBriefById } from '@/app/actions/briefs';
 import BriefDetailClient from './BriefDetailClient';
 
+export const dynamic = 'force-dynamic';
+
 interface BriefDetailPageProps {
     params: {
         id: string;
