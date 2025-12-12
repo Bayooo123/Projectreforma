@@ -181,6 +181,9 @@ export async function createBrief(data: {
             throw new Error('Brief was not persisted to database');
         }
 
+        console.log('[createBrief] Waiting 1s for replication...');
+        await new Promise(resolve => setTimeout(resolve, 1000));
+
         console.log('[createBrief] Calling revalidatePath("/briefs")');
         revalidatePath('/briefs');
 

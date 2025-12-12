@@ -18,17 +18,20 @@ export default async function BriefDetailPage({ params }: BriefDetailPageProps) 
 
     // Retry logic to handle race condition with optimistic updates
     let brief = null;
-    const maxRetries = 3;
-    const retryDelay = 500; // ms
+    const maxRetries = 5;
+    const retryDelay = 1000; // ms
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        console.log(`[BriefDetailPage] Attempt ${attempt}/${maxRetries} to fetch brief ${params.id}`);
         brief = await getBriefById(params.id);
 
         if (brief) {
+            console.log(`[BriefDetailPage] ✅ Found brief on attempt ${attempt}`);
             break; // Brief found, exit retry loop
         }
 
         if (attempt < maxRetries) {
+            console.log(`[BriefDetailPage] Brief not found, waiting ${retryDelay}ms...`);
             // Wait before retrying (except on last attempt)
             await new Promise(resolve => setTimeout(resolve, retryDelay));
         }
