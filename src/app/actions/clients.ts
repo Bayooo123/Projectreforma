@@ -2,12 +2,14 @@
 
 import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
+import { requireAuth } from '@/lib/auth-utils';
 
 // ============================================
 // CLIENT CRUD OPERATIONS
 // ============================================
 
 export async function getClients(workspaceId: string) {
+    await requireAuth();
     try {
         const clients = await prisma.client.findMany({
             where: {
@@ -61,6 +63,7 @@ export async function getClients(workspaceId: string) {
 }
 
 export async function getClientById(id: string) {
+    await requireAuth();
     try {
         const client = await prisma.client.findUnique({
             where: { id },
@@ -117,6 +120,7 @@ interface CreateClientData {
 }
 
 export async function createClient(data: CreateClientData) {
+    await requireAuth();
     try {
         // Check if email already exists
         const existingClient = await prisma.client.findUnique({
@@ -157,6 +161,7 @@ interface UpdateClientData {
 }
 
 export async function updateClient(id: string, data: UpdateClientData) {
+    await requireAuth();
     try {
         // If email is being updated, check for duplicates
         if (data.email) {
@@ -186,6 +191,7 @@ export async function updateClient(id: string, data: UpdateClientData) {
 }
 
 export async function deleteClient(id: string) {
+    await requireAuth();
     try {
         // Check if client has associated matters
         const client = await prisma.client.findUnique({
@@ -228,6 +234,7 @@ export async function deleteClient(id: string) {
 // ============================================
 
 export async function getClientStats(workspaceId: string) {
+    await requireAuth();
     try {
         const [
             totalClients,
@@ -322,6 +329,7 @@ export async function getClientStats(workspaceId: string) {
 // ============================================
 
 export async function searchClients(workspaceId: string, query: string) {
+    await requireAuth();
     try {
         const clients = await prisma.client.findMany({
             where: {
@@ -356,6 +364,7 @@ export async function filterClients(workspaceId: string, filters: {
     status?: string;
     industry?: string;
 }) {
+    await requireAuth();
     try {
         const where: any = { workspaceId };
 

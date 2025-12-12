@@ -2,8 +2,10 @@
 
 import { prisma } from '@/lib/prisma';
 import { revalidatePath, unstable_noStore as noStore } from 'next/cache';
+import { requireAuth } from '@/lib/auth-utils';
 
 export async function getBriefs(workspaceId: string) {
+    await requireAuth();
     noStore(); // Force dynamic fetching, disable cache
     try {
         console.log('[getBriefs] ========== START ==========');
@@ -67,6 +69,7 @@ export async function getBriefs(workspaceId: string) {
 }
 
 export async function getBriefById(id: string) {
+    await requireAuth();
     noStore(); // Force dynamic fetching
     try {
         const brief = await prisma.brief.findUnique({
@@ -108,6 +111,7 @@ export async function createBrief(data: {
     dueDate?: Date;
     description?: string;
 }) {
+    await requireAuth();
     try {
         console.log('[createBrief] ========== START ==========');
         console.log('[createBrief] Creating brief with data:', JSON.stringify(data, null, 2));
@@ -153,6 +157,7 @@ export async function createBrief(data: {
                             id: true,
                             name: true,
                             email: true,
+                            role: true, // Include role for verification
                         },
                     },
                 },
@@ -220,6 +225,7 @@ export async function updateBrief(
         description?: string;
     }
 ) {
+    await requireAuth();
     try {
         const brief = await prisma.brief.update({
             where: { id },
@@ -282,6 +288,7 @@ export async function deleteBrief(id: string) {
 }
 
 export async function assignLawyer(briefId: string, lawyerId: string) {
+    await requireAuth();
     try {
         const brief = await prisma.brief.update({
             where: { id: briefId },
