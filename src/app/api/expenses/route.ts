@@ -1,16 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { prisma } from '@/lib/prisma';
+import { requireAuth } from '@/lib/auth-utils';
+import { notifyExpenseRecorded } from '@/lib/notifications';
 
 // GET /api/expenses - Fetch expenses with optional filtering
 export async function GET(request: NextRequest) {
     try {
+        await requireAuth();
         const searchParams = request.nextUrl.searchParams;
         const filter = searchParams.get('filter'); // 'today' | 'this-month' | 'last-month' | 'date-range'
         const startDate = searchParams.get('startDate');
         const endDate = searchParams.get('endDate');
-        const workspaceId = searchParams.get('workspaceId') || 'default-workspace'; // TODO: Get from auth
+        const workspaceId = searchParams.get('workspaceId');
+
+        if (!workspaceId) {
+            return NextResponse.json(
+                { success: false, error: 'Workspace ID is required' },
+                { status: 400 }
+            );
+        }
 
         let dateFilter: any = {};
 
@@ -119,11 +127,12 @@ export async function GET(request: NextRequest) {
 // POST /api/expenses - Create a new expense
 export async function POST(request: NextRequest) {
     try {
+        await requireAuth();
         const body = await request.json();
         const { category, amount, description, date, reference, workspaceId } = body;
 
         // Validation
-        if (!category || !amount || !description) {
+        if (!category || !amount || !description || !workspaceId) {
             return NextResponse.json(
                 { success: false, error: 'Missing required fields' },
                 { status: 400 }
@@ -132,7 +141,7 @@ export async function POST(request: NextRequest) {
 
         const expense = await prisma.expense.create({
             data: {
-                workspaceId: workspaceId || 'default-workspace', // TODO: Get from auth
+                workspaceId,
                 category,
                 amount: Math.round(amount * 100), // Convert to kobo/cents
                 description,
@@ -140,6 +149,10 @@ export async function POST(request: NextRequest) {
                 reference: reference || null,
             },
         });
+
+        // Notify Managing Partners
+        notifyExpenseRecorded(expense, workspaceId)
+            .catch(err => console.error('Failed to notify partners:', err));
 
         return NextResponse.json({
             success: true,
