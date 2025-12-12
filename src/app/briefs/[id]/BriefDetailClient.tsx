@@ -136,45 +136,22 @@ export default function BriefDetailClient({ brief }: BriefDetailClientProps) {
                     </div>
                 </div>
 
-                <div className={styles.infoGrid}>
-                    <div className={styles.infoCard}>
-                        <div className={styles.infoHeader}>
-                            <Building size={16} />
-                            <span>Client</span>
-                        </div>
-                        <div className={styles.infoContent}>
-                            <p className={styles.infoTitle}>{brief.client.name}</p>
-                            {brief.client.company && (
-                                <p className={styles.infoSubtitle}>{brief.client.company}</p>
-                            )}
-                            {brief.client.email && (
-                                <p className={styles.infoEmail}>{brief.client.email}</p>
-                            )}
-                        </div>
+                <div className={styles.compactInfoRow}>
+                    <div className={styles.compactInfoItem}>
+                        <Building size={14} className={styles.compactIcon} />
+                        <span className={styles.compactLabel}>Client:</span>
+                        <span className={styles.compactValue}>{brief.client.name}</span>
                     </div>
-
-                    <div className={styles.infoCard}>
-                        <div className={styles.infoHeader}>
-                            <User size={16} />
-                            <span>Lawyer in Charge</span>
-                        </div>
-                        <div className={styles.infoContent}>
-                            <p className={styles.infoTitle}>{brief.lawyer.name || brief.lawyer.email}</p>
-                            {brief.lawyer.email && brief.lawyer.name && (
-                                <p className={styles.infoEmail}>{brief.lawyer.email}</p>
-                            )}
-                        </div>
+                    <div className={styles.compactInfoItem}>
+                        <User size={14} className={styles.compactIcon} />
+                        <span className={styles.compactLabel}>Lawyer:</span>
+                        <span className={styles.compactValue}>{brief.lawyer.name || brief.lawyer.email}</span>
                     </div>
-
                     {brief.dueDate && (
-                        <div className={styles.infoCard}>
-                            <div className={styles.infoHeader}>
-                                <Calendar size={16} />
-                                <span>Due Date</span>
-                            </div>
-                            <div className={styles.infoContent}>
-                                <p className={styles.infoTitle}>{formatDate(brief.dueDate)}</p>
-                            </div>
+                        <div className={styles.compactInfoItem}>
+                            <Calendar size={14} className={styles.compactIcon} />
+                            <span className={styles.compactLabel}>Due:</span>
+                            <span className={styles.compactValue}>{formatDate(brief.dueDate)}</span>
                         </div>
                     )}
                 </div>
