@@ -6,12 +6,14 @@ import BriefDetailClient from './BriefDetailClient';
 export const dynamic = 'force-dynamic';
 
 interface BriefDetailPageProps {
-    params: {
+    params: Promise<{
         id: string;
-    };
+    }>;
 }
 
-export default async function BriefDetailPage({ params }: BriefDetailPageProps) {
+export default async function BriefDetailPage(props: BriefDetailPageProps) {
+    const params = await props.params;
+    const { id } = params;
     const session = await auth();
 
     if (!session?.user) {
@@ -24,8 +26,8 @@ export default async function BriefDetailPage({ params }: BriefDetailPageProps) 
     const retryDelay = 1000; // ms
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
-        console.log(`[BriefDetailPage] Attempt ${attempt}/${maxRetries} to fetch brief ${params.id}`);
-        brief = await getBriefById(params.id);
+        console.log(`[BriefDetailPage] Attempt ${attempt}/${maxRetries} to fetch brief ${id}`);
+        brief = await getBriefById(id);
 
         if (brief) {
             console.log(`[BriefDetailPage] ✅ Found brief on attempt ${attempt}`);
@@ -57,7 +59,7 @@ export default async function BriefDetailPage({ params }: BriefDetailPageProps) 
                     fontSize: '12px'
                 }}>
                     <p><strong>Debug Info:</strong></p>
-                    <p>Requested ID: {params.id}</p>
+                    <p>Requested ID: {id}</p>
                     <p>Time: {new Date().toISOString()}</p>
                     <p>Environment: {process.env.NODE_ENV}</p>
                 </div>
