@@ -181,9 +181,9 @@ const BriefList = forwardRef<BriefListRef, BriefListProps>(({ onUpload, workspac
                                             </button>
                                             {activeActionId === brief.id && (
                                                 <div className={styles.actionMenu}>
-                                                    <button className={styles.menuItem}>
+                                                    <Link href={`/briefs/${brief.id}`} className={styles.menuItem}>
                                                         <Eye size={14} /> Open
-                                                    </button>
+                                                    </Link>
                                                     <button className={styles.menuItem}>
                                                         <UserPlus size={14} /> Assign
                                                     </button>

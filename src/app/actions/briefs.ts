@@ -67,6 +67,7 @@ export async function getBriefs(workspaceId: string) {
 }
 
 export async function getBriefById(id: string) {
+    noStore(); // Force dynamic fetching
     try {
         const brief = await prisma.brief.findUnique({
             where: { id },
