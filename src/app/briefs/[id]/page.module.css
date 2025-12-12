@@ -361,3 +361,36 @@
     border-color: #EF4444;
     color: #EF4444;
 }
+
+.compactInfoRow {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+    padding: 0.75rem 1rem;
+    background-color: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    margin-top: 0.5rem;
+    align-items: center;
+}
+
+.compactInfoItem {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: var(--text-sm);
+}
+
+.compactIcon {
+    color: var(--text-secondary);
+}
+
+.compactLabel {
+    font-weight: 600;
+    color: var(--text-secondary);
+}
+
+.compactValue {
+    color: var(--text-primary);
+    font-weight: 500;
+}
