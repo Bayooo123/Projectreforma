@@ -47,23 +47,6 @@ export default async function BriefDetailPage(props: BriefDetailPageProps) {
                 <h2>Brief Not Found</h2>
                 <p>The brief you're looking for doesn't exist or you don't have access to it.</p>
 
-                {/* DEBUG INFO */}
-                <div style={{
-                    marginTop: '2rem',
-                    padding: '1rem',
-                    background: '#fee2e2',
-                    borderRadius: '8px',
-                    display: 'inline-block',
-                    textAlign: 'left',
-                    fontFamily: 'monospace',
-                    fontSize: '12px'
-                }}>
-                    <p><strong>Debug Info:</strong></p>
-                    <p>Requested ID: {id}</p>
-                    <p>Time: {new Date().toISOString()}</p>
-                    <p>Environment: {process.env.NODE_ENV}</p>
-                </div>
-
                 <div style={{ marginTop: '2rem' }}>
                     <a href="/briefs" style={{ color: '#667eea', textDecoration: 'underline' }}>
                         Back to Briefs
