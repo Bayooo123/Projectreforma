@@ -25,6 +25,10 @@
     font-size: var(--text-sm);
     font-weight: 500;
     transition: color 0.2s;
+    cursor: pointer;
+    position: relative;
+    z-index: 10;
+    text-decoration: none;
 }
 
 .backLink:hover {
