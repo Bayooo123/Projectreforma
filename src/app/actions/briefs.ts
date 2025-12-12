@@ -1,9 +1,10 @@
 'use server';
 
 import { prisma } from '@/lib/prisma';
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, unstable_noStore as noStore } from 'next/cache';
 
 export async function getBriefs(workspaceId: string) {
+    noStore(); // Force dynamic fetching, disable cache
     try {
         console.log('[getBriefs] ========== START ==========');
         console.log('[getBriefs] Fetching briefs for workspace:', workspaceId);

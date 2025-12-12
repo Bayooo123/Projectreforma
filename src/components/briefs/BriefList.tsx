@@ -32,12 +32,14 @@ const BriefList = forwardRef<BriefListRef, BriefListProps>(({ onUpload, workspac
     const fetchBriefs = async () => {
         setIsLoading(true);
         try {
-            console.log('[BriefList] Fetching briefs for workspace:', workspaceId);
+            console.log('[BriefList] 🔄 Fetching briefs for workspace:', workspaceId);
             const data = await getBriefs(workspaceId);
-            console.log('[BriefList] Fetched', data.length, 'briefs');
+            console.log('[BriefList] 📥 Fetched', data.length, 'briefs from server');
+            console.log('[BriefList] 📋 Brief IDs:', data.map((b: any) => b.id));
+            console.log('[BriefList] 🔢 Brief Numbers:', data.map((b: any) => b.briefNumber));
             setBriefs(data);
         } catch (error) {
-            console.error("Failed to fetch briefs", error);
+            console.error("[BriefList] ❌ Failed to fetch briefs", error);
         } finally {
             setIsLoading(false);
         }
