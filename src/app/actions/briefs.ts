@@ -246,21 +246,38 @@ export async function updateBrief(
 
 export async function deleteBrief(id: string) {
     try {
-        // Delete associated documents first (cascade should handle this, but being explicit)
-        await prisma.document.deleteMany({
-            where: { briefId: id },
+        // 1. Fetch brief to identify workspace
+        const brief = await prisma.brief.findUnique({
+            where: { id },
+            select: { workspaceId: true, status: true }
         });
 
-        // Delete the brief
-        await prisma.brief.delete({
+        if (!brief) {
+            return { success: false, error: 'Brief not found' };
+        }
+
+        // 2. Security Check: Only 'partner' or 'owner' can delete
+        // We import dynamically to avoid circular deps if any, though not expected here
+        const { requireWorkspaceRole } = await import('@/lib/auth-utils');
+        await requireWorkspaceRole(brief.workspaceId, ['partner', 'owner']);
+
+        // 3. Soft Delete Logic
+        // Instead of deleting, we mark as 'inactive'.
+        // NOTE: A background job (Cron) should run daily to permanently delete
+        // briefs that have been 'inactive' for > 15 days.
+        await prisma.brief.update({
             where: { id },
+            data: {
+                status: 'inactive',
+                updatedAt: new Date() // Updates timestamp for the 15-day timer
+            }
         });
 
         revalidatePath('/briefs');
-        return { success: true };
-    } catch (error) {
+        return { success: true, message: 'Brief moved to trash (will be permanently deleted in 15 days)' };
+    } catch (error: any) {
         console.error('Error deleting brief:', error);
-        return { success: false, error: 'Failed to delete brief' };
+        return { success: false, error: error.message || 'Failed to delete brief' };
     }
 }
 
