@@ -14,14 +14,22 @@ interface Expense {
     reference?: string;
 }
 
-const FinancialLog = () => {
+interface FinancialLogProps {
+    workspaceId?: string;
+}
+
+const FinancialLog = ({ workspaceId }: FinancialLogProps) => {
     const [expenses, setExpenses] = useState<Expense[]>([]);
     const [isExpenseModalOpen, setIsExpenseModalOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
 
     const fetchExpenses = async () => {
         try {
-            const response = await fetch('/api/expenses?filter=today');
+            const queryParams = new URLSearchParams({
+                filter: 'today',
+                ...(workspaceId && { workspaceId }),
+            });
+            const response = await fetch(`/api/expenses?${queryParams}`);
             const data = await response.json();
 
             if (data.success) {
@@ -35,8 +43,10 @@ const FinancialLog = () => {
     };
 
     useEffect(() => {
-        fetchExpenses();
-    }, []);
+        if (workspaceId) {
+            fetchExpenses();
+        }
+    }, [workspaceId]);
 
     const handleExpenseAdded = () => {
         fetchExpenses(); // Refresh the list
@@ -63,6 +73,10 @@ const FinancialLog = () => {
             day: 'numeric'
         });
     };
+
+    if (!workspaceId) {
+        return <div className={styles.loading}>Loading workspace configuration...</div>;
+    }
 
     return (
         <div className={styles.container}>
@@ -127,6 +141,7 @@ const FinancialLog = () => {
                 isOpen={isExpenseModalOpen}
                 onClose={() => setIsExpenseModalOpen(false)}
                 onSuccess={handleExpenseAdded}
+                workspaceId={workspaceId}
             />
         </div>
     );

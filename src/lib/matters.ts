@@ -15,7 +15,8 @@ export async function getMattersForMonth(
         const startDate = new Date(year, month, 1);
         const endDate = new Date(year, month + 1, 0, 23, 59, 59);
 
-        const matters = await prisma.matter.findMany({
+        // 1. Fetch Active/Future Matters (Standard)
+        const activeMatters = await prisma.matter.findMany({
             where: {
                 workspaceId,
                 nextCourtDate: {
@@ -24,23 +25,48 @@ export async function getMattersForMonth(
                 },
             },
             include: {
-                client: {
-                    select: {
-                        id: true,
-                        name: true,
-                    },
-                },
-                assignedLawyer: {
-                    select: {
-                        id: true,
-                        name: true,
-                    },
-                },
+                client: { select: { id: true, name: true } },
+                assignedLawyer: { select: { id: true, name: true } },
             },
-            orderBy: { nextCourtDate: 'asc' },
         });
 
-        return matters;
+        // 2. Fetch Past Hearings (From Activity Logs)
+        // This creates the "Trail" of previous dates
+        const pastHearings = await prisma.matterActivityLog.findMany({
+            where: {
+                matter: { workspaceId },
+                activityType: 'hearing',
+                timestamp: {
+                    gte: startDate,
+                    lte: endDate,
+                },
+            },
+            include: {
+                matter: {
+                    include: {
+                        client: { select: { id: true, name: true } },
+                        assignedLawyer: { select: { id: true, name: true } },
+                    }
+                }
+            }
+        });
+
+        // 3. Convert Logs to "Ghost Matters" for the Calendar
+        const historyMatters = pastHearings.map(log => ({
+            ...log.matter,
+            id: `log-${log.id}`, // Unique ID to avoid collision
+            nextCourtDate: log.timestamp, // The date of the past hearing
+            status: 'past_hearing', // Special status for UI styling
+            // We append the log description to the name or handle it in UI
+            // For now, we just want it to show up on the right day
+        }));
+
+        // 4. Combine and Sort
+        const allEvents = [...activeMatters, ...historyMatters].sort((a, b) => {
+            return (a.nextCourtDate?.getTime() || 0) - (b.nextCourtDate?.getTime() || 0);
+        });
+
+        return allEvents;
     } catch (error) {
         console.error('Error fetching matters for month:', error);
         return [];

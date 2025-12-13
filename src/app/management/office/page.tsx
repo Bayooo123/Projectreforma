@@ -2,8 +2,11 @@ import ManagementTabs from '@/components/management/ManagementTabs';
 import FinancialLog from '@/components/management/FinancialLog';
 import styles from './page.module.css';
 import PasswordProtected from '@/components/auth/PasswordProtected';
+import { getCurrentUserWithWorkspace } from '@/lib/workspace';
 
-export default function OfficePage() {
+export default async function OfficePage() {
+    const { workspace } = (await getCurrentUserWithWorkspace()) || {};
+
     return (
         <PasswordProtected password="12345678">
             <div className={styles.page}>
@@ -15,7 +18,7 @@ export default function OfficePage() {
                 <ManagementTabs />
 
                 <div className={styles.content}>
-                    <FinancialLog />
+                    <FinancialLog workspaceId={workspace?.id} />
                 </div>
             </div>
         </PasswordProtected>

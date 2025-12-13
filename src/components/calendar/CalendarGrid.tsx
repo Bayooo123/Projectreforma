@@ -78,20 +78,30 @@ const CalendarGrid = ({
         const dayMatters = mattersByDay[day];
         if (!dayMatters || dayMatters.length === 0) return null;
 
-        return dayMatters.map((matter) => (
-            <div
-                key={matter.id}
-                className={styles.caseItem}
-                onClick={(e) => {
-                    e.stopPropagation();
-                    onEventClick(matter);
-                }}
-                style={{ cursor: 'pointer' }}
-            >
-                <Gavel size={10} className={styles.caseIcon} />
-                <span className={styles.caseName}>{matter.name}</span>
-            </div>
-        ));
+        return dayMatters.map((matter) => {
+            const isPast = matter.status === 'past_hearing';
+            return (
+                <div
+                    key={matter.id}
+                    className={styles.caseItem}
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        onEventClick(matter);
+                    }}
+                    style={{
+                        cursor: 'pointer',
+                        opacity: isPast ? 0.6 : 1,
+                        backgroundColor: isPast ? '#f3f4f6' : undefined,
+                        borderLeft: isPast ? '2px solid #9ca3af' : undefined
+                    }}
+                >
+                    <Gavel size={10} className={styles.caseIcon} />
+                    <span className={styles.caseName}>
+                        {isPast ? '(Held) ' : ''}{matter.name}
+                    </span>
+                </div>
+            );
+        });
     };
 
     const daysInMonth = new Date(

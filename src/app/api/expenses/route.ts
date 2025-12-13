@@ -124,15 +124,64 @@ export async function GET(request: NextRequest) {
     }
 }
 
-// POST /api/expenses - Create a new expense
+// POST /api/expenses - Create a new expense (single or batch)
 export async function POST(request: NextRequest) {
     try {
         await requireAuth();
         const body = await request.json();
-        const { category, amount, description, date, reference, workspaceId } = body;
+        const { workspaceId, expenses, ...singleExpense } = body;
 
         // Validation
-        if (!category || !amount || !description || !workspaceId) {
+        if (!workspaceId) {
+            return NextResponse.json(
+                { success: false, error: 'Workspace ID is required' },
+                { status: 400 }
+            );
+        }
+
+        // Handle batch creation
+        if (expenses && Array.isArray(expenses)) {
+            if (expenses.length === 0) {
+                return NextResponse.json(
+                    { success: false, error: 'No expenses provided' },
+                    { status: 400 }
+                );
+            }
+
+            // Create all expenses in a transaction
+            const result = await prisma.$transaction(
+                expenses.map((expense: any) =>
+                    prisma.expense.create({
+                        data: {
+                            workspaceId,
+                            category: expense.category,
+                            amount: Math.round(expense.amount * 100), // Convert to kobo/cents
+                            description: expense.description,
+                            date: expense.date ? new Date(expense.date) : new Date(),
+                            reference: expense.reference || null,
+                        },
+                    })
+                )
+            );
+
+            // Notify Partners for each expense (or just once? Doing individually for now to match logic)
+            // Note: In a high volume scenario, we might want to batch notifications too, but this is fine for now.
+            result.forEach(exp => {
+                notifyExpenseRecorded(exp, workspaceId)
+                    .catch(err => console.error('Failed to notify partners:', err));
+            });
+
+            return NextResponse.json({
+                success: true,
+                data: result,
+                count: result.length
+            });
+        }
+
+        // Handle single creation (legacy support or single entry)
+        const { category, amount, description, date, reference } = singleExpense;
+
+        if (!category || !amount || !description) {
             return NextResponse.json(
                 { success: false, error: 'Missing required fields' },
                 { status: 400 }
@@ -150,7 +199,6 @@ export async function POST(request: NextRequest) {
             },
         });
 
-        // Notify Managing Partners
         notifyExpenseRecorded(expense, workspaceId)
             .catch(err => console.error('Failed to notify partners:', err));
 
@@ -158,6 +206,7 @@ export async function POST(request: NextRequest) {
             success: true,
             data: expense,
         });
+
     } catch (error) {
         console.error('Error creating expense:', error);
         return NextResponse.json(
