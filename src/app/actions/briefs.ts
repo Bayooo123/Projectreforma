@@ -157,7 +157,6 @@ export async function createBrief(data: {
                             id: true,
                             name: true,
                             email: true,
-                            role: true, // Include role for verification
                         },
                     },
                 },
