@@ -25,14 +25,26 @@ interface Client {
     };
 }
 
-interface ClientListProps {
-    workspaceId: string;
+interface Invoice {
+    id: string;
+    invoiceNumber: string;
+    totalAmount: number;
+    paidAmount: number;
+    status: string;
+    dueDate: Date | null;
 }
 
-const ClientList = ({ workspaceId }: ClientListProps) => {
+interface ClientListProps {
+    workspaceId: string;
+    letterheadUrl?: string | null;
+}
+
+const ClientList = ({ workspaceId, letterheadUrl }: ClientListProps) => {
     const [clients, setClients] = useState<Client[]>([]);
     const [filteredClients, setFilteredClients] = useState<Client[]>([]);
     const [selectedClient, setSelectedClient] = useState<{ name: string; id: string } | null>(null);
+    const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null); // New state for specific invoice payment
+
     const [isInvoiceModalOpen, setIsInvoiceModalOpen] = useState(false);
     const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
@@ -88,7 +100,18 @@ const ClientList = ({ workspaceId }: ClientListProps) => {
 
     const handleRecordPayment = (clientName: string, clientId: string) => {
         setSelectedClient({ name: clientName, id: clientId });
+        setSelectedInvoice(null); // Clear specific invoice if opening generally
         setIsPaymentModalOpen(true);
+    };
+
+    // Callback when "Pay" is clicked inside InvoiceModal
+    const handlePayInvoice = (invoice: any) => {
+        // Invoice logic passes a simpler invoice object or full object. 
+        // We'll trust it matches what PaymentModal expects or map it.
+        // PaymentModal expects Invoice interface defined above.
+        setSelectedInvoice(invoice);
+        setIsInvoiceModalOpen(false); // Close invoice modal
+        setIsPaymentModalOpen(true); // Open payment modal
     };
 
     const formatLastActivity = (date?: Date) => {
@@ -208,12 +231,15 @@ const ClientList = ({ workspaceId }: ClientListProps) => {
                 clientName={selectedClient?.name || ''}
                 clientId={selectedClient?.id || ''}
                 workspaceId={workspaceId}
+                letterheadUrl={letterheadUrl}
+                onRecordPayment={handlePayInvoice}
             />
             <PaymentModal
                 isOpen={isPaymentModalOpen}
                 onClose={() => setIsPaymentModalOpen(false)}
                 clientName={selectedClient?.name || ''}
                 clientId={selectedClient?.id || ''}
+                selectedInvoice={selectedInvoice}
             />
         </div>
     );

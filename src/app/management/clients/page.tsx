@@ -32,7 +32,7 @@ export default async function ClientsPage() {
 
     return (
         <div className={styles.page}>
-            <ClientsPageClient workspaceId={workspace.id} userId={user.id} />
+            <ClientsPageClient workspaceId={workspace.id} userId={user.id} letterheadUrl={workspace.letterheadUrl} />
         </div>
     );
 }

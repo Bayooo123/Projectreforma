@@ -14,6 +14,7 @@ interface CreatePaymentData {
     method: string; // 'bank_transfer' | 'cash' | 'cheque' | 'card' | 'other'
     reference?: string;
     date?: Date;
+    markAsFullyPaid?: boolean; // New flag for "Discount / Write-off"
 }
 
 export async function createPayment(data: CreatePaymentData) {
@@ -28,7 +29,10 @@ export async function createPayment(data: CreatePaymentData) {
             return { success: false, error: 'Client not found' };
         }
 
-        // If invoice is specified, verify it belongs to this client
+        let invoiceBalance = 0;
+        let invoiceToUpdate = null;
+
+        // If invoice is specified, verify it belongs to this client and check balance
         if (data.invoiceId) {
             const invoice = await prisma.invoice.findUnique({
                 where: { id: data.invoiceId },
@@ -37,6 +41,9 @@ export async function createPayment(data: CreatePaymentData) {
                     clientId: true,
                     totalAmount: true,
                     status: true,
+                    payments: {
+                        select: { amount: true }
+                    }
                 },
             });
 
@@ -52,9 +59,13 @@ export async function createPayment(data: CreatePaymentData) {
             if (invoice.status === 'paid') {
                 return { success: false, error: 'Invoice is already marked as paid' };
             }
+
+            const paidAmount = invoice.payments.reduce((sum, p) => sum + p.amount, 0);
+            invoiceBalance = Math.max(0, invoice.totalAmount - paidAmount);
+            invoiceToUpdate = invoice;
         }
 
-        // Create payment
+        // Create main payment
         const payment = await prisma.payment.create({
             data: {
                 clientId: data.clientId,
@@ -79,6 +90,28 @@ export async function createPayment(data: CreatePaymentData) {
                 },
             },
         });
+
+        // Handle "Mark as Fully Paid" logic (Discount/Write-off)
+        if (data.invoiceId && data.markAsFullyPaid && invoiceToUpdate) {
+            // Calculate remaining balance after the payment we just created
+            // We calculated invoiceBalance BEFORE this payment.
+            // Remaining after = invoiceBalance - data.amount
+            const remainingBalance = invoiceBalance - data.amount;
+
+            if (remainingBalance > 0) {
+                // Create a "Discount" payment to zero out the balance
+                await prisma.payment.create({
+                    data: {
+                        clientId: data.clientId,
+                        invoiceId: data.invoiceId,
+                        amount: remainingBalance,
+                        method: 'other', // or 'discount' if we add it to enum/types
+                        reference: 'Discount / Write-off [FULL SETTLEMENT]',
+                        date: data.date || new Date(),
+                    },
+                });
+            }
+        }
 
         // If payment is linked to an invoice, check if invoice is now fully paid
         if (data.invoiceId) {
@@ -111,6 +144,7 @@ async function updateInvoicePaymentStatus(invoiceId: string) {
         const totalPaid = invoice.payments.reduce((sum, payment) => sum + payment.amount, 0);
 
         // Update invoice status
+        // Allow a small margin of error for floating point issues? (using integers/kobo so exact match expected)
         let newStatus = invoice.status;
         if (totalPaid >= invoice.totalAmount) {
             newStatus = 'paid';

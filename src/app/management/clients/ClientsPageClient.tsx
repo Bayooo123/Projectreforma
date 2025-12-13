@@ -10,9 +10,10 @@ import styles from './page.module.css';
 interface ClientsPageClientProps {
     workspaceId: string;
     userId: string;
+    letterheadUrl?: string | null;
 }
 
-export default function ClientsPageClient({ workspaceId, userId }: ClientsPageClientProps) {
+export default function ClientsPageClient({ workspaceId, userId, letterheadUrl }: ClientsPageClientProps) {
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [refreshKey, setRefreshKey] = useState(0);
 
@@ -47,7 +48,7 @@ export default function ClientsPageClient({ workspaceId, userId }: ClientsPageCl
 
             <ClientStats key={`stats-${refreshKey}`} workspaceId={workspaceId} />
 
-            <ClientList key={`list-${refreshKey}`} workspaceId={workspaceId} />
+            <ClientList key={`list-${refreshKey}`} workspaceId={workspaceId} letterheadUrl={letterheadUrl} />
 
             <AddClientModal
                 isOpen={isAddModalOpen}

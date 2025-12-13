@@ -370,3 +370,43 @@ export async function getClientMatters(clientId: string) {
         return { success: false, error: 'Failed to fetch matters' };
     }
 }
+
+export async function getClientInvoices(clientId: string) {
+    try {
+        const invoices = await prisma.invoice.findMany({
+            where: {
+                clientId,
+            },
+            include: {
+                items: {
+                    orderBy: {
+                        order: 'asc',
+                    },
+                },
+                payments: true,
+                client: {
+                    select: {
+                        name: true,
+                    }
+                }
+            },
+            orderBy: {
+                createdAt: 'desc',
+            },
+        });
+
+        // Calculate paidAmount for each invoice
+        const invoicesWithPaidAmount = invoices.map(invoice => {
+            const paidAmount = invoice.payments.reduce((sum, p) => sum + p.amount, 0);
+            return {
+                ...invoice,
+                paidAmount,
+            };
+        });
+
+        return { success: true, data: invoicesWithPaidAmount };
+    } catch (error) {
+        console.error('Error fetching client invoices:', error);
+        return { success: false, error: 'Failed to fetch invoices' };
+    }
+}
