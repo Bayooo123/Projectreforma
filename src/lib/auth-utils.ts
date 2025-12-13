@@ -16,7 +16,7 @@ export async function requireWorkspaceRole(workspaceId: string, allowedRoles: st
     const membership = await prisma.workspaceMember.findFirst({
         where: {
             workspaceId,
-            user: { email: user.email },
+            user: { email: user.email! },
         },
     });
 
