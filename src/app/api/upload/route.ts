@@ -48,7 +48,7 @@ export async function POST(request: Request): Promise<NextResponse> {
                 name: filename,
                 url: blob.url,
                 type: extension,
-                size: blob.size, // Vercel Blob returns the size
+                size: parseInt(request.headers.get('content-length') || '0'), // Vercel Blob put result doesn't explicitly guarantee size in type
                 briefId: briefId,
             },
         });
