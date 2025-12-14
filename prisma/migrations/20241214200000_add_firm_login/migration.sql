@@ -8,4 +8,3 @@ ADD COLUMN     "status" TEXT NOT NULL DEFAULT 'active';
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Workspace_firmCode_key" ON "Workspace"("firmCode");
-CREATE INDEX "Workspace_firmCode_idx" ON "Workspace"("firmCode");
