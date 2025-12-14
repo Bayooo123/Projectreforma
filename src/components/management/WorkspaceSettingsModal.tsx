@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { X, Upload, FileText, Loader, Check } from 'lucide-react';
 import { put } from '@vercel/blob';
+import { getWorkspaceMembers, approveMember, rejectMember } from '@/app/actions/members';
 import styles from './InvoiceModal.module.css'; // Reusing modal styles for consistency
 
 interface WorkspaceSettingsModalProps {
@@ -14,9 +15,53 @@ interface WorkspaceSettingsModalProps {
 }
 
 const WorkspaceSettingsModal = ({ isOpen, onClose, workspaceId, currentLetterheadUrl, onUpdate }: WorkspaceSettingsModalProps) => {
+    const [activeTab, setActiveTab] = useState<'general' | 'members'>('general');
+    const [members, setMembers] = useState<any[]>([]);
+    const [isLoadingMembers, setIsLoadingMembers] = useState(false);
+
     const [isUploading, setIsUploading] = useState(false);
     const [uploadError, setUploadError] = useState<string | null>(null);
     const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+    // Fetch members when switching to members tab
+    useEffect(() => {
+        if (activeTab === 'members' && isOpen) {
+            fetchMembers();
+        }
+    }, [activeTab, isOpen]);
+
+    const fetchMembers = async () => {
+        setIsLoadingMembers(true);
+        try {
+            const result = await getWorkspaceMembers(workspaceId);
+            if (result.success) {
+                setMembers(result.data || []);
+            }
+        } catch (error) {
+            console.error('Failed to load members', error);
+        } finally {
+            setIsLoadingMembers(false);
+        }
+    };
+
+    const handleApprove = async (memberId: string) => {
+        const result = await approveMember(memberId);
+        if (result.success) {
+            fetchMembers(); // Refresh list
+            setSuccessMessage('Member approved successfully');
+            setTimeout(() => setSuccessMessage(null), 3000);
+        }
+    };
+
+    const handleReject = async (memberId: string) => {
+        if (!confirm('Are you sure you want to reject and remove this member?')) return;
+        const result = await rejectMember(memberId);
+        if (result.success) {
+            fetchMembers();
+            setSuccessMessage('Member removed successfully');
+            setTimeout(() => setSuccessMessage(null), 3000);
+        }
+    };
 
     if (!isOpen) return null;
 
@@ -63,7 +108,7 @@ const WorkspaceSettingsModal = ({ isOpen, onClose, workspaceId, currentLetterhea
 
     return (
         <div className={styles.overlay} onClick={onClose}>
-            <div className={styles.modal} onClick={(e) => e.stopPropagation()} style={{ maxWidth: '500px' }}>
+            <div className={styles.modal} onClick={(e) => e.stopPropagation()} style={{ maxWidth: '600px' }}>
                 <div className={styles.header}>
                     <div>
                         <h2 className={styles.title}>Workspace Settings</h2>
@@ -74,82 +119,183 @@ const WorkspaceSettingsModal = ({ isOpen, onClose, workspaceId, currentLetterhea
                     </button>
                 </div>
 
-                <div className={styles.content}>
-                    <div className={styles.formGroup}>
-                        <label className={styles.formLabel}>Letterhead Upload</label>
-                        <p className={styles.subtitle} style={{ marginBottom: '1rem' }}>
-                            Upload your firm's letterhead (PDF or High-res Image). This will be used as the background for generated PDF invoices.
-                        </p>
+                <div style={{ display: 'flex', gap: '1rem', padding: '0 1.5rem', borderBottom: '1px solid var(--border)' }}>
+                    <button
+                        onClick={() => setActiveTab('general')}
+                        style={{
+                            padding: '1rem 0',
+                            borderBottom: activeTab === 'general' ? '2px solid var(--primary)' : 'none',
+                            color: activeTab === 'general' ? 'var(--primary)' : 'var(--text-secondary)',
+                            fontWeight: 500,
+                            background: 'none',
+                            cursor: 'pointer'
+                        }}
+                    >
+                        General
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('members')}
+                        style={{
+                            padding: '1rem 0',
+                            borderBottom: activeTab === 'members' ? '2px solid var(--primary)' : 'none',
+                            color: activeTab === 'members' ? 'var(--primary)' : 'var(--text-secondary)',
+                            fontWeight: 500,
+                            background: 'none',
+                            cursor: 'pointer'
+                        }}
+                    >
+                        Members
+                        {/* Optional badge count logic here */}
+                    </button>
+                </div>
 
-                        <div style={{
-                            border: '2px dashed var(--border)',
-                            borderRadius: 'var(--radius-md)',
-                            padding: '2rem',
-                            textAlign: 'center',
-                            cursor: 'pointer',
-                            backgroundColor: 'var(--surface)'
-                        }}>
-                            <input
-                                type="file"
-                                accept="image/*,application/pdf"
-                                onChange={handleFileUpload}
-                                style={{
-                                    opacity: 0,
-                                    position: 'absolute',
-                                    width: '100%',
-                                    height: '100%',
-                                    top: 0,
-                                    left: 0,
-                                    cursor: 'pointer'
-                                }}
-                                disabled={isUploading}
-                            />
-                            {isUploading ? (
-                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
-                                    <Loader size={32} className="spin" />
-                                    <span>Uploading...</span>
-                                </div>
-                            ) : (
-                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
-                                    <Upload size={32} color="var(--primary)" />
-                                    <span style={{ fontWeight: 600 }}>Click to upload letterhead</span>
-                                    <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Supports JPG, PNG, PDF</span>
+                <div className={styles.content}>
+                    {activeTab === 'general' ? (
+                        <div className={styles.formGroup}>
+                            {/* Letterhead Upload Logic */}
+                            <label className={styles.formLabel}>Letterhead Upload</label>
+                            <p className={styles.subtitle} style={{ marginBottom: '1rem' }}>
+                                Upload your firm's letterhead (PDF or High-res Image). This will be used as the background for generated PDF invoices.
+                            </p>
+
+                            <div style={{
+                                border: '2px dashed var(--border)',
+                                borderRadius: 'var(--radius-md)',
+                                padding: '2rem',
+                                textAlign: 'center',
+                                cursor: 'pointer',
+                                backgroundColor: 'var(--surface)'
+                            }}>
+                                <input
+                                    type="file"
+                                    accept="image/*,application/pdf"
+                                    onChange={handleFileUpload}
+                                    style={{
+                                        opacity: 0,
+                                        position: 'absolute',
+                                        width: '100%',
+                                        height: '100%',
+                                        top: 0,
+                                        left: 0,
+                                        cursor: 'pointer'
+                                    }}
+                                    disabled={isUploading}
+                                />
+                                {isUploading ? (
+                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
+                                        <Loader size={32} className="spin" />
+                                        <span>Uploading...</span>
+                                    </div>
+                                ) : (
+                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
+                                        <Upload size={32} color="var(--primary)" />
+                                        <span style={{ fontWeight: 600 }}>Click to upload letterhead</span>
+                                        <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Supports JPG, PNG, PDF</span>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Error/Success Messages Reused */}
+                            {uploadError && <p style={{ color: '#DC2626', fontSize: '0.875rem', marginTop: '0.5rem' }}>{uploadError}</p>}
+                            {successMessage && <p style={{ color: '#16A34A', fontSize: '0.875rem', marginTop: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}><Check size={16} /> {successMessage}</p>}
+
+                            {currentLetterheadUrl && (
+                                <div style={{ marginTop: '1.5rem' }}>
+                                    <p className={styles.formLabel}>Current Letterhead:</p>
+                                    <div style={{
+                                        marginTop: '0.5rem',
+                                        padding: '0.5rem',
+                                        border: '1px solid var(--border)',
+                                        borderRadius: 'var(--radius-md)',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '0.5rem'
+                                    }}>
+                                        <FileText size={20} color="var(--primary)" />
+                                        <a href={currentLetterheadUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: '0.875rem', color: 'var(--primary)', textDecoration: 'underline' }}>
+                                            View Uploaded Letterhead
+                                        </a>
+                                    </div>
                                 </div>
                             )}
                         </div>
-
-                        {uploadError && (
-                            <p style={{ color: '#DC2626', fontSize: '0.875rem', marginTop: '0.5rem' }}>
-                                {uploadError}
-                            </p>
-                        )}
-
-                        {successMessage && (
-                            <p style={{ color: '#16A34A', fontSize: '0.875rem', marginTop: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                <Check size={16} /> {successMessage}
-                            </p>
-                        )}
-
-                        {currentLetterheadUrl && (
-                            <div style={{ marginTop: '1.5rem' }}>
-                                <p className={styles.formLabel}>Current Letterhead:</p>
-                                <div style={{
-                                    marginTop: '0.5rem',
-                                    padding: '0.5rem',
-                                    border: '1px solid var(--border)',
-                                    borderRadius: 'var(--radius-md)',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '0.5rem'
-                                }}>
-                                    <FileText size={20} color="var(--primary)" />
-                                    <a href={currentLetterheadUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: '0.875rem', color: 'var(--primary)', textDecoration: 'underline' }}>
-                                        View Uploaded Letterhead
-                                    </a>
+                    ) : (
+                        <div className={styles.formGroup}>
+                            <h3 style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '1rem' }}>Team Members</h3>
+                            {isLoadingMembers ? (
+                                <div style={{ display: 'flex', justifyContent: 'center', padding: '2rem' }}>
+                                    <Loader className="spin" />
                                 </div>
-                            </div>
-                        )}
-                    </div>
+                            ) : (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                                    {members.length === 0 && <p style={{ color: 'var(--text-secondary)' }}>No other members yet.</p>}
+                                    {members.map((member) => (
+                                        <div key={member.id} style={{
+                                            display: 'flex',
+                                            justifyContent: 'space-between',
+                                            alignItems: 'center',
+                                            padding: '1rem',
+                                            border: '1px solid var(--border)',
+                                            borderRadius: 'var(--radius-md)',
+                                            background: member.status === 'pending' ? '#fff7ed' : 'var(--surface)'
+                                        }}>
+                                            <div>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                    <span style={{ fontWeight: 600 }}>{member.name}</span>
+                                                    {member.status === 'pending' && (
+                                                        <span style={{ background: '#f59e0b', color: 'white', fontSize: '0.7rem', padding: '2px 6px', borderRadius: '4px' }}>
+                                                            PENDING
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
+                                                    {member.designation || member.role} • {member.email}
+                                                </div>
+                                            </div>
+
+                                            <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                                {member.status === 'pending' && (
+                                                    <>
+                                                        <button
+                                                            onClick={() => handleApprove(member.id)}
+                                                            style={{
+                                                                padding: '0.5rem 1rem',
+                                                                background: '#16a34a',
+                                                                color: 'white',
+                                                                border: 'none',
+                                                                borderRadius: '4px',
+                                                                cursor: 'pointer',
+                                                                fontSize: '0.875rem'
+                                                            }}
+                                                        >
+                                                            Approve
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleReject(member.id)}
+                                                            style={{
+                                                                padding: '0.5rem 1rem',
+                                                                background: '#dc2626',
+                                                                color: 'white',
+                                                                border: 'none',
+                                                                borderRadius: '4px',
+                                                                cursor: 'pointer',
+                                                                fontSize: '0.875rem'
+                                                            }}
+                                                        >
+                                                            Reject
+                                                        </button>
+                                                    </>
+                                                )}
+                                                {member.status === 'active' && (
+                                                    <span style={{ color: 'var(--text-tertiary)', fontSize: '0.875rem' }}>Active</span>
+                                                )}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    )}
                 </div>
             </div>
         </div>

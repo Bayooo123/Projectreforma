@@ -23,6 +23,10 @@ model Workspace {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   letterheadUrl String?
+  
+  // Firm Login Fields
+  joinPassword String? // Hashed shared password for firm login
+  firmCode     String? @unique // Unique code for joining (e.g. "ASCO")
 
   owner       User                  @relation("WorkspaceOwner", fields: [ownerId], references: [id])
   members     WorkspaceMember[]
@@ -35,6 +39,7 @@ model Workspace {
   emailConfig WorkspaceEmailConfig?
 
   @@index([slug])
+  @@index([firmCode])
 }
 
 model WorkspaceMember {
@@ -42,6 +47,11 @@ model WorkspaceMember {
   workspaceId String
   userId      String
   role        String   // 'owner' | 'partner' | 'lawyer' | 'staff'
+  
+  // New Role/Status Fields
+  designation String?  // e.g. "Senior Associate"
+  status      String   @default("active") // 'pending' | 'active' | 'rejected'
+  
   joinedAt    DateTime @default(now())
 
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)

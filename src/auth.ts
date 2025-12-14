@@ -32,14 +32,35 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
 
                 if (parsedCredentials.success) {
                     const { email, password } = parsedCredentials.data;
-                    const user = await getUser(email);
+
+                    // Fetch user with workspace memberships
+                    const user = await prisma.user.findUnique({
+                        where: { email },
+                        include: { workspaces: true }
+                    });
+
                     if (!user) return null;
 
                     // Handle users created via OAuth who might not have a password
                     if (!user.password) return null;
 
                     const passwordsMatch = await bcrypt.compare(password, user.password);
-                    if (passwordsMatch) return user;
+                    if (passwordsMatch) {
+                        // Check for pending status
+                        // We check the most recent workspace or all of them
+                        // For MVP/Firm Login, usually they join one.
+                        const pendingWorkspace = user.workspaces.find(ws => ws.status === 'pending');
+
+                        if (pendingWorkspace) {
+                            // We return null here, but ideally we'd pass a specific error.
+                            // For now, logging it and the UI will show generic error, 
+                            // but we can improve this by throwing an Error that NextAuth catches.
+                            console.log('User is pending approval');
+                            throw new Error('Pending Approval');
+                        }
+
+                        return user;
+                    }
                 }
 
                 console.log('Invalid credentials');

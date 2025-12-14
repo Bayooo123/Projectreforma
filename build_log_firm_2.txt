@@ -1,0 +1,63 @@
+
+> reforma-os@0.1.0 build
+> next build
+
+   ▲ Next.js 16.0.7 (Turbopack)
+   - Environments: .env.local, .env
+
+   Creating an optimized production build ...
+
+> Build error occurred
+Error: Turbopack build failed with 2 errors:
+./src/app/join-firm/register/page.tsx:8:1
+Module not found: Can't resolve '../page.module.css'
+[0m [90m  6 |[39m [36mimport[39m [33mLink[39m [36mfrom[39m [32m'next/link'[39m[33m;[39m
+ [90m  7 |[39m [36mimport[39m { registerMember[33m,[39m [33mFirmLoginState[39m } [36mfrom[39m [32m'@/app/actions/firm-auth'[39m[33m;[39m
+[31m[1m>[22m[39m[90m  8 |[39m [36mimport[39m styles [36mfrom[39m [32m'../page.module.css'[39m[33m;[39m [90m// Reusing styles[39m
+ [90m    |[39m [31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m
+ [90m  9 |[39m
+ [90m 10 |[39m [36mconst[39m initialState[33m:[39m [33mFirmLoginState[39m [33m=[39m {}[33m;[39m
+ [90m 11 |[39m[0m
+
+
+
+Import traces:
+  Client Component Browser:
+    ./src/app/join-firm/register/page.tsx [Client Component Browser]
+    ./src/app/join-firm/register/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/app/join-firm/register/page.tsx [Client Component SSR]
+    ./src/app/join-firm/register/page.tsx [Server Component]
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+./src/app/join-firm/page.tsx:8:1
+Module not found: Can't resolve './page.module.css'
+[0m [90m  6 |[39m [36mimport[39m [33mLink[39m [36mfrom[39m [32m'next/link'[39m[33m;[39m
+ [90m  7 |[39m [36mimport[39m { validateFirmCredentials[33m,[39m [33mFirmLoginState[39m } [36mfrom[39m [32m'@/app/actions/firm-auth'[39m[33m;[39m
+[31m[1m>[22m[39m[90m  8 |[39m [36mimport[39m styles [36mfrom[39m [32m'./page.module.css'[39m[33m;[39m
+ [90m    |[39m [31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m
+ [90m  9 |[39m
+ [90m 10 |[39m [36mconst[39m initialState[33m:[39m [33mFirmLoginState[39m [33m=[39m {}[33m;[39m
+ [90m 11 |[39m[0m
+
+
+
+Import traces:
+  Client Component Browser:
+    ./src/app/join-firm/page.tsx [Client Component Browser]
+    ./src/app/join-firm/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/app/join-firm/page.tsx [Client Component SSR]
+    ./src/app/join-firm/page.tsx [Server Component]
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+    at <unknown> (./src/app/join-firm/register/page.tsx:8:1)
+    at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+    at <unknown> (./src/app/join-firm/page.tsx:8:1)
+    at <unknown> (https://nextjs.org/docs/messages/module-not-found)
