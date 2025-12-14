@@ -1,14 +1,15 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
-// Initialize Gemini API
-// ERROR HANDLER: Ensure API key exists
 const apiKey = process.env.GEMINI_API_KEY;
-if (!apiKey) {
-    console.error('CRITICAL: GEMINI_API_KEY is not set in environment variables.');
-}
 
-const genAI = new GoogleGenerativeAI(apiKey || '');
-const model = genAI.getGenerativeModel({ model: "text-embedding-004" });
+// Lazy initialization wrapper
+const getModel = () => {
+    if (!apiKey) {
+        throw new Error('GEMINI_API_KEY is not set');
+    }
+    const genAI = new GoogleGenerativeAI(apiKey);
+    return genAI.getGenerativeModel({ model: "text-embedding-004" });
+};
 
 /**
  * Generates a vector embedding for a given text.
@@ -20,6 +21,9 @@ export async function generateEmbedding(text: string): Promise<number[] | null> 
 
         // Clean text to avoid issues (remove null bytes, excessive whitespace)
         const cleanText = text.replace(/\0/g, '').trim();
+
+        // Initialize model on demand
+        const model = getModel();
 
         const result = await model.embedContent(cleanText);
         const embedding = result.embedding;
