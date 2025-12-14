@@ -1,0 +1,3 @@
+﻿src/components/management/PaymentModal.tsx(87,29): error TS2345: Argument of type '{ id: string; status: string; dueDate: Date | null; invoiceNumber: string; totalAmount: number; }[]' is not assignable to parameter of type 'SetStateAction<Invoice[]>'.
+  Type '{ id: string; status: string; dueDate: Date | null; invoiceNumber: string; totalAmount: number; }[]' is not assignable to type 'Invoice[]'.
+    Property 'paidAmount' is missing in type '{ id: string; status: string; dueDate: Date | null; invoiceNumber: string; totalAmount: number; }' but required in type 'Invoice'.

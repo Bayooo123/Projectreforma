@@ -1,0 +1,16 @@
+﻿src/components/management/PaymentModal.tsx(245,85): error TS1005: ',' expected.
+src/components/management/PaymentModal.tsx(245,89): error TS1002: Unterminated string literal.
+src/components/management/PaymentModal.tsx(246,49): error TS1005: ':' expected.
+src/components/management/PaymentModal.tsx(246,59): error TS1005: ',' expected.
+src/components/management/PaymentModal.tsx(246,67): error TS1005: ',' expected.
+src/components/management/PaymentModal.tsx(246,70): error TS1005: ',' expected.
+src/components/management/PaymentModal.tsx(246,71): error TS1005: '...' expected.
+src/components/management/PaymentModal.tsx(247,45): error TS1003: Identifier expected.
+src/components/management/PaymentModal.tsx(247,47): error TS17002: Expected corresponding JSX closing tag for 'div'.
+src/components/management/PaymentModal.tsx(248,41): error TS1005: ')' expected.
+src/components/management/PaymentModal.tsx(249,30): error TS1005: ':' expected.
+src/components/management/PaymentModal.tsx(278,27): error TS17002: Expected corresponding JSX closing tag for 'form'.
+src/components/management/PaymentModal.tsx(279,23): error TS1005: '}' expected.
+src/components/management/PaymentModal.tsx(293,30): error TS1381: Unexpected token. Did you mean `{'}'}` or `&rbrace;`?
+src/components/management/PaymentModal.tsx(379,19): error TS17002: Expected corresponding JSX closing tag for 'div'.
+src/components/management/PaymentModal.tsx(380,22): error TS1381: Unexpected token. Did you mean `{'}'}` or `&rbrace;`?

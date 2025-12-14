@@ -359,13 +359,25 @@ export async function getClientInvoices(clientId: string) {
                 totalAmount: true,
                 status: true,
                 dueDate: true,
+                payments: {
+                    select: { amount: true }
+                }
             },
             orderBy: {
                 createdAt: 'desc',
             },
         });
 
-        return { success: true, data: invoices };
+        const data = invoices.map(inv => ({
+            id: inv.id,
+            invoiceNumber: inv.invoiceNumber,
+            totalAmount: inv.totalAmount,
+            status: inv.status,
+            dueDate: inv.dueDate,
+            paidAmount: inv.payments.reduce((sum, p) => sum + p.amount, 0)
+        }));
+
+        return { success: true, data };
     } catch (error) {
         console.error('Error fetching client invoices:', error);
         return { success: false, error: 'Failed to fetch invoices' };

@@ -241,203 +241,203 @@ const PaymentModal = ({ isOpen, onClose, clientName, clientId, selectedInvoice }
 
                                     {paymentMode === 'full' && (
                                         <div style={{ padding: '1rem', background: 'var(--surface)', borderRadius: 'var(--radius-md)', marginBottom: '1rem' }}>
-                                            <p style={{
-                                                textAlign: 'center', fontWeight: 600'}}>
+                                            <p style={{ textAlign: 'center', fontWeight: 600 }}>
                                                 Recording payment of {formatCurrency(invoiceBalance)}
                                             </p>
                                         </div>
+                                    )}
+
+                                    {paymentMode === 'vary' && (
+                                        <div style={{ marginBottom: '1rem' }}>
+                                            <div className={styles.formGroup}>
+                                                <label className={styles.formLabel}>Amount to Pay (₦)</label>
+                                                <input
+                                                    type="number"
+                                                    className={styles.input}
+                                                    value={varyAmount}
+                                                    onChange={(e) => setVaryAmount(e.target.value)}
+                                                    placeholder="Enter amount..."
+                                                    step="0.01"
+                                                    required
+                                                />
+                                            </div>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.5rem' }}>
+                                                <input
+                                                    type="checkbox"
+                                                    id="markPaid"
+                                                    checked={markAsFullyPaid}
+                                                    onChange={(e) => setMarkAsFullyPaid(e.target.checked)}
+                                                />
+                                                <label htmlFor="markPaid" style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
+                                                    Mark invoice as fully paid (Discount remaining balance)
+                                                </label>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            ) : (
+                                // STANDARD GENERIC PAYMENT FLOW
+                                <div className={styles.formGroup}>
+                                    <label className={styles.formLabel}>Amount (₦) *</label>
+                                    <input
+                                        name="amount"
+                                        type="number"
+                                        className={styles.input}
+                                        placeholder="500000.00"
+                                        required
+                                        step="0.01"
+                                        disabled={isSubmitting}
+                                    />
+                                </div>
                             )}
 
-                            {paymentMode === 'vary' && (
-                                <div style={{ marginBottom: '1rem' }}>
-                                    <div className={styles.formGroup}>
-                                        <label className={styles.formLabel}>Amount to Pay (₦)</label>
-                                        <input
-                                            type="number"
-                                            className={styles.input}
-                                            value={varyAmount}
-                                            onChange={(e) => setVaryAmount(e.target.value)}
-                                            placeholder="Enter amount..."
-                                            step="0.01"
-                                            required
-                                        />
-                                    </div>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.5rem' }}>
-                                        <input
-                                            type="checkbox"
-                                            id="markPaid"
-                                            checked={markAsFullyPaid}
-                                            onChange={(e) => setMarkAsFullyPaid(e.target.checked)}
-                                        />
-                                        <label htmlFor="markPaid" style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
-                                            Mark invoice as fully paid (Discount remaining balance)
-                                        </label>
-                                    </div>
+                            <div className={styles.formGroup}>
+                                <label className={styles.formLabel}>Payment Method *</label>
+                                <select
+                                    name="method"
+                                    className={styles.input}
+                                    required
+                                    disabled={isSubmitting}
+                                >
+                                    <option value="">Select method...</option>
+                                    {PAYMENT_METHODS.map(method => (
+                                        <option key={method} value={method}>
+                                            {method}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            {!selectedInvoice && invoices.length > 0 && (
+                                <div className={styles.formGroup}>
+                                    <label className={styles.formLabel}>Link to Invoice (Optional)</label>
+                                    <select
+                                        name="invoiceId"
+                                        className={styles.input}
+                                        disabled={isSubmitting}
+                                    >
+                                        <option value="">No invoice selected</option>
+                                        {invoices.map(invoice => (
+                                            <option key={invoice.id} value={invoice.id}>
+                                                {invoice.invoiceNumber} - {formatCurrency(invoice.totalAmount)} ({invoice.status})
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+                            )}
+
+                            <div className={styles.formGroup}>
+                                <label className={styles.formLabel}>Payment Reference</label>
+                                <input
+                                    name="reference"
+                                    type="text"
+                                    className={styles.input}
+                                    placeholder="TRF/2025/10001"
+                                    disabled={isSubmitting}
+                                />
+                            </div>
+
+                            <div className={styles.formGroup}>
+                                <label className={styles.formLabel}>Payment Date</label>
+                                <input
+                                    name="date"
+                                    type="date"
+                                    className={styles.input}
+                                    defaultValue={new Date().toISOString().split('T')[0]}
+                                    disabled={isSubmitting}
+                                />
+                            </div>
+
+                            <div className={styles.formActions}>
+                                <button
+                                    type="button"
+                                    onClick={onClose}
+                                    className={styles.cancelBtn}
+                                    disabled={isSubmitting}
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    className={styles.submitBtn}
+                                    disabled={isSubmitting}
+                                >
+                                    {isSubmitting ? (
+                                        <>
+                                            <Loader size={16} className="spin" />
+                                            Recording...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <DollarSign size={16} />
+                                            Record Payment
+                                        </>
+                                    )}
+                                </button>
+                            </div>
+                        </form>
+                    )}
+
+                    {activeTab === 'list' && (
+                        <div className={styles.invoiceList}>
+                            {isLoading ? (
+                                <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>
+                                    <Loader size={32} className="spin" />
+                                    <p>Loading payments...</p>
+                                </div>
+                            ) : payments.length === 0 ? (
+                                <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>
+                                    <p>No payments recorded yet</p>
+                                </div>
+                            ) : (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                                    {payments.map(payment => (
+                                        <div
+                                            key={payment.id}
+                                            style={{
+                                                padding: '1rem',
+                                                border: '1px solid var(--border)',
+                                                borderRadius: 'var(--radius-md)',
+                                                backgroundColor: 'var(--background)',
+                                            }}
+                                        >
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
+                                                <div>
+                                                    <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--primary)', marginBottom: '0.25rem' }}>
+                                                        {formatCurrency(payment.amount)}
+                                                    </h3>
+                                                    <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
+                                                        {payment.method}
+                                                    </p>
+                                                </div>
+                                                <div style={{ textAlign: 'right' }}>
+                                                    <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                                                        <Calendar size={14} />
+                                                        {formatDate(payment.date)}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            {payment.reference && (
+                                                <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>
+                                                    Ref: {payment.reference}
+                                                </p>
+                                            )}
+                                            {payment.invoice && (
+                                                <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                                                    <FileText size={14} />
+                                                    Linked to {payment.invoice.invoiceNumber}
+                                                </p>
+                                            )}
+                                        </div>
+                                    ))}
                                 </div>
                             )}
                         </div>
-                    ) : (
-                    // STANDARD GENERIC PAYMENT FLOW
-                    <div className={styles.formGroup}>
-                        <label className={styles.formLabel}>Amount (₦) *</label>
-                        <input
-                            name="amount"
-                            type="number"
-                            className={styles.input}
-                            placeholder="500000.00"
-                            required
-                            step="0.01"
-                            disabled={isSubmitting}
-                        />
-                    </div>
-                            )}
-
-                    <div className={styles.formGroup}>
-                        <label className={styles.formLabel}>Payment Method *</label>
-                        <select
-                            name="method"
-                            className={styles.input}
-                            required
-                            disabled={isSubmitting}
-                        >
-                            <option value="">Select method...</option>
-                            {PAYMENT_METHODS.map(method => (
-                                <option key={method} value={method}>
-                                    {method}
-                                </option>
-                            ))}
-                        </select>
-                    </div>
-
-                    {!selectedInvoice && invoices.length > 0 && (
-                        <div className={styles.formGroup}>
-                            <label className={styles.formLabel}>Link to Invoice (Optional)</label>
-                            <select
-                                name="invoiceId"
-                                className={styles.input}
-                                disabled={isSubmitting}
-                            >
-                                <option value="">No invoice selected</option>
-                                {invoices.map(invoice => (
-                                    <option key={invoice.id} value={invoice.id}>
-                                        {invoice.invoiceNumber} - {formatCurrency(invoice.totalAmount)} ({invoice.status})
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
                     )}
-
-                    <div className={styles.formGroup}>
-                        <label className={styles.formLabel}>Payment Reference</label>
-                        <input
-                            name="reference"
-                            type="text"
-                            className={styles.input}
-                            placeholder="TRF/2025/10001"
-                            disabled={isSubmitting}
-                        />
-                    </div>
-
-                    <div className={styles.formGroup}>
-                        <label className={styles.formLabel}>Payment Date</label>
-                        <input
-                            name="date"
-                            type="date"
-                            className={styles.input}
-                            defaultValue={new Date().toISOString().split('T')[0]}
-                            disabled={isSubmitting}
-                        />
-                    </div>
-
-                    <div className={styles.formActions}>
-                        <button
-                            type="button"
-                            onClick={onClose}
-                            className={styles.cancelBtn}
-                            disabled={isSubmitting}
-                        >
-                            Cancel
-                        </button>
-                        <button
-                            type="submit"
-                            className={styles.submitBtn}
-                            disabled={isSubmitting}
-                        >
-                            {isSubmitting ? (
-                                <>
-                                    <Loader size={16} className="spin" />
-                                    Recording...
-                                </>
-                            ) : (
-                                <>
-                                    <DollarSign size={16} />
-                                    Record Payment
-                                </>
-                            )}
-                        </button>
-                    </div>
-                </form>
-                    )}
-
-                {activeTab === 'list' && (
-                    <div className={styles.invoiceList}>
-                        {isLoading ? (
-                            <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>
-                                <Loader size={32} className="spin" />
-                                <p>Loading payments...</p>
-                            </div>
-                        ) : payments.length === 0 ? (
-                            <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>
-                                <p>No payments recorded yet</p>
-                            </div>
-                        ) : (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                                {payments.map(payment => (
-                                    <div
-                                        key={payment.id}
-                                        style={{
-                                            padding: '1rem',
-                                            border: '1px solid var(--border)',
-                                            borderRadius: 'var(--radius-md)',
-                                            backgroundColor: 'var(--background)',
-                                        }}
-                                    >
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
-                                            <div>
-                                                <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--primary)', marginBottom: '0.25rem' }}>
-                                                    {formatCurrency(payment.amount)}
-                                                </h3>
-                                                <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
-                                                    {payment.method}
-                                                </p>
-                                            </div>
-                                            <div style={{ textAlign: 'right' }}>
-                                                <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                                                    <Calendar size={14} />
-                                                    {formatDate(payment.date)}
-                                                </p>
-                                            </div>
-                                        </div>
-                                        {payment.reference && (
-                                            <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>
-                                                Ref: {payment.reference}
-                                            </p>
-                                        )}
-                                        {payment.invoice && (
-                                            <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                                                <FileText size={14} />
-                                                Linked to {payment.invoice.invoiceNumber}
-                                            </p>
-                                        )}
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-                    </div>
-                )}
+                </div>
             </div>
+
         </div>
-        </div >
     );
 };
 
