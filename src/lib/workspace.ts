@@ -32,45 +32,50 @@ export async function isWorkspaceOwner(userId: string, workspaceId: string): Pro
  * Get the user's primary workspace (first owned workspace or first joined workspace)
  */
 export async function getPrimaryWorkspace(userId: string) {
-    // First, try to get an owned workspace
-    const ownedWorkspace = await prisma.workspace.findFirst({
-        where: { ownerId: userId },
-        include: {
-            members: {
-                where: { userId },
-                select: { role: true },
+    try {
+        // First, try to get an owned workspace
+        const ownedWorkspace = await prisma.workspace.findFirst({
+            where: { ownerId: userId },
+            include: {
+                members: {
+                    where: { userId },
+                    select: { role: true },
+                },
             },
-        },
-    });
+        });
 
-    if (ownedWorkspace) {
-        return {
-            ...ownedWorkspace,
-            role: ownedWorkspace.members[0]?.role || 'owner',
-            isOwner: true,
-        };
+        if (ownedWorkspace) {
+            return {
+                ...ownedWorkspace,
+                role: ownedWorkspace.members[0]?.role || 'owner',
+                isOwner: true,
+            };
+        }
+
+        // If no owned workspace, get the first workspace they're a member of
+        const membership = await prisma.workspaceMember.findFirst({
+            where: { userId },
+            include: {
+                workspace: true,
+            },
+            orderBy: {
+                joinedAt: 'desc',
+            },
+        });
+
+        if (membership) {
+            return {
+                ...membership.workspace,
+                role: membership.role,
+                isOwner: false,
+            };
+        }
+
+        return null;
+    } catch (error) {
+        console.error('Failed to get primary workspace:', error);
+        return null;
     }
-
-    // If no owned workspace, get the first workspace they're a member of
-    const membership = await prisma.workspaceMember.findFirst({
-        where: { userId },
-        include: {
-            workspace: true,
-        },
-        orderBy: {
-            joinedAt: 'desc',
-        },
-    });
-
-    if (membership) {
-        return {
-            ...membership.workspace,
-            role: membership.role,
-            isOwner: false,
-        };
-    }
-
-    return null;
 }
 
 /**
@@ -114,30 +119,35 @@ export async function getWorkspaceDetails(workspaceId: string) {
  * Get current authenticated user with workspace info
  */
 export async function getCurrentUserWithWorkspace() {
-    const session = await auth();
+    try {
+        const session = await auth();
 
-    if (!session?.user?.id) {
+        if (!session?.user?.id) {
+            return null;
+        }
+
+        const user = await prisma.user.findUnique({
+            where: { id: session.user.id },
+            select: {
+                id: true,
+                name: true,
+                email: true,
+                image: true,
+            },
+        });
+
+        if (!user) {
+            return null;
+        }
+
+        const workspace = await getPrimaryWorkspace(user.id);
+
+        return {
+            user,
+            workspace,
+        };
+    } catch (error) {
+        console.error('Failed to get current user with workspace:', error);
         return null;
     }
-
-    const user = await prisma.user.findUnique({
-        where: { id: session.user.id },
-        select: {
-            id: true,
-            name: true,
-            email: true,
-            image: true,
-        },
-    });
-
-    if (!user) {
-        return null;
-    }
-
-    const workspace = await getPrimaryWorkspace(user.id);
-
-    return {
-        user,
-        workspace,
-    };
 }
