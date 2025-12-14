@@ -284,20 +284,8 @@ model Document {
   ocrText    String?
   
   brief Brief @relation(fields: [briefId], references: [id], onDelete: Cascade)
-  embeddings DocumentEmbedding[]
   
   @@index([briefId])
-}
-
-model DocumentEmbedding {
-  id         String                 @id @default(cuid())
-  documentId String
-  content    String                 @db.Text
-  embedding  Unsupported("vector")?
-
-  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
-
-  @@index([documentId])
 }
 
 model Client {
