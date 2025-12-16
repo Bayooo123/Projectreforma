@@ -3,15 +3,15 @@
 @tailwind utilities;
 
 :root {
-  /* Brand Colors - Sophisticated Navy Theme */
-  --primary: #1E293B;
-  /* Deep Navy (Sidebar/Headers) */
-  --primary-dark: #0F172A;
-  /* Darker Navy (Active States) */
-  --primary-light: #334155;
-  /* Lighter Navy (Borders/Accents) */
-  --primary-soft: rgba(30, 41, 59, 0.05);
-  /* Very light wash */
+  /* Brand Colors - Teal Green Theme */
+  --primary: #0F766E;
+  /* Teal 700 - Deep Teal Main */
+  --primary-dark: #134E4A;
+  /* Teal 900 - Darker Teal (Sidebar) */
+  --primary-light: #14B8A6;
+  /* Teal 500 - Brighter Teal (Accents) */
+  --primary-soft: rgba(20, 184, 166, 0.1);
+  /* Light Teal Wash */
 
   --accent: #F8FAFC;
   /* Off-white background */
@@ -91,13 +91,15 @@
 @media (prefers-color-scheme: dark) {
   :root {
     /* Brand Colors - Dark Mode */
-    --primary: #38BDF8;
-    /* Sky 400 - Brighter for dark mode accents */
-    --primary-dark: #0EA5E9;
-    --primary-light: #7DD3FC;
-    --primary-soft: rgba(56, 189, 248, 0.1);
+    --primary: #2DD4BF;
+    /* Teal 400 - Bright Teal for dark mode */
+    --primary-dark: #0d9488;
+    /* Teal 600 */
+    --primary-light: #5EEAD4;
+    /* Teal 300 */
+    --primary-soft: rgba(45, 212, 191, 0.1);
 
-    --accent: #1E293B;
+    --accent: #0F172A;
     --accent-hover: #334155;
 
     --text-primary: #F1F5F9;
