@@ -27,43 +27,67 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
         Credentials({
             async authorize(credentials) {
                 const parsedCredentials = z
-                    .object({ email: z.string().email(), password: z.string().min(6) })
+                    .object({
+                        email: z.string().email(),
+                        password: z.string().min(6),
+                        firmCode: z.string().min(1),
+                        firmPassword: z.string().min(1)
+                    })
                     .safeParse(credentials);
 
                 if (parsedCredentials.success) {
-                    const { email, password } = parsedCredentials.data;
+                    const { email, password, firmCode, firmPassword } = parsedCredentials.data;
 
-                    // Fetch user with workspace memberships
+                    // 1. Verify Firm Credentials
+                    const workspace = await prisma.workspace.findUnique({
+                        where: { firmCode }
+                    });
+
+                    if (!workspace || !workspace.joinPassword) {
+                        console.log('Invalid Firm Code');
+                        throw new Error('Invalid Firm Code');
+                    }
+
+                    const firmPasswordMatch = await bcrypt.compare(firmPassword, workspace.joinPassword);
+                    if (!firmPasswordMatch) {
+                        console.log('Invalid Firm Password');
+                        throw new Error('Invalid Firm Password');
+                    }
+
+                    // 2. Verify User Credentials
                     const user = await prisma.user.findUnique({
                         where: { email },
                         include: { workspaces: true }
                     });
 
-                    if (!user) return null;
-
-                    // Handle users created via OAuth who might not have a password
-                    if (!user.password) return null;
-
-                    const passwordsMatch = await bcrypt.compare(password, user.password);
-                    if (passwordsMatch) {
-                        // Check for pending status
-                        // We check the most recent workspace or all of them
-                        // For MVP/Firm Login, usually they join one.
-                        const pendingWorkspace = user.workspaces.find(ws => ws.status === 'pending');
-
-                        if (pendingWorkspace) {
-                            // We return null here, but ideally we'd pass a specific error.
-                            // For now, logging it and the UI will show generic error, 
-                            // but we can improve this by throwing an Error that NextAuth catches.
-                            console.log('User is pending approval');
-                            throw new Error('Pending Approval');
-                        }
-
-                        return user;
+                    if (!user || !user.password) {
+                        console.log('User not found or missing password');
+                        return null;
                     }
+
+                    const userPasswordMatch = await bcrypt.compare(password, user.password);
+                    if (!userPasswordMatch) {
+                        console.log('Invalid User Password');
+                        return null;
+                    }
+
+                    // 3. Verify User Belongs to Firm
+                    const membership = user.workspaces.find(ws => ws.workspaceId === workspace.id);
+                    if (!membership) {
+                        console.log('User is not a member of this firm');
+                        throw new Error('You are not a member of this firm.');
+                    }
+
+                    // Check for pending status
+                    if (membership.status === 'pending') {
+                        console.log('User is pending approval');
+                        throw new Error('Pending Approval');
+                    }
+
+                    return user;
                 }
 
-                console.log('Invalid credentials');
+                console.log('Invalid credentials format');
                 return null;
             },
         }),

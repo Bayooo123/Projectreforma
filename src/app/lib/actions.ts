@@ -18,9 +18,23 @@ export async function authenticate(
             return 'Your account is pending firm approval. Please contact your administrator.';
         }
         if (error instanceof AuthError) {
+            // Check for our custom errors wrapped in AuthError
+            if (error.cause?.err?.message) {
+                return error.cause.err.message;
+            }
+            // Or check the message directly if it propagates
+            if (error.message.includes('Invalid Firm Code')) return 'Invalid Firm Code.';
+            if (error.message.includes('Invalid Firm Password')) return 'Invalid Firm Password.';
+            if (error.message.includes('not a member')) return 'You are not a member of this firm.';
+
             switch (error.type) {
                 case 'CredentialsSignin':
-                    return 'Invalid credentials.';
+                    return 'Invalid email or password.';
+                case 'CallbackRouteError':
+                    // Often where the thrown Error ends up
+                    if (error.message.includes('Invalid Firm Code')) return 'Invalid Firm Code.';
+                    if (error.message.includes('Invalid Firm Password')) return 'Invalid Firm Password.';
+                    return 'Authentication failed.';
                 default:
                     return 'Something went wrong.';
             }

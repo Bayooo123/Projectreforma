@@ -62,6 +62,36 @@ export default function LoginPage() {
                     </div>
 
                     <form action={dispatch} className={styles.form}>
+                        {/* Firm Credentials */}
+                        <div className={styles.formGroup}>
+                            <label htmlFor="firmCode" className={styles.label}>
+                                Firm Code
+                            </label>
+                            <input
+                                id="firmCode"
+                                name="firmCode"
+                                type="text"
+                                required
+                                className={styles.input}
+                                placeholder="e.g. ASCOLP-001"
+                            />
+                        </div>
+
+                        <div className={styles.formGroup}>
+                            <label htmlFor="firmPassword" className={styles.label}>
+                                Firm Password
+                            </label>
+                            <input
+                                id="firmPassword"
+                                name="firmPassword"
+                                type="password"
+                                required
+                                className={styles.input}
+                                placeholder="Firm Access Code"
+                            />
+                        </div>
+
+                        {/* User Credentials */}
                         <div className={styles.formGroup}>
                             <label htmlFor="email" className={styles.label}>
                                 Email address
