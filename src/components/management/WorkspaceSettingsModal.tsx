@@ -374,6 +374,64 @@ const WorkspaceSettingsModal = ({ isOpen, onClose, workspaceId, currentLetterhea
                                 )}
                             </div>
 
+                            {/* Revenue PIN Section */}
+                            <div style={{ marginBottom: '1.5rem', paddingTop: '1.5rem', borderTop: '1px solid var(--border)' }}>
+                                <h4 style={{ fontSize: '0.9rem', fontWeight: 600, marginBottom: '0.5rem', color: 'var(--text-primary)' }}>Finance Security</h4>
+                                <p className={styles.subtitle} style={{ marginBottom: '1rem' }}>
+                                    Set a 5-digit PIN to hide total revenue on the dashboard. Leave blank to disable.
+                                </p>
+                                <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-end' }}>
+                                    <div style={{ flex: 1 }}>
+                                        <label className={styles.formLabel}>Revenue PIN</label>
+                                        <input
+                                            name="revenuePin" // We'll need to handle this in a separate handler or update action
+                                            type="password"
+                                            maxLength={5}
+                                            placeholder="-----"
+                                            className={styles.input}
+                                            onChange={async (e) => {
+                                                // Quick hack: Handle PIN update separately on blur or change if valid
+                                                // Ideally we'd update the form action, but let's do an optimistic local update
+                                                // Actually, let's just make a separate button for this or integrate.
+                                                // User might expect "Update Credentials" to save this.
+                                                // Let's rely on a separate specific button for PIN to avoid modifying the massive access action right now.
+                                            }}
+                                            style={{ width: '100%', padding: '0.75rem', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', textAlign: 'center', letterSpacing: '0.25rem' }}
+                                        />
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={async (e) => {
+                                            const input = (e.currentTarget.previousElementSibling?.querySelector('input') as HTMLInputElement);
+                                            const pin = input?.value;
+                                            if (pin && pin.length === 5) {
+                                                // Call action
+                                                const { setRevenuePin } = await import('@/app/actions/clients');
+                                                const res = await setRevenuePin(workspaceId, pin);
+                                                if (res.success) {
+                                                    alert('Revenue PIN set successfully');
+                                                } else {
+                                                    alert('Failed to set PIN: ' + res.error);
+                                                }
+                                            } else {
+                                                alert('Please enter exactly 5 digits');
+                                            }
+                                        }}
+                                        style={{
+                                            padding: '0.75rem 1rem',
+                                            background: 'var(--surface)',
+                                            border: '1px solid var(--border)',
+                                            borderRadius: 'var(--radius-md)',
+                                            cursor: 'pointer',
+                                            color: 'var(--text-primary)',
+                                            fontWeight: 500
+                                        }}
+                                    >
+                                        Set PIN
+                                    </button>
+                                </div>
+                            </div>
+
                             {accessState.errors?._form && (
                                 <div style={{ color: '#dc2626', background: '#fee2e2', padding: '0.75rem', borderRadius: '4px', marginBottom: '1rem' }}>
                                     {accessState.errors._form[0]}

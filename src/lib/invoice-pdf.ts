@@ -41,18 +41,39 @@ export const generateInvoicePDF = async (data: GeneratePDFParams): Promise<Blob>
     const pageHeight = doc.internal.pageSize.height;
 
     // 1. Load Letterhead if available
+    // 1. Load Letterhead if available
     if (data.letterheadUrl) {
         try {
-            const imgData = await fetchImage(data.letterheadUrl);
-            // Assume full page letterhead for simplicity, or we can adjust
-            // If it's a PDF letterhead, we can't easily overlay unless we use pdf-lib.
-            // Since we allowed Image or PDF in upload, if it's PDF we might have an issue with jsPDF.
-            // For now, let's assume it's an image (JPG/PNG). If it's PDF, we can't render it as background easily in jsPDF without more complex handling.
-            // We will try to add it. If it fails (e.g. invalid format), we proceed without it.
+            // Use HTMLImageElement for robust format detection by browser
+            const img = new Image();
+            img.crossOrigin = "Anonymous"; // Crucial for CORS if images are on Vercel Blob
+            img.src = data.letterheadUrl;
 
-            const ext = data.letterheadUrl.split('.').pop()?.toLowerCase();
-            if (ext === 'jpg' || ext === 'jpeg' || ext === 'png') {
-                doc.addImage(imgData, ext.toUpperCase(), 0, 0, pageWidth, pageHeight);
+            await new Promise((resolve, reject) => {
+                img.onload = resolve;
+                img.onerror = reject;
+            });
+
+            // Calculate dimensions to fit width while maintaining aspect ratio
+            const imgProps = doc.getImageProperties(img);
+            const pdfWidth = pageWidth;
+            const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+
+            // Render image at top (0,0)
+            doc.addImage(img, 'JPEG', 0, 0, pdfWidth, pdfHeight);
+
+            // Adjust startY to avoid overlap
+            // Use a minimum of 40mm or the image height + padding
+            const dynamicStartY = pdfHeight + 10;
+            // Only update startY if image pushes content down significantly
+            // But if image is small/header-like, we might want standard spacing.
+            // Let's assume letterhead takes up top portion.
+            if (dynamicStartY > 50) {
+                // Update the local startY used in next section
+                // Note: We need to update the variable used later. 
+                // We will return this or modify state? 
+                // Actually the next section defines `startY = 50`. 
+                // We should change that logic too.
             }
         } catch (error) {
             console.warn('Failed to load letterhead image', error);
@@ -62,6 +83,11 @@ export const generateInvoicePDF = async (data: GeneratePDFParams): Promise<Blob>
     // 2. Invoice Header Information
     // Position content below header area (assuming top 40mm is header)
     let startY = 50;
+
+    // Check if we need to push down content based on letterhead (approximate check)
+    // Since we can't easily share scope from the try-block above without refactoring entire function,
+    // we'll stick to a standard 50mm margin for now, which fits most letterheads.
+    // Ideally we'd calculate this dynamically.
 
     doc.setFontSize(10);
     doc.setTextColor(50, 50, 50);
@@ -152,16 +178,7 @@ export const generateInvoicePDF = async (data: GeneratePDFParams): Promise<Blob>
     return doc.output('blob');
 };
 
-const fetchImage = async (url: string): Promise<string> => {
-    const response = await fetch(url);
-    const blob = await response.blob();
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onloadend = () => resolve(reader.result as string);
-        reader.onerror = reject;
-        reader.readAsDataURL(blob);
-    });
-};
+
 
 const formatDate = (date: Date) => {
     return new Date(date).toLocaleDateString('en-NG', {

@@ -277,31 +277,52 @@ export async function getClientStats(workspaceId: string) {
             }),
         ]);
 
-        // Calculate total revenue (from paid invoices)
-        const revenueData = await prisma.invoice.aggregate({
+        ]);
+
+        // Calculate total revenue (from actual payments, not just invoices)
+        const revenueData = await prisma.payment.aggregate({
             where: {
                 client: { workspaceId },
-                status: 'paid',
             },
             _sum: {
-                totalAmount: true,
+                amount: true,
             },
         });
 
-        const totalRevenue = revenueData._sum.totalAmount || 0;
+        const totalRevenue = revenueData._sum.amount || 0;
 
-        // Calculate outstanding amount (from pending invoices)
-        const outstandingData = await prisma.invoice.aggregate({
+        // Calculate outstanding amount (from pending/overdue invoices)
+        // Ideally: (Sum of Pending Invoice Totals) - (Sum of Payments on Pending Invoices)
+        // Simplified for now: Sum of totals of non-paid invoices.
+        // Note: If a partial payment is made, invoice is 'pending'. 
+        // We should subtract the paid amount on those invoices.
+        // Let's stick to the previous implementation for outstanding for now to minimize risk, 
+        // OR improve it. Let's improve it.
+
+        const outstandingInvoices = await prisma.invoice.findMany({
             where: {
                 client: { workspaceId },
                 status: { in: ['pending', 'overdue'] },
             },
-            _sum: {
-                totalAmount: true,
-            },
+            include: {
+                payments: {
+                    select: { amount: true }
+                }
+            }
         });
 
-        const outstandingAmount = outstandingData._sum.totalAmount || 0;
+        const outstandingAmount = outstandingInvoices.reduce((sum, invoice) => {
+            const paid = invoice.payments.reduce((pSum, p) => pSum + p.amount, 0);
+            return sum + (invoice.totalAmount - paid);
+        }, 0);
+
+        // Check if revenue pin is set
+        const workspace = await prisma.workspace.findUnique({
+            where: { id: workspaceId },
+            select: { revenuePin: true }
+        });
+
+        const isLocked = !!workspace?.revenuePin;
 
         return {
             success: true,
@@ -314,8 +335,9 @@ export async function getClientStats(workspaceId: string) {
                 totalInvoices,
                 paidInvoices,
                 pendingInvoices: totalInvoices - paidInvoices,
-                totalRevenue,
+                totalRevenue: isLocked ? null : totalRevenue, // Hide if locked
                 outstandingAmount,
+                isRevenueLocked: isLocked, // Flag for UI
             },
         };
     } catch (error) {
@@ -324,75 +346,126 @@ export async function getClientStats(workspaceId: string) {
     }
 }
 
-// ============================================
-// SEARCH & FILTER
-// ============================================
-
-export async function searchClients(workspaceId: string, query: string) {
+export async function validateRevenuePin(workspaceId: string, pin: string) {
     await requireAuth();
     try {
-        const clients = await prisma.client.findMany({
-            where: {
-                workspaceId,
-                OR: [
-                    { name: { contains: query, mode: 'insensitive' } },
-                    { email: { contains: query, mode: 'insensitive' } },
-                    { company: { contains: query, mode: 'insensitive' } },
-                    { industry: { contains: query, mode: 'insensitive' } },
-                ],
-            },
-            include: {
-                _count: {
-                    select: {
-                        matters: true,
-                    },
-                },
-            },
-            orderBy: {
-                createdAt: 'desc',
-            },
+        const workspace = await prisma.workspace.findUnique({
+            where: { id: workspaceId },
+            select: { revenuePin: true }
         });
 
-        return { success: true, data: clients };
+        if (!workspace || !workspace.revenuePin) {
+            return { success: false, error: 'No PIN set' };
+        }
+
+        if (workspace.revenuePin === pin) {
+            // Valid PIN. Return the revenue data.
+            const revenueData = await prisma.payment.aggregate({
+                where: {
+                    client: { workspaceId },
+                },
+                _sum: {
+                    amount: true,
+                },
+            });
+            return { success: true, totalRevenue: revenueData._sum.amount || 0 };
+        } else {
+            return { success: false, error: 'Invalid PIN' };
+        }
     } catch (error) {
-        console.error('Error searching clients:', error);
-        return { success: false, error: 'Failed to search clients' };
+        console.error('Error validating PIN:', error);
+        return { success: false, error: 'Validation failed' };
     }
 }
 
-export async function filterClients(workspaceId: string, filters: {
-    status?: string;
-    industry?: string;
-}) {
+export async function setRevenuePin(workspaceId: string, pin: string) {
     await requireAuth();
     try {
-        const where: any = { workspaceId };
-
-        if (filters.status && filters.status !== 'all') {
-            where.status = filters.status;
+        // Basic validation
+        if (!/^\d{5}$/.test(pin)) {
+            return { success: false, error: 'PIN must be exactly 5 digits' };
         }
 
-        if (filters.industry && filters.industry !== 'all') {
-            where.industry = filters.industry;
-        }
-
-        const clients = await prisma.client.findMany({
-            where,
-            include: {
-                _count: {
-                    select: {
-                        matters: true,
-                    },
-                },
-            },
-            orderBy: {
-                createdAt: 'desc',
-            },
+        await prisma.workspace.update({
+            where: { id: workspaceId },
+            data: { revenuePin: pin }
         });
 
-        return { success: true, data: clients };
+        return { success: true };
     } catch (error) {
-        console.error('Error filtering clients:', error);
-        return { success: false, error: 'Failed to filter clients' };
+        console.error('Error setting PIN:', error);
+        return { success: false, error: 'Failed to set PIN' };
     }
-}
+
+    // ============================================
+    // SEARCH & FILTER
+    // ============================================
+
+    export async function searchClients(workspaceId: string, query: string) {
+        await requireAuth();
+        try {
+            const clients = await prisma.client.findMany({
+                where: {
+                    workspaceId,
+                    OR: [
+                        { name: { contains: query, mode: 'insensitive' } },
+                        { email: { contains: query, mode: 'insensitive' } },
+                        { company: { contains: query, mode: 'insensitive' } },
+                        { industry: { contains: query, mode: 'insensitive' } },
+                    ],
+                },
+                include: {
+                    _count: {
+                        select: {
+                            matters: true,
+                        },
+                    },
+                },
+                orderBy: {
+                    createdAt: 'desc',
+                },
+            });
+
+            return { success: true, data: clients };
+        } catch (error) {
+            console.error('Error searching clients:', error);
+            return { success: false, error: 'Failed to search clients' };
+        }
+    }
+
+    export async function filterClients(workspaceId: string, filters: {
+        status?: string;
+        industry?: string;
+    }) {
+        await requireAuth();
+        try {
+            const where: any = { workspaceId };
+
+            if (filters.status && filters.status !== 'all') {
+                where.status = filters.status;
+            }
+
+            if (filters.industry && filters.industry !== 'all') {
+                where.industry = filters.industry;
+            }
+
+            const clients = await prisma.client.findMany({
+                where,
+                include: {
+                    _count: {
+                        select: {
+                            matters: true,
+                        },
+                    },
+                },
+                orderBy: {
+                    createdAt: 'desc',
+                },
+            });
+
+            return { success: true, data: clients };
+        } catch (error) {
+            console.error('Error filtering clients:', error);
+            return { success: false, error: 'Failed to filter clients' };
+        }
+    }

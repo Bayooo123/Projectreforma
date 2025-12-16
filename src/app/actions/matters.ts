@@ -147,6 +147,7 @@ export async function createMatter(data: {
         });
 
         revalidatePath('/calendar');
+        revalidatePath('/management/clients');
         return { success: true, matter };
     } catch (error) {
         console.error('Error creating matter:', error);
@@ -201,6 +202,7 @@ export async function updateMatter(
 
         revalidatePath('/calendar');
         revalidatePath(`/calendar/${id}`);
+        revalidatePath('/management/clients');
         return { success: true, matter };
     } catch (error) {
         console.error('Error updating matter:', error);
@@ -218,6 +220,7 @@ export async function deleteMatter(id: string) {
         });
 
         revalidatePath('/calendar');
+        revalidatePath('/management/clients');
         return { success: true };
     } catch (error) {
         console.error('Error deleting matter:', error);
@@ -329,6 +332,7 @@ export async function updateMatterStatus(
         });
 
         revalidatePath('/calendar');
+        revalidatePath('/management/clients');
         return { success: true, matter };
     } catch (error) {
         console.error('Error updating status:', error);

@@ -24,6 +24,9 @@ model Workspace {
   updatedAt DateTime @updatedAt
   letterheadUrl String?
   
+  // Security
+  revenuePin    String?  // 5-digit PIN to unlock revenue visibility
+  
   // Firm Login Fields
   joinPassword String? // Hashed shared password for firm login
   firmCode     String? @unique // Unique code for joining (e.g. "ASCO")
