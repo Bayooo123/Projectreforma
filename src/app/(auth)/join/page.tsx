@@ -56,7 +56,7 @@ export default function JoinPage() {
         }
     }
 
-    const [registerState, registerDispatch, isRegisterPending] = useActionState(registerMember, undefined);
+    const [registerState, registerDispatch, isRegisterPending] = useActionState(registerMember, {});
 
     return (
         <div className={styles.authContainer}>
