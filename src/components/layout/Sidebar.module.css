@@ -2,7 +2,14 @@
     width: 260px;
     height: 100vh;
     background-color: var(--primary);
-    /* Dark Slate */
+    /* Deep Navy Fallback */
+    /* Glassmorphism Effect */
+    background: rgba(30, 41, 59, 0.95);
+    /* Nearly opaque navy for legibility */
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-right: 1px solid rgba(255, 255, 255, 0.05);
+
     color: var(--text-inverse);
     display: flex;
     flex-direction: column;
@@ -10,6 +17,8 @@
     left: 0;
     top: 0;
     z-index: 50;
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.1);
+    /* Soft shadow to lift it */
 }
 
 .logoContainer {
@@ -53,8 +62,10 @@
 
 .active {
     color: var(--text-inverse);
-    background-color: rgba(255, 255, 255, 0.1);
+    background: linear-gradient(90deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.02) 100%);
     border-left-color: var(--text-inverse);
+    /* Add a subtle glow/shadow */
+    text-shadow: 0 0 20px rgba(255, 255, 255, 0.3);
 }
 
 .navIcon {

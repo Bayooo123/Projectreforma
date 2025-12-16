@@ -3,6 +3,8 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import Sidebar from "@/components/layout/Sidebar";
 import Header from "@/components/layout/Header";
+import PageTransition from "@/components/layout/PageTransition";
+import NextTopLoader from 'nextjs-toploader';
 import { auth } from "@/auth";
 import { getCurrentUserWithWorkspace } from "@/lib/workspace";
 
@@ -31,6 +33,13 @@ export default async function RootLayout({
   return (
     <html lang="en">
       <body className={inter.variable}>
+        <NextTopLoader
+          color="#2C3E50"
+          height={3}
+          showSpinner={false}
+          easing="ease"
+          speed={200}
+        />
         {user ? (
           // Authenticated layout with sidebar and header
           <div className="flex">
@@ -38,13 +47,17 @@ export default async function RootLayout({
             <main style={{ marginLeft: '260px', width: 'calc(100% - 260px)', minHeight: '100vh' }}>
               <Header user={user} workspace={workspaceData ?? undefined} />
               <div className="container" style={{ padding: '2rem' }}>
-                {children}
+                <PageTransition>
+                  {children}
+                </PageTransition>
               </div>
             </main>
           </div>
         ) : (
           // Unauthenticated layout (auth pages handle their own layout)
-          children
+          <PageTransition>
+            {children}
+          </PageTransition>
         )}
       </body>
     </html>
