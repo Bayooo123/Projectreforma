@@ -2,8 +2,9 @@
 
 import { useState, useEffect, forwardRef, useImperativeHandle } from 'react';
 import Link from 'next/link';
-import { Search, Filter, MoreVertical, Plus, Trash2, UserPlus, Eye, Briefcase, Loader } from 'lucide-react';
+import { Search, Filter, MoreVertical, Plus, Trash2, UserPlus, Eye, Briefcase } from 'lucide-react';
 import styles from './BriefList.module.css';
+import FluidLoader from '@/components/ui/FluidLoader';
 import { getBriefs } from '@/app/actions/briefs';
 
 interface BriefListProps {
@@ -84,7 +85,7 @@ const BriefList = forwardRef<BriefListRef, BriefListProps>(({ onUpload, workspac
         return (
             <div className={styles.container}>
                 <div className="flex justify-center items-center h-64">
-                    <Loader className="animate-spin text-gray-500" size={32} />
+                    <FluidLoader />
                 </div>
             </div>
         );
