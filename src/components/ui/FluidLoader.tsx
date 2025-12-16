@@ -6,8 +6,8 @@ export default function FluidLoader() {
     const dotTransition = {
         duration: 0.6,
         repeat: Infinity,
-        repeatType: 'reverse' as const, // Fixes type error for repeatType
-        ease: "easeInOut"
+        repeatType: 'reverse' as const,
+        ease: "easeInOut" as const
     };
 
     return (
