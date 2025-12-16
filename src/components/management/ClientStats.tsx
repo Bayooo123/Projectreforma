@@ -15,6 +15,7 @@ const ClientStats = ({ workspaceId }: ClientStatsProps) => {
     const [pin, setPin] = useState(['', '', '', '', '']); // 5 digit pin
     const [pinError, setPinError] = useState('');
     const [verifying, setVerifying] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
 
     // Dynamic imports to avoid server/client mixups if needed, but actions are safe
     // We import validateRevenuePin from actions
