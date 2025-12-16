@@ -11,6 +11,8 @@ const ADMIN_ROLES = [
     'Head of Chambers',
     'Deputy Head of Chambers',
     'Managing Partner',
+    'Senior Associate',
+    'Associate',
     'Managing Associate',
 ];
 

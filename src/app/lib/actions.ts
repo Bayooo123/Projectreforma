@@ -69,6 +69,8 @@ export async function register(
         'Head of Chambers',
         'Deputy Head of Chambers',
         'Managing Partner',
+        'Senior Associate',
+        'Associate',
         'Managing Associate',
     ];
 
