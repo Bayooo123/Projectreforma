@@ -64,6 +64,7 @@ const OfficeView = ({ workspace }: OfficeViewProps) => {
                     onClose={() => setIsSettingsOpen(false)}
                     workspaceId={workspace.id}
                     currentLetterheadUrl={workspace.letterheadUrl}
+                    firmCode={workspace.firmCode}
                     onUpdate={handleSettingsUpdate}
                 />
             )}

@@ -64,8 +64,9 @@ export default function RegisterPage() {
                     <div className={styles.formHeader}>
                         <h2 className={styles.formTitle}>Create your firm</h2>
                         <p className={styles.formSubtitle}>
-                            Already have an account?{' '}
-                            <Link href="/login">Sign in</Link>
+                            Joining a team? <Link href="/join">Find your firm</Link>
+                            <span className={styles.divider}> · </span>
+                            Already have an account? <Link href="/login">Sign in</Link>
                         </p>
                     </div>
 
@@ -127,6 +128,42 @@ export default function RegisterPage() {
                                 className={styles.input}
                                 placeholder="Doe & Associates"
                             />
+                        </div>
+
+                        <div className={styles.formGroup}>
+                            <label htmlFor="firmCode" className={styles.label}>
+                                Firm Code (Unique ID)
+                            </label>
+                            <input
+                                id="firmCode"
+                                name="firmCode"
+                                type="text"
+                                required
+                                className={styles.input}
+                                placeholder="DOE-LAW-001"
+                                minLength={3}
+                            />
+                            <p className={styles.hint}>
+                                This code will be used by your team to join the firm.
+                            </p>
+                        </div>
+
+                        <div className={styles.formGroup}>
+                            <label htmlFor="firmPassword" className={styles.label}>
+                                Firm Join Password
+                            </label>
+                            <input
+                                id="firmPassword"
+                                name="firmPassword"
+                                type="text"
+                                required
+                                className={styles.input}
+                                placeholder="SecureFirmPass123"
+                                minLength={6}
+                            />
+                            <p className={styles.hint}>
+                                Share this password only with your team members.
+                            </p>
                         </div>
 
                         <div className={styles.formGroup}>

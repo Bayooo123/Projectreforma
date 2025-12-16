@@ -38,12 +38,14 @@ export async function register(
     const password = formData.get('password') as string;
     const phone = formData.get('phone') as string;
     const firmName = formData.get('firmName') as string;
+    const firmCode = formData.get('firmCode') as string;
+    const firmPassword = formData.get('firmPassword') as string;
     const role = formData.get('role') as string;
 
-    console.log('🔵 Registration attempt started for:', { email, name, firmName, role });
+    console.log('🔵 Registration attempt started for:', { email, name, firmName, firmCode, role });
 
     // Validate required fields
-    if (!name || !email || !password || !phone || !firmName || !role) {
+    if (!name || !email || !password || !phone || !firmName || !firmCode || !firmPassword || !role) {
         console.log('❌ Validation failed: Missing required fields');
         return 'Please fill in all fields.';
     }
@@ -105,6 +107,15 @@ export async function register(
             });
             console.log('✅ User created successfully:', { id: user.id, email: user.email });
 
+            // Check if firm code exists
+            const existingFirm = await tx.workspace.findUnique({ where: { firmCode } });
+            if (existingFirm) {
+                throw new Error('Firm code is already taken.');
+            }
+
+            // Hash Firm Password
+            const hashedFirmPassword = await bcrypt.hash(firmPassword, 10);
+
             // Create Workspace (Firm)
             console.log('🏢 Creating workspace...');
             const slug = firmName.toLowerCase().replace(/[^a-z0-9]/g, '-') + '-' + nanoid(6);
@@ -113,6 +124,8 @@ export async function register(
                     name: firmName,
                     slug,
                     ownerId: user.id,
+                    firmCode,
+                    joinPassword: hashedFirmPassword
                 },
             });
             console.log('✅ Workspace created successfully:', { id: workspace.id, slug: workspace.slug });

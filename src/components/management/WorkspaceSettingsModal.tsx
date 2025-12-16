@@ -1,9 +1,11 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { X, Upload, FileText, Loader, Check } from 'lucide-react';
+import { useFormState } from 'react-dom';
+import { X, Upload, FileText, Loader, Check, Lock, Key, Building } from 'lucide-react';
 import { put } from '@vercel/blob';
 import { getWorkspaceMembers, approveMember, rejectMember } from '@/app/actions/members';
+import { updateWorkspaceAccess, WorkspaceAccessState } from '@/app/actions/workspace';
 import styles from './InvoiceModal.module.css'; // Reusing modal styles for consistency
 
 interface WorkspaceSettingsModalProps {
@@ -11,11 +13,14 @@ interface WorkspaceSettingsModalProps {
     onClose: () => void;
     workspaceId: string;
     currentLetterheadUrl?: string | null;
+    firmCode?: string | null;
     onUpdate: () => void;
 }
 
-const WorkspaceSettingsModal = ({ isOpen, onClose, workspaceId, currentLetterheadUrl, onUpdate }: WorkspaceSettingsModalProps) => {
-    const [activeTab, setActiveTab] = useState<'general' | 'members'>('general');
+const initialState: WorkspaceAccessState = {};
+
+const WorkspaceSettingsModal = ({ isOpen, onClose, workspaceId, currentLetterheadUrl, firmCode, onUpdate }: WorkspaceSettingsModalProps) => {
+    const [activeTab, setActiveTab] = useState<'general' | 'members' | 'access'>('general');
     const [members, setMembers] = useState<any[]>([]);
     const [isLoadingMembers, setIsLoadingMembers] = useState(false);
 
@@ -23,12 +28,22 @@ const WorkspaceSettingsModal = ({ isOpen, onClose, workspaceId, currentLetterhea
     const [uploadError, setUploadError] = useState<string | null>(null);
     const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
+    const [accessState, accessAction] = useFormState(updateWorkspaceAccess, initialState);
+
     // Fetch members when switching to members tab
     useEffect(() => {
         if (activeTab === 'members' && isOpen) {
             fetchMembers();
         }
     }, [activeTab, isOpen]);
+
+    useEffect(() => {
+        if (accessState.success) {
+            setSuccessMessage(accessState.message || 'Settings updated');
+            setTimeout(() => setSuccessMessage(null), 3000);
+            onUpdate(); // Refresh parent to get new firmCode if changed
+        }
+    }, [accessState, onUpdate]);
 
     const fetchMembers = async () => {
         setIsLoadingMembers(true);
@@ -145,12 +160,28 @@ const WorkspaceSettingsModal = ({ isOpen, onClose, workspaceId, currentLetterhea
                         }}
                     >
                         Members
-                        {/* Optional badge count logic here */}
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('access')}
+                        style={{
+                            padding: '1rem 0',
+                            borderBottom: activeTab === 'access' ? '2px solid var(--primary)' : 'none',
+                            color: activeTab === 'access' ? 'var(--primary)' : 'var(--text-secondary)',
+                            fontWeight: 500,
+                            background: 'none',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.25rem'
+                        }}
+                    >
+                        <Lock size={14} />
+                        Access
                     </button>
                 </div>
 
                 <div className={styles.content}>
-                    {activeTab === 'general' ? (
+                    {activeTab === 'general' && (
                         <div className={styles.formGroup}>
                             {/* Letterhead Upload Logic */}
                             <label className={styles.formLabel}>Letterhead Upload</label>
@@ -219,7 +250,9 @@ const WorkspaceSettingsModal = ({ isOpen, onClose, workspaceId, currentLetterhea
                                 </div>
                             )}
                         </div>
-                    ) : (
+                    )}
+
+                    {activeTab === 'members' && (
                         <div className={styles.formGroup}>
                             <h3 style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '1rem' }}>Team Members</h3>
                             {isLoadingMembers ? (
@@ -295,6 +328,82 @@ const WorkspaceSettingsModal = ({ isOpen, onClose, workspaceId, currentLetterhea
                                 </div>
                             )}
                         </div>
+                    )}
+
+                    {activeTab === 'access' && (
+                        <form action={accessAction} className={styles.formGroup}>
+                            <input type="hidden" name="workspaceId" value={workspaceId} />
+
+                            <h3 style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '0.5rem' }}>Firm Access Credentials</h3>
+                            <p className={styles.subtitle} style={{ marginBottom: '1.5rem' }}>
+                                Share these credentials with your team members so they can join this workspace.
+                            </p>
+
+                            <div style={{ marginBottom: '1.5rem' }}>
+                                <label className={styles.formLabel} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                    <Building size={16} /> Firm Code
+                                </label>
+                                <input
+                                    name="firmCode"
+                                    defaultValue={firmCode || ''}
+                                    placeholder="e.g. ASCO-LP"
+                                    className={styles.input}
+                                    style={{ width: '100%', padding: '0.75rem', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)' }}
+                                />
+                                {accessState.errors?.firmCode && (
+                                    <p style={{ color: '#dc2626', fontSize: '0.875rem', marginTop: '0.25rem' }}>{accessState.errors.firmCode[0]}</p>
+                                )}
+                            </div>
+
+                            <div style={{ marginBottom: '1.5rem' }}>
+                                <label className={styles.formLabel} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                    <Key size={16} /> Join Password
+                                </label>
+                                <input
+                                    name="firmPassword"
+                                    type="password"
+                                    placeholder="Set a new password to reset"
+                                    className={styles.input}
+                                    style={{ width: '100%', padding: '0.75rem', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)' }}
+                                />
+                                <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '0.25rem' }}>
+                                    Leave blank to keep current password. Required if setting up for the first time.
+                                </p>
+                                {accessState.errors?.firmPassword && (
+                                    <p style={{ color: '#dc2626', fontSize: '0.875rem', marginTop: '0.25rem' }}>{accessState.errors.firmPassword[0]}</p>
+                                )}
+                            </div>
+
+                            {accessState.errors?._form && (
+                                <div style={{ color: '#dc2626', background: '#fee2e2', padding: '0.75rem', borderRadius: '4px', marginBottom: '1rem' }}>
+                                    {accessState.errors._form[0]}
+                                </div>
+                            )}
+
+                            {successMessage && (
+                                <div style={{ color: '#16a34a', background: '#dcfce7', padding: '0.75rem', borderRadius: '4px', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                    <Check size={16} /> {successMessage}
+                                </div>
+                            )}
+
+                            <button
+                                type="submit"
+                                style={{
+                                    padding: '0.75rem 1.5rem',
+                                    background: 'var(--primary)',
+                                    color: 'white',
+                                    border: 'none',
+                                    borderRadius: 'var(--radius-md)',
+                                    fontWeight: 600,
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '0.5rem'
+                                }}
+                            >
+                                Update Credentials
+                            </button>
+                        </form>
                     )}
                 </div>
             </div>

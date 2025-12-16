@@ -23,8 +23,7 @@ export default function LoginPage() {
                         Modern Legal Practice<br />Management
                     </h1>
                     <p className={styles.brandingDescription}>
-                        Streamline your law firm operations with intelligent case management,
-                        automated workflows, and powerful analytics.
+                        Manage documents, communicate internally, track finances and scale your firm with Reforma
                     </p>
 
                     <div className={styles.features}>
@@ -32,7 +31,7 @@ export default function LoginPage() {
                             <Shield className={styles.featureIcon} />
                             <div className={styles.featureContent}>
                                 <h3>Secure & Compliant</h3>
-                                <p>Bank-level encryption and data protection</p>
+                                <p>Built in line with Nigerian and global data protection provisions.</p>
                             </div>
                         </div>
                         <div className={styles.feature}>
@@ -56,8 +55,9 @@ export default function LoginPage() {
                     <div className={styles.formHeader}>
                         <h2 className={styles.formTitle}>Welcome back</h2>
                         <p className={styles.formSubtitle}>
-                            Don't have an account?{' '}
-                            <Link href="/register">Create your firm</Link>
+                            Joining a firm? <Link href="/join">Sign in here</Link>
+                            <span className={styles.divider}> · </span>
+                            New firm? <Link href="/register">Create account</Link>
                         </p>
                     </div>
 
