@@ -10,6 +10,11 @@ interface ClientStatsProps {
 }
 
 const ClientStats = ({ workspaceId }: ClientStatsProps) => {
+    const [stats, setStats] = useState({
+        totalClients: 0,
+        activeMatters: 0,
+        totalRevenue: 0,
+    });
     const [isLocked, setIsLocked] = useState(false);
     const [showPinModal, setShowPinModal] = useState(false);
     const [pin, setPin] = useState(['', '', '', '', '']); // 5 digit pin
