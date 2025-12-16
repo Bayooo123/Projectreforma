@@ -396,76 +396,77 @@ export async function setRevenuePin(workspaceId: string, pin: string) {
         console.error('Error setting PIN:', error);
         return { success: false, error: 'Failed to set PIN' };
     }
+}
 
-    // ============================================
-    // SEARCH & FILTER
-    // ============================================
+// ============================================
+// SEARCH & FILTER
+// ============================================
 
-    export async function searchClients(workspaceId: string, query: string) {
-        await requireAuth();
-        try {
-            const clients = await prisma.client.findMany({
-                where: {
-                    workspaceId,
-                    OR: [
-                        { name: { contains: query, mode: 'insensitive' } },
-                        { email: { contains: query, mode: 'insensitive' } },
-                        { company: { contains: query, mode: 'insensitive' } },
-                        { industry: { contains: query, mode: 'insensitive' } },
-                    ],
-                },
-                include: {
-                    _count: {
-                        select: {
-                            matters: true,
-                        },
+export async function searchClients(workspaceId: string, query: string) {
+    await requireAuth();
+    try {
+        const clients = await prisma.client.findMany({
+            where: {
+                workspaceId,
+                OR: [
+                    { name: { contains: query, mode: 'insensitive' } },
+                    { email: { contains: query, mode: 'insensitive' } },
+                    { company: { contains: query, mode: 'insensitive' } },
+                    { industry: { contains: query, mode: 'insensitive' } },
+                ],
+            },
+            include: {
+                _count: {
+                    select: {
+                        matters: true,
                     },
                 },
-                orderBy: {
-                    createdAt: 'desc',
-                },
-            });
+            },
+            orderBy: {
+                createdAt: 'desc',
+            },
+        });
 
-            return { success: true, data: clients };
-        } catch (error) {
-            console.error('Error searching clients:', error);
-            return { success: false, error: 'Failed to search clients' };
-        }
+        return { success: true, data: clients };
+    } catch (error) {
+        console.error('Error searching clients:', error);
+        return { success: false, error: 'Failed to search clients' };
     }
+}
 
-    export async function filterClients(workspaceId: string, filters: {
-        status?: string;
-        industry?: string;
-    }) {
-        await requireAuth();
-        try {
-            const where: any = { workspaceId };
+export async function filterClients(workspaceId: string, filters: {
+    status?: string;
+    industry?: string;
+}) {
+    await requireAuth();
+    try {
+        const where: any = { workspaceId };
 
-            if (filters.status && filters.status !== 'all') {
-                where.status = filters.status;
-            }
+        if (filters.status && filters.status !== 'all') {
+            where.status = filters.status;
+        }
 
-            if (filters.industry && filters.industry !== 'all') {
-                where.industry = filters.industry;
-            }
+        if (filters.industry && filters.industry !== 'all') {
+            where.industry = filters.industry;
+        }
 
-            const clients = await prisma.client.findMany({
-                where,
-                include: {
-                    _count: {
-                        select: {
-                            matters: true,
-                        },
+        const clients = await prisma.client.findMany({
+            where,
+            include: {
+                _count: {
+                    select: {
+                        matters: true,
                     },
                 },
-                orderBy: {
-                    createdAt: 'desc',
-                },
-            });
+            },
+            orderBy: {
+                createdAt: 'desc',
+            },
+        });
 
-            return { success: true, data: clients };
-        } catch (error) {
-            console.error('Error filtering clients:', error);
-            return { success: false, error: 'Failed to filter clients' };
-        }
+        return { success: true, data: clients };
+    } catch (error) {
+        console.error('Error filtering clients:', error);
+        return { success: false, error: 'Failed to filter clients' };
     }
+}
