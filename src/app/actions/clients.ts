@@ -277,7 +277,7 @@ export async function getClientStats(workspaceId: string) {
             }),
         ]);
 
-        ]);
+
 
         // Calculate total revenue (from actual payments, not just invoices)
         const revenueData = await prisma.payment.aggregate({
