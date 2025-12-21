@@ -1,11 +1,8 @@
 .sidebar {
     width: 260px;
     height: 100vh;
-    background-color: var(--primary);
-    /* Deep Navy Fallback */
-    /* Glassmorphism Effect */
-    background: rgba(30, 41, 59, 0.95);
-    /* Nearly opaque navy for legibility */
+    background-color: var(--primary-dark);
+    /* Glassmorphism Effect - lightly blended */
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
     border-right: 1px solid rgba(255, 255, 255, 0.05);

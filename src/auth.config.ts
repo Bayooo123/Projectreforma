@@ -20,9 +20,7 @@ export const authConfig = {
             } else if (isLoggedIn) {
                 // Redirect logged-in users away from login/register pages to dashboard
                 if (nextUrl.pathname === '/login' || nextUrl.pathname === '/register') {
-                    // Don't use Response.redirect - just return true and let Next.js handle it
-                    // The middleware will handle the actual redirect
-                    return true;
+                    return Response.redirect(new URL('/management', nextUrl));
                 }
             }
             return true;
