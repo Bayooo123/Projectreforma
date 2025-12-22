@@ -1,0 +1,62 @@
+.gridContainer {
+    display: grid;
+    grid-template-columns: 260px 1fr;
+    /* Fixed sidebar width, flexible content */
+    min-height: 100vh;
+    background-color: var(--background);
+}
+
+.sidebar {
+    position: sticky;
+    /* Sticky is better than fixed for grid contexts */
+    top: 0;
+    height: 100vh;
+    z-index: 50;
+    /* Note: Sidebar component's internal styles might need adjustment to fill this container */
+}
+
+.mainContent {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    min-height: 100vh;
+    position: relative;
+    /* Ensure content stacks properly */
+}
+
+.headerWrapper {
+    position: sticky;
+    top: 0;
+    z-index: 40;
+    width: 100%;
+}
+
+.contentArea {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    /* Create a stacking context for content */
+    position: relative;
+    z-index: 10;
+}
+
+.contentContainer {
+    padding: 2.5rem;
+    /* More generous padding */
+    max-width: 1400px;
+    margin: 0 auto;
+    width: 100%;
+    animation: fadeIn 0.4s var(--ease-fluid) forwards;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}

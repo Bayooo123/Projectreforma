@@ -1,11 +1,21 @@
 .card {
-    background-color: var(--background);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-lg);
+    background-color: var(--surface);
+    border: 1px solid rgba(255, 255, 255, 0.6);
+    /* Glass-like border */
+    border-radius: var(--radius-md);
+    /* Relaxed radius */
     box-shadow: var(--shadow-sm);
     overflow: hidden;
     display: flex;
     flex-direction: column;
+    transition: transform 0.3s var(--ease-fluid), box-shadow 0.3s var(--ease-fluid);
+}
+
+.card:hover {
+    transform: translateY(-4px);
+    /* The Lift */
+    box-shadow: var(--shadow-lg);
+    border-color: rgba(255, 255, 255, 0.9);
 }
 
 .header {

@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import Sidebar from "@/components/layout/Sidebar";
-import Header from "@/components/layout/Header";
+import "./globals.css";
+import AppLayout from '@/components/layout/AppLayout';
 import PageTransition from "@/components/layout/PageTransition";
 import NextTopLoader from 'nextjs-toploader';
 import { auth } from "@/auth";
@@ -41,18 +41,12 @@ export default async function RootLayout({
           speed={200}
         />
         {user ? (
-          // Authenticated layout with sidebar and header
-          <div className="flex">
-            <Sidebar user={user} />
-            <main style={{ marginLeft: '260px', width: 'calc(100% - 260px)', minHeight: '100vh' }}>
-              <Header user={user} workspace={workspaceData ?? undefined} />
-              <div className="container" style={{ padding: '2rem' }}>
-                <PageTransition>
-                  {children}
-                </PageTransition>
-              </div>
-            </main>
-          </div>
+          // Authenticated layout with AppLayout Grid
+          <AppLayout user={user} workspace={workspaceData}>
+            <PageTransition>
+              {children}
+            </PageTransition>
+          </AppLayout>
         ) : (
           // Unauthenticated layout (auth pages handle their own layout)
           <PageTransition>
