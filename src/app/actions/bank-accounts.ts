@@ -19,7 +19,7 @@ export async function createBankAccount(data: {
     try {
         const account = await prisma.bankAccount.create({
             data: {
-                workspaceId: session.user.workspaceId,
+                workspaceId: user.workspaceId!, // We already checked this above
                 bankName: data.bankName,
                 accountNumber: data.accountNumber,
                 accountName: data.accountName,
