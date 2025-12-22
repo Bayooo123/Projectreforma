@@ -101,76 +101,77 @@
     --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
     --shadow-soft: 0 20px 40px -10px rgba(0, 0, 0, 0.5);
   }
+}
 
-  * {
-    box-sizing: border-box;
-    padding: 0;
-    margin: 0;
+* {
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
+}
+
+html,
+body {
+  max-width: 100vw;
+  overflow-x: hidden;
+  font-size: 14px;
+  /* Reverted to 14px per user feedback */
+}
+
+body {
+  color: var(--text-primary);
+  background: var(--background);
+  font-family: var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  line-height: 1.5;
+}
+
+
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* Refined Heading Styles */
+h1 {
+  font-size: var(--text-2xl);
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+h2 {
+  font-size: var(--text-xl);
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+h3 {
+  font-size: var(--text-lg);
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+h4,
+h5,
+h6 {
+  font-size: var(--text-base);
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+p {
+  font-size: var(--text-base);
+  line-height: 1.6;
+}
+
+small {
+  font-size: var(--text-sm);
+}
+
+
+@media (prefers-color-scheme: dark) {
+  html {
+    color-scheme: dark;
   }
-
-  html,
-  body {
-    max-width: 100vw;
-    overflow-x: hidden;
-    font-size: 14px;
-    /* Reverted to 14px per user feedback */
-  }
-
-  body {
-    color: var(--text-primary);
-    background: var(--background);
-    font-family: var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-    line-height: 1.5;
-  }
-
-
-
-  a {
-    color: inherit;
-    text-decoration: none;
-  }
-
-  /* Refined Heading Styles */
-  h1 {
-    font-size: var(--text-2xl);
-    font-weight: 700;
-    line-height: 1.2;
-  }
-
-  h2 {
-    font-size: var(--text-xl);
-    font-weight: 600;
-    line-height: 1.3;
-  }
-
-  h3 {
-    font-size: var(--text-lg);
-    font-weight: 600;
-    line-height: 1.4;
-  }
-
-  h4,
-  h5,
-  h6 {
-    font-size: var(--text-base);
-    font-weight: 600;
-    line-height: 1.5;
-  }
-
-  p {
-    font-size: var(--text-base);
-    line-height: 1.6;
-  }
-
-  small {
-    font-size: var(--text-sm);
-  }
-
-
-  @media (prefers-color-scheme: dark) {
-    html {
-      color-scheme: dark;
-    }
-  }
+}
