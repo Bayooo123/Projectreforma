@@ -1,0 +1,61 @@
+﻿src/app/actions/bank-accounts.ts(17,38): error TS2339: Property 'bankAccount' does not exist on type 'PrismaClient<PrismaClientOptions, never, DefaultArgs>'.
+src/app/actions/bank-accounts.ts(36,39): error TS2339: Property 'bankAccount' does not exist on type 'PrismaClient<PrismaClientOptions, never, DefaultArgs>'.
+src/app/actions/bank-accounts.ts(53,38): error TS2339: Property 'bankAccount' does not exist on type 'PrismaClient<PrismaClientOptions, never, DefaultArgs>'.
+src/app/actions/bank-accounts.ts(58,22): error TS2339: Property 'bankAccount' does not exist on type 'PrismaClient<PrismaClientOptions, never, DefaultArgs>'.
+src/app/actions/members.ts(18,25): error TS2353: Object literal may only specify known properties, and 'jobTitle' does not exist in type 'UserSelect<DefaultArgs>'.
+src/app/actions/members.ts(25,18): error TS2339: Property 'user' does not exist on type '{ id: string; workspaceId: string; userId: string; role: string; designation: string | null; status: string; joinedAt: Date; }'.
+src/app/actions/members.ts(48,21): error TS2353: Object literal may only specify known properties, and 'jobTitle' does not exist in type '(Without<UserUpdateInput, UserUncheckedUpdateInput> & UserUncheckedUpdateInput) | (Without<...> & UserUpdateInput)'.
+src/app/actions/members.ts(65,45): error TS2353: Object literal may only specify known properties, and 'jobTitle' does not exist in type 'UserSelect<DefaultArgs>'.
+src/app/settings/page.tsx(40,27): error TS2304: Cannot find name 'getUserProfile'.
+src/app/settings/page.tsx(55,35): error TS2304: Cannot find name 'getBankAccounts'.
+src/app/settings/page.tsx(65,27): error TS2304: Cannot find name 'updateUserProfile'.
+src/app/settings/page.tsx(77,27): error TS2304: Cannot find name 'createBankAccount'.
+src/app/settings/page.tsx(87,15): error TS2304: Cannot find name 'deleteBankAccount'.
+src/components/management/InvoiceModal.tsx(77,9): error TS2304: Cannot find name 'setIsLoadingInvoices'.
+src/components/management/InvoiceModal.tsx(81,17): error TS2552: Cannot find name 'setInvoices'. Did you mean 'fetchInvoices'?
+src/components/management/InvoiceModal.tsx(86,13): error TS2304: Cannot find name 'setIsLoadingInvoices'.
+src/components/management/InvoiceModal.tsx(154,54): error TS2339: Property 'members' does not exist on type '{ success: boolean; data: any[]; error?: undefined; } | { success: boolean; error: string; data?: undefined; }'.
+  Property 'members' does not exist on type '{ success: boolean; data: any[]; error?: undefined; }'.
+src/components/management/InvoiceModal.tsx(155,47): error TS2339: Property 'members' does not exist on type '{ success: boolean; data: any[]; error?: undefined; } | { success: boolean; error: string; data?: undefined; }'.
+  Property 'members' does not exist on type '{ success: boolean; data: any[]; error?: undefined; }'.
+src/components/management/InvoiceModal.tsx(158,36): error TS2339: Property 'members' does not exist on type '{ success: boolean; data: any[]; error?: undefined; } | { success: boolean; error: string; data?: undefined; }'.
+  Property 'members' does not exist on type '{ success: boolean; data: any[]; error?: undefined; }'.
+src/components/management/InvoiceModal.tsx(158,90): error TS2339: Property 'members' does not exist on type '{ success: boolean; data: any[]; error?: undefined; } | { success: boolean; error: string; data?: undefined; }'.
+  Property 'members' does not exist on type '{ success: boolean; data: any[]; error?: undefined; }'.
+src/components/management/InvoiceModal.tsx(172,9): error TS2304: Cannot find name 'setIsGeneratingPdf'.
+src/components/management/InvoiceModal.tsx(247,13): error TS2304: Cannot find name 'setIsGeneratingPdf'.
+src/components/management/InvoiceModal.tsx(254,9): error TS2304: Cannot find name 'setIsSubmitting'.
+src/components/management/InvoiceModal.tsx(299,13): error TS2304: Cannot find name 'setIsSubmitting'.
+src/components/management/InvoiceModal.tsx(315,85): error TS2304: Cannot find name 'isSubmitting'.
+src/components/management/InvoiceModal.tsx(320,156): error TS2304: Cannot find name 'isSubmitting'.
+src/components/management/InvoiceModal.tsx(324,152): error TS2304: Cannot find name 'isSubmitting'.
+src/components/management/InvoiceModal.tsx(341,106): error TS2304: Cannot find name 'isSubmitting'.
+src/components/management/InvoiceModal.tsx(353,51): error TS2304: Cannot find name 'isSubmitting'.
+src/components/management/InvoiceModal.tsx(367,51): error TS2304: Cannot find name 'isSubmitting'.
+src/components/management/InvoiceModal.tsx(384,51): error TS2304: Cannot find name 'isSubmitting'.
+src/components/management/InvoiceModal.tsx(384,67): error TS2304: Cannot find name 'isLoadingMatters'.
+src/components/management/InvoiceModal.tsx(405,47): error TS2304: Cannot find name 'isSubmitting'.
+src/components/management/InvoiceModal.tsx(415,47): error TS2304: Cannot find name 'isSubmitting'.
+src/components/management/InvoiceModal.tsx(425,51): error TS2304: Cannot find name 'isSubmitting'.
+src/components/management/InvoiceModal.tsx(434,51): error TS2304: Cannot find name 'isSubmitting'.
+src/components/management/InvoiceModal.tsx(445,47): error TS2304: Cannot find name 'isSubmitting'.
+src/components/management/InvoiceModal.tsx(464,63): error TS2304: Cannot find name 'isSubmitting'.
+src/components/management/InvoiceModal.tsx(475,67): error TS2304: Cannot find name 'isSubmitting'.
+src/components/management/InvoiceModal.tsx(486,67): error TS2304: Cannot find name 'isSubmitting'.
+src/components/management/InvoiceModal.tsx(496,63): error TS2304: Cannot find name 'isSubmitting'.
+src/components/management/InvoiceModal.tsx(504,113): error TS2304: Cannot find name 'isSubmitting'.
+src/components/management/InvoiceModal.tsx(519,51): error TS2304: Cannot find name 'isSubmitting'.
+src/components/management/InvoiceModal.tsx(530,51): error TS2304: Cannot find name 'isSubmitting'.
+src/components/management/InvoiceModal.tsx(558,47): error TS2304: Cannot find name 'isSubmitting'.
+src/components/management/InvoiceModal.tsx(568,47): error TS2304: Cannot find name 'isGeneratingPdf'.
+src/components/management/InvoiceModal.tsx(568,78): error TS2304: Cannot find name 'isSubmitting'.
+src/components/management/InvoiceModal.tsx(576,38): error TS2304: Cannot find name 'isGeneratingPdf'.
+src/components/management/InvoiceModal.tsx(580,112): error TS2304: Cannot find name 'isSubmitting'.
+src/components/management/InvoiceModal.tsx(583,94): error TS2304: Cannot find name 'isSubmitting'.
+src/components/management/InvoiceModal.tsx(584,38): error TS2304: Cannot find name 'isSubmitting'.
+src/components/management/InvoiceModal.tsx(602,30): error TS2304: Cannot find name 'isLoadingInvoices'.
+src/components/management/InvoiceModal.tsx(607,33): error TS2304: Cannot find name 'invoices'.
+src/components/management/InvoiceModal.tsx(613,38): error TS2304: Cannot find name 'invoices'.
+src/components/management/InvoiceModal.tsx(613,51): error TS7006: Parameter 'invoice' implicitly has an 'any' type.
+src/components/management/InvoiceModal.tsx(649,63): error TS2304: Cannot find name 'isGeneratingPdf'.
+src/components/management/InvoiceModal.tsx(657,54): error TS2304: Cannot find name 'isGeneratingPdf'.

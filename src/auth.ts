@@ -84,7 +84,11 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
                         throw new Error('Pending Approval');
                     }
 
-                    return user;
+                    // Return user with workspaceId
+                    return {
+                        ...user,
+                        workspaceId: workspace.id
+                    };
                 }
 
                 console.log('Invalid credentials format');
@@ -92,4 +96,19 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
             },
         }),
     ],
+    callbacks: {
+        async jwt({ token, user, trigger, session }) {
+            if (user) {
+                token.workspaceId = user.workspaceId;
+            }
+            return token;
+        },
+        async session({ session, token }) {
+            if (session.user && token.sub) {
+                session.user.id = token.sub;
+                session.user.workspaceId = token.workspaceId as string;
+            }
+            return session;
+        },
+    }
 });

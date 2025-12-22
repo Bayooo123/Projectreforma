@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { User, Building2, Lock, Save, Image as ImageIcon, Loader } from 'lucide-react';
 import { updateWorkspaceSettings, getWorkspaceSettings } from '@/app/actions/settings';
+import { getUserProfile, updateUserProfile } from '@/app/actions/members';
+import { getBankAccounts, createBankAccount, deleteBankAccount } from '@/app/actions/bank-accounts';
 import styles from './page.module.css';
 
 export default function SettingsPage() {

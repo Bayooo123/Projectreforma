@@ -54,6 +54,13 @@ const InvoiceModal = ({ isOpen, onClose, clientName, clientId, workspaceId, lett
     const [securityChargeRate, setSecurityChargeRate] = useState(1.0);
     const [invoiceNumber, setInvoiceNumber] = useState('');
     const [matters, setMatters] = useState<Matter[]>([]);
+    const [isLoadingMatters, setIsLoadingMatters] = useState(false);
+
+    const [invoices, setInvoices] = useState<Invoice[]>([]);
+    const [isLoadingInvoices, setIsLoadingInvoices] = useState(false);
+
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isGeneratingPdf, setIsGeneratingPdf] = useState<string | null>(null);
 
 
 
@@ -151,11 +158,11 @@ const InvoiceModal = ({ isOpen, onClose, clientName, clientId, workspaceId, lett
                     setBankAccounts(banksRes.accounts);
                     if (banksRes.accounts.length > 0) setSelectedBankId(banksRes.accounts[0].id);
                 }
-                if (membersRes.success && membersRes.members) {
-                    setSignatories(membersRes.members);
+                if (membersRes.success && membersRes.data) {
+                    setSignatories(membersRes.data);
                     // try to select current user? we don't have current user id easily here props-wise?
                     // just select first lawyer/owner
-                    if (membersRes.members.length > 0) setSelectedSignatoryId(membersRes.members[0].id);
+                    if (membersRes.data.length > 0) setSelectedSignatoryId(membersRes.data[0].id);
                 }
             };
             loadData();

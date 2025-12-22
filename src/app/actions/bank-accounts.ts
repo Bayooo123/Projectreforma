@@ -3,6 +3,7 @@
 import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
 import { auth } from '@/auth';
+import { User } from 'next-auth';
 
 export async function createBankAccount(data: {
     bankName: string;
@@ -11,7 +12,9 @@ export async function createBankAccount(data: {
     currency?: string;
 }) {
     const session = await auth();
-    if (!session?.user?.workspaceId) return { success: false, error: 'Unauthorized' };
+    // Force type check pass if d.ts is ignored in CI
+    const user = session?.user as (User & { workspaceId?: string }) | undefined;
+    if (!user?.workspaceId) return { success: false, error: 'Unauthorized' };
 
     try {
         const account = await prisma.bankAccount.create({
@@ -46,12 +49,13 @@ export async function getBankAccounts(workspaceId: string) {
 
 export async function deleteBankAccount(id: string) {
     const session = await auth();
-    if (!session?.user?.workspaceId) return { success: false, error: 'Unauthorized' };
+    const user = session?.user as (User & { workspaceId?: string }) | undefined;
+    if (!user?.workspaceId) return { success: false, error: 'Unauthorized' };
 
     try {
         // Verify ownership
         const account = await prisma.bankAccount.findUnique({ where: { id } });
-        if (!account || account.workspaceId !== session.user.workspaceId) {
+        if (!account || account.workspaceId !== user.workspaceId) {
             return { success: false, error: 'Unauthorized' };
         }
 
