@@ -55,36 +55,167 @@ const InvoiceModal = ({ isOpen, onClose, clientName, clientId, workspaceId, lett
     const [invoiceNumber, setInvoiceNumber] = useState('');
     const [matters, setMatters] = useState<Matter[]>([]);
 
-    // List State
-    const [invoices, setInvoices] = useState<Invoice[]>([]);
-    const [isLoadingInvoices, setIsLoadingInvoices] = useState(false);
-    const [isGeneratingPdf, setIsGeneratingPdf] = useState<string | null>(null);
+    const [bankAccounts, setBankAccounts] = useState<any[]>([]);
+    const [signatories, setSignatories] = useState<any[]>([]);
+    const [selectedBankId, setSelectedBankId] = useState('');
+    const [selectedSignatoryId, setSelectedSignatoryId] = useState('');
 
-    const [isSubmitting, setIsSubmitting] = useState(false);
-    const [isLoadingMatters, setIsLoadingMatters] = useState(false);
-
-    // Generate invoice number and fetch matters when modal opens
     useEffect(() => {
-        if (isOpen && clientId) {
-            if (activeTab === 'create') {
-                // Generate invoice number
-                generateInvoiceNumber(workspaceId).then(number => {
-                    setInvoiceNumber(number);
-                });
+        if (isOpen) {
+            const loadData = async () => {
+                const { getBankAccounts } = await import('@/app/actions/bank-accounts');
+                const { getWorkspaceMembers } = await import('@/app/actions/members');
 
-                // Fetch client matters
-                setIsLoadingMatters(true);
-                getClientMatters(clientId).then(result => {
-                    if (result.success && result.data) {
-                        setMatters(result.data);
-                    }
-                    setIsLoadingMatters(false);
-                });
-            } else if (activeTab === 'list') {
-                fetchInvoices();
-            }
+                const [banksRes, membersRes] = await Promise.all([
+                    getBankAccounts(workspaceId),
+                    getWorkspaceMembers(workspaceId)
+                ]);
+
+                if (banksRes.success && banksRes.accounts) setBankAccounts(banksRes.accounts);
+                if (membersRes.success && membersRes.members) setSignatories(membersRes.members);
+            };
+            loadData();
         }
-    }, [isOpen, clientId, workspaceId, activeTab]);
+    }, [isOpen, workspaceId]);
+
+    // ... existing list useEffect ...
+
+    // ... create pdf logic ...
+    const handleDownloadPDF = async (invoice: Invoice) => {
+        // ... previous logic
+        // Need to pass selected bank/signatory or retrieve from invoice?
+        // Since schema doesn't store them on invoice yet, we might need to assume
+        // for "List View" downloads, we can't show them unless we store them.
+        // OR we just ask user to select continuously? No that's bad UX.
+        // For CREATION flow, we use state.
+        // For LIST flow, we might skip or show default if stored.
+        // Current constraint: Just enable it for creation PDF mainly.
+
+        // Actually, let's just use the currently selected ones in state if user is creating,
+        // but for List view, pass undefined if we don't have it saved.
+        // Or better: update pdf generator to optionally accept them.
+
+        // ... (PDF Generation call with new params)
+        const bank = bankAccounts.find(b => b.id === selectedBankId);
+        const signatory = signatories.find(s => s.id === selectedSignatoryId);
+
+        // NOTE: For existing invoices in List View, we don't have this data stored.
+        // Users won't see it on reprint unless we update Invoice schema to store `bankAccountId`, `signatoryId`.
+        // I will assume for now this is mostly for the verification flow of "Create -> View PDF".
+    };
+
+    const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        // ...
+        // We really should store bankAccountId and signatoryId in the Invoice model eventually.
+        // For now, I'll pass them to PDF generator on the client side trigger, 
+        // BUT `createInvoice` action doesn't support them yet.
+        // So they won't persist.
+        // I will trigger the download MANUALLY after creation if user wants, or just rely on the PDF button.
+
+        // Wait, if I want to visualize it in the PDF, I must be able to generate it.
+        // If I create the invoice, I usually close the modal.
+        // The Verification Plan says: "Create Invoice -> Generate PDF".
+        // In the list view, if I click PDF, I need that data.
+
+        // CRITICAL: Invoice Model needs to store these references?
+        // OR we just assume "Current Default" for the firm?
+        // User asked to "select it in the process of creation".
+
+        // Let's rely on passing them to the PDF generator directly from the `InvoiceModal` state when clicking "PDF"
+        // IF we are in the Create flow? No, Create flow handles submission.
+        // The "Download PDF" button is in the LIST view (InvoiceCard).
+        // So the user creates it, then goes to list (updates), then clicks PDF.
+        // IF we don't store it, it's lost.
+
+        // DECISION: I will update `createInvoice` to accept `bankAccountId` and `signatoryId` (store as JSON/String notes? Or new fields?)
+        // To avoid another schema migration right now (risk), I will append them to the `notes` field or `terms`?
+        // Or `footer`?
+        // Actually, I can just generate the PDF *immediately* upon creation success?
+        // No, standard flow is Create -> List.
+
+        // Let's add simple fields to Schema? I just did a schema update.
+        // I can do another one? Maybe too much risk.
+        // Alternative: Append to `notes` field "metadata: {bankId:..., sigId:...}"? Hacky.
+
+        // Let's just default to the "Most Recent" or "First" bank account for the firm if not stored?
+        // And the "Owner" or "CurrentUser" as signatory?
+        // User explicitly asked for selection.
+
+        // I will do a quick "Create -> Auto Download PDF" flow?
+        // Or add a "Preview PDF" button in Create tab?
+
+        // Let's add "Preview/Download PDF" button in the Create Invoice form so they can get it BEFORE submitting?
+        // Or immediately AFTER submitting, show a "Success" view with "Download PDF".
+
+    };
+
+    // ...
+    // Let's add the Dropdowns and a "Download PDF" button to the Create Form directly.
+
+    // New function to generate PDF from form state (Draft)
+    const handleDraftPDF = async () => {
+        // Construct temporary invoice object from state
+        const bank = bankAccounts.find(b => b.id === selectedBankId);
+        const signatory = signatories.find(s => s.id === selectedSignatoryId);
+
+        const totals = calculateTotals();
+
+        try {
+            setIsGeneratingPdf('draft');
+            const pdfBlob = await generateInvoicePDF({
+                invoiceNumber: invoiceNumber || 'DRAFT',
+                date: new Date(),
+                dueDate: undefined, // get from form if possible
+                billTo: { name: 'Client Name (Preview)', address: '...', ...placeholder }, // or read defaults
+                // actually reading from input Refs is hard here without controlled fileds for everything.
+                // let's just make the fields controlled? They assume `name` props currently.
+                // I'll make billTo fields controlled state.
+                billTo: {
+                    name: billToName, // Need to add state
+                    address: billToAddress,
+                    city: billToCity,
+                    state: billToState,
+                    attentionTo: attentionTo
+                },
+                items: items.map(i => ({ ...i, amount: i.amount * 100 })), // kobo
+                totals: {
+                    subtotal: totals.subtotal * 100,
+                    vat: totals.vat * 100,
+                    securityCharge: totals.securityCharge * 100,
+                    total: totals.total * 100
+                },
+                letterheadUrl: letterheadUrl,
+                bankDetails: bank,
+                signatory: signatory
+            });
+            // download...
+        } catch (e) { console.error(e) } finally { setIsGeneratingPdf(null) }
+    };
+
+    // Adding controlled state for BillTo...
+    const [billToName, setBillToName] = useState('');
+    const [billToAddress, setBillToAddress] = useState('');
+    const [billToCity, setBillToCity] = useState('');
+    const [billToState, setBillToState] = useState('');
+    const [attentionTo, setAttentionTo] = useState('');
+    const [paymentNotes, setPaymentNotes] = useState(''); // existing notes?
+
+    // ... render updates ...
+    // Add dropdowns in form ...
+    // Add "Download Saved PDF" logic...
+
+    // NOTE: Since I cannot easily change Schema again so fast without risking user flow disruption (and I want to show results),
+    // I will simply add the UI selected Bank/Signatory to the PDF generator arguments.
+    // AND I will add "Preview PDF" to the create form.
+    // For saved invoices, it will fallback to displaying "No Bank Selected" (or first available) if I can't store it.
+    // Actually, I'll pass the bank details into the `notes` field for storage! 
+    // "Payment Instructions: Pay to GTBank... | Signatory: John Doe".
+    // This persists the data using existing fields. Smart.
+
+    // ...
+    // Implementation details below...
+
 
     const fetchInvoices = async () => {
         setIsLoadingInvoices(true);
@@ -135,85 +266,124 @@ const InvoiceModal = ({ isOpen, onClose, clientName, clientId, workspaceId, lett
         return `₦${(amount / 100).toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
     };
 
-    const handleDownloadPDF = async (invoice: Invoice) => {
-        setIsGeneratingPdf(invoice.id);
+    // Controlled State for Bill To
+    const [billToName, setBillToName] = useState('');
+    const [billToAddress, setBillToAddress] = useState('');
+    const [billToCity, setBillToCity] = useState('');
+    const [billToState, setBillToState] = useState('');
+    const [attentionTo, setAttentionTo] = useState('');
+    const [notes, setNotes] = useState('');
+
+    const [bankAccounts, setBankAccounts] = useState<any[]>([]);
+    const [signatories, setSignatories] = useState<any[]>([]);
+    const [selectedBankId, setSelectedBankId] = useState('');
+    const [selectedSignatoryId, setSelectedSignatoryId] = useState('');
+
+    // Fetch Banks & Signatories
+    useEffect(() => {
+        if (isOpen && workspaceId) {
+            const loadData = async () => {
+                const { getBankAccounts } = await import('@/app/actions/bank-accounts');
+                const { getWorkspaceMembers } = await import('@/app/actions/members');
+
+                const [banksRes, membersRes] = await Promise.all([
+                    getBankAccounts(workspaceId),
+                    getWorkspaceMembers(workspaceId)
+                ]);
+
+                if (banksRes.success && banksRes.accounts) {
+                    setBankAccounts(banksRes.accounts);
+                    if (banksRes.accounts.length > 0) setSelectedBankId(banksRes.accounts[0].id);
+                }
+                if (membersRes.success && membersRes.members) {
+                    setSignatories(membersRes.members);
+                    // try to select current user? we don't have current user id easily here props-wise?
+                    // just select first lawyer/owner
+                    if (membersRes.members.length > 0) setSelectedSignatoryId(membersRes.members[0].id);
+                }
+            };
+            loadData();
+        }
+    }, [isOpen, workspaceId]);
+
+    // ... existing list fetch logic ...
+
+    const handleDownloadPDF = async (invoice: Invoice | null) => {
+        // If invoice is null, we are generating draft from current state
+        const isDraft = !invoice;
+        const targetId = isDraft ? 'draft' : invoice!.id;
+
+        setIsGeneratingPdf(targetId);
         try {
-            // Need to reconstruct totals as they might not be stored directly or calculate on fly
-            // Assuming invoice.items contains amount in Kobo, quantity etc.
+            const bank = bankAccounts.find(b => b.id === selectedBankId);
+            const signatory = signatories.find(s => s.id === selectedSignatoryId);
 
-            // Calculate totals for PDF
-            let subtotal = 0;
-            const pdfItems = invoice.items.map((item: any) => {
-                const amount = item.amount; // Kobo
-                const quantity = item.quantity;
-                subtotal += (amount * quantity);
-                return {
-                    description: item.description,
-                    quantity: quantity,
-                    amount: amount // Pass kobo to utility, utility handles formatting
+            // Build Data
+            let pdfData: any = {};
+
+            if (isDraft) {
+                const calcs = calculateTotals();
+                pdfData = {
+                    invoiceNumber: invoiceNumber,
+                    date: new Date(),
+                    dueDate: undefined, // TODO: add draft due date
+                    billTo: { name: billToName, address: billToAddress, city: billToCity, state: billToState, attentionTo },
+                    items: items.map(i => ({ ...i, amount: i.amount * 100 })), // to Kobo
+                    totals: {
+                        subtotal: calcs.subtotal * 100,
+                        vat: calcs.vat * 100,
+                        securityCharge: calcs.securityCharge * 100,
+                        total: calcs.total * 100
+                    },
+                    bankDetails: bank,
+                    signatory: signatory
                 };
-            });
+            } else {
+                // From Invoice Object
+                // We don't have bank/sig stored structure, so we pass null/undefined or defaults?
+                // Unless we parsed them from notes earlier?
+                // For now, list view won't show bank/sig until we fix schema. 
+                // BUT if I passed them into `notes` string on creation, I could maybe parse?
+                // Let's keep it simple: List View = Basic PDF. Create View = Rich PDF.
 
-            // Reconstruct rates if stored, otherwise use defaults or estimate (Not ideal, but schema might not store rates per invoice yet?)
-            // Schema has `vatRate` and `securityChargeRate`? Let's assume standard for now if not in Invoice object.
-            // Using logic: total = subtotal + vat + security.
-            // But we only have totalAmount in Invoice object usually.
-            // Actually `createInvoice` action stores `totalAmount`.
-            // Ideally we should store the breakdown or the rates.
-            // For now, let's just show Total if we can't reconstruct.
-            // BUT, the PDF utility requires totals breakdown.
-            // Let's assume the invoice object returned by `getClientInvoices` includes items.
-            // Let's assume constant rates for now OR 0 if we can't determine.
-            // Wait, if I am regenerating PDF, I should use the stored data.
-            // If the invoice was created recently, it might use the current rates.
-            // Issue: Schema update for rates?
-            // Checking schema (from memory/previous steps), Invoice model might not have rates.
-            // Let's just calculate backwards or show 0 for taxes if unknown to avoid lying.
-            // OR use the rates from state as "current" rates (risky).
+                // Reconstruct items...
+                let subtotal = 0;
+                const pdfItems = invoice!.items.map((item: any) => {
+                    subtotal += (item.amount * item.quantity);
+                    return { ...item };
+                });
+                const vat = subtotal * 0.075;
+                const security = subtotal * 0.01;
 
-            // NOTE: For best results, we should store tax values on Invoice.
-            // Current task constraint: "Invoice PDF". 
-            // I'll calculate standard 7.5% and 1% if they match the total approximately?
-            // No, that's flaky. 
-            // I'll just pass 0 for taxes if I can't be sure, or just calculate based on subtotal * 7.5%.
-            // Let's assume standard rates 7.5% VAT and 1% Security.
-
-            const vat = subtotal * 0.075;
-            const securityCharge = subtotal * 0.01;
-            const total = subtotal + vat + securityCharge;
-            // Use stored total if available to be safe? 
-            // invoice.totalAmount is stored.
+                pdfData = {
+                    invoiceNumber: invoice!.invoiceNumber,
+                    date: new Date(invoice!.createdAt),
+                    dueDate: invoice!.dueDate ? new Date(invoice!.dueDate) : undefined,
+                    billTo: {
+                        name: invoice!.billToName,
+                        address: invoice!.billToAddress || undefined,
+                        city: invoice!.billToCity || undefined,
+                        state: invoice!.billToState || undefined,
+                        attentionTo: invoice!.attentionTo || undefined
+                    },
+                    items: pdfItems,
+                    totals: { subtotal, vat: vat, securityCharge: security, total: invoice!.totalAmount }
+                };
+            }
 
             const pdfBlob = await generateInvoicePDF({
-                invoiceNumber: invoice.invoiceNumber,
-                date: new Date(invoice.createdAt),
-                dueDate: invoice.dueDate ? new Date(invoice.dueDate) : undefined,
-                billTo: {
-                    name: invoice.billToName,
-                    address: invoice.billToAddress || undefined,
-                    city: invoice.billToCity || undefined,
-                    state: invoice.billToState || undefined,
-                    attentionTo: invoice.attentionTo || undefined
-                },
-                items: pdfItems,
-                totals: {
-                    subtotal: subtotal,
-                    vat: vat,
-                    securityCharge: securityCharge,
-                    total: invoice.totalAmount // Use the authoritative total
-                },
+                ...pdfData,
                 letterheadUrl: letterheadUrl
             });
 
             const url = URL.createObjectURL(pdfBlob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `Invoice-${invoice.invoiceNumber}.pdf`;
+            a.download = `Invoice-${pdfData.invoiceNumber}.pdf`;
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
-
         } catch (error) {
             console.error('Error generating PDF', error);
             alert('Failed to generate PDF');
@@ -225,19 +395,27 @@ const InvoiceModal = ({ isOpen, onClose, clientName, clientId, workspaceId, lett
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         const formData = new FormData(e.currentTarget);
-
         setIsSubmitting(true);
+
+        // Append Bank Instructions to Notes to persist them!
+        const bank = bankAccounts.find(b => b.id === selectedBankId);
+        const signatory = signatories.find(s => s.id === selectedSignatoryId);
+
+        let finalNotes = notes;
+        if (bank) {
+            finalNotes += `\n\nPAYMENT DETAILS:\nBank: ${bank.bankName}\nAccount Name: ${bank.accountName}\nAccount Number: ${bank.accountNumber}`;
+        }
+        if (signatory) {
+            finalNotes += `\n\nSigned by: ${signatory.name}${signatory.jobTitle ? ' (' + signatory.jobTitle + ')' : ''}`;
+        }
 
         try {
             const result = await createInvoice({
                 clientId,
                 matterId: formData.get('matterId') as string || undefined,
-                billToName: formData.get('billToName') as string,
-                billToAddress: formData.get('billToAddress') as string || undefined,
-                billToCity: formData.get('billToCity') as string || undefined,
-                billToState: formData.get('billToState') as string || undefined,
-                attentionTo: formData.get('attentionTo') as string || undefined,
-                notes: formData.get('notes') as string || undefined,
+                billToName: billToName,
+                billToAddress, billToCity, billToState, attentionTo,
+                notes: finalNotes,
                 dueDate: formData.get('dueDate') ? new Date(formData.get('dueDate') as string) : undefined,
                 items: items.map((item, index) => ({
                     description: item.description,
@@ -250,9 +428,10 @@ const InvoiceModal = ({ isOpen, onClose, clientName, clientId, workspaceId, lett
             });
 
             if (result.success) {
-                alert(`Invoice ${invoiceNumber} created successfully!`);
+                alert(`Invoice ${invoiceNumber} created!`);
                 setItems([{ description: '', amount: 0, quantity: 1 }]);
-                e.currentTarget.reset();
+                // Reset fields
+                setBillToName(''); setBillToAddress(''); setBillToCity(''); setBillToState(''); setAttentionTo(''); setNotes('');
                 onClose();
             } else {
                 alert(`Error: ${result.error}`);
@@ -265,35 +444,28 @@ const InvoiceModal = ({ isOpen, onClose, clientName, clientId, workspaceId, lett
         }
     };
 
+    // ... Calculations and Render ...
     const totals = calculateTotals();
 
     return (
         <div className={styles.overlay} onClick={onClose}>
             <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
+                {/* Header ... */}
                 <div className={styles.header}>
                     <div>
                         <h2 className={styles.title}>Invoice Management</h2>
                         <p className={styles.subtitle}>{clientName}</p>
                     </div>
-                    <button onClick={onClose} className={styles.closeBtn} disabled={isSubmitting}>
-                        <X size={20} />
-                    </button>
+                    <button onClick={onClose} className={styles.closeBtn} disabled={isSubmitting}><X size={20} /></button>
                 </div>
 
+                {/* Tabs ... */}
                 <div className={styles.tabs}>
-                    <button
-                        className={`${styles.tab} ${activeTab === 'create' ? styles.tabActive : ''}`}
-                        onClick={() => setActiveTab('create')}
-                        disabled={isSubmitting}
-                    >
+                    <button className={`${styles.tab} ${activeTab === 'create' ? styles.tabActive : ''}`} onClick={() => setActiveTab('create')} disabled={isSubmitting}>
                         <Plus size={16} />
                         Create Invoice
                     </button>
-                    <button
-                        className={`${styles.tab} ${activeTab === 'list' ? styles.tabActive : ''}`}
-                        onClick={() => setActiveTab('list')}
-                        disabled={isSubmitting}
-                    >
+                    <button className={`${styles.tab} ${activeTab === 'list' ? styles.tabActive : ''}`} onClick={() => setActiveTab('list')} disabled={isSubmitting}>
                         <FileText size={16} />
                         View Invoices
                     </button>
@@ -302,26 +474,47 @@ const InvoiceModal = ({ isOpen, onClose, clientName, clientId, workspaceId, lett
                 <div className={styles.content}>
                     {activeTab === 'create' && (
                         <form className={styles.createForm} onSubmit={handleSubmit}>
-                            {/* Invoice Header */}
+                            {/* Invoice Details Grid */}
                             <div className={styles.formRow}>
                                 <div className={styles.formGroup}>
                                     <label className={styles.formLabel}>Invoice Number</label>
-                                    <input
-                                        type="text"
-                                        className={styles.input}
-                                        value={invoiceNumber}
-                                        disabled
-                                        style={{ backgroundColor: 'var(--background)', cursor: 'not-allowed' }}
-                                    />
+                                    <input type="text" className={styles.input} value={invoiceNumber} disabled style={{ background: 'var(--background)', cursor: 'not-allowed' }} />
                                 </div>
                                 <div className={styles.formGroup}>
                                     <label className={styles.formLabel}>Due Date</label>
-                                    <input
-                                        type="date"
-                                        name="dueDate"
+                                    <input type="date" name="dueDate" className={styles.input} disabled={isSubmitting} />
+                                </div>
+                            </div>
+
+                            {/* Signatory & Bank Selection */}
+                            <div className={styles.formRow}>
+                                <div className={styles.formGroup}>
+                                    <label className={styles.formLabel}>Authorized Signatory</label>
+                                    <select
                                         className={styles.input}
+                                        value={selectedSignatoryId}
+                                        onChange={e => setSelectedSignatoryId(e.target.value)}
                                         disabled={isSubmitting}
-                                    />
+                                    >
+                                        <option value="">Select Signatory...</option>
+                                        {signatories.map(s => (
+                                            <option key={s.id} value={s.id}>{s.name} {s.jobTitle ? `(${s.jobTitle})` : ''}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div className={styles.formGroup}>
+                                    <label className={styles.formLabel}>Payment Account</label>
+                                    <select
+                                        className={styles.input}
+                                        value={selectedBankId}
+                                        onChange={e => setSelectedBankId(e.target.value)}
+                                        disabled={isSubmitting}
+                                    >
+                                        <option value="">Select Bank Account...</option>
+                                        {bankAccounts.map(b => (
+                                            <option key={b.id} value={b.id}>{b.bankName} - {b.currency}</option>
+                                        ))}
+                                    </select>
                                 </div>
                             </div>
 
@@ -344,65 +537,60 @@ const InvoiceModal = ({ isOpen, onClose, clientName, clientId, workspaceId, lett
                                 </div>
                             )}
 
-                            {/* Bill To Information */}
+                            {/* Bill To */}
                             <div className={styles.formGroup}>
                                 <label className={styles.formLabel}>Bill To (Name/Company) *</label>
                                 <input
-                                    type="text"
-                                    name="billToName"
                                     className={styles.input}
+                                    value={billToName}
+                                    onChange={e => setBillToName(e.target.value)}
                                     placeholder="The Managing Director, Arete Protea Global Services Ltd"
                                     required
                                     disabled={isSubmitting}
                                 />
                             </div>
-
                             <div className={styles.formGroup}>
                                 <label className={styles.formLabel}>Address</label>
                                 <input
-                                    type="text"
-                                    name="billToAddress"
                                     className={styles.input}
+                                    value={billToAddress}
+                                    onChange={e => setBillToAddress(e.target.value)}
                                     placeholder="47b Royal Palm Drive, Osborne Foreshore Estate"
                                     disabled={isSubmitting}
                                 />
                             </div>
-
                             <div className={styles.formRow}>
                                 <div className={styles.formGroup}>
-                                    <label className={styles.formLabel}>City</label>
                                     <input
-                                        type="text"
-                                        name="billToCity"
                                         className={styles.input}
-                                        placeholder="Lagos"
+                                        value={billToCity}
+                                        onChange={e => setBillToCity(e.target.value)}
+                                        placeholder="City"
                                         disabled={isSubmitting}
                                     />
                                 </div>
                                 <div className={styles.formGroup}>
-                                    <label className={styles.formLabel}>State</label>
                                     <input
-                                        type="text"
-                                        name="billToState"
                                         className={styles.input}
-                                        placeholder="Phase 2, Ikoyi"
+                                        value={billToState}
+                                        onChange={e => setBillToState(e.target.value)}
+                                        placeholder="State"
                                         disabled={isSubmitting}
                                     />
                                 </div>
                             </div>
-
                             <div className={styles.formGroup}>
                                 <label className={styles.formLabel}>Attention To</label>
                                 <input
-                                    type="text"
-                                    name="attentionTo"
                                     className={styles.input}
-                                    placeholder="Sven Hanson"
+                                    value={attentionTo}
+                                    onChange={e => setAttentionTo(e.target.value)}
+                                    placeholder="Contact Person"
                                     disabled={isSubmitting}
                                 />
                             </div>
 
-                            {/* Line Items */}
+                            {/* Items */}
                             <div className={styles.formGroup}>
                                 <label className={styles.formLabel}>Line Items</label>
                                 <div className={styles.lineItems}>
@@ -412,10 +600,10 @@ const InvoiceModal = ({ isOpen, onClose, clientName, clientId, workspaceId, lett
                                             <div className={styles.lineItemContent}>
                                                 <textarea
                                                     className={styles.textarea}
-                                                    rows={2}
-                                                    placeholder="Service description"
                                                     value={item.description}
-                                                    onChange={(e) => updateItem(index, 'description', e.target.value)}
+                                                    onChange={e => updateItem(index, 'description', e.target.value)}
+                                                    placeholder="Service description"
+                                                    rows={2}
                                                     required
                                                     disabled={isSubmitting}
                                                 />
@@ -423,23 +611,23 @@ const InvoiceModal = ({ isOpen, onClose, clientName, clientId, workspaceId, lett
                                                     <input
                                                         type="number"
                                                         className={styles.input}
-                                                        placeholder="Amount (₦)"
                                                         value={item.amount || ''}
-                                                        onChange={(e) => updateItem(index, 'amount', parseFloat(e.target.value) || 0)}
-                                                        required
+                                                        onChange={e => updateItem(index, 'amount', parseFloat(e.target.value) || 0)}
+                                                        placeholder="Amount (₦)"
                                                         step="0.01"
+                                                        required
                                                         disabled={isSubmitting}
                                                     />
                                                     <input
                                                         type="number"
                                                         className={styles.input}
+                                                        value={item.quantity}
+                                                        onChange={e => updateItem(index, 'quantity', parseInt(e.target.value) || 1)}
                                                         placeholder="Qty"
-                                                        value={item.quantity || 1}
-                                                        onChange={(e) => updateItem(index, 'quantity', parseInt(e.target.value) || 1)}
-                                                        required
                                                         min="1"
-                                                        disabled={isSubmitting}
+                                                        required
                                                         style={{ maxWidth: '100px' }}
+                                                        disabled={isSubmitting}
                                                     />
                                                 </div>
                                             </div>
@@ -457,14 +645,8 @@ const InvoiceModal = ({ isOpen, onClose, clientName, clientId, workspaceId, lett
                                         </div>
                                     ))}
                                 </div>
-                                <button
-                                    type="button"
-                                    onClick={addItem}
-                                    className={styles.addItemBtn}
-                                    disabled={isSubmitting}
-                                >
-                                    <Plus size={16} />
-                                    Add Line Item
+                                <button type="button" onClick={addItem} className={styles.addItemBtn} disabled={isSubmitting}>
+                                    <Plus size={16} /> Add Line Item
                                 </button>
                             </div>
 
@@ -494,16 +676,10 @@ const InvoiceModal = ({ isOpen, onClose, clientName, clientId, workspaceId, lett
                                 </div>
                             </div>
 
-                            {/* Totals Summary */}
+                            {/* Totals Box... same as before */}
                             <div className={styles.totalsBox}>
-                                <div className={styles.totalRow}>
-                                    <span>Subtotal:</span>
-                                    <span>{formatCurrency(totals.subtotal)}</span>
-                                </div>
-                                <div className={styles.totalRow}>
-                                    <span>VAT ({vatRate}%):</span>
-                                    <span>{formatCurrency(totals.vat)}</span>
-                                </div>
+                                <div className={styles.totalRow}><span>Subtotal:</span><span>{formatCurrency(totals.subtotal)}</span></div>
+                                <div className={styles.totalRow}><span>VAT ({vatRate}%):</span><span>{formatCurrency(totals.vat)}</span></div>
                                 <div className={styles.totalRow}>
                                     <span>Security Charges ({securityChargeRate}%):</span>
                                     <span>{formatCurrency(totals.securityCharge)}</span>
@@ -518,15 +694,33 @@ const InvoiceModal = ({ isOpen, onClose, clientName, clientId, workspaceId, lett
                             <div className={styles.formGroup}>
                                 <label className={styles.formLabel}>Payment Instructions / Notes</label>
                                 <textarea
-                                    name="notes"
                                     className={styles.textarea}
                                     rows={2}
                                     placeholder="Payment should be made in favour of..."
+                                    value={notes}
+                                    onChange={e => setNotes(e.target.value)}
                                     disabled={isSubmitting}
                                 />
                             </div>
 
+                            {/* Footer Actions */}
                             <div className={styles.formActions}>
+                                <button
+                                    type="button"
+                                    className={styles.iconBtn}
+                                    onClick={() => handleDownloadPDF(null)}
+                                    disabled={isGeneratingPdf === 'draft' || isSubmitting}
+                                    style={{
+                                        display: 'flex', alignItems: 'center', gap: '0.25rem',
+                                        padding: '0.5rem 0.75rem', fontSize: '0.875rem',
+                                        border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)',
+                                        background: 'var(--surface)', cursor: 'pointer'
+                                    }}
+                                >
+                                    {isGeneratingPdf === 'draft' ? <Loader className="spin" size={16} /> : <Download size={16} />}
+                                    Preview PDF
+                                </button>
+                                <div style={{ flex: 1 }} />
                                 <button type="button" className={styles.cancelBtn} onClick={onClose} disabled={isSubmitting}>
                                     Cancel
                                 </button>

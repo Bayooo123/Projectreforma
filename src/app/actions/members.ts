@@ -2,17 +2,7 @@
 
 import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
-
-export type Member = {
-    id: string;
-    userId: string;
-    name: string | null;
-    email: string;
-    role: string;
-    designation: string | null;
-    status: string;
-    joinedAt: Date;
-};
+import { auth } from '@/auth';
 
 export async function getWorkspaceMembers(workspaceId: string) {
     try {
@@ -21,67 +11,50 @@ export async function getWorkspaceMembers(workspaceId: string) {
             include: {
                 user: {
                     select: {
+                        id: true,
                         name: true,
                         email: true,
-                    }
-                }
+                        image: true,
+                        jobTitle: true,
+                    },
+                },
             },
-            orderBy: {
-                joinedAt: 'desc'
-            }
         });
-
-        return {
-            success: true,
-            data: members.map(m => ({
-                id: m.id, // workspaceMember id
-                userId: m.userId,
-                name: m.user.name,
-                email: m.user.email,
-                role: m.role,
-                // @ts-ignore
-                designation: m.designation,
-                // @ts-ignore
-                status: m.status,
-                joinedAt: m.joinedAt,
-            }))
-        };
+        return { success: true, members: members.map(m => m.user) };
     } catch (error) {
         console.error('Failed to fetch members:', error);
         return { success: false, error: 'Failed to fetch members' };
     }
 }
 
-export async function approveMember(memberId: string) {
-    try {
-        await prisma.workspaceMember.update({
-            where: { id: memberId },
-            // @ts-ignore
-            data: { status: 'active' }
-        });
+export async function updateUserProfile(data: { jobTitle: string }) {
+    const session = await auth();
+    if (!session?.user?.email) return { success: false, error: 'Unauthorized' };
 
-        revalidatePath('/dashboard');
-        return { success: true };
+    try {
+        const user = await prisma.user.update({
+            where: { email: session.user.email },
+            data: { jobTitle: data.jobTitle },
+        });
+        revalidatePath('/settings');
+        return { success: true, user };
     } catch (error) {
-        console.error('Failed to approve member:', error);
-        return { success: false, error: 'Failed to approve member' };
+        console.error('Failed to update profile:', error);
+        return { success: false, error: 'Failed to update profile' };
     }
 }
 
-export async function rejectMember(memberId: string) {
+export async function getUserProfile() {
+    const session = await auth();
+    if (!session?.user?.email) return { success: false, error: 'Unauthorized' };
+
     try {
-        // Delete the membership
-        await prisma.workspaceMember.delete({
-            where: { id: memberId },
+        const user = await prisma.user.findUnique({
+            where: { email: session.user.email },
+            select: { id: true, name: true, jobTitle: true, email: true }
         });
-
-        // Optional: If user has no other workspaces and was just created, delete user?
-        // For simplicity, we just remove them from the workspace.
-
-        revalidatePath('/dashboard');
-        return { success: true };
+        return { success: true, user };
     } catch (error) {
-        console.error('Failed to reject member:', error);
-        return { success: false, error: 'Failed to reject member' };
+        return { success: false, error: 'Failed to fetch profile' };
     }
 }

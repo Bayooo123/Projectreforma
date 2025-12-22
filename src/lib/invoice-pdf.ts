@@ -27,6 +27,15 @@ interface GeneratePDFParams {
         total: number;
     };
     letterheadUrl?: string | null;
+    bankDetails?: {
+        bankName: string;
+        accountNumber: string;
+        accountName: string;
+    };
+    signatory?: {
+        name: string;
+        jobTitle?: string | null;
+    };
 }
 
 declare module 'jspdf' {
@@ -175,6 +184,53 @@ export const generateInvoicePDF = async (data: GeneratePDFParams): Promise<Blob>
     doc.text('TOTAL:', totalsX, finalY);
     doc.text(formatCurrency(data.totals.total), pageWidth - 14, finalY, { align: 'right' });
 
+    // 5. Payment Details & Signatory
+    finalY += 15;
+    const footerStartY = finalY;
+
+    // Payment Section (Left)
+    if (data.bankDetails) {
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(10);
+        doc.text('Payment should be made in favour of:', 14, finalY);
+
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'normal');
+        finalY += 6;
+        doc.text(`Account Name:   ${data.bankDetails.accountName}`, 14, finalY);
+        finalY += 5;
+        doc.text(`Account Number: ${data.bankDetails.accountNumber}`, 14, finalY);
+        finalY += 5;
+        doc.text(`Bank:           ${data.bankDetails.bankName}`, 14, finalY);
+    }
+
+    // Signatory Section (Below Payment or Right?)
+    // Typically signatures are bottom left or right. 
+    // Let's put it below payment info, spaced out.
+    // Or if payment info is left, sig is left below it.
+
+    finalY += 25; // Space for signature
+
+    if (data.signatory) {
+        // Draw Line
+        doc.setLineWidth(0.5);
+        doc.line(14, finalY, 70, finalY);
+
+        finalY += 5;
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(10);
+
+        const sigName = data.signatory.name;
+        const sigTitle = data.signatory.jobTitle || '';
+
+        doc.text(sigName, 14, finalY);
+        if (sigTitle) {
+            finalY += 5;
+            doc.setFont('helvetica', 'normal'); // Title usually regular/italic?
+            doc.text(sigTitle, 14, finalY);
+        }
+    }
+
     return doc.output('blob');
 };
 
@@ -190,12 +246,5 @@ const formatDate = (date: Date) => {
 
 const formatCurrency = (amount: number) => {
     // Input is assumed to be in kobo if passing from backend, but check context.
-    // In our app we usually store in kobo. BUT InvoiceModal passes amounts from UI state which might be Naira?
-    // Let's assume input to this function is in KOBO.
-    // Wait, InvoiceModal items.amount are in Naira from the UI inputs?
-    // Let's check usage.
-    // If the input amount is 1000 (Naira) from UI, we might need to be careful.
-    // The utility expects amount in Kobo usually for formatting, OR we standardize on Naira.
-    // Let's standardize this utility to accept KOBO and devide by 100.
     return `N${(amount / 100).toLocaleString('en-NG', { minimumFractionDigits: 2 })}`;
 };

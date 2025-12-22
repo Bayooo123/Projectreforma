@@ -8,6 +8,7 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 // ============================================
@@ -22,7 +23,7 @@ model Workspace {
   plan          String   @default("free") // 'free' | 'pro' | 'enterprise'
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
-  letterheadUrl String?
+
 
   // Security
   revenuePin String? // 5-digit PIN to unlock revenue visibility
@@ -30,6 +31,7 @@ model Workspace {
   // Firm Login Fields
   joinPassword String? // Hashed shared password for firm login
   firmCode     String? @unique // Unique code for joining (e.g. "ASCO")
+  letterheadUrl String? // URL to uploaded letterhead image
 
   owner       User                  @relation("WorkspaceOwner", fields: [ownerId], references: [id])
   members     WorkspaceMember[]
@@ -40,6 +42,7 @@ model Workspace {
   expenses    Expense[]
   tasks       Task[]
   emailConfig WorkspaceEmailConfig?
+  bankAccounts BankAccount[]
 
   @@index([slug])
   @@index([firmCode])
@@ -91,11 +94,31 @@ model User {
   image         String?
   password      String? // Hashed with bcrypt (Optional for OAuth users)
   phone         String? // Phone number
+  jobTitle      String? // e.g. "Senior Associate"
   accounts      Account[]
   sessions      Session[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  workspaces WorkspaceMember[]
+  invitations Invitation[] // Invitations sent by this user
+  briefs      Brief[]
+}
+
+model BankAccount {
+  id            String   @id @default(cuid())
+  workspaceId   String
+  bankName      String   // "GTBank"
+  accountNumber String   // "0123456789"
+  accountName   String   // "ASCO LP"
+  currency      String   @default("NGN") // "NGN", "USD", etc.
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  workspace     Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+}
 
   // App Relations
   ownedWorkspaces      Workspace[]           @relation("WorkspaceOwner")

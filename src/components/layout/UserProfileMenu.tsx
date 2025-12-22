@@ -120,7 +120,10 @@ const UserProfileMenu = ({ user, workspace }: UserProfileMenuProps) => {
                                 </button>
                             )}
 
-                            <button className={styles.menuItem}>
+                            <button
+                                className={styles.menuItem}
+                                onClick={() => window.location.href = '/settings'}
+                            >
                                 <Settings size={18} />
                                 <span>Settings</span>
                             </button>
