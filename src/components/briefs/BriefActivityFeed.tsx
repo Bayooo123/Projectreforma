@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { Mail, Clock, FileText, CheckCircle, AlertCircle, Copy, Check } from 'lucide-react';
-import { getBriefActivity } from '@/lib/briefs'; // Server action
+import { getBriefActivity, addBriefNote } from '@/lib/briefs'; // Server action
 import styles from './BriefActivityFeed.module.css';
 
 interface ActivityLog {
@@ -27,6 +27,10 @@ export default function BriefActivityFeed({ briefId, inboundEmailId }: BriefActi
     const [activities, setActivities] = useState<ActivityLog[]>([]);
     const [loading, setLoading] = useState(true);
     const [copied, setCopied] = useState(false);
+
+    // Note Input State
+    const [newNote, setNewNote] = useState('');
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     // email address format: brief-[inboundEmailId]@reforma.ai (or similar domain)
     // For now, prompt the user to use the configured domain or fallback
@@ -54,6 +58,25 @@ export default function BriefActivityFeed({ briefId, inboundEmailId }: BriefActi
         navigator.clipboard.writeText(emailAddress);
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
+    };
+
+    const handleAddNote = async () => {
+        if (!newNote.trim()) return;
+        setIsSubmitting(true);
+        try {
+            const result = await addBriefNote(briefId, newNote);
+            if (result.success && 'activity' in result) {
+                setNewNote('');
+                // Refresh list or Optimistic update
+                loadActivity();
+            } else {
+                alert('Failed to add note');
+            }
+        } catch (error) {
+            console.error('Error adding note:', error);
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     const getActivityIcon = (type: string) => {
@@ -84,6 +107,26 @@ export default function BriefActivityFeed({ briefId, inboundEmailId }: BriefActi
             </div>
 
             <h3 className={styles.feedTitle}>Activity Feed</h3>
+
+            {/* Note Input */}
+            <div className={styles.noteInputBox}>
+                <textarea
+                    className={styles.noteInput}
+                    placeholder="Add a note or comment..."
+                    value={newNote}
+                    onChange={(e) => setNewNote(e.target.value)}
+                    disabled={isSubmitting}
+                />
+                <div className={styles.noteActions}>
+                    <button
+                        className={styles.addNoteBtn}
+                        onClick={handleAddNote}
+                        disabled={!newNote.trim() || isSubmitting}
+                    >
+                        {isSubmitting ? 'Posting...' : 'Post Note'}
+                    </button>
+                </div>
+            </div>
 
             <div className={styles.feedList}>
                 {loading ? (

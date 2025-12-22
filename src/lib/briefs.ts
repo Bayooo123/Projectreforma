@@ -172,3 +172,20 @@ export async function getBriefActivity(briefId: string) {
         return [];
     }
 }
+/**
+ * Add a note to a brief (User Action)
+ */
+export async function addBriefNote(briefId: string, note: string) {
+    const session = await auth();
+    if (!session?.user?.id) {
+        return { success: false, error: 'Unauthorized' };
+    }
+
+    return await addBriefActivity(
+        briefId,
+        'note_added',
+        note,
+        {},
+        session.user.id
+    );
+}

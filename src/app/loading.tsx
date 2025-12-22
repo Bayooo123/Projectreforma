@@ -26,10 +26,8 @@ export default function Loading() {
                 ))}
             </div>
 
-            <div className="mt-8 flex items-center gap-2 text-slate-400 text-sm">
-                <Loader2 className="animate-spin" size={16} />
-                <span>Loading workspace...</span>
-            </div>
+            <Loader2 className="animate-spin" size={20} />
         </div>
+        </div >
     );
 }
