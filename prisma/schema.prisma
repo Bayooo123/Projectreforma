@@ -104,6 +104,17 @@ model User {
   workspaces WorkspaceMember[]
   invitations Invitation[] // Invitations sent by this user
   briefs      Brief[]
+
+  // App Relations
+  ownedWorkspaces      Workspace[]           @relation("WorkspaceOwner")
+  assignedMatters      Matter[]              @relation("AssignedMatters")
+  activityLogs         MatterActivityLog[]
+  clientCommunications ClientCommunication[]
+  assignedTasks        Task[]                @relation("AssignedTasks")
+  createdTasks         Task[]                @relation("CreatedTasks")
+  BriefActivityLog     BriefActivityLog[]
+
+  @@index([email])
 }
 
 model BankAccount {
@@ -120,20 +131,7 @@ model BankAccount {
   workspace     Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 }
 
-  // App Relations
-  ownedWorkspaces      Workspace[]           @relation("WorkspaceOwner")
-  workspaces           WorkspaceMember[]
-  sentInvitations      Invitation[]
-  assignedMatters      Matter[]              @relation("AssignedMatters")
-  activityLogs         MatterActivityLog[]
-  clientCommunications ClientCommunication[]
-  briefs               Brief[]
-  assignedTasks        Task[]                @relation("AssignedTasks")
-  createdTasks         Task[]                @relation("CreatedTasks")
-  BriefActivityLog     BriefActivityLog[]
 
-  @@index([email])
-}
 
 model Account {
   id                String  @id @default(cuid())
