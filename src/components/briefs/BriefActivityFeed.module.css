@@ -1,0 +1,182 @@
+.container {
+    margin-top: 2rem;
+    border-top: 1px solid #e2e8f0;
+    padding-top: 2rem;
+}
+
+.emailBox {
+    background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+    border: 1px solid #bae6fd;
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.emailHeader {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.emailLabel {
+    font-weight: 600;
+    color: #0c4a6e;
+    font-size: 0.95rem;
+}
+
+.emailBadge {
+    background-color: #0ea5e9;
+    color: white;
+    font-size: 0.7rem;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.emailExplainer {
+    font-size: 0.9rem;
+    color: #0369a1;
+    margin: 0 0 1rem 0;
+}
+
+.copyRow {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: white;
+    padding: 0.5rem;
+    border-radius: 8px;
+    border: 1px solid #bae6fd;
+}
+
+.emailCode {
+    flex: 1;
+    font-family: monospace;
+    color: #0284c7;
+    font-size: 0.95rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.copyBtn {
+    background: none;
+    border: none;
+    color: #64748b;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    transition: all 0.2s;
+}
+
+.copyBtn:hover {
+    color: #0ea5e9;
+    background-color: #f0f9ff;
+}
+
+.feedTitle {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #1e293b;
+    margin-bottom: 1.5rem;
+}
+
+.feedList {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    position: relative;
+}
+
+.feedItem {
+    display: flex;
+    gap: 1rem;
+    position: relative;
+}
+
+/* Vertical line connecting items */
+.feedItem:not(:last-child)::before {
+    content: '';
+    position: absolute;
+    left: 15px;
+    /* Center of the 32px icon (ish) */
+    top: 32px;
+    bottom: -24px;
+    /* Gap + wait */
+    width: 2px;
+    background-color: #e2e8f0;
+}
+
+.icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background-color: #f1f5f9;
+    color: #64748b;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    border: 2px solid white;
+    box-shadow: 0 0 0 1px #e2e8f0;
+    z-index: 1;
+}
+
+.icon.email_received {
+    background-color: #e0f2fe;
+    color: #0284c7;
+    box-shadow: 0 0 0 1px #bae6fd;
+}
+
+.content {
+    flex: 1;
+    background-color: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 1rem;
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
+}
+
+.author {
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: #1e293b;
+}
+
+.time {
+    font-size: 0.8rem;
+    color: #94a3b8;
+}
+
+.description {
+    font-size: 0.9rem;
+    color: #475569;
+    line-height: 1.5;
+    margin: 0;
+    white-space: pre-wrap;
+}
+
+.aiSummary {
+    margin-top: 0.75rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid #f1f5f9;
+    font-size: 0.85rem;
+    color: #64748b;
+    font-style: italic;
+}
+
+.loading,
+.empty {
+    text-align: center;
+    color: #94a3b8;
+    padding: 2rem;
+    font-style: italic;
+}

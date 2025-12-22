@@ -124,3 +124,51 @@ export async function createClientQuick(workspaceId: string, name: string, email
         return { success: false, error: 'Failed to create client' };
     }
 }
+
+/**
+ * Add an activity log entry to a brief
+ */
+export async function addBriefActivity(
+    briefId: string,
+    type: 'note_added' | 'email_received' | 'status_changed' | 'document_uploaded',
+    description: string,
+    metadata?: any,
+    performedBy?: string
+) {
+    try {
+        const activity = await prisma.briefActivityLog.create({
+            data: {
+                briefId,
+                activityType: type,
+                description,
+                metadata: metadata || {},
+                performedBy,
+            },
+        });
+        return { success: true, activity };
+    } catch (error) {
+        console.error('Error adding brief activity:', error);
+        return { success: false, error: 'Failed to add activity log' };
+    }
+}
+
+/**
+ * Get activity logs for a brief
+ */
+export async function getBriefActivity(briefId: string) {
+    try {
+        const logs = await prisma.briefActivityLog.findMany({
+            where: { briefId },
+            orderBy: { timestamp: 'desc' },
+            include: {
+                user: {
+                    select: { name: true, email: true, image: true },
+                },
+            },
+        });
+        return logs;
+    } catch (error) {
+        console.error('Error fetching brief activity:', error);
+        return [];
+    }
+}

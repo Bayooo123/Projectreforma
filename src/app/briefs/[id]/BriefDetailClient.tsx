@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { ArrowLeft, Clock, Tag, User, Building, Calendar, Upload, Loader, FileText, Trash2, Edit } from 'lucide-react';
 import DocumentUpload from '@/components/briefs/DocumentUpload';
 import DocumentPreview from '@/components/briefs/DocumentPreview';
+import BriefActivityFeed from '@/components/briefs/BriefActivityFeed';
 import styles from './page.module.css';
 
 interface Brief {
@@ -40,6 +41,7 @@ interface Brief {
         id: string;
         name: string;
     };
+    inboundEmailId: string;
 }
 
 interface BriefDetailClientProps {
@@ -211,6 +213,9 @@ export default function BriefDetailClient({ brief }: BriefDetailClientProps) {
                         ))}
                     </div>
                 )}
+
+
+                <BriefActivityFeed briefId={brief.id} inboundEmailId={brief.inboundEmailId} />
             </div>
 
             <DocumentPreview
