@@ -43,6 +43,7 @@ model Workspace {
   tasks       Task[]
   emailConfig WorkspaceEmailConfig?
   bankAccounts BankAccount[]
+  draftingTemplates DraftingTemplate[]
 
   @@index([slug])
   @@index([firmCode])
@@ -113,6 +114,8 @@ model User {
   assignedTasks        Task[]                @relation("AssignedTasks")
   createdTasks         Task[]                @relation("CreatedTasks")
   BriefActivityLog     BriefActivityLog[]
+  draftingTemplates    DraftingTemplate[]
+  draftingSessions     DraftingSession[]
 
   @@index([email])
 }
@@ -514,4 +517,116 @@ model BriefActivityLog {
   user  User? @relation(fields: [performedBy], references: [id])
 
   @@index([briefId, timestamp])
+}
+
+// ============================================
+// INTELLIGENT DRAFTING ENGINE MODELS
+// ============================================
+
+model DraftingTemplate {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  category    String // 'contracts', 'litigation', 'letters'
+  workspaceId String? // If null, it's a System Global Template
+  authorId    String
+  isPublished Boolean  @default(false)
+  version     Int      @default(1)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  nodes       DraftingNode[]
+  sessions    DraftingSession[]
+  variables   DraftingVariable[]
+
+  workspace   Workspace? @relation(fields: [workspaceId], references: [id])
+  author      User       @relation(fields: [authorId], references: [id])
+
+  @@index([workspaceId])
+}
+
+model DraftingNode {
+  id          String   @id @default(cuid())
+  templateId  String
+  type        String // 'QUESTION', 'CLAUSE', 'INFO', 'LOGIC_GATE'
+  
+  // Content
+  content     String   @db.Text // The question text OR the clause text
+  helpText    String?  @db.Text // Socratic explanation: "Why are we asking this?"
+  
+  // Logic
+  order       Int      // Default sequence
+  variableName String? // If this is a question, answer is stored under this var key
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  template    DraftingTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  options     NodeOption[]
+  responses   DraftingResponse[]
+  
+  @@index([templateId, order])
+}
+
+model NodeOption {
+  id          String   @id @default(cuid())
+  nodeId      String
+  label       String   // "Fixed Term"
+  value       String   // "fixed_term"
+  
+  // Branching Logic
+  nextNodeId  String?  // Jump to this node if selected (overrides default order)
+  
+  node        DraftingNode @relation(fields: [nodeId], references: [id], onDelete: Cascade)
+  
+  @@index([nodeId])
+}
+
+model DraftingVariable {
+  id          String   @id @default(cuid())
+  templateId  String
+  name        String   // "rent_amount"
+  label       String   // "Annual Rent"
+  type        String   // 'text', 'number', 'date', 'currency'
+  required    Boolean  @default(true)
+  defaultValue String?
+
+  template    DraftingTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  
+  @@unique([templateId, name])
+}
+
+model DraftingSession {
+  id          String   @id @default(cuid())
+  templateId  String
+  userId      String
+  status      String   // 'in_progress', 'completed', 'abandoned'
+  currentStepId String? // ID of the node user is currently on
+  
+  // Compiled Data
+  variables   Json?    // Flattened map of all answers { rent_amount: 50000 }
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  template    DraftingTemplate @relation(fields: [templateId], references: [id])
+  user        User             @relation(fields: [userId], references: [id])
+  responses   DraftingResponse[]
+  
+  @@index([userId, status])
+}
+
+model DraftingResponse {
+  id          String   @id @default(cuid())
+  sessionId   String
+  nodeId      String
+  value       String   @db.Text // The user's answer
+  
+  timestamp   DateTime @default(now())
+
+  session     DraftingSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  node        DraftingNode    @relation(fields: [nodeId], references: [id])
+  
+  @@unique([sessionId, nodeId])
 }
