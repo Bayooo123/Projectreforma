@@ -31,9 +31,11 @@ export default function DraftingStudio() {
     const [nodes, setNodes] = useState<DraftingNode[]>([]);
     const [templateId, setTemplateId] = useState<string | null>(null);
     const [sessionId, setSessionId] = useState<string | null>(null);
+    const [showContextPanel, setShowContextPanel] = useState(true);
 
     // Brief Context for Auto-Answers
     const [briefContext, setBriefContext] = useState<any>({});
+
     // Fallback Mock Context (Merging logic handled in loadSystem)
     const MOCK_CONTEXT = {
         property_type: 'residential',
@@ -238,13 +240,6 @@ export default function DraftingStudio() {
         );
     };
 
-    if (isLoading) {
-        return <div className="p-8 flex justify-center">Loading Drafting Engine...</div>;
-    }
-
-    // -- UI State --
-    const [showContextPanel, setShowContextPanel] = useState(true);
-
     // -- Derived Strategy (Mock Logic for Demo) --
     const strategicInsights = [];
     if (briefContext?.brief) {
@@ -254,6 +249,19 @@ export default function DraftingStudio() {
             message: `Pulling facts from Matter "${briefContext.brief.name}".`
         });
     }
+    // Specific Logic based on template name
+    if (nodes.length > 0 && nodes[0].content && nodes[0].content.includes("Partnership")) {
+        strategicInsights.push({
+            type: 'strategy',
+            title: 'Procedural Strategy',
+            message: "We don't have a record of the Defendant's Counsel yet. Recommended: Omit counsel details in the initial filing to avoid procedural delays. Service will be effected personally."
+        });
+    }
+
+    if (isLoading) {
+        return <div className="p-8 flex justify-center">Loading Drafting Engine...</div>;
+    }
+
     // Specific Logic based on template name
     if (nodes.length > 0 && nodes[0].content.includes("Partnership")) {
         strategicInsights.push({
