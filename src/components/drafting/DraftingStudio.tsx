@@ -248,7 +248,7 @@ export default function DraftingStudio() {
             <div className={styles.container} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 20 }}>
                 <div className="text-xl font-bold">System Initialization Required</div>
                 <p className="text-gray-500 max-w-md text-center">
-                    The logic database is currently empty. Initialize the "Lagos Tenancy Agreement" template to start the engine.
+                    The logic database is currently empty. Initialize the "Statement of Claim (Partnership)" template to start the engine.
                 </p>
                 <button
                     onClick={handleSeed}
