@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { ArrowRight, Check, AlertCircle, RefreshCw, Database } from 'lucide-react';
+import { ArrowRight, Check, AlertCircle, RefreshCw, Database, Sparkles, Bot, MessageSquare, CheckCircle2, Zap, BrainCircuit, PanelLeftOpen, PanelLeftClose, Briefcase, Lightbulb, Settings, Edit3, Info, Copy, Download, Wand2, X, ChevronRight, FileText } from 'lucide-react';
 import styles from './DraftingStudio.module.css';
 import { useSearchParams } from 'next/navigation';
 import { getTemplateByName, seedStatementOfClaimTemplate, saveDraftingResponse, startDraftingSession } from '@/app/actions/drafting';
