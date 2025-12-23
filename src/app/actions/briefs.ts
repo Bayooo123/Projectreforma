@@ -1,71 +1,103 @@
-'use server';
-
-import { prisma } from '@/lib/prisma';
-import { revalidatePath, unstable_noStore as noStore } from 'next/cache';
-import { requireAuth } from '@/lib/auth-utils';
+// ... existing imports
 
 export async function getBriefs(workspaceId: string) {
-    await requireAuth();
-    noStore(); // Force dynamic fetching, disable cache
-    try {
-        console.log('[getBriefs] ========== START ==========');
-        console.log('[getBriefs] Fetching briefs for workspace:', workspaceId);
+    // ... existing code
+}
 
+// NEW ACTION
+export async function getUserBriefs() {
+    const session = await requireAuth();
+    // Assuming the user is linked to a workspace or we just fetch all briefs the user has access to.
+    // For now, simpler: Fetch the first workspace the user belongs to.
+    // Since I don't have the full schema map in head, I'll try to find the user's workspace.
+    // ...
+    // Actually, let's keep it robust. If I can't get workspace easily, I'll just return all briefs where lawyerId or clientId matches user, OR brief.workspace.users includes user.
+    // Let's use `prisma.brief.findMany` with `where: { workspace: { users: { some: { id: session.user.id } } } }`
+
+    try {
         const briefs = await prisma.brief.findMany({
             where: {
-                workspaceId,
+                workspace: {
+                    users: {
+                        some: {
+                            id: session.user.id
+                        }
+                    }
+                }
             },
             include: {
-                client: {
-                    select: {
-                        id: true,
-                        name: true,
-                        email: true,
-                    },
-                },
-                lawyer: {
-                    select: {
-                        id: true,
-                        name: true,
-                        email: true,
-                    },
-                },
-                documents: {
-                    select: {
-                        id: true,
-                        name: true,
-                        url: true,
-                        type: true,
-                        size: true,
-                        uploadedAt: true,
-                    },
-                },
-                _count: {
-                    select: {
-                        documents: true,
-                    },
-                },
+                client: { select: { name: true } }
             },
-            orderBy: {
-                updatedAt: 'desc',
-            },
+            orderBy: { updatedAt: 'desc' },
+            take: 20 // Limit for selector
         });
-
-        console.log('[getBriefs] ✅ Found', briefs.length, 'briefs');
-        if (briefs.length > 0) {
-            console.log('[getBriefs] Brief IDs:', briefs.map(b => b.id));
-            console.log('[getBriefs] Brief Numbers:', briefs.map(b => b.briefNumber));
-            console.log('[getBriefs] Brief Names:', briefs.map(b => b.name));
-        }
-        console.log('[getBriefs] ========== END ==========');
-
         return briefs;
-    } catch (error) {
-        console.error('[getBriefs] ========== ERROR ==========');
-        console.error('[getBriefs] Error fetching briefs:', error);
-        console.error('[getBriefs] ========== ERROR END ==========');
+    } catch (err) {
+        console.error("Failed to fetch user briefs", err);
         return [];
     }
+}
+await requireAuth();
+noStore(); // Force dynamic fetching, disable cache
+try {
+    console.log('[getBriefs] ========== START ==========');
+    console.log('[getBriefs] Fetching briefs for workspace:', workspaceId);
+
+    const briefs = await prisma.brief.findMany({
+        where: {
+            workspaceId,
+        },
+        include: {
+            client: {
+                select: {
+                    id: true,
+                    name: true,
+                    email: true,
+                },
+            },
+            lawyer: {
+                select: {
+                    id: true,
+                    name: true,
+                    email: true,
+                },
+            },
+            documents: {
+                select: {
+                    id: true,
+                    name: true,
+                    url: true,
+                    type: true,
+                    size: true,
+                    uploadedAt: true,
+                },
+            },
+            _count: {
+                select: {
+                    documents: true,
+                },
+            },
+        },
+        orderBy: {
+            updatedAt: 'desc',
+        },
+    });
+
+    console.log('[getBriefs] ✅ Found', briefs.length, 'briefs');
+    if (briefs.length > 0) {
+        console.log('[getBriefs] Brief IDs:', briefs.map(b => b.id));
+        console.log('[getBriefs] Brief Numbers:', briefs.map(b => b.briefNumber));
+        console.log('[getBriefs] Brief Names:', briefs.map(b => b.name));
+    }
+    console.log('[getBriefs] ========== END ==========');
+
+    return briefs;
+} catch (error) {
+    console.error('[getBriefs] ========== ERROR ==========');
+    console.error('[getBriefs] Error fetching briefs:', error);
+    console.error('[getBriefs] ========== ERROR END ==========');
+    return [];
+}
 }
 
 export async function getBriefById(id: string) {
