@@ -107,8 +107,8 @@ export default function DraftingStudio() {
 
         const currentVar = currentNode.variableName;
         // Check if we have context AND we haven't answered it yet
-        if (currentVar && BRIEF_CONTEXT[currentVar as keyof typeof BRIEF_CONTEXT] && !answers[currentVar]) {
-            const autoValue = BRIEF_CONTEXT[currentVar as keyof typeof BRIEF_CONTEXT];
+        if (currentVar && briefContext[currentVar as keyof typeof briefContext] && !answers[currentVar]) {
+            const autoValue = briefContext[currentVar as keyof typeof briefContext];
 
             // Simulate "Reading" delay
             const timer = setTimeout(() => {
@@ -116,11 +116,15 @@ export default function DraftingStudio() {
                 const matchedOption = currentNode.options?.find(o => o.value === autoValue);
                 if (matchedOption) {
                     handleSelectOption(matchedOption);
+                } else if (currentNode.type !== 'QUESTION') {
+                    // For text variables (non-questions), we might want to auto-fill? 
+                    // Currently checking options matches, but string variables need direct set
+                    setAnswers(prev => ({ ...prev, [currentVar]: autoValue }));
                 }
             }, 1000);
             return () => clearTimeout(timer);
         }
-    }, [currentNodeIndex, currentNode, answers]);
+    }, [currentNodeIndex, currentNode, answers, briefContext]);
 
 
     // -- RENDER HELPERS --
@@ -238,7 +242,12 @@ export default function DraftingStudio() {
                 <div className={styles.chatHeader}>
                     <div className={styles.templateTitle}>Statement of Claim (Partnership)</div>
                     <div className={styles.templateMeta}>
-                        <span style={{ color: 'green' }}>● Connected to Brief: #B-2024-001</span>
+                        {briefId ? (
+                            <span style={{ color: 'green' }}>● Connected to {briefContext.claimant_name ? `Client: ${briefContext.claimant_name}` : `Brief: #${briefId}`}</span>
+                        ) : (
+                            <span style={{ color: 'gray' }}>○ No Brief Connected (Sandbox Mode)</span>
+                        )}
+
                     </div>
                 </div>
 
@@ -246,7 +255,7 @@ export default function DraftingStudio() {
                     {!isFinished ? (
                         <div className={styles.questionCard}>
                             {/* Auto-Resolve Indicator */}
-                            {currentNode.variableName && BRIEF_CONTEXT[currentNode.variableName as keyof typeof BRIEF_CONTEXT] && (
+                            {currentNode.variableName && briefContext[currentNode.variableName as keyof typeof briefContext] && (
                                 <div style={{
                                     background: '#F0FDF4',
                                     color: '#166534',
@@ -259,7 +268,7 @@ export default function DraftingStudio() {
                                     gap: '8px'
                                 }}>
                                     <Check size={14} />
-                                    Context Found: "This is a {BRIEF_CONTEXT[currentNode.variableName as keyof typeof BRIEF_CONTEXT]} property" (Auto-selected)
+                                    Context Found: "{briefContext[currentNode.variableName as keyof typeof briefContext]}" (Applying from Brief)
                                 </div>
                             )}
 
