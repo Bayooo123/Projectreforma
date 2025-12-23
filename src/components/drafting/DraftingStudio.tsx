@@ -262,14 +262,7 @@ export default function DraftingStudio() {
         return <div className="p-8 flex justify-center">Loading Drafting Engine...</div>;
     }
 
-    // Specific Logic based on template name
-    if (nodes.length > 0 && nodes[0].content.includes("Partnership")) {
-        strategicInsights.push({
-            type: 'strategy',
-            title: 'Procedural Strategy',
-            message: "We don't have a record of the Defendant's Counsel yet. Recommended: Omit counsel details in the initial filing to avoid procedural delays. Service will be effected personally."
-        });
-    }
+
 
     // No Template Found State
     if (nodes.length === 0) {
