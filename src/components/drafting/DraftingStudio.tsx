@@ -1,8 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from 'react';
-import { ArrowRight, Sparkles, FolderOpen, Settings, Copy, Download, Bot, User, CheckCircle2, ChevronDown, Paperclip, Mic, Globe, FileText } from 'lucide-react';
-import styles from './DraftingStudio.module.css';
+import { ArrowRight, Sparkles, FolderOpen, Settings, Copy, Download, Bot, User, CheckCircle2, ChevronDown, Paperclip, Mic, Globe, FileText, Send, Menu } from 'lucide-react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { getBriefById } from '@/app/actions/briefs';
 import BriefSelector from './BriefSelector';
@@ -15,7 +14,6 @@ export default function DraftingStudio() {
     const [isLoading, setIsLoading] = useState(true);
     const [messages, setMessages] = useState<any[]>([]);
     const [inputValue, setInputValue] = useState("");
-    const [showContextPanel, setShowContextPanel] = useState(true);
     const [showSelector, setShowSelector] = useState(false);
 
     // Document State (Artifact)
@@ -158,29 +156,29 @@ export default function DraftingStudio() {
     const renderDocumentObject = () => {
         if (!generatedArtifact) {
             return (
-                <div className="flex flex-col items-center justify-center h-full text-gray-300 select-none">
-                    <div className="w-24 h-24 bg-gray-50 rounded-full flex items-center justify-center mb-6 shadow-inner">
-                        <Sparkles size={48} className="text-gray-200" />
+                <div className="flex flex-col items-center justify-center h-full text-slate-400 select-none">
+                    <div className="w-24 h-24 bg-white/50 backdrop-blur-sm rounded-full flex items-center justify-center mb-6 shadow-sm border border-slate-100">
+                        <Sparkles size={32} className="text-slate-300" />
                     </div>
-                    <p className="font-medium text-lg">Reforma Intelligent Engine</p>
-                    <p className="text-sm opacity-60">Ready to generate</p>
+                    <p className="font-semibold text-lg text-slate-600">Reforma Intelligent Engine</p>
+                    <p className="text-sm opacity-60">Context aware. Ready to generate.</p>
                 </div>
             );
         }
 
         return (
-            <div className={styles.documentPage}>
-                <div className={styles.docTitle} style={{ textAlign: 'center', marginBottom: '2rem', fontFamily: '"Times New Roman", Times, serif' }}>
+            <div className="bg-white w-full max-w-[800px] min-h-[1000px] p-[60px] shadow-xl border border-slate-200/50 mx-auto transition-all duration-500 ease-in-out">
+                <div className="text-center mb-8 font-[Times_New_Roman] uppercase font-bold text-lg leading-relaxed">
                     IN THE HIGH COURT OF LAGOS STATE<br />
                     IN THE IKEJA JUDICIAL DIVISION<br />
                     HOLDEN AT IKEJA
                 </div>
 
-                <div className="flex justify-between mb-8 font-serif">
+                <div className="flex justify-between mb-8 font-[Times_New_Roman]">
                     <div>SUIT NO: ........................</div>
                 </div>
 
-                <div className="grid grid-cols-[1fr_auto_1fr] gap-8 items-center mb-12 font-serif">
+                <div className="grid grid-cols-[1fr_auto_1fr] gap-8 items-center mb-12 font-[Times_New_Roman]">
                     <div>
                         <strong>BETWEEN</strong><br /><br />
                         <strong className="uppercase">{answers['claimant_name'] || '..................'}</strong>
@@ -193,9 +191,9 @@ export default function DraftingStudio() {
                     </div>
                 </div>
 
-                <div className="text-center font-bold underline mb-8 font-serif text-lg">STATEMENT OF CLAIM</div>
+                <div className="text-center font-bold underline mb-8 font-[Times_New_Roman] text-lg">STATEMENT OF CLAIM</div>
 
-                <div className="space-y-6 font-serif leading-relaxed text-justify">
+                <div className="space-y-6 font-[Times_New_Roman] leading-relaxed text-justify text-[15px]">
                     <p>
                         1. The Claimant is {answers['claimant_type'] === 'company' ? 'a Limited Liability Company registered under the Laws of the Federation of Nigeria' : 'an individual'} carrying on business at {answers['claimant_address']}.
                     </p>
@@ -210,7 +208,7 @@ export default function DraftingStudio() {
                     </p>
                 </div>
 
-                <div className="mt-12 pt-12 border-t border-black/10 flex justify-end font-serif">
+                <div className="mt-16 pt-8 border-t border-black/10 flex justify-end font-[Times_New_Roman]">
                     <div className="text-right">
                         <p className="mb-8">Dated this ______ day of ___________ 2025</p>
                         <div className="border-t border-black w-48 ml-auto my-2"></div>
@@ -223,7 +221,7 @@ export default function DraftingStudio() {
     };
 
     return (
-        <div className="flex h-screen bg-[#F0F2F5] font-sans overflow-hidden text-[#1d1d1f]">
+        <div className="flex h-[calc(100vh-64px)] bg-[#F1F5F9] font-sans overflow-hidden text-[#0f172a]">
             {/* Context Selector Modal */}
             {showSelector && (
                 <BriefSelector
@@ -234,54 +232,54 @@ export default function DraftingStudio() {
             )}
 
             {/* -- Left: Chat Interface -- */}
-            <div className="w-[450px] flex flex-col border-r border-white/50 bg-[#F7F9FC] relative shadow-2xl z-20">
+            <div className="w-[450px] flex flex-col border-r border-slate-200 bg-white relative shadow-[4px_0_24px_rgba(0,0,0,0.02)] z-20">
 
                 {/* Header */}
-                <div className="h-16 border-b border-gray-200/60 flex items-center justify-between px-6 bg-white/80 backdrop-blur-xl z-10 sticky top-0 shadow-sm">
+                <div className="h-[60px] border-b border-slate-100 flex items-center justify-between px-6 bg-white/80 backdrop-blur-xl z-10 sticky top-0">
                     <button
                         onClick={() => setShowSelector(true)}
-                        className={`flex items-center gap-3 px-3 py-1.5 rounded-lg transition-all border ${briefContext?.brief ? 'bg-white border-gray-200 hover:border-blue-400 hover:shadow-sm' : 'bg-blue-50 border-blue-200 text-blue-700 animate-pulse'}`}
+                        className={`flex items-center gap-3 px-3 py-1.5 rounded-full transition-all border ${briefContext?.brief ? 'bg-white border-slate-200 hover:border-blue-400 hover:shadow-sm' : 'bg-amber-50 border-amber-200 text-amber-700 animate-pulse'}`}
                     >
-                        <div className={`w-2.5 h-2.5 rounded-full ${briefContext?.brief ? 'bg-emerald-500' : 'bg-amber-500'}`}></div>
+                        <div className={`w-2 h-2 rounded-full ${briefContext?.brief ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]' : 'bg-amber-500'}`}></div>
                         <div className="flex flex-col items-start">
-                            <span className="text-[10px] uppercase tracking-wider font-bold text-gray-400">Context</span>
-                            <span className="text-xs font-semibold max-w-[150px] truncate leading-tight">
+                            <span className="text-[10px] uppercase tracking-wider font-bold text-slate-400 leading-none mb-0.5">Context</span>
+                            <span className="text-xs font-semibold max-w-[150px] truncate leading-none text-slate-700">
                                 {briefContext?.brief ? briefContext.brief.name : 'Select Matter...'}
                             </span>
                         </div>
-                        <ChevronDown size={14} className="text-gray-400" />
+                        <ChevronDown size={14} className="text-slate-400 ml-1" />
                     </button>
 
-                    <button className="p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-black/5 transition-colors">
+                    <button className="p-2 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-50 transition-colors">
                         <Settings size={18} />
                     </button>
                 </div>
 
                 {/* Chat History */}
-                <div className="flex-1 overflow-y-auto px-6 py-6 space-y-8 custom-scrollbar scroll-smooth">
+                <div className="flex-1 overflow-y-auto px-6 py-6 space-y-6 custom-scrollbar scroll-smooth bg-gradient-to-b from-white to-slate-50/50">
                     {messages.map((msg) => (
-                        <div key={msg.id} className={`flex gap-4 ${msg.role === 'user' ? 'flex-row-reverse' : ''} animate-fade-in-up group`}>
+                        <div key={msg.id} className={`flex gap-3 ${msg.role === 'user' ? 'flex-row-reverse' : ''} animate-[fadeIn_0.3s_ease-out] group`}>
 
                             {/* Avatar */}
                             {msg.role === 'assistant' ? (
-                                <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-[#0071e3] to-[#00c6fb] flex items-center justify-center flex-shrink-0 shadow-lg shadow-blue-500/20 mt-1">
+                                <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center flex-shrink-0 shadow-md ring-2 ring-white mt-1">
                                     <Sparkles size={14} className="text-white" />
                                 </div>
                             ) : (
-                                <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0 mt-1">
-                                    <User size={14} className="text-gray-500" />
+                                <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center flex-shrink-0 mt-1 ring-2 ring-white">
+                                    <User size={14} className="text-slate-500" />
                                 </div>
                             )}
 
                             {/* Bubble */}
                             <div className="flex flex-col max-w-[85%]">
-                                <div className={`px-5 py-3.5 rounded-2xl text-[13.5px] leading-relaxed shadow-sm relative ${msg.role === 'assistant'
-                                        ? 'bg-white border border-gray-100 text-gray-800 rounded-tl-sm'
-                                        : 'bg-[#0071e3] text-white rounded-tr-sm border border-[#0071e3]'
+                                <div className={`px-4 py-3 rounded-2xl text-[14px] leading-relaxed shadow-sm relative ${msg.role === 'assistant'
+                                        ? 'bg-white border border-slate-100 text-slate-700 rounded-tl-none shadow-[0_2px_8px_rgba(0,0,0,0.04)]'
+                                        : 'bg-[#0071e3] text-white rounded-tr-none shadow-md shadow-blue-500/20'
                                     }`}>
                                     <div dangerouslySetInnerHTML={{ __html: msg.content.replace(/\n/g, '<br/>').replace(/\*\*(.*?)\*\*/g, '<b>$1</b>') }} />
                                 </div>
-                                <span className={`text-[10px] text-gray-300 mt-1.5 px-1 ${msg.role === 'user' ? 'text-right' : 'text-left'}`}>
+                                <span className={`text-[10px] text-slate-400 mt-1 px-1 font-medium ${msg.role === 'user' ? 'text-right' : 'text-left'}`}>
                                     {msg.timestamp}
                                 </span>
                             </div>
@@ -290,14 +288,14 @@ export default function DraftingStudio() {
 
                     {/* Typing Indicator */}
                     {isLoading && (
-                        <div className="flex gap-4 animate-fade-in">
-                            <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-[#0071e3] to-[#00c6fb] flex items-center justify-center flex-shrink-0 shadow-lg shadow-blue-500/20 mt-1">
+                        <div className="flex gap-3 animate-pulse">
+                            <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center flex-shrink-0 shadow-md ring-2 ring-white mt-1">
                                 <Bot size={14} className="text-white" />
                             </div>
-                            <div className="bg-white border border-gray-100 px-4 py-3 rounded-2xl rounded-tl-sm shadow-sm flex items-center gap-1.5">
-                                <div className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                                <div className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                                <div className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                            <div className="bg-white border border-slate-100 px-4 py-3 rounded-2xl rounded-tl-none shadow-sm flex items-center gap-1.5 h-[46px] w-[60px]">
+                                <div className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                                <div className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                                <div className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
                             </div>
                         </div>
                     )}
@@ -306,8 +304,8 @@ export default function DraftingStudio() {
                 </div>
 
                 {/* Composer Input */}
-                <div className="p-5 bg-[#F7F9FC]">
-                    <div className="relative shadow-sm rounded-[24px] bg-white border border-gray-200 focus-within:ring-2 focus-within:ring-[#0071e3]/10 focus-within:border-[#0071e3] transition-all flex flex-col overflow-hidden">
+                <div className="p-4 bg-white border-t border-slate-100">
+                    <div className="relative shadow-sm hover:shadow-md transition-shadow duration-300 rounded-[24px] bg-slate-50 border border-slate-200 focus-within:ring-2 focus-within:ring-blue-500/20 focus-within:border-blue-500 focus-within:bg-white flex flex-col overflow-hidden">
                         <textarea
                             value={inputValue}
                             onChange={(e) => setInputValue(e.target.value)}
@@ -317,62 +315,66 @@ export default function DraftingStudio() {
                                     handleSendMessage();
                                 }
                             }}
-                            placeholder={briefContext?.brief ? "Drafting instructions..." : "Please select a context first."}
-                            className="w-full bg-transparent px-5 py-4 min-h-[50px] max-h-[120px] outline-none text-[13.5px] text-gray-800 resize-none font-medium placeholder-gray-400"
+                            placeholder={briefContext?.brief ? "Describe what you need drafted..." : "Select a context above to start."}
+                            className="w-full bg-transparent px-4 py-3 min-h-[50px] max-h-[120px] outline-none text-[14px] text-slate-800 resize-none font-medium placeholder-slate-400"
                             disabled={!briefContext?.brief}
                         />
-                        <div className="flex items-center justify-between px-3 pb-3 pt-0">
-                            <div className="flex gap-2">
-                                <button className="p-2 text-gray-400 hover:text-[#0071e3] transition-colors rounded-full hover:bg-blue-50" title="Attach Context">
-                                    <Paperclip size={16} />
+                        <div className="flex items-center justify-between px-2 pb-2 pt-0">
+                            <div className="flex gap-1">
+                                <button className="p-2 text-slate-400 hover:text-blue-600 transition-colors rounded-full hover:bg-blue-50" title="Attach Context">
+                                    <Paperclip size={18} />
                                 </button>
-                                <button className="p-2 text-gray-400 hover:text-[#0071e3] transition-colors rounded-full hover:bg-blue-50" title="Voice Input">
-                                    <Mic size={16} />
+                                <button className="p-2 text-slate-400 hover:text-blue-600 transition-colors rounded-full hover:bg-blue-50" title="Voice Input">
+                                    <Mic size={18} />
                                 </button>
                             </div>
                             <button
                                 onClick={handleSendMessage}
                                 disabled={!inputValue.trim() || !briefContext?.brief}
-                                className={`p-2 rounded-full transition-all duration-300 ${inputValue.trim() ? 'bg-[#0071e3] text-white shadow-md hover:bg-[#0077ED] transform scale-100' : 'bg-gray-100 text-gray-300 scale-95'
+                                className={`p-2 rounded-full transition-all duration-300 flex items-center justify-center ${inputValue.trim() ? 'bg-blue-600 text-white shadow-md hover:bg-blue-700 transform scale-100' : 'bg-slate-200 text-slate-400 scale-95'
                                     }`}
                             >
-                                <ArrowRight size={18} />
+                                <ArrowRight size={20} />
                             </button>
                         </div>
                     </div>
-                    <p className="text-center mt-3 text-[10px] text-gray-400 font-medium opacity-60">
-                        AI-generated content. Review for legal accuracy.
+                    <p className="text-center mt-2 text-[10px] text-slate-400 font-medium">
+                        Reforma AI v1.0 • Confidential
                     </p>
                 </div>
             </div>
 
             {/* -- Right: Live Preview Panel -- */}
             <div className="flex-1 bg-[#EEF2F6] flex flex-col overflow-hidden relative shadow-inner">
-                <div className="h-16 border-b border-gray-200/60 flex items-center justify-between px-8 bg-white/80 backdrop-blur-xl sticky top-0 z-10">
+                {/* Canvas Texture */}
+                <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: 'radial-gradient(#64748b 1px, transparent 1px)', backgroundSize: '24px 24px' }}></div>
+
+                <div className="h-[60px] border-b border-slate-200/60 flex items-center justify-between px-8 bg-white/60 backdrop-blur-xl sticky top-0 z-10">
                     <div className="flex items-center gap-3">
-                        <div className="bg-blue-50 p-2 rounded-lg text-blue-600">
+                        <div className="bg-blue-50/80 p-2 rounded-lg text-blue-600 border border-blue-100">
                             <FileText size={18} />
                         </div>
                         <div>
-                            <div className="text-sm font-bold text-gray-800">{generatedArtifact ? 'Statement of Claim.docx' : 'Drafting Canvas'}</div>
-                            <div className="text-[10px] text-gray-500 font-medium">Last updated just now</div>
+                            <div className="text-sm font-bold text-slate-800 tracking-tight">{generatedArtifact ? 'Statement of Claim.docx' : 'Drafting Canvas'}</div>
+                            <div className="text-[10px] text-slate-500 font-medium flex items-center gap-1">
+                                <span className={`w-1.5 h-1.5 rounded-full ${generatedArtifact ? 'bg-emerald-500' : 'bg-slate-300'}`}></span>
+                                {generatedArtifact ? 'Live Sync Active' : 'Waiting for content'}
+                            </div>
                         </div>
                     </div>
                     <div className="flex gap-2">
-                        <button className="flex items-center gap-2 px-3 py-1.5 text-xs font-semibold text-gray-600 hover:bg-gray-50 rounded-lg border border-transparent hover:border-gray-200 transition-all">
+                        <button className="flex items-center gap-2 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-white hover:shadow-sm rounded-lg border border-transparent hover:border-slate-200 transition-all">
                             <Copy size={14} /> Copy
                         </button>
-                        <button className="flex items-center gap-2 px-3 py-1.5 text-xs font-semibold text-white bg-[#0071e3] hover:bg-[#0077ED] rounded-lg shadow-sm shadow-blue-500/20 transition-all">
+                        <button className="flex items-center gap-2 px-3 py-1.5 text-xs font-semibold text-white bg-slate-900 hover:bg-black rounded-lg shadow-sm transition-all border border-black">
                             <Download size={14} /> Export PDF
                         </button>
                     </div>
                 </div>
 
                 {/* Artifact Content */}
-                <div className="flex-1 overflow-y-auto p-12 custom-scrollbar flex justify-center bg-[#EEF2F6]">
-                    <div className="bg-white shadow-2xl shadow-gray-300/50 min-h-[900px] w-full max-w-[800px] p-[60px] text-[#1d1d1f] transition-all duration-500 ease-in-out transform hover:scale-[1.002]">
-                        {renderDocumentObject()}
-                    </div>
+                <div className="flex-1 overflow-y-auto p-12 custom-scrollbar flex justify-center bg-slate-100/50">
+                    {renderDocumentObject()}
                 </div>
             </div>
 
