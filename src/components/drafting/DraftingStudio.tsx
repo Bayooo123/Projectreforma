@@ -3,7 +3,9 @@
 import { useState, useEffect } from 'react';
 import { ArrowRight, Check, AlertCircle, RefreshCw, Database } from 'lucide-react';
 import styles from './DraftingStudio.module.css';
+import { useSearchParams } from 'next/navigation';
 import { getTemplateByName, seedStatementOfClaimTemplate, saveDraftingResponse, startDraftingSession } from '@/app/actions/drafting';
+import { getBriefById } from '@/app/actions/briefs';
 
 // Types matching Prisma + Frontend needs
 interface NodeOption {
@@ -22,42 +24,66 @@ interface DraftingNode {
 }
 
 export default function DraftingStudio() {
+    const searchParams = useSearchParams();
+    const briefId = searchParams.get('briefId');
+
     const [isLoading, setIsLoading] = useState(true);
     const [nodes, setNodes] = useState<DraftingNode[]>([]);
     const [templateId, setTemplateId] = useState<string | null>(null);
     const [sessionId, setSessionId] = useState<string | null>(null);
 
-    const [currentNodeIndex, setCurrentNodeIndex] = useState(0);
-    const [answers, setAnswers] = useState<Record<string, string>>({});
-
-    // Mock Context for Gap Analysis Simulation
-    const BRIEF_CONTEXT = {
+    // Brief Context for Auto-Answers
+    const [briefContext, setBriefContext] = useState<any>({});
+    // Fallback Mock Context (Merging logic handled in loadSystem)
+    const MOCK_CONTEXT = {
         property_type: 'residential',
         landlord_name: 'Chief Obi',
         tenant_name: 'Acme Ltd'
     };
 
+    const [currentNodeIndex, setCurrentNodeIndex] = useState(0);
+    const [answers, setAnswers] = useState<Record<string, string>>({});
+
     // 1. Initial Load
     useEffect(() => {
         loadSystem();
-    }, []);
+    }, [briefId]);
 
     const loadSystem = async () => {
         setIsLoading(true);
-        // Try to fetch the standard template
+
+        // A. Load Brief Context if available
+        let foundContext: any = MOCK_CONTEXT;
+        if (briefId) {
+            try {
+                const brief = await getBriefById(briefId);
+                if (brief) {
+                    // Heuristic Mapping
+                    foundContext = {
+                        ...MOCK_CONTEXT,
+                        claimant_name: brief.client?.name || '',
+                        // Try to guess Defendant from Brief Name (e.g., "Client v. Defendant")
+                        defendant_name: brief.name.includes(' v. ') ? brief.name.split(' v. ')[1] : '',
+                        description: brief.description
+                    };
+                }
+            } catch (err) {
+                console.error("Failed to load brief context", err);
+            }
+        }
+        setBriefContext(foundContext);
+
+        // B. Load Template
         const res = await getTemplateByName("Statement of Claim (Partnership)");
 
         if (res.success && res.data) {
-            // Transform database nodes to frontend shape if needed
-            // (Prisma structure closely matches, just handling nulls)
             setNodes(res.data.nodes as any);
             setTemplateId(res.data.id);
 
             // Start a new session
-            const sessionRes = await startDraftingSession(res.data.id);
+            const sessionRes = await startDraftingSession(res.data.id, briefId || undefined);
             if (sessionRes.success) setSessionId(sessionRes.sessionId!);
         } else {
-            // Template doesn't exist yet
             setNodes([]);
         }
         setIsLoading(false);
