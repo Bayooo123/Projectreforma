@@ -29,5 +29,6 @@ export default function Loading() {
             <div className="mt-8 flex items-center justify-center text-slate-400">
                 <Loader2 className="animate-spin" size={20} />
             </div>
-            );
+        </div>
+    );
 }
