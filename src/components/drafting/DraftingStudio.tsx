@@ -28,44 +28,40 @@ export default function DraftingStudio() {
     const briefId = searchParams.get('briefId');
 
     const [isLoading, setIsLoading] = useState(true);
-    const [nodes, setNodes] = useState<DraftingNode[]>([]);
-    const [templateId, setTemplateId] = useState<string | null>(null);
-    const [sessionId, setSessionId] = useState<string | null>(null);
+    const [messages, setMessages] = useState<any[]>([]);
+    const [inputValue, setInputValue] = useState("");
     const [showContextPanel, setShowContextPanel] = useState(true);
 
-    // Brief Context for Auto-Answers
-    const [briefContext, setBriefContext] = useState<any>({});
+    // Document State (Artifact)
+    const [answers, setAnswers] = useState<Record<string, string>>({});
+    const [generatedArtifact, setGeneratedArtifact] = useState<string | null>(null); // 'statement_of_claim' | null
 
-    // Fallback Mock Context (Merging logic handled in loadSystem)
+    // Brief Context
+    const [briefContext, setBriefContext] = useState<any>({});
     const MOCK_CONTEXT = {
         property_type: 'residential',
         landlord_name: 'Chief Obi',
         tenant_name: 'Acme Ltd'
     };
 
-    const [currentNodeIndex, setCurrentNodeIndex] = useState(0);
-    const [answers, setAnswers] = useState<Record<string, string>>({});
-
-    // 1. Initial Load
+    // 1. Initial Load & Context Enforcement
     useEffect(() => {
         loadSystem();
     }, [briefId]);
 
     const loadSystem = async () => {
         setIsLoading(true);
+        let foundContext: any = null;
 
-        // A. Load Brief Context if available
-        let foundContext: any = MOCK_CONTEXT;
         if (briefId) {
             try {
                 const brief = await getBriefById(briefId);
                 if (brief) {
-                    // Heuristic Mapping
                     foundContext = {
                         ...MOCK_CONTEXT,
-                        claimant_name: brief.client?.name || '',
-                        // Try to guess Defendant from Brief Name (e.g., "Client v. Defendant")
-                        defendant_name: brief.name.includes(' v. ') ? brief.name.split(' v. ')[1] : '',
+                        brief: brief, // Store full brief object
+                        claimant_name: brief.client?.name || 'Unknown Claimant',
+                        defendant_name: brief.name.includes(' v. ') ? brief.name.split(' v. ')[1] : 'Unknown Defendant',
                         description: brief.description
                     };
                 }
@@ -73,86 +69,69 @@ export default function DraftingStudio() {
                 console.error("Failed to load brief context", err);
             }
         }
-        setBriefContext(foundContext);
-
-        // B. Load Template
-        const res = await getTemplateByName("Statement of Claim (Partnership)");
-
-        if (res.success && res.data) {
-            setNodes(res.data.nodes as any);
-            setTemplateId(res.data.id);
-
-            // Start a new session
-            const sessionRes = await startDraftingSession(res.data.id, briefId || undefined);
-            if (sessionRes.success) setSessionId(sessionRes.sessionId!);
-        } else {
-            setNodes([]);
-        }
+        setBriefContext(foundContext || {});
         setIsLoading(false);
+
+        // Initial Greeting Logic
+        if (foundContext) {
+            addMessage('assistant', `I have analyzed the brief "${foundContext.brief.name}". I'm ready to draft. What would you like to create?`);
+        } else {
+            addMessage('assistant', `Welcome. Please select a brief to begin drafting. Context is required.`);
+        }
     };
 
-    const handleSeed = async () => {
-        setIsLoading(true);
-        await seedStatementOfClaimTemplate();
-        await loadSystem(); // Reload
+    const addMessage = (role: 'user' | 'assistant', content: string) => {
+        setMessages(prev => [...prev, { id: Date.now(), role, content }]);
     };
 
-    // 2. Interaction Logic
-    const currentNode = nodes[currentNodeIndex];
-    const isFinished = nodes.length > 0 && currentNodeIndex >= nodes.length;
+    const handleSendMessage = async () => {
+        if (!inputValue.trim()) return;
 
-    const handleSelectOption = async (option: NodeOption) => {
-        // Optimistic Update
-        if (currentNode.variableName) {
-            setAnswers(prev => ({
-                ...prev,
-                [currentNode.variableName!]: option.value
-            }));
+        // 1. User Message
+        const userText = inputValue;
+        setInputValue("");
+        addMessage('user', userText);
 
-            // Save to Backend (Fire and Forget for smoothness)
-            if (sessionId) {
-                saveDraftingResponse(sessionId, currentNode.id, option.value);
-            }
+        // 2. Strict Context Check
+        if (!briefContext?.brief) {
+            setTimeout(() => {
+                addMessage('assistant', "I cannot draft without a valid Brief Context. Please return to the Brief Manager and select a matter.");
+            }, 500);
+            return;
         }
 
-        // Advance
+        // 3. AI Agent Simulation (Mock Logic)
         setTimeout(() => {
-            if (currentNodeIndex < nodes.length) {
-                setCurrentNodeIndex(prev => prev + 1);
+            const lowerText = userText.toLowerCase();
+
+            if (lowerText.includes("draft") && lowerText.includes("claim")) {
+                // Intent: Draft Statement of Claim
+                setGeneratedArtifact('statement_of_claim');
+
+                // Auto-fill variables from Context
+                setAnswers({
+                    claimant_name: briefContext.claimant_name,
+                    defendant_name: briefContext.defendant_name,
+                    claimant_address: "No. 1 Lagos Street", // Mock inference
+                    defendant_address: "No. 2 Abuja Street", // Mock inference
+                    claimant_type: briefContext.claimant_name?.includes("Ltd") ? "company" : "individual",
+                    breach_type: "both", // Making an assumption based on "brief" analysis (mock)
+                    demands_served: "yes"
+                });
+
+                addMessage('assistant', `I've drafted a **Statement of Claim** based on the facts in *${briefContext.brief.name}*.\n\n**Strategic Note:** I noticed we don't have the Defendant's counsel on file, so I've omitted that section to expedite filing.`);
             }
-        }, 400);
+            else if (lowerText.includes("counsel")) {
+                addMessage('assistant', "I've updated the draft to include the defendant's counsel details based on your input.");
+                // In real logic, we'd update 'answers' here
+            }
+            else {
+                addMessage('assistant', "I can help you draft documents for this brief. Try asking me to 'Draft a Statement of Claim'.");
+            }
+        }, 800);
     };
 
-    const handleRestart = () => {
-        setAnswers({});
-        setCurrentNodeIndex(0);
-        // Ideally fetch a new session here too
-    };
 
-    // 3. Gap Analysis (Auto-Answer)
-    useEffect(() => {
-        if (!currentNode) return;
-
-        const currentVar = currentNode.variableName;
-        // Check if we have context AND we haven't answered it yet
-        if (currentVar && briefContext[currentVar as keyof typeof briefContext] && !answers[currentVar]) {
-            const autoValue = briefContext[currentVar as keyof typeof briefContext];
-
-            // Simulate "Reading" delay
-            const timer = setTimeout(() => {
-                // Determine which option matches the autoValue
-                const matchedOption = currentNode.options?.find(o => o.value === autoValue);
-                if (matchedOption) {
-                    handleSelectOption(matchedOption);
-                } else if (currentNode.type !== 'QUESTION') {
-                    // For text variables (non-questions), we might want to auto-fill? 
-                    // Currently checking options matches, but string variables need direct set
-                    setAnswers(prev => ({ ...prev, [currentVar]: autoValue }));
-                }
-            }, 1000);
-            return () => clearTimeout(timer);
-        }
-    }, [currentNodeIndex, currentNode, answers, briefContext]);
 
 
     // -- RENDER HELPERS --
@@ -240,27 +219,7 @@ export default function DraftingStudio() {
         );
     };
 
-    // -- Derived Strategy (Mock Logic for Demo) --
-    const strategicInsights = [];
-    if (briefContext?.brief) {
-        strategicInsights.push({
-            type: 'info',
-            title: 'Context Loaded',
-            message: `Pulling facts from Matter "${briefContext.brief.name}".`
-        });
-    }
-    // Specific Logic based on template name
-    if (nodes.length > 0 && nodes[0].content && nodes[0].content.includes("Partnership")) {
-        strategicInsights.push({
-            type: 'strategy',
-            title: 'Procedural Strategy',
-            message: "We don't have a record of the Defendant's Counsel yet. Recommended: Omit counsel details in the initial filing to avoid procedural delays. Service will be effected personally."
-        });
-    }
 
-    if (isLoading) {
-        return <div className="p-8 flex justify-center">Loading Drafting Engine...</div>;
-    }
 
 
 
