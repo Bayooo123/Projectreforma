@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Clock, Tag, User, Building, Calendar, Upload, Loader, FileText, Trash2, Edit } from 'lucide-react';
+import { ArrowLeft, Clock, Tag, User, Building, Calendar, Upload, Loader, FileText, Trash2, Edit, Hammer } from 'lucide-react';
 import DocumentUpload from '@/components/briefs/DocumentUpload';
 import DocumentPreview from '@/components/briefs/DocumentPreview';
 import BriefActivityFeed from '@/components/briefs/BriefActivityFeed';
@@ -111,6 +111,10 @@ export default function BriefDetailClient({ brief }: BriefDetailClientProps) {
                         <span>Back to Briefs</span>
                     </Link>
                     <div className={styles.actions}>
+                        <Link href={`/drafting?briefId=${brief.id}`} className={styles.draftBtn}>
+                            <Hammer size={16} />
+                            Start Drafting
+                        </Link>
                         <button className={styles.editBtn} onClick={() => setIsEditModalOpen(true)}>
                             <Edit size={16} />
                             Edit Brief

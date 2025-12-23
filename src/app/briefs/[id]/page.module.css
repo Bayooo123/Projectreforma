@@ -60,6 +60,27 @@
     border-color: var(--primary);
 }
 
+.draftBtn {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    background-color: var(--primary);
+    color: white;
+    border: 1px solid var(--primary);
+    border-radius: var(--radius-md);
+    font-size: var(--text-sm);
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-decoration: none;
+}
+
+.draftBtn:hover {
+    background-color: var(--primary-dark);
+    transform: translateY(-1px);
+}
+
 .titleRow {
     display: flex;
     align-items: center;
