@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { ArrowRight, Check, AlertCircle, RefreshCw, Database } from 'lucide-react';
 import styles from './DraftingStudio.module.css';
-import { getTemplateByName, seedLagosTenancyTemplate, saveDraftingResponse, startDraftingSession } from '@/app/actions/drafting';
+import { getTemplateByName, seedStatementOfClaimTemplate, saveDraftingResponse, startDraftingSession } from '@/app/actions/drafting';
 
 // Types matching Prisma + Frontend needs
 interface NodeOption {
@@ -45,7 +45,7 @@ export default function DraftingStudio() {
     const loadSystem = async () => {
         setIsLoading(true);
         // Try to fetch the standard template
-        const res = await getTemplateByName("Lagos Tenancy Agreement");
+        const res = await getTemplateByName("Statement of Claim (Partnership)");
 
         if (res.success && res.data) {
             // Transform database nodes to frontend shape if needed
@@ -65,7 +65,7 @@ export default function DraftingStudio() {
 
     const handleSeed = async () => {
         setIsLoading(true);
-        await seedLagosTenancyTemplate();
+        await seedStatementOfClaimTemplate();
         await loadSystem(); // Reload
     };
 
@@ -127,51 +127,77 @@ export default function DraftingStudio() {
     const renderDocumentObject = () => {
         return (
             <div className={styles.documentPage}>
-                <div className={styles.docTitle}>TENANCY AGREEMENT</div>
-                <div className={styles.docClause} style={{ textAlign: 'center', color: '#666', fontSize: '0.9rem' }}>
-                    {/* Dynamic Citation Bar */}
-                    {answers['property_type'] === 'residential' && <span>[Cited: Tenancy Law of Lagos State 2011]</span>}
+                <div className={styles.docTitle} style={{ textAlign: 'center', marginBottom: '1rem' }}>
+                    IN THE HIGH COURT OF LAGOS STATE<br />
+                    IN THE IKEJA JUDICIAL DIVISION<br />
+                    HOLDEN AT IKEJA
                 </div>
 
-                <p className={styles.docClause}>
-                    <strong>THIS AGREEMENT</strong> is made this ____ day of ________, 2024.
-                </p>
-
-                <p className={styles.docClause}>
-                    <strong>BETWEEN:</strong><br />
-                    [LANDLORD NAME], of [Address] (hereinafter called "The Landlord") of the one part.
-                </p>
-
-                <p className={styles.docClause}>
-                    <strong>AND:</strong><br />
-                    [TENANT NAME], of [Address] (hereinafter called "The Tenant") of the other part.
-                </p>
-
-                <div className={styles.docClause}>
-                    <strong>WHEREAS:</strong><br />
-                    1. The Landlord is the beneficial owner of the {answers['property_type'] === 'commercial' ? 'commercial' : 'residential'} property known as [PROPERTY ADDRESS].
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2rem' }}>
+                    <div>SUIT NO: ........................</div>
                 </div>
 
-                {answers['duration_type'] && (
-                    <div className={styles.docClause}>
-                        <strong>1. TERM</strong><br />
-                        The tenancy shall be for a fixed term of
-                        <span className={styles.highlight}>
-                            {answers['duration_type'] === '1_year' ? ' ONE (1) YEAR ' :
-                                answers['duration_type'] === '2_years' ? ' TWO (2) YEARS ' : ' [LONG LEASE TERM] '}
-                        </span>
-                        commencing on [START DATE].
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 50px 1fr', alignItems: 'center', marginBottom: '2rem' }}>
+                    <div>
+                        <strong>BETWEEN</strong><br /><br />
+                        <strong>{answers['claimant_name'] || 'KROWN NIGERIA LIMITED'}</strong>
+                        <div style={{ fontSize: '0.8rem', fontStyle: 'italic' }}>(Claimant)</div>
+                    </div>
+                    <div style={{ textAlign: 'center' }}>AND</div>
+                    <div style={{ textAlign: 'right' }}>
+                        <strong>{answers['defendant_name'] || 'KAT NIGERIA'}</strong>
+                        <div style={{ fontSize: '0.8rem', fontStyle: 'italic' }}>(Defendant)</div>
+                    </div>
+                </div>
+
+                <div className={styles.docTitle} style={{ textDecoration: 'underline' }}>STATEMENT OF CLAIM</div>
+
+                <p className={styles.docClause}>
+                    1. The Claimant is
+                    {answers['claimant_type'] === 'individual' ? ' an individual trading under the name and style of...' : ' an incorporated limited liability company registered in Nigeria under Companies and Allied Matters Act'}
+                    , which deals in rendering catering services and supply of general goods and merchandise with its registered/head office at {answers['claimant_address'] || 'No.1 Benakol Street, Victoria Island, Lagos'}.
+                </p>
+
+                <p className={styles.docClause}>
+                    2. The Defendant is an incorporated limited liability company registered in Nigeria under Companies and Allied Matters Act, which deals in supply of general goods and merchandise with its registered/head office at {answers['defendant_address'] || 'No. 2 Allen Avenue, Ikoyi, Lagos'}.
+                </p>
+
+                <p className={styles.docClause}>
+                    3. The Claimant avers that a valid partnership contract was signed between the Claimant and the Defendant
+                    {answers['partnership_start_date'] ? ` on ${answers['partnership_start_date']}` : ' between March 1995 and December 1997'}
+                    which is still subsisting.
+                </p>
+
+                {answers['breach_type'] && (
+                    <div className={styles.docClause} style={{ borderLeft: '3px solid green', paddingLeft: '10px' }}>
+                        <strong>[AI Inserted Averment on Breach]</strong><br />
+                        8. The Claimant avers that the Defendant
+                        {answers['breach_type'] === 'conversion'
+                            ? " refused to respond to any of the letters and instead purported to convert the partnership vehicles to its sole use."
+                            : answers['breach_type'] === 'non_remittance'
+                                ? " refused to remit the agreed sum of N2.17 Million accrued from the contract."
+                                : " refused to remit the accrued sums AND purported to convert the partnership vehicles to its sole use."}
+                        <br />
+                        By reason of this, the Defendant has breached the terms of the partnership contract.
                     </div>
                 )}
 
-                {answers['repairs'] && (
-                    <div className={styles.docClause}>
-                        <strong>2. REPAIRS</strong><br />
-                        {answers['repairs'] === 'landlord'
-                            ? "The Landlord shall be responsible for all structural and external repairs to the Demised Premises, including the roof, main walls, and foundation."
-                            : "The Tenant shall keep the interior and exterior of the Demised Premises in good and substantial repair and condition (fair wear and tear excepted)."}
-                    </div>
+                {answers['demands_served'] === 'yes' && (
+                    <p className={styles.docClause}>
+                        7. The claimant avers that several letters of demand were written to the Defendant for the share of the proceeds of the contract. The Claimant pleads these letters and shall rely on them at trial.
+                    </p>
                 )}
+
+                <div style={{ marginTop: '2rem' }}>
+                    <div style={{ fontWeight: 'bold', textDecoration: 'underline' }}>WHEREFORE THE CLAIMANT CLAIMS AS FOLLOWS:</div>
+                    <ol style={{ paddingLeft: '20px', listStyleType: 'lower-roman' }}>
+                        <li>A DECLARATION that the contract between the parties is still subsisting;</li>
+                        {(answers['breach_type'] === 'conversion' || answers['breach_type'] === 'both') && (
+                            <li>AN ORDER FOR THE SHARING OF THE VEHICLES between the parties.</li>
+                        )}
+                        <li>AN ORDER FOR DAMAGES FOR BREACH OF CONTRACT.</li>
+                    </ol>
+                </div>
 
                 {!isFinished && nodes.length > 0 && (
                     <div style={{ opacity: 0.5, marginTop: '2rem', fontStyle: 'italic' }}>
@@ -210,7 +236,7 @@ export default function DraftingStudio() {
             {/* LEFT PANEL: Socratic Logic */}
             <div className={styles.leftPanel}>
                 <div className={styles.chatHeader}>
-                    <div className={styles.templateTitle}>Tenancy Agreement (Lagos)</div>
+                    <div className={styles.templateTitle}>Statement of Claim (Partnership)</div>
                     <div className={styles.templateMeta}>
                         <span style={{ color: 'green' }}>● Connected to Brief: #B-2024-001</span>
                     </div>

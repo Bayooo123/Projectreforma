@@ -116,76 +116,90 @@ export async function saveDraftingResponse(sessionId: string, nodeId: string, va
     }
 }
 
-// --- SEEDING HELPER (TEMPORARY) ---
-// This allows us to inject the 'Lagos Tenancy' logical structure into the DB
-export async function seedLagosTenancyTemplate() {
+// --- SEEDING HELPER (Statement of Claim) ---
+// --- SEEDING HELPER (Statement of Claim) ---
+export async function seedStatementOfClaimTemplate() {
     const session = await auth();
-    // In production, restrict this to admins
     if (!session?.user) return { success: false, error: "Unauthorized" };
 
     try {
-        // Check if exists
         const existing = await prisma.draftingTemplate.findFirst({
-            where: { name: "Lagos Tenancy Agreement" }
+            where: { name: "Statement of Claim (Partnership)" }
         });
 
         if (existing) return { success: true, id: existing.id, message: "Already exists" };
 
-        // Create Template
         const template = await prisma.draftingTemplate.create({
             data: {
-                name: "Lagos Tenancy Agreement",
-                category: "contracts",
+                name: "Statement of Claim (Partnership)",
+                category: "litigation",
                 authorId: session.user.id!,
                 isPublished: true,
+                variables: {
+                    create: [
+                        { name: "claimant_name", label: "Claimant Name", type: "text" },
+                        { name: "claimant_address", label: "Claimant Address", type: "text" },
+                        { name: "defendant_name", label: "Defendant Name", type: "text" },
+                        { name: "defendant_address", label: "Defendant Address", type: "text" },
+                        { name: "partnership_start_date", label: "Partnership Start Date", type: "date" },
+                        { name: "contract_sum", label: "Accrued Sum", type: "currency" }
+                    ]
+                },
                 nodes: {
                     create: [
                         {
                             type: "QUESTION",
-                            content: "Is this tenancy for a residential or commercial property?",
-                            helpText: "The Tenancy Law of Lagos State 2011 has specific exemptions for certain commercial premises.",
-                            variableName: "property_type",
+                            content: "Is the Claimant an individual or a registered company?",
+                            helpText: "This determines the introductory averments regarding corporate status under CAMA.",
+                            variableName: "claimant_type",
                             order: 1,
                             options: {
                                 create: [
-                                    { label: "Residential Premises", value: "residential" },
-                                    { label: "Commercial Premises", value: "commercial" }
+                                    { label: "Limited Liability Company", value: "company" },
+                                    { label: "Individual / Sole Trader", value: "individual" }
                                 ]
                             }
                         },
                         {
                             type: "QUESTION",
-                            content: "What is the duration of the tenancy?",
-                            helpText: "Tenancies over 3 years require a deed and specific registration.",
-                            variableName: "duration_type",
+                            content: "What was the specific breach committed by the Defendant?",
+                            helpText: "Identifying the breach is crucial for framing the cause of action.",
+                            variableName: "breach_type",
                             order: 2,
                             options: {
                                 create: [
-                                    { label: "One Year (Standard)", value: "1_year" },
-                                    { label: "Two Years", value: "2_years" },
-                                    { label: "Long Lease (>3 Years)", value: "long_lease" }
+                                    { label: "Conversion of Partnership Assets", value: "conversion" },
+                                    { label: "Failure to Remit Proceeds", value: "non_remittance" },
+                                    { label: "Both (Conversion & Non-Remittance)", value: "both" }
                                 ]
                             }
                         },
                         {
                             type: "QUESTION",
-                            content: "Who is responsible for external repairs?",
-                            helpText: "Standard practice is Landlord, but full repairing leases shift this to the Tenant.",
-                            variableName: "repairs",
+                            content: "Have formal demand letters been served?",
+                            helpText: "Proof of demand is often required to establish the cause of action and claim for interest.",
+                            variableName: "demands_served",
                             order: 3,
                             options: {
                                 create: [
-                                    { label: "Landlord (Standard)", value: "landlord" },
-                                    { label: "Tenant (Full Repairing)", value: "tenant" }
+                                    { label: "Yes, Letters Served", value: "yes" },
+                                    { label: "No / Oral Demands only", value: "no" }
                                 ]
                             }
+                        },
+                        {
+                            type: "INFO",
+                            content: "Procedural Note: Service Rules",
+                            helpText: "At this stage (Statement of Claim), logic dictates Personal Service on the Defendant as no appearance has been entered yet.",
+                            order: 4,
+                            variableName: null
                         }
                     ]
                 }
             }
         });
 
-        return { success: true, id: template.id, message: "Template Seeded" };
+        return { success: true, id: template.id, message: "Statement of Claim Seeded" };
 
     } catch (error) {
         console.error("Seeding error:", error);
