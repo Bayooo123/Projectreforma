@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from 'react';
-import { ArrowRight, Sparkles, FolderOpen, Settings, Copy, Download, Bot, User, CheckCircle2, ChevronDown, Paperclip, Mic, Globe, FileText, Send, Menu } from 'lucide-react';
+import { ArrowRight, Sparkles, FolderOpen, Settings, Copy, Download, Bot, User, CheckCircle2, ChevronDown, Paperclip, Mic, Globe, FileText } from 'lucide-react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { getBriefById } from '@/app/actions/briefs';
 import BriefSelector from './BriefSelector';
@@ -16,7 +16,7 @@ export default function DraftingStudio() {
     const [inputValue, setInputValue] = useState("");
     const [showSelector, setShowSelector] = useState(false);
 
-    // Document State (Artifact)
+    // Document State
     const [answers, setAnswers] = useState<Record<string, string>>({});
     const [generatedArtifact, setGeneratedArtifact] = useState<string | null>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -24,12 +24,12 @@ export default function DraftingStudio() {
     // Brief Context
     const [briefContext, setBriefContext] = useState<any>({});
 
-    // Auto-scroll to bottom of chat
+    // Auto-scroll
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }, [messages]);
 
-    // 1. Initial Load & Context Enforcement
+    // Initial Load
     useEffect(() => {
         loadSystem();
     }, [briefId]);
@@ -129,7 +129,6 @@ export default function DraftingStudio() {
             }
             else if (lowerText.includes("counsel")) {
                 responseText = "I've updated the draft to include the details for Defendant's Counsel (Festus Keyamo Chambers).";
-                // Mock update logic
             }
             else {
                 responseText = "I understand. Use the panel on the right to review any changes. Anything else you need for this matter?";
@@ -148,7 +147,7 @@ export default function DraftingStudio() {
     };
 
     const selectBrief = (id: string) => {
-        router.push(`/drafting?briefId=${id}`); // URL drives state, clean approach
+        router.push(`/drafting?briefId=${id}`);
         setShowSelector(false);
     };
 
@@ -157,17 +156,17 @@ export default function DraftingStudio() {
         if (!generatedArtifact) {
             return (
                 <div className="flex flex-col items-center justify-center h-full text-slate-400 select-none">
-                    <div className="w-24 h-24 bg-white/50 backdrop-blur-sm rounded-full flex items-center justify-center mb-6 shadow-sm border border-slate-100">
-                        <Sparkles size={32} className="text-slate-300" />
+                    <div className="w-20 h-20 bg-white/80 backdrop-blur-sm rounded-full flex items-center justify-center mb-4 shadow-sm border border-slate-100">
+                        <Sparkles size={28} className="text-slate-300" />
                     </div>
-                    <p className="font-semibold text-lg text-slate-600">Reforma Intelligent Engine</p>
+                    <p className="font-semibold text-base text-slate-600">Reforma Intelligent Engine</p>
                     <p className="text-sm opacity-60">Context aware. Ready to generate.</p>
                 </div>
             );
         }
 
         return (
-            <div className="bg-white w-full max-w-[800px] min-h-[1000px] p-[60px] shadow-xl border border-slate-200/50 mx-auto transition-all duration-500 ease-in-out">
+            <div className="bg-white w-full max-w-[800px] min-h-[1000px] p-[60px] shadow-2xl border border-slate-200/50 mx-auto transition-all duration-500 ease-in-out">
                 <div className="text-center mb-8 font-[Times_New_Roman] uppercase font-bold text-lg leading-relaxed">
                     IN THE HIGH COURT OF LAGOS STATE<br />
                     IN THE IKEJA JUDICIAL DIVISION<br />
@@ -232,54 +231,54 @@ export default function DraftingStudio() {
             )}
 
             {/* -- Left: Chat Interface -- */}
-            <div className="w-[450px] flex flex-col border-r border-slate-200 bg-white relative shadow-[4px_0_24px_rgba(0,0,0,0.02)] z-20">
+            <div className="w-[450px] flex flex-col border-r border-slate-200 bg-white relative shadow-xl z-20">
 
                 {/* Header */}
-                <div className="h-[60px] border-b border-slate-100 flex items-center justify-between px-6 bg-white/80 backdrop-blur-xl z-10 sticky top-0">
+                <div className="h-[70px] border-b border-slate-100 flex items-center justify-between px-6 bg-white/80 backdrop-blur-xl z-10 sticky top-0">
                     <button
                         onClick={() => setShowSelector(true)}
-                        className={`flex items-center gap-3 px-3 py-1.5 rounded-full transition-all border ${briefContext?.brief ? 'bg-white border-slate-200 hover:border-blue-400 hover:shadow-sm' : 'bg-amber-50 border-amber-200 text-amber-700 animate-pulse'}`}
+                        className={`group flex items-center gap-3 px-4 py-2 rounded-full transition-all border ${briefContext?.brief ? 'bg-white border-slate-200 hover:border-blue-400 hover:shadow-sm' : 'bg-amber-50 border-amber-200 text-amber-700 animate-pulse'}`}
                     >
-                        <div className={`w-2 h-2 rounded-full ${briefContext?.brief ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]' : 'bg-amber-500'}`}></div>
-                        <div className="flex flex-col items-start">
-                            <span className="text-[10px] uppercase tracking-wider font-bold text-slate-400 leading-none mb-0.5">Context</span>
-                            <span className="text-xs font-semibold max-w-[150px] truncate leading-none text-slate-700">
+                        <div className={`w-2.5 h-2.5 flex-shrink-0 rounded-full ${briefContext?.brief ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]' : 'bg-amber-500'}`}></div>
+                        <div className="flex flex-col items-start min-w-0">
+                            <span className="text-[10px] uppercase tracking-wider font-bold text-slate-400 leading-none mb-1">Context</span>
+                            <span className="text-sm font-semibold truncate leading-none text-slate-700 max-w-[140px]">
                                 {briefContext?.brief ? briefContext.brief.name : 'Select Matter...'}
                             </span>
                         </div>
-                        <ChevronDown size={14} className="text-slate-400 ml-1" />
+                        <ChevronDown size={14} className="text-slate-400 ml-1 group-hover:text-blue-500 transition-colors" />
                     </button>
 
                     <button className="p-2 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-50 transition-colors">
-                        <Settings size={18} />
+                        <Settings size={20} />
                     </button>
                 </div>
 
                 {/* Chat History */}
-                <div className="flex-1 overflow-y-auto px-6 py-6 space-y-6 custom-scrollbar scroll-smooth bg-gradient-to-b from-white to-slate-50/50">
+                <div className="flex-1 overflow-y-auto px-6 py-6 space-y-6 custom-scrollbar scroll-smooth bg-gradient-to-b from-white to-slate-50">
                     {messages.map((msg) => (
                         <div key={msg.id} className={`flex gap-3 ${msg.role === 'user' ? 'flex-row-reverse' : ''} animate-[fadeIn_0.3s_ease-out] group`}>
 
                             {/* Avatar */}
                             {msg.role === 'assistant' ? (
-                                <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center flex-shrink-0 shadow-md ring-2 ring-white mt-1">
-                                    <Sparkles size={14} className="text-white" />
+                                <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center flex-shrink-0 shadow-lg ring-2 ring-white mt-1">
+                                    <Sparkles size={16} className="text-white" />
                                 </div>
                             ) : (
-                                <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center flex-shrink-0 mt-1 ring-2 ring-white">
-                                    <User size={14} className="text-slate-500" />
+                                <div className="w-9 h-9 rounded-full bg-slate-200 flex items-center justify-center flex-shrink-0 mt-1 ring-2 ring-white">
+                                    <User size={16} className="text-slate-500" />
                                 </div>
                             )}
 
                             {/* Bubble */}
                             <div className="flex flex-col max-w-[85%]">
-                                <div className={`px-4 py-3 rounded-2xl text-[14px] leading-relaxed shadow-sm relative ${msg.role === 'assistant'
-                                        ? 'bg-white border border-slate-100 text-slate-700 rounded-tl-none shadow-[0_2px_8px_rgba(0,0,0,0.04)]'
+                                <div className={`px-5 py-3.5 rounded-2xl text-[14px] leading-relaxed shadow-sm relative ${msg.role === 'assistant'
+                                        ? 'bg-white border border-slate-100 text-slate-800 rounded-tl-none shadow-[0_2px_12px_rgba(0,0,0,0.04)]'
                                         : 'bg-[#0071e3] text-white rounded-tr-none shadow-md shadow-blue-500/20'
                                     }`}>
                                     <div dangerouslySetInnerHTML={{ __html: msg.content.replace(/\n/g, '<br/>').replace(/\*\*(.*?)\*\*/g, '<b>$1</b>') }} />
                                 </div>
-                                <span className={`text-[10px] text-slate-400 mt-1 px-1 font-medium ${msg.role === 'user' ? 'text-right' : 'text-left'}`}>
+                                <span className={`text-[10px] text-slate-400 mt-1.5 px-1 font-medium ${msg.role === 'user' ? 'text-right' : 'text-left'}`}>
                                     {msg.timestamp}
                                 </span>
                             </div>
@@ -289,10 +288,10 @@ export default function DraftingStudio() {
                     {/* Typing Indicator */}
                     {isLoading && (
                         <div className="flex gap-3 animate-pulse">
-                            <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center flex-shrink-0 shadow-md ring-2 ring-white mt-1">
-                                <Bot size={14} className="text-white" />
+                            <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center flex-shrink-0 shadow-lg ring-2 ring-white mt-1">
+                                <Bot size={16} className="text-white" />
                             </div>
-                            <div className="bg-white border border-slate-100 px-4 py-3 rounded-2xl rounded-tl-none shadow-sm flex items-center gap-1.5 h-[46px] w-[60px]">
+                            <div className="bg-white border border-slate-100 px-5 py-4 rounded-2xl rounded-tl-none shadow-sm flex items-center gap-1.5 w-fit">
                                 <div className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
                                 <div className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
                                 <div className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
@@ -304,8 +303,8 @@ export default function DraftingStudio() {
                 </div>
 
                 {/* Composer Input */}
-                <div className="p-4 bg-white border-t border-slate-100">
-                    <div className="relative shadow-sm hover:shadow-md transition-shadow duration-300 rounded-[24px] bg-slate-50 border border-slate-200 focus-within:ring-2 focus-within:ring-blue-500/20 focus-within:border-blue-500 focus-within:bg-white flex flex-col overflow-hidden">
+                <div className="p-5 bg-white border-t border-slate-100 z-20">
+                    <div className="relative shadow-lg ring-1 ring-slate-200 rounded-[28px] bg-white focus-within:ring-2 focus-within:ring-blue-500 transition-all duration-300">
                         <textarea
                             value={inputValue}
                             onChange={(e) => setInputValue(e.target.value)}
@@ -315,58 +314,54 @@ export default function DraftingStudio() {
                                     handleSendMessage();
                                 }
                             }}
-                            placeholder={briefContext?.brief ? "Describe what you need drafted..." : "Select a context above to start."}
-                            className="w-full bg-transparent px-4 py-3 min-h-[50px] max-h-[120px] outline-none text-[14px] text-slate-800 resize-none font-medium placeholder-slate-400"
+                            placeholder={briefContext?.brief ? "Drafting instructions (e.g. 'Add a witness')..." : "Please select a context first."}
+                            className="w-full bg-transparent pl-5 pr-14 py-4 min-h-[60px] max-h-[140px] outline-none text-[15px] text-slate-800 resize-none font-medium placeholder-slate-400"
                             disabled={!briefContext?.brief}
                         />
-                        <div className="flex items-center justify-between px-2 pb-2 pt-0">
+
+                        {/* Bottom Row Actions */}
+                        <div className="flex items-center justify-between px-3 pb-3">
                             <div className="flex gap-1">
-                                <button className="p-2 text-slate-400 hover:text-blue-600 transition-colors rounded-full hover:bg-blue-50" title="Attach Context">
+                                <button className="p-2 text-slate-400 hover:text-blue-600 transition-colors rounded-full hover:bg-slate-50" title="Attach">
                                     <Paperclip size={18} />
                                 </button>
-                                <button className="p-2 text-slate-400 hover:text-blue-600 transition-colors rounded-full hover:bg-blue-50" title="Voice Input">
+                                <button className="p-2 text-slate-400 hover:text-blue-600 transition-colors rounded-full hover:bg-slate-50" title="Voice">
                                     <Mic size={18} />
                                 </button>
                             </div>
                             <button
                                 onClick={handleSendMessage}
                                 disabled={!inputValue.trim() || !briefContext?.brief}
-                                className={`p-2 rounded-full transition-all duration-300 flex items-center justify-center ${inputValue.trim() ? 'bg-blue-600 text-white shadow-md hover:bg-blue-700 transform scale-100' : 'bg-slate-200 text-slate-400 scale-95'
+                                className={`p-2.5 rounded-full transition-all duration-200 flex items-center justify-center shadow-sm ${inputValue.trim() ? 'bg-blue-600 text-white hover:bg-blue-700 hover:shadow-md' : 'bg-slate-100 text-slate-300'
                                     }`}
                             >
                                 <ArrowRight size={20} />
                             </button>
                         </div>
                     </div>
-                    <p className="text-center mt-2 text-[10px] text-slate-400 font-medium">
-                        Reforma AI v1.0 • Confidential
-                    </p>
                 </div>
             </div>
 
             {/* -- Right: Live Preview Panel -- */}
             <div className="flex-1 bg-[#EEF2F6] flex flex-col overflow-hidden relative shadow-inner">
-                {/* Canvas Texture */}
-                <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: 'radial-gradient(#64748b 1px, transparent 1px)', backgroundSize: '24px 24px' }}></div>
-
-                <div className="h-[60px] border-b border-slate-200/60 flex items-center justify-between px-8 bg-white/60 backdrop-blur-xl sticky top-0 z-10">
+                <div className="h-[70px] border-b border-slate-200/60 flex items-center justify-between px-8 bg-white/60 backdrop-blur-md sticky top-0 z-10">
                     <div className="flex items-center gap-3">
-                        <div className="bg-blue-50/80 p-2 rounded-lg text-blue-600 border border-blue-100">
-                            <FileText size={18} />
+                        <div className="bg-white p-2 rounded-lg text-blue-600 shadow-sm border border-slate-100">
+                            <FileText size={20} />
                         </div>
                         <div>
                             <div className="text-sm font-bold text-slate-800 tracking-tight">{generatedArtifact ? 'Statement of Claim.docx' : 'Drafting Canvas'}</div>
-                            <div className="text-[10px] text-slate-500 font-medium flex items-center gap-1">
-                                <span className={`w-1.5 h-1.5 rounded-full ${generatedArtifact ? 'bg-emerald-500' : 'bg-slate-300'}`}></span>
+                            <div className="text-[11px] text-slate-500 font-medium flex items-center gap-1.5 mt-0.5">
+                                <span className={`w-1.5 h-1.5 rounded-full ${generatedArtifact ? 'bg-emerald-500 animate-pulse' : 'bg-slate-300'}`}></span>
                                 {generatedArtifact ? 'Live Sync Active' : 'Waiting for content'}
                             </div>
                         </div>
                     </div>
-                    <div className="flex gap-2">
-                        <button className="flex items-center gap-2 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-white hover:shadow-sm rounded-lg border border-transparent hover:border-slate-200 transition-all">
+                    <div className="flex gap-3">
+                        <button className="flex items-center gap-2 px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-white hover:shadow-sm rounded-lg border border-transparent hover:border-slate-200 transition-all">
                             <Copy size={14} /> Copy
                         </button>
-                        <button className="flex items-center gap-2 px-3 py-1.5 text-xs font-semibold text-white bg-slate-900 hover:bg-black rounded-lg shadow-sm transition-all border border-black">
+                        <button className="flex items-center gap-2 px-4 py-2 text-xs font-semibold text-white bg-slate-900 hover:bg-black rounded-lg shadow-md transition-all">
                             <Download size={14} /> Export PDF
                         </button>
                     </div>
