@@ -1,10 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, FileText, PieChart, Users, Shield, Zap, CheckCircle2, ChevronRight } from "lucide-react";
+import { ArrowRight, FileText, PieChart, Users, Shield, Zap, CheckCircle2, ChevronRight, LayoutDashboard } from "lucide-react";
 import { useEffect, useRef } from "react";
+import { useSession } from "next-auth/react";
 
 export default function LandingPage() {
+  const { data: session } = useSession();
+  const isLoggedIn = !!session?.user;
 
   // Simple Scroll Reveal Observer
   const observerRef = useRef<IntersectionObserver | null>(null);
@@ -52,10 +55,18 @@ export default function LandingPage() {
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-            <Link href="/briefs" className="group px-8 py-4 bg-teal-700 hover:bg-teal-800 text-white rounded-xl font-medium text-lg transition-all shadow-lg hover:shadow-teal-700/20 hover:-translate-y-1 flex items-center gap-2">
-              Deploy Infrastructure
-              <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
-            </Link>
+            {isLoggedIn ? (
+              <Link href="/management" className="group px-8 py-4 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-medium text-lg transition-all shadow-lg hover:shadow-slate-900/20 hover:-translate-y-1 flex items-center gap-2">
+                <LayoutDashboard size={20} className="text-teal-400" />
+                Go to Dashboard
+                <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform opacity-50" />
+              </Link>
+            ) : (
+              <Link href="/login" className="group px-8 py-4 bg-teal-700 hover:bg-teal-800 text-white rounded-xl font-medium text-lg transition-all shadow-lg hover:shadow-teal-700/20 hover:-translate-y-1 flex items-center gap-2">
+                Deploy Infrastructure
+                <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
+              </Link>
+            )}
             <Link href="#manifesto" className="px-8 py-4 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-xl font-medium text-lg transition-all shadow-sm hover:shadow-md">
               Why Infrastructure?
             </Link>
@@ -210,7 +221,7 @@ export default function LandingPage() {
             Join the forward-thinking firms building their operational infrastructure with Reforma.
           </p>
           <div className="flex flex-col sm:flex-row justify-center gap-4">
-            <Link href="/briefs" className="px-10 py-4 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold text-lg transition-all shadow-xl hover:shadow-2xl hover:-translate-y-1">
+            <Link href="/register" className="px-10 py-4 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold text-lg transition-all shadow-xl hover:shadow-2xl hover:-translate-y-1">
               Start Building Now
             </Link>
           </div>
