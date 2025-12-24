@@ -7,6 +7,7 @@ import PageTransition from "@/components/layout/PageTransition";
 import NextTopLoader from 'nextjs-toploader';
 import { auth } from "@/auth";
 import { getCurrentUserWithWorkspace } from "@/lib/workspace";
+import { SessionProvider } from "next-auth/react";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
@@ -40,19 +41,21 @@ export default async function RootLayout({
           easing="ease"
           speed={200}
         />
-        {user ? (
-          // Authenticated layout with AppLayout Grid
-          <AppLayout user={user} workspace={workspaceData}>
+        <SessionProvider session={session}>
+          {user ? (
+            // Authenticated layout with AppLayout Grid
+            <AppLayout user={user} workspace={workspaceData}>
+              <PageTransition>
+                {children}
+              </PageTransition>
+            </AppLayout>
+          ) : (
+            // Unauthenticated layout (auth pages handle their own layout)
             <PageTransition>
               {children}
             </PageTransition>
-          </AppLayout>
-        ) : (
-          // Unauthenticated layout (auth pages handle their own layout)
-          <PageTransition>
-            {children}
-          </PageTransition>
-        )}
+          )}
+        </SessionProvider>
       </body>
     </html>
   );
