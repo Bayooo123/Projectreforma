@@ -1,6 +1,4 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
 :root {
   /* Brand Colors - Refined Teal Theme */
@@ -385,12 +383,14 @@ small {
 
 .text-gradient {
   background: linear-gradient(135deg, #0F172A 0%, #334155 100%);
+  background-clip: text;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
 .text-gradient-teal {
   background: linear-gradient(135deg, #115E59 0%, #2DD4BF 100%);
+  background-clip: text;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
