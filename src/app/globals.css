@@ -66,6 +66,34 @@
   /* Animation Timing */
   --ease-fluid: cubic-bezier(0.4, 0, 0.2, 1);
   --ease-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  /* Landing Page Specific Globals (Moved from Module) */
+  --bg-page: #f8fafc;
+  --bg-nav: rgba(255, 255, 255, 0.9);
+  --border-color: #e2e8f0;
+  --text-lp-primary: #0f172a;
+  /* Renamed to avoid collision with app --text-primary */
+  --text-lp-secondary: #64748b;
+  --text-lp-tertiary: #94a3b8;
+  --primary-color: #0f766e;
+  --primary-hover: #0d6962;
+
+  --card-bg: #ffffff;
+  --card-hover-bg: rgba(15, 118, 110, 0.05);
+
+  --section-hero-bg: #ffffff;
+  --section-problem-bg: #f8fafc;
+  --section-system-bg: #ffffff;
+  --section-drafter-bg: #0f172a;
+  /* Always dark for spotlight */
+
+  --icon-bg: #f8fafc;
+  --icon-border: #f1f5f9;
+
+  --btn-secondary-bg: #ffffff;
+  --btn-secondary-border: #e2e8f0;
+  --btn-secondary-text: #334155;
+  --btn-secondary-hover: #f8fafc;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -99,6 +127,42 @@
     --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
     --shadow-soft: 0 20px 40px -10px rgba(0, 0, 0, 0.5);
   }
+}
+
+/* Universal Dark Mode Override (Applied by next-themes) */
+[data-theme='dark'] {
+  --bg-page: #0f172a;
+  --bg-nav: rgba(15, 23, 42, 0.9);
+  --border-color: #1e293b;
+  --text-lp-primary: #f8fafc;
+  --text-lp-secondary: #cbd5e1;
+  --text-lp-tertiary: #64748b;
+  --primary-color: #14b8a6;
+  /* Brighter teal for dark mode */
+  --primary-hover: #0d9488;
+
+  --card-bg: #1e293b;
+  --card-hover-bg: rgba(20, 184, 166, 0.1);
+
+  --section-hero-bg: #0f172a;
+  --section-problem-bg: #1e293b;
+  /* Slightly lighter than page bg */
+  --section-system-bg: #0f172a;
+  --section-drafter-bg: #020617;
+  /* Even darker */
+
+  --icon-bg: #1e293b;
+  --icon-border: #334155;
+
+  --btn-secondary-bg: #1e293b;
+  --btn-secondary-border: #334155;
+  --btn-secondary-text: #e2e8f0;
+  --btn-secondary-hover: #334155;
+
+  /* Also override default app vars for seamless transition */
+  --background: #0F172A;
+  --text-primary: #F8FAFC;
+  --text-secondary: #94A3B8;
 }
 
 * {
