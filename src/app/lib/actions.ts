@@ -220,3 +220,77 @@ export async function register(
         return 'Failed to create account. Please try again.';
     }
 }
+
+export async function registerMember(
+    prevState: string | undefined,
+    formData: FormData,
+) {
+    const name = formData.get('name') as string;
+    const email = formData.get('email') as string;
+    const password = formData.get('password') as string;
+    const phone = formData.get('phone') as string;
+    const inviteToken = formData.get('inviteToken') as string;
+    const role = 'Associate'; // Default role for magic link joins? Or allow select? Slack allows generic member. Let's say 'lawyer' or 'staff'. 'Associate' is safe.
+
+    console.log('🔵 User Joining via Token:', { email, name });
+
+    if (!name || !email || !password || !phone || !inviteToken) {
+        return 'Please fill in all fields.';
+    }
+
+    try {
+        const hashedPassword = await bcrypt.hash(password, 10);
+
+        const result = await prisma.$transaction(async (tx) => {
+            // 1. Validate Token & Get Workspace
+            const workspace = await tx.workspace.findUnique({
+                where: { inviteLinkToken: inviteToken }
+            });
+            if (!workspace) throw new Error('Invalid or expired invite link.');
+
+            // 2. Check/Create User
+            let user = await tx.user.findUnique({ where: { email } });
+            if (user) {
+                // If user exists, just add them? 
+                // But we requested a password. If they entered a different password, that's weird.
+                // Assuming "Register" means new user.
+                // If user exists, they should "Login".
+                throw new Error('User already exists. Please log in instead.');
+            }
+
+            user = await tx.user.create({
+                data: { name, email, password: hashedPassword, phone }
+            });
+
+            // 3. Add to Workspace
+            await tx.workspaceMember.create({
+                data: {
+                    userId: user.id,
+                    workspaceId: workspace.id,
+                    role: role,
+                    status: 'active' // Magic link auto-activates?
+                }
+            });
+
+            return { user, workspace };
+        });
+
+        // 4. Sign In (using the new auth logic that accepts inviteToken)
+        // We need to pass inviteToken so authorize() skips firm checks
+        // But wait, `signIn` calls `authorize`. 
+        // My `auth.ts` `authorize` logic handles `inviteToken`.
+        // So I pass `inviteToken` in the credentials object.
+
+        await signIn('credentials', {
+            email,
+            password,
+            inviteToken,
+            redirectTo: '/management' // Go to dashboard
+        });
+
+    } catch (error) {
+        console.error('Join error:', error);
+        if (error instanceof Error) return error.message;
+        return 'Failed to join workspace.';
+    }
+}

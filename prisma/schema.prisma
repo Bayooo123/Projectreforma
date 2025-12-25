@@ -31,6 +31,7 @@ model Workspace {
   // Firm Login Fields
   joinPassword String? // Hashed shared password for firm login
   firmCode     String? @unique // Unique code for joining (e.g. "ASCO")
+  inviteLinkToken String? @unique // Magic Link Token (Slack-style join)
   letterheadUrl String? // URL to uploaded letterhead image
 
   owner       User                  @relation("WorkspaceOwner", fields: [ownerId], references: [id])
