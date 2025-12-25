@@ -31,6 +31,17 @@ export default function LandingPage() {
 
   return (
     <div className="min-h-screen bg-slate-50 font-[Inter,sans-serif] text-slate-900 overflow-x-hidden">
+      <style jsx global>{`
+        .reveal {
+          opacity: 0;
+          transform: translateY(30px);
+          transition: all 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .reveal.visible {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      `}</style>
 
       {/* Navigation */}
       <nav className="fixed top-0 w-full z-50 bg-white/90 backdrop-blur-md border-b border-slate-200 h-16">
