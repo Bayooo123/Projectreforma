@@ -1,233 +1,188 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, FileText, PieChart, Users, Shield, Zap, CheckCircle2, ChevronRight, LayoutDashboard } from "lucide-react";
-import { useEffect, useRef } from "react";
 import { useSession } from "next-auth/react";
 
 export default function LandingPage() {
   const { data: session } = useSession();
   const isLoggedIn = !!session?.user;
 
-  // Simple Scroll Reveal Observer
-  const observerRef = useRef<IntersectionObserver | null>(null);
-
-  useEffect(() => {
-    observerRef.current = new IntersectionObserver((entries) => {
-      entries.forEach((entry) => {
-        if (entry.isIntersecting) {
-          entry.target.classList.add('reveal-visible');
-        }
-      });
-    }, { threshold: 0.1 });
-
-    const elements = document.querySelectorAll('.reveal-on-scroll');
-    elements.forEach((el) => observerRef.current?.observe(el));
-
-    return () => observerRef.current?.disconnect();
-  }, []);
-
   return (
-    <div className="bg-[#F8FAFC] min-h-screen text-slate-800 selection:bg-teal-100 selection:text-teal-900 font-[Inter,sans-serif] overflow-x-hidden">
+    <div className="min-h-screen text-[#1a1a1a] bg-[#fafafa]" style={{ fontFamily: 'Georgia, serif', lineHeight: 1.6 }}>
 
-      {/* -- HERO SECTION -- */}
-      <header className="relative w-full h-screen min-h-[800px] flex flex-col justify-center items-center overflow-hidden grid-beam-container">
-        {/* Background Beam Animation */}
-        <div className="absolute inset-0 pointer-events-none">
-          <div className="beam-glow top-0 left-0"></div>
+      {/* HERO SECTION */}
+      <div className="relative text-white py-[120px] px-5 text-center overflow-hidden"
+        style={{
+          background: 'linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%)'
+        }}>
+        {/* Background Pattern */}
+        <div className="absolute inset-0 pointer-events-none opacity-[0.4]"
+          style={{
+            backgroundImage: `url('data:image/svg+xml,<svg width="60" height="60" xmlns="http://www.w3.org/2000/svg"><path d="M30 0L60 30L30 60L0 30Z" fill="rgba(255,255,255,0.03)"/></svg>')`
+          }}>
         </div>
 
-        <div className="z-10 text-center max-w-4xl px-6 relative reveal-on-scroll reveal-visible">
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-teal-600/20 bg-teal-50/50 text-teal-700 text-xs font-semibold uppercase tracking-wider mb-8 shadow-sm backdrop-blur-sm">
-            <span className="w-2 h-2 rounded-full bg-teal-500 animate-pulse"></span>
-            Reforma OS 1.0
-          </div>
-
-          <h1 className="text-5xl md:text-7xl font-bold tracking-tight mb-8 leading-[1.1] text-gradient">
-            The Operational <br />
-            <span className="text-gradient-teal">Infrastructure</span> for <br />
-            Nigerian Law Firms.
+        <div className="relative z-10 max-w-[900px] mx-auto">
+          <h1 className="text-[2.5rem] md:text-[3.5rem] font-light mb-5 tracking-tight">
+            Reforma
           </h1>
-
-          <p className="text-lg md:text-xl text-slate-500 max-w-2xl mx-auto mb-12 leading-relaxed">
-            Scaling a practice requires more than just hard work. It requires a backbone.
-            Manage briefs, finances, and staff workload from <span className="text-slate-900 font-semibold">one centralized workspace</span>.
+          <p className="text-[1.2rem] md:text-[1.5rem] italic opacity-95 mb-[15px]">
+            Infrastructure, Not Just Software
+          </p>
+          <p className="text-[1.1rem] md:text-[1.2rem] opacity-90 leading-[1.8] mb-10 max-w-2xl mx-auto">
+            The operational backbone for Nigerian law firms—transforming legal practices into enduring institutions
           </p>
 
-          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-            {isLoggedIn ? (
-              <Link href="/management" className="group px-8 py-4 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-medium text-lg transition-all shadow-lg hover:shadow-slate-900/20 hover:-translate-y-1 flex items-center gap-2">
-                <LayoutDashboard size={20} className="text-teal-400" />
-                Go to Dashboard
-                <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform opacity-50" />
-              </Link>
-            ) : (
-              <Link href="/login" className="group px-8 py-4 bg-teal-700 hover:bg-teal-800 text-white rounded-xl font-medium text-lg transition-all shadow-lg hover:shadow-teal-700/20 hover:-translate-y-1 flex items-center gap-2">
-                Deploy Infrastructure
-                <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
-              </Link>
-            )}
-            <Link href="#manifesto" className="px-8 py-4 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-xl font-medium text-lg transition-all shadow-sm hover:shadow-md">
-              Why Infrastructure?
+          {isLoggedIn ? (
+            <Link href="/management" className="inline-block px-[45px] py-[18px] bg-[#c19a6b] text-white rounded-[4px] text-[1.1rem] font-semibold border-2 border-transparent hover:bg-transparent hover:border-[#c19a6b] hover:-translate-y-[2px] transition-all duration-300">
+              Go to Dashboard
             </Link>
-          </div>
-
-          <div className="mt-16 text-slate-400 text-xs font-medium tracking-wide uppercase">
-            Built for the Nigerian Legal Context
-          </div>
+          ) : (
+            <Link href="/register" className="inline-block px-[45px] py-[18px] bg-[#c19a6b] text-white rounded-[4px] text-[1.1rem] font-semibold border-2 border-transparent hover:bg-transparent hover:border-[#c19a6b] hover:-translate-y-[2px] transition-all duration-300">
+              Request Early Access
+            </Link>
+          )}
         </div>
-      </header>
+      </div>
 
-      {/* -- MANIFESTO SECTION -- */}
-      <section id="manifesto" className="py-24 px-6 bg-white border-y border-slate-100 relative">
-        <div className="max-w-3xl mx-auto space-y-12">
-          <div className="reveal-on-scroll">
-            <h2 className="text-3xl font-bold mb-6 text-slate-900">Infrastructure is not a buzzword.</h2>
-            <p className="text-xl text-slate-600 leading-relaxed">
-              When you hear infrastructure, you think of railroads connecting the nation. You think of masts enabling communication.
-              <strong className="text-slate-900 block mt-4">At Reforma, infrastructure means structure.</strong>
+      {/* PROBLEM / SOLUTION SECTION */}
+      <div className="py-[80px] px-5">
+        <div className="max-w-[1200px] mx-auto">
+          <h2 className="text-[2rem] md:text-[2.5rem] text-center mb-[60px] text-[#0f2027] font-light">
+            From Practice to Institution
+          </h2>
+
+          <div className="bg-white border-l-4 border-[#c19a6b] p-10 my-10 max-w-[900px] mx-auto shadow-[0_4px_20px_rgba(0,0,0,0.08)]">
+            <h3 className="text-[#c19a6b] text-[1.3rem] mb-[15px] font-bold">The Problem</h3>
+            <p>
+              Most small-to-mid-sized Nigerian law firms rely on "institutional memory"—what the senior partner knows—and physical files scattered across offices. When a key staff member leaves, critical knowledge walks out the door. The infrastructure isn't in the systems; it's in people's heads.
             </p>
           </div>
 
-          <div className="grid gap-8 reveal-on-scroll">
-            <div className="flex gap-4">
-              <div className="mt-1 w-12 h-12 bg-blue-50 rounded-full flex items-center justify-center text-blue-600 shrink-0">
-                <Shield size={24} />
-              </div>
-              <div>
-                <h3 className="text-lg font-bold text-slate-900 mb-2">Preventing Loss</h3>
-                <p className="text-slate-500 leading-relaxed">A centralized memory for every document. No more "missing files" when an associate leaves.</p>
-              </div>
+          <div className="bg-white border-l-4 border-[#c19a6b] p-10 my-10 max-w-[900px] mx-auto shadow-[0_4px_20px_rgba(0,0,0,0.08)]">
+            <h3 className="text-[#c19a6b] text-[1.3rem] mb-[15px] font-bold">The Solution</h3>
+            <p>
+              Reforma digitizes your firm's backbone. We are the system that remains constant even as staff evolve. Like the railroads that connect cities or the masts that power communication, we provide the foundation upon which your legal practice can truly scale.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* THREE PILLARS SECTION */}
+      <div className="py-[80px] px-5 bg-[#f5f5f5]">
+        <div className="max-w-[1200px] mx-auto">
+          <h2 className="text-[2rem] md:text-[2.5rem] text-center mb-[60px] text-[#0f2027] font-light">
+            The Three Pillars of Infrastructure
+          </h2>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-10 mt-[60px]">
+            {/* Pillar 1 */}
+            <div className="bg-white p-10 rounded-lg shadow-[0_8px_30px_rgba(0,0,0,0.1)] border-t-4 border-[#2c5364] hover:-translate-y-2 hover:shadow-[0_12px_40px_rgba(0,0,0,0.15)] transition-all duration-300">
+              <h3 className="text-[1.8rem] text-[#0f2027] mb-[10px] font-normal">Digital Vault</h3>
+              <p className="italic text-[#c19a6b] mb-5 text-[1.1rem]">"The firm that remembers everything"</p>
+              <p className="mb-[15px] text-[#444] font-bold">Brief Management System</p>
+              <p className="text-[#666] text-[0.95rem] leading-[1.7]">
+                A centralized, secure repository for every case file, client document, and court process. No more "Case of the Missing File." Any associate can pick up a matter five years later and understand exactly what happened. This is your firm's collective memory—permanent and accessible.
+              </p>
             </div>
-            <div className="flex gap-4">
-              <div className="mt-1 w-12 h-12 bg-emerald-50 rounded-full flex items-center justify-center text-emerald-600 shrink-0">
-                <PieChart size={24} />
-              </div>
-              <div>
-                <h3 className="text-lg font-bold text-slate-900 mb-2">Financial Control</h3>
-                <p className="text-slate-500 leading-relaxed">Managing firm revenue without a specialized CFO hire. Invoices, receipts, and tracking in one place.</p>
-              </div>
+
+            {/* Pillar 2 */}
+            <div className="bg-white p-10 rounded-lg shadow-[0_8px_30px_rgba(0,0,0,0.1)] border-t-4 border-[#2c5364] hover:-translate-y-2 hover:shadow-[0_12px_40px_rgba(0,0,0,0.15)] transition-all duration-300">
+              <h3 className="text-[1.8rem] text-[#0f2027] mb-[10px] font-normal">Silent CFO</h3>
+              <p className="italic text-[#c19a6b] mb-5 text-[1.1rem]">"Managing finances without a specialized hire"</p>
+              <p className="mb-[15px] text-[#444] font-bold">Financial Operating System</p>
+              <p className="text-[#666] text-[0.95rem] leading-[1.7]">
+                Automated invoicing, expense tracking, and revenue monitoring. Most firms cannot justify a full-time CFO or accountant. Reforma automates this role, tracking every Naira from "Billable Hour" to "Bank Account" and giving you a real-time dashboard of your firm's financial health.
+              </p>
             </div>
-            <div className="flex gap-4">
-              <div className="mt-1 w-12 h-12 bg-purple-50 rounded-full flex items-center justify-center text-purple-600 shrink-0">
-                <Users size={24} />
-              </div>
-              <div>
-                <h3 className="text-lg font-bold text-slate-900 mb-2">Partner Visibility</h3>
-                <p className="text-slate-500 leading-relaxed">Giving the Managing Partner a live pulse on staff workload and deliverables.</p>
-              </div>
+
+            {/* Pillar 3 */}
+            <div className="bg-white p-10 rounded-lg shadow-[0_8px_30px_rgba(0,0,0,0.1)] border-t-4 border-[#2c5364] hover:-translate-y-2 hover:shadow-[0_12px_40px_rgba(0,0,0,0.15)] transition-all duration-300">
+              <h3 className="text-[1.8rem] text-[#0f2027] mb-[10px] font-normal">Command Center</h3>
+              <p className="italic text-[#c19a6b] mb-5 text-[1.1rem]">"The Partner's Eye"</p>
+              <p className="mb-[15px] text-[#444] font-bold">Workload & Visibility Management</p>
+              <p className="text-[#666] text-[0.95rem] leading-[1.7]">
+                Task assignment, deadline tracking, and deliverable monitoring. It answers the Managing Partner's most pressing question: "Who is doing what, and is it done?" Gain transparency into staff capacity, prevent burnout, and ensure accountability across every matter.
+              </p>
             </div>
           </div>
         </div>
-      </section>
+      </div>
 
-      {/* -- BENTO GRID PILLARS -- */}
-      <section className="py-32 px-6 bg-slate-50/50">
-        <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-16 reveal-on-scroll">
-            <h2 className="text-3xl font-bold text-slate-900 mb-4">The 3 Pillars of Operations</h2>
-            <p className="text-slate-500 max-w-2xl mx-auto">Reforma unifies the disjointed parts of your practice into a single operating system.</p>
-          </div>
+      {/* FUTURE / DRAFTING SECTION */}
+      <div className="py-[80px] px-5 text-white"
+        style={{ background: 'linear-gradient(135deg, #c19a6b 0%, #8b7355 100%)' }}>
+        <div className="max-w-[1200px] mx-auto">
+          <h2 className="text-[2rem] md:text-[2.5rem] text-center mb-[60px] text-white font-light">
+            The Future: Intelligent Creation
+          </h2>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 auto-rows-[400px]">
-
-            {/* Col 1: Briefs (Large) */}
-            <div className="md:col-span-2 bento-card p-10 relative group reveal-on-scroll">
-              <div className="relative z-10 h-full flex flex-col justify-between">
-                <div>
-                  <div className="inline-flex p-3 bg-blue-50 text-blue-600 rounded-xl mb-6">
-                    <Shield size={28} />
-                  </div>
-                  <h3 className="text-2xl font-bold text-slate-900 mb-3">The Central Nervous System</h3>
-                  <p className="text-slate-500 text-lg leading-relaxed max-w-md">
-                    Stop chasing physical files. Centralize your briefs, documents, and client data in one secure vault. Prevent loss. Ensure continuity.
-                  </p>
-                </div>
-                <div className="flex items-center gap-2 text-blue-600 font-medium group-hover:translate-x-2 transition-transform cursor-pointer">
-                  Explore Brief Manager <ChevronRight size={18} />
-                </div>
-              </div>
-              {/* Abstract UI representation */}
-              <div className="absolute right-[-40px] bottom-[-40px] w-[300px] h-[300px] bg-blue-100/50 rounded-full blur-3xl group-hover:bg-blue-200/50 transition-colors"></div>
-            </div>
-
-            {/* Col 2: Finance */}
-            <div className="bento-card p-10 relative group reveal-on-scroll">
-              <div className="relative z-10 h-full flex flex-col justify-between">
-                <div>
-                  <div className="inline-flex p-3 bg-emerald-50 text-emerald-600 rounded-xl mb-6">
-                    <PieChart size={28} />
-                  </div>
-                  <h3 className="text-xl font-bold text-slate-900 mb-3">Financial Backbone</h3>
-                  <p className="text-slate-500 leading-relaxed">
-                    You don't need a full-time accountant to track billing. Automate invoices and payment tracking.
-                  </p>
-                </div>
-              </div>
-              <div className="absolute right-0 bottom-0 w-full h-32 bg-gradient-to-t from-emerald-50/50 to-transparent"></div>
-            </div>
-
-            {/* Col 3: Workload */}
-            <div className="bento-card p-10 relative group reveal-on-scroll">
-              <div className="relative z-10 h-full flex flex-col justify-between">
-                <div>
-                  <div className="inline-flex p-3 bg-purple-50 text-purple-600 rounded-xl mb-6">
-                    <Users size={28} />
-                  </div>
-                  <h3 className="text-xl font-bold text-slate-900 mb-3">Command Center</h3>
-                  <p className="text-slate-500 leading-relaxed">
-                    For the Managing Partner who needs to know *who* is doing *what*. Live capacity tracking.
-                  </p>
-                </div>
-              </div>
-              <div className="absolute right-0 bottom-0 w-full h-32 bg-gradient-to-t from-purple-50/50 to-transparent"></div>
-            </div>
-
-            {/* Col 4: Drafting Studio (Wide) */}
-            <div className="md:col-span-2 bento-card p-10 relative overflow-hidden group reveal-on-scroll bg-slate-900 text-white border-slate-800">
-              <div className="relative z-10 h-full flex flex-col justify-between">
-                <div>
-                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 border border-white/20 text-xs font-medium mb-6">
-                    <Zap size={14} className="text-yellow-400" /> New Feature
-                  </div>
-                  <h3 className="text-2xl font-bold mb-3">Intelligent Drafting Studio</h3>
-                  <p className="text-slate-400 text-lg leading-relaxed max-w-lg">
-                    And when you're ready to build... our AI drafting engine sits on top of this infrastructure, turning your organized data into key legal documents in seconds.
-                  </p>
-                </div>
-                <div className="flex items-center gap-4">
-                  <button className="px-6 py-3 bg-white text-slate-900 rounded-lg font-semibold hover:bg-slate-100 transition-colors">
-                    Try Drafting Studio
-                  </button>
-                </div>
-              </div>
-
-              {/* Decorative Grid */}
-              <div className="absolute inset-0 opacity-20" style={{
-                backgroundImage: `linear-gradient(rgba(255, 255, 255, 0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.1) 1px, transparent 1px)`,
-                backgroundSize: '40px 40px'
-              }}></div>
-            </div>
-
+          <div className="p-10 rounded-lg max-w-[900px] mx-auto border border-white/20 backdrop-blur-md bg-white/10">
+            <h3 className="text-[2rem] mb-5 font-light">The Socratic Drafter</h3>
+            <p className="text-[1.1rem] mb-5 opacity-95 italic">"From Administration to Creation"</p>
+            <p className="mb-5 leading-relaxed">
+              While the three pillars handle operations, the Drafting Studio handles production. Instead of merely providing templates, Reforma acts as an intelligent senior associate.
+            </p>
+            <p className="mb-5 leading-relaxed">
+              It asks strategic questions: "Is this a commercial tenancy?" "Are there guarantors?" "What remedies are you seeking?" Then it generates complex legal documents—Statements of Claim, Tenancy Agreements, Contracts—in seconds, pre-filled with context from your Brief Manager.
+            </p>
+            <p className="leading-relaxed font-medium">
+              This is where administration meets law. Where infrastructure enables excellence.
+            </p>
           </div>
         </div>
-      </section>
+      </div>
 
-      {/* -- FOOTER / CTA -- */}
-      <section className="py-24 px-6 bg-white border-t border-slate-100">
-        <div className="max-w-4xl mx-auto text-center reveal-on-scroll">
-          <h2 className="text-4xl font-bold text-slate-900 mb-6">Is your firm running on rails, or hope?</h2>
-          <p className="text-xl text-slate-500 mb-10 max-w-2xl mx-auto">
-            Join the forward-thinking firms building their operational infrastructure with Reforma.
+      {/* CONTEXT SECTION */}
+      <div className="py-[80px] px-5">
+        <div className="max-w-[1200px] mx-auto">
+          <h2 className="text-[2rem] md:text-[2.5rem] text-center mb-[60px] text-[#0f2027] font-light">
+            Built for the Nigerian Context
+          </h2>
+          <p className="text-center max-w-[800px] mx-auto mb-[50px] text-[1.1rem] text-[#666]">
+            Reforma is not a generic Silicon Valley tool adapted for Africa. It is purpose-built for the specific realities of Nigerian legal practice.
           </p>
-          <div className="flex flex-col sm:flex-row justify-center gap-4">
-            <Link href="/register" className="px-10 py-4 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold text-lg transition-all shadow-xl hover:shadow-2xl hover:-translate-y-1">
-              Start Building Now
-            </Link>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-[30px] mt-[40px]">
+            <div className="text-center p-[30px] bg-white rounded-lg shadow-[0_4px_15px_rgba(0,0,0,0.08)]">
+              <h4 className="text-[#0f2027] mb-[15px] text-[1.3rem] font-bold">Resilient</h4>
+              <p className="text-[#666] text-[0.95rem]">Built to work seamlessly with fluctuating internet connectivity. Your practice doesn't stop when the power goes out.</p>
+            </div>
+            <div className="text-center p-[30px] bg-white rounded-lg shadow-[0_4px_15px_rgba(0,0,0,0.08)]">
+              <h4 className="text-[#0f2027] mb-[15px] text-[1.3rem] font-bold">Compliant</h4>
+              <p className="text-[#666] text-[0.95rem]">Aligned with Nigerian Bar Association (NBA) standards for record-keeping and professional conduct.</p>
+            </div>
+            <div className="text-center p-[30px] bg-white rounded-lg shadow-[0_4px_15px_rgba(0,0,0,0.08)]">
+              <h4 className="text-[#0f2027] mb-[15px] text-[1.3rem] font-bold">Native</h4>
+              <p className="text-[#666] text-[0.95rem]">Uses the language of Nigerian courts—"Statement of Claim," not "Complaint." We speak your legal language.</p>
+            </div>
           </div>
-          <p className="mt-8 text-sm text-slate-400">© 2025 Reforma OS. All rights reserved.</p>
         </div>
-      </section>
+      </div>
+
+      {/* FINAL CTA & FOOTER */}
+      <div className="bg-[#0f2027] text-white text-center py-[80px] px-5">
+        <div className="max-w-[1200px] mx-auto">
+          <h2 className="text-[2rem] md:text-[2.5rem] mb-5 font-light">Transform Your Practice Into an Institution</h2>
+          <p className="text-[1.2rem] mb-10 opacity-90 max-w-3xl mx-auto">
+            Reforma OS provides the structure, stability, and intelligence required to scale your law firm from chaotic practice to enduring business institution.
+          </p>
+
+          {isLoggedIn ? (
+            <Link href="/management" className="inline-block px-[45px] py-[18px] bg-[#c19a6b] text-white rounded-[4px] text-[1.1rem] font-semibold border-2 border-transparent hover:bg-transparent hover:border-[#c19a6b] hover:-translate-y-[2px] transition-all duration-300">
+              Go to Dashboard
+            </Link>
+          ) : (
+            <Link href="/register" className="inline-block px-[45px] py-[18px] bg-[#c19a6b] text-white rounded-[4px] text-[1.1rem] font-semibold border-2 border-transparent hover:bg-transparent hover:border-[#c19a6b] hover:-translate-y-[2px] transition-all duration-300">
+              Schedule a Demo
+            </Link>
+          )}
+
+          <div className="mt-20 pt-10 border-t border-white/10 text-sm text-white/50">
+            &copy; {new Date().getFullYear()} Reforma Digital Solutions Limited. All rights reserved.
+          </div>
+        </div>
+      </div>
 
     </div>
   );
