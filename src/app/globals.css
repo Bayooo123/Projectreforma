@@ -96,41 +96,40 @@
   --btn-secondary-hover: #f8fafc;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    /* Brand Colors - Dark Mode */
-    --primary: #2DD4BF;
-    --primary-dark: #134E4A;
-    --primary-light: #5EEAD4;
-    --primary-soft: rgba(45, 212, 191, 0.1);
+/* System preference handled by next-themes enabling .dark class on html */
 
-    --accent: #1E293B;
-    --accent-hover: #334155;
+/* Dark Mode Overrides (Applied by next-themes via .dark class) */
+.dark {
+  /* Brand Colors - Dark Mode */
+  --primary: #2DD4BF;
+  --primary-dark: #134E4A;
+  --primary-light: #5EEAD4;
+  --primary-soft: rgba(45, 212, 191, 0.1);
 
-    --text-primary: #F8FAFC;
-    --text-secondary: #94A3B8;
-    --text-tertiary: #64748B;
+  --accent: #1E293B;
+  --accent-hover: #334155;
 
-    --background: #0F172A;
-    /* Slate 900 */
-    --surface: #1E293B;
-    /* Slate 800 */
-    --surface-subtle: #020617;
-    /* Slate 950 */
+  --text-primary: #F8FAFC;
+  --text-secondary: #94A3B8;
+  --text-tertiary: #64748B;
 
-    --glass-bg: rgba(30, 41, 59, 0.7);
-    --glass-border: rgba(255, 255, 255, 0.05);
+  --background: #0F172A;
+  /* Slate 900 */
+  --surface: #1E293B;
+  /* Slate 800 */
+  --surface-subtle: #020617;
+  /* Slate 950 */
 
-    --border: #334155;
+  --glass-bg: rgba(30, 41, 59, 0.7);
+  --glass-border: rgba(255, 255, 255, 0.05);
 
-    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
-    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
-    --shadow-soft: 0 20px 40px -10px rgba(0, 0, 0, 0.5);
-  }
-}
+  --border: #334155;
 
-/* Universal Dark Mode Override (Applied by next-themes) */
-[data-theme='dark'] {
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+  --shadow-soft: 0 20px 40px -10px rgba(0, 0, 0, 0.5);
+
+  /* Landing Page Overrides */
   --bg-page: #0f172a;
   --bg-nav: rgba(15, 23, 42, 0.9);
   --border-color: #1e293b;
@@ -158,11 +157,6 @@
   --btn-secondary-border: #334155;
   --btn-secondary-text: #e2e8f0;
   --btn-secondary-hover: #334155;
-
-  /* Also override default app vars for seamless transition */
-  --background: #0F172A;
-  --text-primary: #F8FAFC;
-  --text-secondary: #94A3B8;
 }
 
 * {
