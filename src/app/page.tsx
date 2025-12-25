@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import styles from "./LandingPage.module.css";
 
 export default function LandingPage() {
@@ -14,7 +15,7 @@ export default function LandingPage() {
 
   useEffect(() => {
     // Reset any global styles that might be interfering
-    document.body.style.backgroundColor = "#f8fafc";
+    // document.body.style.backgroundColor = "#f8fafc"; // Removed for dark mode compatibility
 
     // Strict observer implementation from user snippet
     const observerOptions = {
@@ -40,7 +41,7 @@ export default function LandingPage() {
 
     return () => {
       observerRef.current?.disconnect();
-      document.body.style.backgroundColor = ""; // Cleanup
+      // document.body.style.backgroundColor = ""; // Cleanup
     };
   }, []);
 
@@ -55,6 +56,7 @@ export default function LandingPage() {
             <span className={styles.logoText}>Reforma</span>
           </div>
           <div className={styles.navButtons}>
+            <ThemeToggle />
             {isLoggedIn ? (
               <Link href="/management" className={styles.navLink}>
                 Dashboard

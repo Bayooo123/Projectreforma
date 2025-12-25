@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { DM_Sans } from "next/font/google";
 import "./globals.css";
 
 import AppLayout from '@/components/layout/AppLayout';
@@ -8,8 +8,9 @@ import NextTopLoader from 'nextjs-toploader';
 import { auth } from "@/auth";
 import { getCurrentUserWithWorkspace } from "@/lib/workspace";
 import { SessionProvider } from "next-auth/react";
+import { ThemeProvider } from "@/components/providers/ThemeProvider";
 
-const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
+const dmSans = DM_Sans({ subsets: ["latin"], variable: "--font-dm-sans" });
 
 export const metadata: Metadata = {
   title: "ReformaOS | Legal Operating System",
@@ -32,31 +33,39 @@ export default async function RootLayout({
   }
 
   return (
-    <html lang="en">
-      <body className={inter.variable}>
+    <html lang="en" suppressHydrationWarning>
+      <body className={dmSans.variable}>
         <NextTopLoader
-          color="#2C3E50"
+          color="#0f766e"
           height={3}
           showSpinner={false}
           easing="ease"
           speed={200}
         />
-        <SessionProvider session={session}>
-          {user ? (
-            // Authenticated layout with AppLayout Grid
-            <AppLayout user={user} workspace={workspaceData}>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <SessionProvider session={session}>
+            {user ? (
+              // Authenticated layout with AppLayout Grid
+              <AppLayout user={user} workspace={workspaceData}>
+                <PageTransition>
+                  {children}
+                </PageTransition>
+              </AppLayout>
+            ) : (
+              // Unauthenticated layout (auth pages handle their own layout)
               <PageTransition>
                 {children}
               </PageTransition>
-            </AppLayout>
-          ) : (
-            // Unauthenticated layout (auth pages handle their own layout)
-            <PageTransition>
-              {children}
-            </PageTransition>
-          )}
-        </SessionProvider>
+            )}
+          </SessionProvider>
+        </ThemeProvider>
       </body>
     </html>
   );
 }
+

@@ -1,12 +1,72 @@
-/* Exact copy of user provided CSS */
+/* Exact copy of user provided CSS - Refactored for Variables */
+
+:root {
+    /* Light Mode (Default) */
+    --bg-page: #f8fafc;
+    --bg-nav: rgba(255, 255, 255, 0.9);
+    --border-color: #e2e8f0;
+    --text-primary: #0f172a;
+    --text-secondary: #64748b;
+    --text-tertiary: #94a3b8;
+    --primary-color: #0f766e;
+    --primary-hover: #0d6962;
+
+    --card-bg: #ffffff;
+    --card-hover-bg: rgba(15, 118, 110, 0.05);
+
+    --section-hero-bg: #ffffff;
+    --section-problem-bg: #f8fafc;
+    --section-system-bg: #ffffff;
+    --section-drafter-bg: #0f172a;
+    /* Always dark for spotlight */
+
+    --icon-bg: #f8fafc;
+    --icon-border: #f1f5f9;
+
+    --btn-secondary-bg: #ffffff;
+    --btn-secondary-border: #e2e8f0;
+    --btn-secondary-text: #334155;
+    --btn-secondary-hover: #f8fafc;
+}
+
+[data-theme='dark'] {
+    --bg-page: #0f172a;
+    --bg-nav: rgba(15, 23, 42, 0.9);
+    --border-color: #1e293b;
+    --text-primary: #f8fafc;
+    --text-secondary: #cbd5e1;
+    --text-tertiary: #64748b;
+    --primary-color: #14b8a6;
+    /* Brighter teal for dark mode */
+    --primary-hover: #0d9488;
+
+    --card-bg: #1e293b;
+    --card-hover-bg: rgba(20, 184, 166, 0.1);
+
+    --section-hero-bg: #0f172a;
+    --section-problem-bg: #1e293b;
+    /* Slightly lighter than page bg */
+    --section-system-bg: #0f172a;
+    --section-drafter-bg: #020617;
+    /* Even darker */
+
+    --icon-bg: #1e293b;
+    --icon-border: #334155;
+
+    --btn-secondary-bg: #1e293b;
+    --btn-secondary-border: #334155;
+    --btn-secondary-text: #e2e8f0;
+    --btn-secondary-hover: #334155;
+}
 
 /* Reset & Base */
 .body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', sans-serif;
+    font-family: var(--font-dm-sans), -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', sans-serif;
     line-height: 1.6;
-    color: #0f172a;
-    background: #f8fafc;
+    color: var(--text-primary);
+    background: var(--bg-page);
     overflow-x: hidden;
+    transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 /* Navigation */
@@ -15,9 +75,10 @@
     top: 0;
     width: 100%;
     z-index: 1000;
-    background: rgba(255, 255, 255, 0.9);
+    background: var(--bg-nav);
     backdrop-filter: blur(12px);
-    border-bottom: 1px solid #e2e8f0;
+    border-bottom: 1px solid var(--border-color);
+    transition: background-color 0.3s ease, border-color 0.3s ease;
 }
 
 .navContent {
@@ -39,7 +100,7 @@
 .logoIcon {
     width: 24px;
     height: 24px;
-    background: #0f766e;
+    background: var(--primary-color);
     border-radius: 6px;
     display: flex;
     align-items: center;
@@ -54,6 +115,7 @@
     font-weight: bold;
     text-transform: uppercase;
     letter-spacing: -0.3px;
+    color: var(--text-primary);
 }
 
 .navButtons {
@@ -65,20 +127,21 @@
 .navLink {
     font-size: 14px;
     font-weight: 500;
-    color: #475569;
+    color: var(--text-secondary);
     text-decoration: none;
     transition: color 0.2s;
     cursor: pointer;
 }
 
 .navLink:hover {
-    color: #0f172a;
+    color: var(--text-primary);
 }
 
 .navCta {
     padding: 8px 16px;
-    background: #0f172a;
-    color: white;
+    background: var(--text-primary);
+    /* Slate 900 in light, white in dark? No, keep it specific */
+    color: var(--bg-page);
     text-decoration: none;
     border-radius: 6px;
     font-size: 12px;
@@ -87,16 +150,28 @@
     cursor: pointer;
 }
 
+/* Specific nav CTA override */
+[data-theme='light'] .navCta {
+    background: #0f172a;
+    color: white;
+}
+
+[data-theme='dark'] .navCta {
+    background: #f8fafc;
+    color: #0f172a;
+}
+
 .navCta:hover {
-    background: #1e293b;
+    opacity: 0.9;
 }
 
 /* Hero Section */
 .hero {
     padding: 160px 24px 96px;
-    background: white;
-    border-bottom: 1px solid #f1f5f9;
+    background: var(--section-hero-bg);
+    border-bottom: 1px solid var(--border-color);
     text-align: center;
+    transition: background-color 0.3s ease;
 }
 
 .heroContent {
@@ -109,16 +184,16 @@
     font-weight: bold;
     line-height: 1.15;
     margin-bottom: 24px;
-    color: #0f172a;
+    color: var(--text-primary);
 }
 
 .highlight {
-    color: #0f766e;
+    color: var(--primary-color);
 }
 
 .heroSubtitle {
     font-size: 1.125rem;
-    color: #64748b;
+    color: var(--text-secondary);
     max-width: 720px;
     margin: 0 auto 40px;
     line-height: 1.7;
@@ -134,8 +209,9 @@
 
 .btnPrimary {
     padding: 12px 24px;
-    background: #0f766e;
+    background: var(--primary-color);
     color: white;
+    /* Always white on primary btn */
     text-decoration: none;
     border-radius: 8px;
     font-weight: 500;
@@ -148,19 +224,19 @@
 }
 
 .btnPrimary:hover {
-    background: #0d6962;
+    background: var(--primary-hover);
     transform: translateY(-1px);
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
 .btnSecondary {
     padding: 12px 24px;
-    background: white;
-    color: #334155;
+    background: var(--btn-secondary-bg);
+    color: var(--btn-secondary-text);
     text-decoration: none;
     border-radius: 8px;
     font-weight: 500;
-    border: 1px solid #e2e8f0;
+    border: 1px solid var(--btn-secondary-border);
     transition: all 0.2s;
     display: inline-flex;
     align-items: center;
@@ -169,8 +245,8 @@
 }
 
 .btnSecondary:hover {
-    background: #f8fafc;
-    border-color: #cbd5e1;
+    background: var(--btn-secondary-hover);
+    border-color: var(--border-color);
 }
 
 .trustBar {
@@ -186,12 +262,12 @@
     font-size: 11px;
     text-transform: uppercase;
     letter-spacing: 1px;
-    color: #94a3b8;
+    color: var(--text-tertiary);
     font-weight: 600;
 }
 
 .trustFirm {
-    color: #64748b;
+    color: var(--text-secondary);
     font-weight: bold;
     font-style: italic;
     font-family: Georgia, serif;
@@ -200,8 +276,9 @@
 /* Problem Section */
 .problem {
     padding: 80px 24px;
-    background: #f8fafc;
-    border-bottom: 1px solid #e2e8f0;
+    background: var(--section-problem-bg);
+    border-bottom: 1px solid var(--border-color);
+    transition: background-color 0.3s ease;
 }
 
 .problemContent {
@@ -214,18 +291,19 @@
     font-size: 1.5rem;
     font-weight: 600;
     margin-bottom: 16px;
-    color: #0f172a;
+    color: var(--text-primary);
 }
 
 .problem p {
-    color: #475569;
+    color: var(--text-secondary);
     line-height: 1.7;
 }
 
 /* System Section */
 .system {
     padding: 96px 24px;
-    background: white;
+    background: var(--section-system-bg);
+    transition: background-color 0.3s ease;
 }
 
 .systemGrid {
@@ -247,49 +325,52 @@
 .pillarIcon {
     width: 48px;
     height: 48px;
-    background: #f8fafc;
-    border: 1px solid #f1f5f9;
+    background: var(--icon-bg);
+    border: 1px solid var(--icon-border);
     border-radius: 8px;
     display: flex;
     align-items: center;
     justify-content: center;
     margin-bottom: 24px;
-    color: #334155;
+    color: var(--text-secondary);
     transition: all 0.2s;
 }
 
 .pillar:hover .pillarIcon {
-    background: rgba(15, 118, 110, 0.05);
+    background: var(--card-hover-bg);
     border-color: rgba(15, 118, 110, 0.1);
+    color: var(--primary-color);
 }
 
 .pillar h3 {
     font-size: 1.125rem;
     font-weight: bold;
     margin-bottom: 8px;
-    color: #0f172a;
+    color: var(--text-primary);
 }
 
 .pillarReplaces {
     font-size: 11px;
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    color: #94a3b8;
+    color: var(--text-tertiary);
     font-weight: 600;
     margin-bottom: 16px;
 }
 
 .pillar p {
-    color: #475569;
+    color: var(--text-secondary);
     font-size: 14px;
     line-height: 1.7;
 }
 
-/* Drafter Section */
+/* Drafter Section - This is always dark, so we can keep hardcoded or make responsive if desired. 
+   User likely expects this to be "extra dark" in dark mode. */
 .drafter {
     padding: 96px 24px;
-    background: #0f172a;
+    background: var(--section-drafter-bg);
     color: white;
+    transition: background-color 0.3s ease;
 }
 
 .drafterContent {
@@ -319,6 +400,8 @@
     font-size: 2rem;
     font-weight: bold;
     margin-bottom: 16px;
+    color: #ffffff;
+    /* Always white inside this section */
 }
 
 .drafterDesc {
@@ -347,6 +430,7 @@
 /* Drafter Demo */
 .drafterDemo {
     background: #020617;
+    /* Keep very dark */
     border: 1px solid #1e293b;
     border-radius: 8px;
     padding: 24px;
@@ -459,9 +543,11 @@
 /* CTA Section */
 .cta {
     padding: 96px 24px;
-    background: white;
-    border-top: 1px solid #f1f5f9;
+    background: var(--section-hero-bg);
+    /* Match hero */
+    border-top: 1px solid var(--border-color);
     text-align: center;
+    transition: background-color 0.3s ease;
 }
 
 .ctaContent {
@@ -473,12 +559,12 @@
     font-size: 2rem;
     font-weight: bold;
     margin-bottom: 24px;
-    color: #0f172a;
+    color: var(--text-primary);
 }
 
 .cta p {
     font-size: 1rem;
-    color: #64748b;
+    color: var(--text-secondary);
     margin-bottom: 40px;
 }
 
@@ -492,14 +578,14 @@
 
 .footerMeta {
     padding-top: 32px;
-    border-top: 1px solid #f1f5f9;
+    border-top: 1px solid var(--border-color);
     display: flex;
     justify-content: space-between;
     align-items: center;
     flex-wrap: wrap;
     gap: 16px;
     font-size: 12px;
-    color: #94a3b8;
+    color: var(--text-tertiary);
 }
 
 .footerLinks {
@@ -508,13 +594,13 @@
 }
 
 .footerLinks a {
-    color: #94a3b8;
+    color: var(--text-tertiary);
     text-decoration: none;
     transition: color 0.2s;
 }
 
 .footerLinks a:hover {
-    color: #475569;
+    color: var(--text-secondary);
 }
 
 /* Icons */
@@ -539,6 +625,10 @@
 @media (max-width: 768px) {
     .hero h1 {
         font-size: 2.5rem;
+    }
+
+    .navContent {
+        padding: 0 16px;
     }
 
     .drafterContent {
