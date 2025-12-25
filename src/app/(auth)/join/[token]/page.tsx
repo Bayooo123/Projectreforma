@@ -3,6 +3,8 @@ import { verifyInviteToken } from "@/app/actions/join";
 import RegisterForm from "@/components/auth/RegisterForm";
 import Link from "next/link";
 
+export const dynamic = 'force-dynamic';
+
 export default async function JoinPage({ params }: { params: { token: string } }) {
     const { token } = params;
     const result = await verifyInviteToken(token);
