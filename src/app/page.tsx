@@ -16,15 +16,13 @@ export default function LandingPage() {
     observerRef.current = new IntersectionObserver((entries) => {
       entries.forEach((entry) => {
         if (entry.isIntersecting) {
-          entry.target.classList.add('opacity-100', 'translate-y-0');
-          entry.target.classList.remove('opacity-0', 'translate-y-5');
+          entry.target.classList.add('visible');
         }
       });
     }, { threshold: 0.1, rootMargin: "0px 0px -50px 0px" });
 
-    const elements = document.querySelectorAll('.reveal-on-scroll');
+    const elements = document.querySelectorAll('.reveal');
     elements.forEach((el) => {
-      el.classList.add('opacity-0', 'translate-y-5', 'transition-all', 'duration-700', 'ease-out');
       observerRef.current?.observe(el);
     });
 
@@ -101,7 +99,7 @@ export default function LandingPage() {
 
       {/* Problem Section */}
       <section className="py-20 px-6 bg-slate-50 border-b border-slate-200">
-        <div className="max-w-[800px] mx-auto text-center reveal-on-scroll">
+        <div className="max-w-[800px] mx-auto text-center reveal">
           <h2 className="text-2xl font-semibold text-slate-900 mb-4">The "Institutional Memory" Gap</h2>
           <p className="text-base text-slate-600 leading-[1.7]">
             Most firms rely on the memory of senior partners and physical files. When a key associate leaves,
@@ -116,7 +114,7 @@ export default function LandingPage() {
         <div className="max-w-[1280px] mx-auto grid grid-cols-1 md:grid-cols-3 gap-12">
 
           {/* Pillar 1 */}
-          <div className="group reveal-on-scroll hover:-translate-y-1 transition-transform duration-200">
+          <div className="group reveal hover:-translate-y-1 transition-transform duration-200">
             <div className="w-12 h-12 bg-slate-50 border border-slate-100 rounded-lg flex items-center justify-center text-slate-700 mb-6 group-hover:bg-teal-700/5 group-hover:border-teal-700/10 transition-colors">
               <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
@@ -132,7 +130,7 @@ export default function LandingPage() {
           </div>
 
           {/* Pillar 2 */}
-          <div className="group reveal-on-scroll delay-100 hover:-translate-y-1 transition-transform duration-200">
+          <div className="group reveal delay-100 hover:-translate-y-1 transition-transform duration-200">
             <div className="w-12 h-12 bg-slate-50 border border-slate-100 rounded-lg flex items-center justify-center text-slate-700 mb-6 group-hover:bg-teal-700/5 group-hover:border-teal-700/10 transition-colors">
               <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" />
@@ -149,7 +147,7 @@ export default function LandingPage() {
           </div>
 
           {/* Pillar 3 */}
-          <div className="group reveal-on-scroll delay-200 hover:-translate-y-1 transition-transform duration-200">
+          <div className="group reveal delay-200 hover:-translate-y-1 transition-transform duration-200">
             <div className="w-12 h-12 bg-slate-50 border border-slate-100 rounded-lg flex items-center justify-center text-slate-700 mb-6 group-hover:bg-teal-700/5 group-hover:border-teal-700/10 transition-colors">
               <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
@@ -171,7 +169,7 @@ export default function LandingPage() {
       <section className="py-24 px-6 bg-slate-900 text-white overflow-hidden">
         <div className="max-w-[1280px] mx-auto grid md:grid-cols-2 gap-16 items-center">
 
-          <div className="reveal-on-scroll">
+          <div className="reveal">
             <div className="inline-flex px-2.5 py-1 rounded bg-teal-500/10 border border-teal-500/30 text-teal-300 text-[10px] font-bold uppercase tracking-widest mb-6">
               Product Spotlight
             </div>
@@ -197,7 +195,7 @@ export default function LandingPage() {
           </div>
 
           {/* Drafter Demo (Dark/Code Metaphor) */}
-          <div className="bg-[#020617] border border-slate-800 rounded-lg p-6 shadow-2xl reveal-on-scroll delay-200 font-mono text-xs leading-relaxed">
+          <div className="bg-[#020617] border border-slate-800 rounded-lg p-6 shadow-2xl reveal delay-200 font-mono text-xs leading-relaxed">
             <div className="flex items-center justify-between border-b border-slate-800 pb-4 mb-6">
               <div className="flex gap-1.5">
                 <div className="w-3 h-3 rounded-full bg-slate-800"></div>
@@ -245,7 +243,7 @@ export default function LandingPage() {
 
       {/* CTA Footer */}
       <footer className="py-24 px-6 bg-white border-t border-slate-100 text-center">
-        <div className="max-w-[720px] mx-auto reveal-on-scroll">
+        <div className="max-w-[720px] mx-auto reveal">
           <h2 className="text-[2rem] font-bold text-slate-900 mb-6">Build Your Firm's Infrastructure</h2>
           <p className="text-base text-slate-500 mb-10">
             Join the forward-thinking firms scaling their operations with Reforma.

@@ -388,9 +388,22 @@ small {
   -webkit-text-fill-color: transparent;
 }
 
+
 .text-gradient-teal {
   background: linear-gradient(135deg, #115E59 0%, #2DD4BF 100%);
   background-clip: text;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
+}
+
+/* Robust Scroll Reveal Animation (Matches Landing Page Design) */
+.reveal {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+}
+
+.reveal.visible {
+  opacity: 1;
+  transform: translateY(0);
 }
