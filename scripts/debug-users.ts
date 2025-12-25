@@ -22,7 +22,7 @@ async function listAllUsers() {
             console.log('User Table Columns:', Object.keys(allUsers[0]).join(', '));
         }
 
-        let ascolpUsers = [];
+        let ascolpUsers: any[] = [];
         let bayoFound = false;
 
         allUsers.forEach((u: any) => {
