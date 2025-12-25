@@ -11,7 +11,7 @@ async function listUsersConcise() {
         // Select ALL users to avoid column errors
         const allUsers: any = await prisma.$queryRaw`SELECT * FROM "User"`;
 
-        let ascolpUsers = [];
+        let ascolpUsers: any[] = [];
         let bayoFound = false;
 
         if (workspace) {
