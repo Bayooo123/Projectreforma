@@ -7,12 +7,13 @@ import { ArrowLeft, FileText } from 'lucide-react';
 import Link from 'next/link';
 
 interface DraftingPageProps {
-    params: {
+    params: Promise<{
         briefId: string;
-    }
+    }>
 }
 
-export default async function DraftingPage({ params }: DraftingPageProps) {
+export default async function DraftingPage(props: DraftingPageProps) {
+    const params = await props.params;
     const { briefId } = params;
 
     // 1. Fetch Brief Context
