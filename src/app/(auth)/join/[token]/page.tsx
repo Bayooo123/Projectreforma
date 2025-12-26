@@ -5,7 +5,8 @@ import Link from "next/link";
 
 export const dynamic = 'force-dynamic';
 
-export default async function JoinPage({ params }: { params: { token: string } }) {
+export default async function JoinPage(props: { params: Promise<{ token: string }> }) {
+    const params = await props.params;
     const { token } = params;
     const result = await verifyInviteToken(token);
 
