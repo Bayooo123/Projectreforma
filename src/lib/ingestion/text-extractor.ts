@@ -1,6 +1,8 @@
 
-const pdf = require('pdf-parse');
 import mammoth from 'mammoth';
+
+// Use standard require for pdfjs-dist legacy build (Node.js compatible)
+const pdfjsLib = require("pdfjs-dist/legacy/build/pdf.js");
 
 export class TextExtractor {
 
@@ -25,8 +27,27 @@ export class TextExtractor {
     }
 
     private static async extractPdf(buffer: Buffer): Promise<string> {
-        const data = await pdf(buffer);
-        return data.text;
+        // Load the PDF file
+        const uint8Array = new Uint8Array(buffer);
+        const loadingTask = pdfjsLib.getDocument({ data: uint8Array });
+        const doc = await loadingTask.promise;
+
+        let fullText = '';
+
+        // Iterate through each page
+        for (let i = 1; i <= doc.numPages; i++) {
+            const page = await doc.getPage(i);
+            const textContent = await page.getTextContent();
+
+            // Extract text items
+            const pageText = textContent.items
+                .map((item: any) => item.str)
+                .join(' ');
+
+            fullText += pageText + '\n\n';
+        }
+
+        return fullText;
     }
 
     private static async extractDocx(buffer: Buffer): Promise<string> {
