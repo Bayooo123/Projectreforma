@@ -3,12 +3,14 @@
 
 generator client {
   provider = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
 }
 
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
   directUrl = env("DIRECT_URL")
+  extensions = [vector]
 }
 
 // ============================================
@@ -330,6 +332,21 @@ model Document {
   brief Brief @relation(fields: [briefId], references: [id], onDelete: Cascade)
 
   @@index([briefId])
+
+  chunks     DocumentChunk[]
+}
+
+model DocumentChunk {
+  id         String   @id @default(cuid())
+  documentId String
+  content    String   @db.Text
+  embedding  Unsupported("vector(768)")? // Standard OpenAI/Gemini embedding size
+  chunkIndex Int
+  metadata   Json?    // Page number, bbox, etc.
+  
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@index([documentId])
 }
 
 model Client {
@@ -604,6 +621,10 @@ model DraftingSession {
   userId      String
   status      String   // 'in_progress', 'completed', 'abandoned'
   currentStepId String? // ID of the node user is currently on
+  
+  // New Fields for "Fresh Drafting"
+  mode        String   @default("template") // 'template' | 'fresh' | 'review'
+  context     Json?    // The "Strategy/Instruction" derived from user prompt
   
   // Compiled Data
   variables   Json?    // Flattened map of all answers { rent_amount: 50000 }
