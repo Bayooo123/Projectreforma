@@ -111,9 +111,9 @@ export default function BriefDetailClient({ brief }: BriefDetailClientProps) {
                         <span>Back to Briefs</span>
                     </Link>
                     <div className={styles.actions}>
-                        <Link href={`/drafting?briefId=${brief.id}`} className={styles.draftBtn}>
+                        <Link href={`/management/drafting/${brief.id}`} className={styles.draftBtn}>
                             <Hammer size={16} />
-                            Start Drafting
+                            Open Drafting Studio
                         </Link>
                         <button className={styles.editBtn} onClick={() => setIsEditModalOpen(true)}>
                             <Edit size={16} />
