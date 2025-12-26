@@ -19,7 +19,7 @@ export const authConfig = {
                 return false; // Redirect unauthenticated users to login page
             } else if (isLoggedIn) {
                 // Redirect logged-in users away from login/register pages to dashboard
-                if (nextUrl.pathname === '/login' || nextUrl.pathname === '/register') {
+                if (['/login', '/register', '/join', '/forgot-password'].includes(nextUrl.pathname)) {
                     return Response.redirect(new URL('/management', nextUrl));
                 }
             }
