@@ -1,5 +1,4 @@
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
-import { Activity, FileText, UserPlus, Scale, MessageSquare, ArrowRight } from 'lucide-react';
+import { Activity, FileText, UserPlus, Scale, MessageSquare } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/ScrollArea';
 import { Button } from '@/components/ui/Button';
 import Link from 'next/link';
@@ -35,61 +34,68 @@ export function FirmPulse({ logs }: FirmPulseProps) {
     };
 
     const getIcon = (activityType: string) => {
-        if (activityType.includes('document')) return <FileText className="w-4 h-4 text-white" />;
-        if (activityType.includes('client')) return <UserPlus className="w-4 h-4 text-white" />;
-        if (activityType.includes('court')) return <Scale className="w-4 h-4 text-white" />;
-        if (activityType.includes('note')) return <MessageSquare className="w-4 h-4 text-white" />;
-        return <Activity className="w-4 h-4 text-white" />;
+        if (activityType.includes('document')) return <FileText className="w-4 h-4 text-teal-600" />;
+        if (activityType.includes('client')) return <UserPlus className="w-4 h-4 text-emerald-600" />;
+        if (activityType.includes('court')) return <Scale className="w-4 h-4 text-purple-600" />;
+        if (activityType.includes('note')) return <MessageSquare className="w-4 h-4 text-amber-600" />;
+        return <Activity className="w-4 h-4 text-slate-500" />;
     };
 
     const getIconBg = (activityType: string) => {
-        if (activityType.includes('document')) return 'bg-blue-500';
-        if (activityType.includes('client')) return 'bg-green-500';
-        if (activityType.includes('court')) return 'bg-purple-500';
-        if (activityType.includes('note')) return 'bg-amber-500';
-        return 'bg-slate-500';
+        if (activityType.includes('document')) return 'bg-teal-50';
+        if (activityType.includes('client')) return 'bg-emerald-50';
+        if (activityType.includes('court')) return 'bg-purple-50';
+        if (activityType.includes('note')) return 'bg-amber-50';
+        return 'bg-slate-50';
     };
 
     return (
-        <Card className="h-full shadow-sm hover:shadow-md transition-shadow border-t-4 border-t-slate-500">
-            <CardHeader className="pb-4 border-b border-slate-50">
-                <div className="flex items-center justify-between">
-                    <CardTitle className="text-xl font-bold flex items-center text-slate-800">
-                        <Activity className="w-5 h-5 mr-3 text-slate-600" />
+        <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden transition-all duration-300 hover:shadow-lg h-full flex flex-col">
+            {/* Colored Header */}
+            <div className="bg-gradient-to-r from-teal-500 to-emerald-600 p-6 flex justify-between items-center text-white">
+                <div>
+                    <h3 className="text-xl font-medium flex items-center">
+                        <Activity className="w-5 h-5 mr-3 opacity-90" />
                         Firm Pulse
-                    </CardTitle>
-                    <Link href="/analytics">
-                        <div className="text-xs font-medium px-2 py-1 rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors">
-                            Live Feed
-                        </div>
-                    </Link>
+                    </h3>
+                    <p className="text-sm font-light opacity-90 mt-1">Live activity feed</p>
                 </div>
-            </CardHeader>
-            <CardContent className="p-0">
+                <Link href="/analytics">
+                    <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-white/20 backdrop-blur-sm border border-white/20">
+                        <span className="relative flex h-2 w-2">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-300 opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400"></span>
+                        </span>
+                        <span className="text-xs font-medium text-white">Live</span>
+                    </div>
+                </Link>
+            </div>
+
+            <div className="p-0 flex-1 bg-white">
                 <ScrollArea className="h-[600px]">
                     {logs.length === 0 ? (
-                        <div className="text-center py-12 text-muted-foreground text-sm flex flex-col items-center">
-                            <div className="h-12 w-12 rounded-full bg-slate-100 flex items-center justify-center mb-3">
-                                <Activity className="w-6 h-6 text-slate-300" />
+                        <div className="flex flex-col items-center justify-center py-12 px-4 text-center h-full">
+                            <div className="w-16 h-16 rounded-full bg-slate-50 flex items-center justify-center mb-4">
+                                <Activity className="w-8 h-8 text-slate-300" />
                             </div>
-                            <p>No recent firm activity.</p>
+                            <p className="text-slate-500">No recent activity recorded.</p>
                         </div>
                     ) : (
                         <div className="relative pl-8 pr-6 py-6 space-y-8">
                             {/* Vertical Line */}
-                            <div className="absolute left-[30px] top-6 bottom-6 w-px bg-slate-200" />
+                            <div className="absolute left-[30px] top-6 bottom-6 w-px bg-slate-100" />
 
                             {logs.map((log) => (
                                 <div key={log.id} className="relative group">
                                     {/* Icon Bubble */}
-                                    <div className={`absolute -left-[30px] top-1 h-8 w-8 rounded-full ${getIconBg(log.activityType)} flex items-center justify-center shadow-sm ring-4 ring-white z-10 group-hover:scale-110 transition-transform`}>
+                                    <div className={`absolute -left-[30px] top-1 h-8 w-8 rounded-full ${getIconBg(log.activityType)} flex items-center justify-center shadow-sm border-2 border-white z-10 transition-transform group-hover:scale-110`}>
                                         {getIcon(log.activityType)}
                                     </div>
 
-                                    <div className="flex flex-col gap-1.5 p-3 rounded-lg hover:bg-slate-50 transition-colors -mt-2">
+                                    <div className="flex flex-col gap-1.5 p-3 rounded-lg group-hover:bg-slate-50 transition-colors -mt-2">
                                         <div className="flex justify-between items-start">
                                             <p className="text-sm text-slate-800 leading-snug">
-                                                <span className="font-bold">{log.performedBy}</span>
+                                                <span className="font-semibold text-slate-900">{log.performedBy}</span>
                                                 {' '}
                                                 <span className="text-slate-600">{log.description.toLowerCase()}</span>
                                             </p>
@@ -99,8 +105,8 @@ export function FirmPulse({ logs }: FirmPulseProps) {
                                         </div>
 
                                         {log.entityName && (
-                                            <div className="flex items-center text-xs font-medium text-slate-500 bg-slate-100 px-2 py-1 rounded w-fit group-hover:bg-white group-hover:shadow-sm transition-all border border-transparent group-hover:border-slate-100">
-                                                {log.type === 'matter' ? <Scale className="w-3 h-3 mr-1.5" /> : <FileText className="w-3 h-3 mr-1.5" />}
+                                            <div className="flex items-center text-xs font-medium text-slate-500 bg-slate-100/50 px-2 py-1 rounded w-fit border border-slate-100">
+                                                {log.type === 'matter' ? <Scale className="w-3 h-3 mr-1.5 opacity-70" /> : <FileText className="w-3 h-3 mr-1.5 opacity-70" />}
                                                 {log.entityName}
                                             </div>
                                         )}
@@ -110,7 +116,7 @@ export function FirmPulse({ logs }: FirmPulseProps) {
                         </div>
                     )}
                 </ScrollArea>
-            </CardContent>
-        </Card>
+            </div>
+        </div>
     );
 }

@@ -1,5 +1,5 @@
 import { ArrowUpRight, Calendar, CheckSquare, FileText, TrendingUp, BarChart2 } from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/Card';
+import { Card } from '@/components/ui/Card';
 import { cn } from "@/lib/utils";
 
 interface MetricsRowProps {
@@ -23,94 +23,93 @@ export function MetricsRow({ metrics, userRole }: MetricsRowProps) {
         }).format(amount / 100);
     };
 
-    const MetricCard = ({
+    const StatCard = ({
         title,
         value,
         icon: Icon,
-        colorClass,
-        bgClass,
-        footerText,
-        footerClass,
+        gradientClass,
+        iconClass,
+        subtext,
         isPrivate = false
     }: any) => (
-        <Card className={cn("overflow-hidden transition-all duration-200 hover:shadow-md border-t-4", colorClass)}>
-            <CardContent className="p-6">
-                <div className="flex justify-between items-start mb-4">
-                    <div className={cn("p-2.5 rounded-lg", bgClass)}>
-                        <Icon className={cn("w-5 h-5", footerClass)} />
-                    </div>
-                    {isPrivate && (
-                        <div className="text-[10px] uppercase font-bold tracking-wider text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">
-                            Private
-                        </div>
-                    )}
-                </div>
+        <div className={cn(
+            "relative overflow-hidden rounded-xl bg-white p-6 border border-slate-200 transition-all duration-300 hover:shadow-lg hover:-translate-y-1 group cursor-pointer",
+            isPrivate && "opacity-75"
+        )}>
+            {/* Hover Gradient Overlay */}
+            <div className={cn(
+                "absolute inset-0 opacity-0 group-hover:opacity-5 transition-opacity duration-500",
+                gradientClass
+            )} />
 
-                <div className="space-y-1">
-                    <h3 className="text-3xl font-bold tracking-tight text-slate-900">{value}</h3>
-                    <p className="text-sm font-medium text-slate-500">{title}</p>
+            <div className="flex justify-between items-start mb-4 relative z-10">
+                <div className={cn(
+                    "w-12 h-12 rounded-xl flex items-center justify-center shadow-sm text-white",
+                    iconClass
+                )}>
+                    <Icon className="w-6 h-6" />
                 </div>
+                {isPrivate && (
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 bg-slate-100 px-2 py-1 rounded-full">
+                        Private
+                    </span>
+                )}
+            </div>
 
-                <div className="mt-4 pt-4 border-t border-slate-50 flex items-center">
-                    <div className={cn("text-xs font-medium px-2 py-0.5 rounded-full bg-opacity-10 w-fit", bgClass, footerClass)}>
-                        {footerText}
-                    </div>
-                </div>
-            </CardContent>
-        </Card>
+            <div className="relative z-10">
+                <div className="text-3xl font-light text-slate-900 mb-1">{value}</div>
+                <div className="text-sm font-medium text-slate-500">{title}</div>
+                {subtext && <div className="text-xs font-light text-slate-400 mt-1">{subtext}</div>}
+            </div>
+        </div>
     );
 
     return (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            <MetricCard
-                title="My Pending Tasks"
+            <StatCard
+                title="Pending Tasks"
                 value={metrics.pendingTasks}
                 icon={CheckSquare}
-                colorClass="border-t-blue-500"
-                bgClass="bg-blue-50"
-                footerClass="text-blue-600"
-                footerText="Requires Action"
+                gradientClass="bg-gradient-to-br from-amber-500 to-orange-600"
+                iconClass="bg-gradient-to-br from-amber-500 to-orange-600"
+                subtext="Requires Action"
             />
 
-            <MetricCard
-                title="Court Dates (7 Days)"
+            <StatCard
+                title="Court Dates"
                 value={metrics.upcomingHearings}
                 icon={Calendar}
-                colorClass="border-t-purple-500"
-                bgClass="bg-purple-50"
-                footerClass="text-purple-600"
-                footerText="Upcoming"
+                gradientClass="bg-gradient-to-br from-purple-500 to-pink-500"
+                iconClass="bg-gradient-to-br from-purple-500 to-pink-500"
+                subtext="Next 7 Days"
             />
 
-            <MetricCard
+            <StatCard
                 title="Active Briefs"
                 value={metrics.activeBriefs}
                 icon={FileText}
-                colorClass="border-t-amber-500"
-                bgClass="bg-amber-50"
-                footerClass="text-amber-600"
-                footerText="In Progress"
+                gradientClass="bg-gradient-to-br from-blue-500 to-cyan-500"
+                iconClass="bg-gradient-to-br from-blue-500 to-cyan-500"
+                subtext="In Progress"
             />
 
             {isPartner ? (
-                <MetricCard
+                <StatCard
                     title="Revenue (MTD)"
                     value={formatCurrency(metrics.monthlyRevenue || 0)}
                     icon={TrendingUp}
-                    colorClass="border-t-emerald-500"
-                    bgClass="bg-emerald-50"
-                    footerClass="text-emerald-600"
-                    footerText="+12% vs last month"
+                    gradientClass="bg-gradient-to-br from-emerald-500 to-teal-500"
+                    iconClass="bg-gradient-to-br from-emerald-500 to-teal-500"
+                    subtext="Verified Income"
                 />
             ) : (
-                <MetricCard
+                <StatCard
                     title="Firm Utilization"
                     value="--"
                     icon={BarChart2}
-                    colorClass="border-t-slate-300"
-                    bgClass="bg-slate-100"
-                    footerClass="text-slate-500"
-                    footerText="Restricted Access"
+                    gradientClass="bg-gradient-to-br from-slate-500 to-slate-600"
+                    iconClass="bg-gradient-to-br from-slate-500 to-slate-600"
+                    subtext="Restricted Access"
                     isPrivate={true}
                 />
             )}

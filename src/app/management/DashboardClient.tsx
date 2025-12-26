@@ -5,9 +5,7 @@ import { MetricsRow } from "@/components/dashboard/MetricsRow";
 import { UpcomingHearings } from "@/components/dashboard/UpcomingHearings";
 import { FirmPulse } from "@/components/dashboard/FirmPulse";
 import { TaskAssignmentWidget } from "@/components/dashboard/TaskAssignmentWidget";
-import { Button } from "@/components/ui/Button";
-import { Plus } from "lucide-react";
-import Link from "next/link";
+import { cn } from "@/lib/utils";
 
 interface DashboardClientProps {
     initialData: {
@@ -22,70 +20,55 @@ interface DashboardClientProps {
 export default function DashboardClient({ initialData }: DashboardClientProps) {
     const { data: session } = useSession();
     const user = session?.user;
-    // TODO: Add proper role check
-    const userRole = 'partner'; // Placeholder until properly passed from session/db
+    const userRole = 'partner';
+
+    const currentDate = new Intl.DateTimeFormat('en-GB', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+    }).format(new Date());
 
     return (
-        <div className="p-6 max-w-[1600px] mx-auto space-y-6">
-            {/* Header */}
-            <div className="flex justify-between items-center mb-8">
-                <div>
-                    <h1 className="text-3xl font-bold text-slate-900">
-                        Good morning, {user?.name?.split(' ')[0] || 'Counsel'}
-                    </h1>
-                    <p className="text-slate-500 mt-1">Here is what's happening in your firm today.</p>
-                </div>
-                <div className="flex gap-3">
-                    <Link href="/calendar">
-                        <Button variant="outline">
-                            View Calendar
-                        </Button>
-                    </Link>
-                    <Link href="/briefs">
-                        <Button className="bg-slate-900 hover:bg-slate-800">
-                            <Plus className="w-4 h-4 mr-2" />
-                            New Matter
-                        </Button>
-                    </Link>
-                </div>
+        <div className="p-8 max-w-[1600px] mx-auto min-h-screen">
+            {/* Welcome Section */}
+            <div className="mb-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+                <h2 className="text-3xl font-light text-slate-900 mb-2">
+                    Good morning, <span className="font-medium bg-gradient-to-r from-teal-600 to-emerald-600 bg-clip-text text-transparent">
+                        {user?.name?.split(' ')[0] || 'Counsel'}
+                    </span>
+                </h2>
+                <p className="text-lg font-light text-slate-500">{currentDate}</p>
             </div>
 
-            {/* 1. The Pulse (Metrics) */}
-            <MetricsRow metrics={initialData.metrics} userRole={userRole} />
+            {/* Stats Grid */}
+            <div className="mb-8 animate-in fade-in slide-in-from-bottom-5 duration-1000 delay-100 fill-mode-both">
+                <MetricsRow metrics={initialData.metrics} userRole={userRole} />
+            </div>
 
-            {/* 2. Main Grid */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            {/* Cards Grid */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 animate-in fade-in slide-in-from-bottom-6 duration-1000 delay-200 fill-mode-both">
 
-                {/* Left Column: My Priorities (Task & Calendar Focus) - Spans 7 cols */}
-                <div className="lg:col-span-7 space-y-6">
-                    <div className="grid grid-cols-1 gap-6">
-                        {/* Upcoming Hearings */}
+                {/* Left Column: Hearings & Quick Actions */}
+                <div className="space-y-8">
+                    {/* Upcoming Hearings (Feature Card Purple) */}
+                    <div className="h-[400px]">
                         <UpcomingHearings hearings={initialData.upcomingHearings} />
                     </div>
 
-                    {/* My Tasks Widget (Existing) */}
-                    {/* We reuse the TaskAssignmentWidget but maybe wrap it to fit the style? 
-                It seems designed as a full widget. Let's place it here. 
-            */}
-                    <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-                        <div className="p-4 border-b border-slate-100 bg-slate-50/50">
-                            <h3 className="font-semibold text-lg">My Priorities</h3>
-                        </div>
-                        <div className="p-0">
-                            <TaskAssignmentWidget
-                                initialTasks={initialData.tasks}
-                                users={initialData.users}
-                                currentUserId={user?.id || ''}
-                            />
-                        </div>
+                    {/* Quick Actions (Task Widget) */}
+                    <div className="h-auto">
+                        <TaskAssignmentWidget
+                            initialTasks={initialData.tasks}
+                            users={initialData.users}
+                            currentUserId={user?.id || ''}
+                        />
                     </div>
                 </div>
 
-                {/* Right Column: Firm Intelligence (Async Awareness) - Spans 5 cols */}
-                <div className="lg:col-span-5 space-y-6">
+                {/* Right Column: Firm Pulse (Feature Card Green/Blue) */}
+                <div className="h-full min-h-[600px]">
                     <FirmPulse logs={initialData.firmPulseLogs} />
-
-                    {/* Quick Links / Resources could go here */}
                 </div>
 
             </div>
