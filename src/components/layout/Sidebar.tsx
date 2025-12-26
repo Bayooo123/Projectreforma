@@ -28,7 +28,7 @@ const Sidebar = ({ user }: SidebarProps) => {
   const pathname = usePathname();
 
   const navItems = [
-    { name: 'Overview', href: '/', icon: LayoutDashboard },
+    { name: 'Overview', href: '/management', icon: LayoutDashboard },
     { name: 'Briefs Manager', href: '/briefs', icon: FileText },
     { name: 'Drafting Studio', href: '/drafting', icon: PenTool },
     { name: 'Litigation', href: '/calendar', icon: Gavel },
@@ -38,9 +38,7 @@ const Sidebar = ({ user }: SidebarProps) => {
   ];
 
   const isActive = (path: string) => {
-    if (path === '/' && pathname === '/') return true;
-    if (path !== '/' && pathname.startsWith(path)) return true;
-    return false;
+    return pathname === path || pathname.startsWith(path + '/');
   };
 
   return (
