@@ -1,5 +1,5 @@
 import { ArrowUpRight, Calendar, CheckSquare, FileText, TrendingUp } from 'lucide-react';
-import { Card } from '@/components/ui/card';
+import { Card } from '@/components/ui/Card';
 
 interface MetricsRowProps {
     metrics: {

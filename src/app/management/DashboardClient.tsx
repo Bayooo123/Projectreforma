@@ -5,7 +5,7 @@ import { MetricsRow } from "@/components/dashboard/MetricsRow";
 import { UpcomingHearings } from "@/components/dashboard/UpcomingHearings";
 import { FirmPulse } from "@/components/dashboard/FirmPulse";
 import { TaskAssignmentWidget } from "@/components/dashboard/TaskAssignmentWidget";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui/Button";
 import { Plus } from "lucide-react";
 import Link from "next/link";
 
