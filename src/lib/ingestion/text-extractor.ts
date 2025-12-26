@@ -1,7 +1,7 @@
 
 import mammoth from 'mammoth';
 
-// Use standard require for pdfjs-dist legacy build (Node.js compatible)
+// Use standard require for pdfjs-dist v3 legacy build
 const pdfjsLib = require("pdfjs-dist/legacy/build/pdf.js");
 
 export class TextExtractor {
