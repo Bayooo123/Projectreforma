@@ -2,7 +2,7 @@
 import { prisma } from '@/lib/prisma';
 import { notFound, redirect } from 'next/navigation';
 import { AgentChat } from '@/components/drafting/AgentChat';
-import { LiveEditorWrapper } from './LiveEditorWrapper'; // Client wrapper for the state
+import { LiveEditorWrapper } from './LiveEditorWrapper';
 import { ArrowLeft, FileText } from 'lucide-react';
 import Link from 'next/link';
 

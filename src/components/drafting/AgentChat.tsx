@@ -2,8 +2,8 @@
 'use client';
 
 import { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
+import { Button } from '@/components/ui/Button';
+import { Textarea } from '@/components/ui/Textarea';
 import { Loader2, Send, Sparkles } from 'lucide-react';
 import { generateDraftAction } from '@/app/actions/drafting';
 
@@ -82,9 +82,9 @@ export function AgentChat({ briefId, onDraftReceived }: AgentChatProps) {
                     <Textarea
                         placeholder="E.g., Draft a Motion on Notice..."
                         value={input}
-                        onChange={(e) => setInput(e.target.value)}
+                        onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setInput(e.target.value)}
                         className="min-h-[80px] pr-12 resize-none bg-slate-50 border-slate-200 focus:bg-white transition-all"
-                        onKeyDown={(e) => {
+                        onKeyDown={(e: React.KeyboardEvent<HTMLTextAreaElement>) => {
                             if (e.key === 'Enter' && !e.shiftKey) {
                                 e.preventDefault();
                                 handleSend();
