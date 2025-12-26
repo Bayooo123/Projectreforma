@@ -100,7 +100,6 @@ export function MetricsRow({ metrics, userRole }: MetricsRowProps) {
                 <StatCard
                     title="Verified Revenue"
                     value={formatCurrency(metrics.monthlyRevenue || 0)}
-                    icon={TrendingUp}
                     gradientClass="bg-emerald-500"
                     iconClass="hidden"
                     noIcon={true}
