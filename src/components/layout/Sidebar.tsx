@@ -38,6 +38,10 @@ const Sidebar = ({ user }: SidebarProps) => {
   ];
 
   const isActive = (path: string) => {
+    // Strict match for the root Overview page to prevent it from being active on sub-pages
+    if (path === '/management') {
+      return pathname === path;
+    }
     return pathname === path || pathname.startsWith(path + '/');
   };
 

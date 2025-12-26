@@ -6,7 +6,13 @@ import styles from './TaskAssignmentWidget.module.css';
 
 const STAFF = ['Kemi Adeniran', 'Adebayo Ogundimu', 'Bola Okafor', 'Chinedu Okeke'];
 
-const TaskAssignmentWidget = () => {
+interface TaskAssignmentWidgetProps {
+    initialTasks?: any[];
+    users?: any[];
+    currentUserId?: string;
+}
+
+export function TaskAssignmentWidget({ initialTasks, users, currentUserId }: TaskAssignmentWidgetProps) {
     const [task, setTask] = useState('');
     const [assignee, setAssignee] = useState('');
     const [dueDate, setDueDate] = useState('');
@@ -73,6 +79,7 @@ const TaskAssignmentWidget = () => {
             </div>
         </div>
     );
-};
+}
 
-export default TaskAssignmentWidget;
+// Remove default export
+
