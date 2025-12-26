@@ -1,12 +1,13 @@
-import { ArrowUpRight, Calendar, CheckSquare, FileText, TrendingUp } from 'lucide-react';
-import { Card } from '@/components/ui/Card';
+import { ArrowUpRight, Calendar, CheckSquare, FileText, TrendingUp, BarChart2 } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/Card';
+import { cn } from "@/lib/utils";
 
 interface MetricsRowProps {
     metrics: {
         pendingTasks: number;
         upcomingHearings: number;
         activeBriefs: number;
-        monthlyRevenue?: number; // Optional, only for partners
+        monthlyRevenue?: number;
     };
     userRole?: string;
 }
@@ -19,98 +20,100 @@ export function MetricsRow({ metrics, userRole }: MetricsRowProps) {
             style: 'currency',
             currency: 'NGN',
             minimumFractionDigits: 0,
-        }).format(amount / 100); // Amount is in kobo
+        }).format(amount / 100);
     };
 
+    const MetricCard = ({
+        title,
+        value,
+        icon: Icon,
+        colorClass,
+        bgClass,
+        footerText,
+        footerClass,
+        isPrivate = false
+    }: any) => (
+        <Card className={cn("overflow-hidden transition-all duration-200 hover:shadow-md border-t-4", colorClass)}>
+            <CardContent className="p-6">
+                <div className="flex justify-between items-start mb-4">
+                    <div className={cn("p-2.5 rounded-lg", bgClass)}>
+                        <Icon className={cn("w-5 h-5", footerClass)} />
+                    </div>
+                    {isPrivate && (
+                        <div className="text-[10px] uppercase font-bold tracking-wider text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">
+                            Private
+                        </div>
+                    )}
+                </div>
+
+                <div className="space-y-1">
+                    <h3 className="text-3xl font-bold tracking-tight text-slate-900">{value}</h3>
+                    <p className="text-sm font-medium text-slate-500">{title}</p>
+                </div>
+
+                <div className="mt-4 pt-4 border-t border-slate-50 flex items-center">
+                    <div className={cn("text-xs font-medium px-2 py-0.5 rounded-full bg-opacity-10 w-fit", bgClass, footerClass)}>
+                        {footerText}
+                    </div>
+                </div>
+            </CardContent>
+        </Card>
+    );
+
     return (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-            <Card className="p-4 border-l-4 border-l-blue-500 shadow-sm hover:shadow-md transition-shadow">
-                <div className="flex justify-between items-start">
-                    <div>
-                        <p className="text-sm font-medium text-muted-foreground">My Tasks</p>
-                        <h3 className="text-2xl font-bold mt-1">{metrics.pendingTasks}</h3>
-                    </div>
-                    <div className="p-2 bg-blue-50 rounded-lg">
-                        <CheckSquare className="w-5 h-5 text-blue-600" />
-                    </div>
-                </div>
-                <div className="mt-2 flex items-center text-xs text-muted-foreground">
-                    <span className="text-blue-600 font-medium flex items-center">
-                        Pending Action
-                    </span>
-                </div>
-            </Card>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <MetricCard
+                title="My Pending Tasks"
+                value={metrics.pendingTasks}
+                icon={CheckSquare}
+                colorClass="border-t-blue-500"
+                bgClass="bg-blue-50"
+                footerClass="text-blue-600"
+                footerText="Requires Action"
+            />
 
-            <Card className="p-4 border-l-4 border-l-purple-500 shadow-sm hover:shadow-md transition-shadow">
-                <div className="flex justify-between items-start">
-                    <div>
-                        <p className="text-sm font-medium text-muted-foreground">Court Dates</p>
-                        <h3 className="text-2xl font-bold mt-1">{metrics.upcomingHearings}</h3>
-                    </div>
-                    <div className="p-2 bg-purple-50 rounded-lg">
-                        <Calendar className="w-5 h-5 text-purple-600" />
-                    </div>
-                </div>
-                <div className="mt-2 flex items-center text-xs text-muted-foreground">
-                    <span className="text-purple-600 font-medium">
-                        Next 7 Days
-                    </span>
-                </div>
-            </Card>
+            <MetricCard
+                title="Court Dates (7 Days)"
+                value={metrics.upcomingHearings}
+                icon={Calendar}
+                colorClass="border-t-purple-500"
+                bgClass="bg-purple-50"
+                footerClass="text-purple-600"
+                footerText="Upcoming"
+            />
 
-            <Card className="p-4 border-l-4 border-l-amber-500 shadow-sm hover:shadow-md transition-shadow">
-                <div className="flex justify-between items-start">
-                    <div>
-                        <p className="text-sm font-medium text-muted-foreground">Active Briefs</p>
-                        <h3 className="text-2xl font-bold mt-1">{metrics.activeBriefs}</h3>
-                    </div>
-                    <div className="p-2 bg-amber-50 rounded-lg">
-                        <FileText className="w-5 h-5 text-amber-600" />
-                    </div>
-                </div>
-                <div className="mt-2 flex items-center text-xs text-muted-foreground">
-                    <span className="text-amber-600 font-medium">
-                        In Progress
-                    </span>
-                </div>
-            </Card>
+            <MetricCard
+                title="Active Briefs"
+                value={metrics.activeBriefs}
+                icon={FileText}
+                colorClass="border-t-amber-500"
+                bgClass="bg-amber-50"
+                footerClass="text-amber-600"
+                footerText="In Progress"
+            />
 
-            {/* Financials - Only visible to Partners/Owners */}
             {isPartner ? (
-                <Card className="p-4 border-l-4 border-l-emerald-500 shadow-sm hover:shadow-md transition-shadow">
-                    <div className="flex justify-between items-start">
-                        <div>
-                            <p className="text-sm font-medium text-muted-foreground">Revenue (MTD)</p>
-                            <h3 className="text-xl font-bold mt-1">{formatCurrency(metrics.monthlyRevenue || 0)}</h3>
-                        </div>
-                        <div className="p-2 bg-emerald-50 rounded-lg">
-                            <TrendingUp className="w-5 h-5 text-emerald-600" />
-                        </div>
-                    </div>
-                    <div className="mt-2 flex items-center text-xs text-muted-foreground">
-                        <span className="text-emerald-600 font-medium flex items-center">
-                            <ArrowUpRight className="w-3 h-3 mr-1" /> Verified
-                        </span>
-                    </div>
-                </Card>
+                <MetricCard
+                    title="Revenue (MTD)"
+                    value={formatCurrency(metrics.monthlyRevenue || 0)}
+                    icon={TrendingUp}
+                    colorClass="border-t-emerald-500"
+                    bgClass="bg-emerald-50"
+                    footerClass="text-emerald-600"
+                    footerText="+12% vs last month"
+                />
             ) : (
-                <Card className="p-4 border-l-4 border-l-slate-200 shadow-sm opacity-60">
-                    <div className="flex justify-between items-start">
-                        <div>
-                            <p className="text-sm font-medium text-muted-foreground">Firm Utilization</p>
-                            <h3 className="text-2xl font-bold mt-1">--</h3>
-                        </div>
-                        <div className="p-2 bg-slate-100 rounded-lg">
-                            <BarChart2 className="w-5 h-5 text-slate-400" />
-                        </div>
-                    </div>
-                    <div className="mt-2 text-xs text-muted-foreground">
-                        Restricted Access
-                    </div>
-                </Card>
+                <MetricCard
+                    title="Firm Utilization"
+                    value="--"
+                    icon={BarChart2}
+                    colorClass="border-t-slate-300"
+                    bgClass="bg-slate-100"
+                    footerClass="text-slate-500"
+                    footerText="Restricted Access"
+                    isPrivate={true}
+                />
             )}
         </div>
     );
 }
-
-import { BarChart2 } from 'lucide-react';

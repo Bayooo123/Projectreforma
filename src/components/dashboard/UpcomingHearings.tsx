@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
-import { Calendar, Gavel, MapPin, Clock } from 'lucide-react';
+import { Button } from '@/components/ui/Button';
+import { Calendar, Gavel, MapPin, Clock, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 
 interface Hearing {
@@ -22,8 +23,6 @@ export function UpcomingHearings({ hearings }: UpcomingHearingsProps) {
             weekday: 'short',
             day: 'numeric',
             month: 'short',
-            // hour: 'numeric',
-            // minute: 'numeric'
         }).format(date);
     };
 
@@ -37,60 +36,84 @@ export function UpcomingHearings({ hearings }: UpcomingHearingsProps) {
         return `In ${diffDays} days`;
     };
 
+    const getBadgeVariant = (daysText: string) => {
+        if (daysText === 'Today') return 'destructive';
+        if (daysText === 'Tomorrow') return 'secondary'; // using secondary which is usually orange/yellow/purple depending on theme, or we can use custom class
+        return 'outline';
+    };
+
     return (
-        <Card className="h-full shadow-sm hover:shadow-md transition-shadow">
-            <CardHeader className="pb-2">
+        <Card className="h-full shadow-sm hover:shadow-md transition-shadow border-t-4 border-t-purple-500">
+            <CardHeader className="pb-4 border-b border-slate-50">
                 <div className="flex items-center justify-between">
-                    <CardTitle className="text-lg font-semibold flex items-center">
-                        <Gavel className="w-5 h-5 mr-2 text-primary" />
+                    <CardTitle className="text-xl font-bold flex items-center text-slate-800">
+                        <Gavel className="w-5 h-5 mr-3 text-purple-600" />
                         Upcoming Hearings
                     </CardTitle>
-                    <Link href="/calendar" className="text-xs text-primary hover:underline">
-                        View Calendar
+                    <Link href="/calendar">
+                        <Button variant="ghost" size="sm" className="text-sm font-medium text-purple-600 hover:text-purple-700 hover:bg-purple-50">
+                            View Calendar <ArrowRight className="w-4 h-4 ml-1" />
+                        </Button>
                     </Link>
                 </div>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-0">
                 {hearings.length === 0 ? (
-                    <div className="text-center py-8 text-muted-foreground text-sm">
-                        <Calendar className="w-8 h-8 mx-auto mb-2 opacity-20" />
-                        No active court dates in the next 30 days.
+                    <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
+                        <div className="p-4 bg-slate-50 rounded-full mb-3">
+                            <Calendar className="w-8 h-8 text-slate-300" />
+                        </div>
+                        <h4 className="text-slate-900 font-medium mb-1">No hearings this week</h4>
+                        <p className="text-slate-500 text-sm max-w-[200px]">You have no upcoming court dates scheduled for the next 7 days.</p>
+                        <Link href="/calendar/new" className="mt-4">
+                            <Button variant="outline" size="sm">Schedule Hearing</Button>
+                        </Link>
                     </div>
                 ) : (
-                    <div className="space-y-4">
-                        {hearings.map((hearing) => (
-                            <div key={hearing.id} className="group relative pl-4 border-l-2 border-slate-200 hover:border-primary transition-colors">
-                                <Link href={`/calendar?matterId=${hearing.id}`} className="block">
-                                    <div className="flex justify-between items-start mb-1">
-                                        <h4 className="font-medium text-sm group-hover:text-primary transition-colors line-clamp-1">
-                                            {hearing.name}
-                                        </h4>
-                                        <Badge variant="outline" className="text-xs shrink-0 ml-2 bg-slate-50">
-                                            {hearing.nextCourtDate ? getDaysUntil(new Date(hearing.nextCourtDate)) : ''}
+                    <div className="divide-y divide-slate-100">
+                        {hearings.map((hearing) => {
+                            const daysText = hearing.nextCourtDate ? getDaysUntil(new Date(hearing.nextCourtDate)) : '';
+                            return (
+                                <Link
+                                    href={`/calendar?matterId=${hearing.id}`}
+                                    key={hearing.id}
+                                    className="block p-4 hover:bg-slate-50 transition-colors group"
+                                >
+                                    <div className="flex justify-between items-start mb-2">
+                                        <div className="flex-1 min-w-0 pr-4">
+                                            <h4 className="font-semibold text-slate-900 truncate group-hover:text-purple-700 transition-colors">
+                                                {hearing.name}
+                                            </h4>
+                                            <div className="flex items-center text-xs text-slate-500 mt-1">
+                                                <span className="font-mono bg-slate-100 px-1.5 py-0.5 rounded text-slate-600 mr-2">
+                                                    {hearing.caseNumber}
+                                                </span>
+                                                {hearing.court && (
+                                                    <span className="flex items-center truncate" title={hearing.court}>
+                                                        <MapPin className="w-3 h-3 mr-1 text-slate-400" />
+                                                        {hearing.court.split(',')[0]}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+                                        <Badge
+                                            variant={getBadgeVariant(daysText) as any}
+                                            className="shrink-0 whitespace-nowrap"
+                                        >
+                                            {daysText}
                                         </Badge>
                                     </div>
 
-                                    <div className="text-xs text-muted-foreground flex flex-col gap-1">
-                                        <span className="font-mono text-[10px] bg-slate-100 px-1 py-0.5 rounded w-fit text-slate-600">
-                                            {hearing.caseNumber}
-                                        </span>
-
-                                        <div className="flex items-center gap-2 mt-1">
-                                            <span className="flex items-center">
-                                                <Calendar className="w-3 h-3 mr-1" />
-                                                {hearing.nextCourtDate ? formatDate(new Date(hearing.nextCourtDate)) : 'No Date'}
-                                            </span>
-                                            {hearing.court && (
-                                                <span className="flex items-center" title={hearing.court}>
-                                                    <MapPin className="w-3 h-3 mr-1" />
-                                                    {hearing.court.split(',')[0]}
-                                                </span>
-                                            )}
+                                    <div className="flex items-center justify-between mt-3 text-sm">
+                                        <div className="flex items-center text-slate-600 font-medium bg-purple-50 px-2 py-1 rounded text-xs">
+                                            <Calendar className="w-3.5 h-3.5 mr-1.5 text-purple-600" />
+                                            {hearing.nextCourtDate ? formatDate(new Date(hearing.nextCourtDate)) : 'No Date'}
                                         </div>
+                                        <ArrowRight className="w-4 h-4 text-slate-300 group-hover:text-purple-400 -translate-x-2 opacity-0 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-200" />
                                     </div>
                                 </Link>
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
                 )}
             </CardContent>
