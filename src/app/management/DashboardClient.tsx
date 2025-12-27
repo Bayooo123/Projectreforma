@@ -2,6 +2,7 @@
 
 import { useSession } from "next-auth/react";
 import Link from 'next/link';
+import { useState, useRef, useEffect } from 'react';
 import {
     Check,
     Calendar,
@@ -11,28 +12,47 @@ import {
     UserPlus,
     FilePlus,
     BarChart2,
-    ArrowRight
 } from 'lucide-react';
+import { PendingTasksModal } from "@/components/dashboard/PendingTasksModal";
+import { CourtDatesModal } from "@/components/dashboard/CourtDatesModal";
 
 interface DashboardClientProps {
     initialData: {
         metrics: {
             pendingTasks: number;
-            upcomingHearings: number; // Count for metric
+            upcomingHearings: number;
             activeBriefs: number;
             monthlyRevenue: number;
         };
         upcomingHearings: any[];
         firmPulseLogs: any[];
-        tasks: any[]; // Kept for future use if needed
+        tasks: any[];
         users: any[];
-        myBriefs: any[]; // Kept for data availability
+        myBriefs: any[];
     }
 }
 
 export default function DashboardClient({ initialData }: DashboardClientProps) {
     const { data: session } = useSession();
     const user = session?.user;
+
+    // State for Modals & Dropdowns
+    const [isPendingTasksOpen, setIsPendingTasksOpen] = useState(false);
+    const [isCourtDatesOpen, setIsCourtDatesOpen] = useState(false);
+    const [isActiveBriefsOpen, setIsActiveBriefsOpen] = useState(false);
+
+    const dropdownRef = useRef<HTMLDivElement>(null);
+
+    // Close dropdown when clicking outside
+    useEffect(() => {
+        function handleClickOutside(event: MouseEvent) {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+                setIsActiveBriefsOpen(false);
+            }
+        }
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
 
     const currentDate = new Intl.DateTimeFormat('en-GB', {
         weekday: 'long',
@@ -41,8 +61,13 @@ export default function DashboardClient({ initialData }: DashboardClientProps) {
         day: 'numeric',
     }).format(new Date());
 
-    const Card = ({ title, value, subtitle, icon: Icon }: any) => (
-        <div className="bg-white rounded-xl p-7 shadow-[0_1px_3px_rgba(0,0,0,0.08)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.12)] hover:-translate-y-0.5 transition-all duration-300">
+    const Card = ({ title, value, subtitle, icon: Icon, onClick, isActive, hasDropdown }: any) => (
+        <div
+            onClick={onClick}
+            className={`bg-white rounded-xl p-7 shadow-[0_1px_3px_rgba(0,0,0,0.08)] transition-all duration-300 relative cursor-pointer
+                ${isActive ? '' : 'hover:shadow-[0_4px_12px_rgba(0,0,0,0.12)] hover:-translate-y-0.5'}
+            `}
+        >
             <div className="flex justify-between items-start mb-5">
                 <div>
                     <div className="text-sm text-slate-500 uppercase tracking-wide font-semibold mb-2">{title}</div>
@@ -53,11 +78,29 @@ export default function DashboardClient({ initialData }: DashboardClientProps) {
                     <Icon size={20} strokeWidth={2.5} />
                 </div>
             </div>
+
+            {/* Dropdown Content */}
+            {hasDropdown && isActive && (
+                <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-[0_8px_24px_rgba(0,0,0,0.15)] z-20 max-h-[400px] overflow-y-auto animate-in fade-in zoom-in-95 duration-200">
+                    {initialData.myBriefs.length === 0 ? (
+                        <div className="p-5 text-center text-slate-500 text-sm">No active briefs</div>
+                    ) : (
+                        initialData.myBriefs.slice(0, 8).map((brief: any) => (
+                            <Link href={`/briefs/${brief.id}`} key={brief.id}>
+                                <div className="p-4 border-b border-slate-100 last:border-0 hover:bg-[#f8fffe] transition-colors group">
+                                    <div className="font-semibold text-slate-800 text-sm mb-1 group-hover:text-[#0f5f5a]">{brief.name}</div>
+                                    <div className="text-xs text-slate-400">Updated {formatTimeAgo(new Date(brief.updatedAt))}</div>
+                                </div>
+                            </Link>
+                        ))
+                    )}
+                </div>
+            )}
         </div>
     );
 
     return (
-        <div className="max-w-[1400px] mx-auto">
+        <div className="max-w-[1400px] mx-auto pb-12">
             {/* Greeting Section */}
             <div className="mb-10 animate-in fade-in slide-in-from-top-2 duration-700">
                 <h1 className="text-3xl font-semibold text-slate-800 mb-2">
@@ -69,132 +112,95 @@ export default function DashboardClient({ initialData }: DashboardClientProps) {
             </div>
 
             {/* Dashboard Grid - 3 Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6 animate-in fade-in slide-in-from-bottom-5 duration-1000 delay-100 fill-mode-both">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 animate-in fade-in slide-in-from-bottom-5 duration-1000 delay-100 fill-mode-both">
                 <Card
                     title="Pending Tasks"
                     value={initialData.metrics.pendingTasks}
                     subtitle="Requires Action"
                     icon={Check}
+                    onClick={() => setIsPendingTasksOpen(true)}
                 />
                 <Card
                     title="Court Dates"
                     value={initialData.metrics.upcomingHearings}
                     subtitle="Next 7 Days"
                     icon={Calendar}
+                    onClick={() => setIsCourtDatesOpen(true)}
                 />
-                <Card
-                    title="Active Briefs"
-                    value={initialData.metrics.activeBriefs}
-                    subtitle="In Progress"
-                    icon={FileText}
-                />
+
+                {/* Active Briefs with Dropdown */}
+                <div ref={dropdownRef} className="relative z-10">
+                    <Card
+                        title="Active Briefs"
+                        value={initialData.metrics.activeBriefs}
+                        subtitle="In Progress"
+                        icon={FileText}
+                        onClick={() => setIsActiveBriefsOpen(!isActiveBriefsOpen)}
+                        isActive={isActiveBriefsOpen}
+                        hasDropdown={true}
+                    />
+                </div>
             </div>
 
-            {/* Main Section */}
-            <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-6 animate-in fade-in slide-in-from-bottom-6 duration-1000 delay-200 fill-mode-both">
-
-                {/* Large Card 1: Upcoming Hearings + Quick Actions */}
-                <div className="bg-white rounded-xl p-8 shadow-[0_1px_3px_rgba(0,0,0,0.08)]">
-                    <div className="flex justify-between items-center mb-6">
-                        <div className="text-xl font-semibold text-slate-800">Upcoming Hearings</div>
-                        <Link href="/calendar" className="text-teal-800 text-sm font-medium hover:opacity-70 transition-opacity">
-                            View Calendar →
-                        </Link>
-                    </div>
-
-                    {initialData.upcomingHearings.length === 0 ? (
-                        <div className="text-center py-10 px-5 text-slate-500 border border-dashed border-slate-200 rounded-xl mb-8">
-                            <div className="text-5xl mb-4 opacity-30 mx-auto w-fit">📅</div>
-                            <div className="text-base font-semibold text-slate-600 mb-2">No hearings this week</div>
-                            <div className="text-sm mb-6">Your calendar is clear. Enjoy the focus time.</div>
-                            <Link href="/calendar">
-                                <button className="bg-[#0f5f5a] text-white border-0 py-3 px-6 rounded-lg font-semibold cursor-pointer transition-all duration-200 text-sm hover:bg-[#0d4d49] hover:-translate-y-px hover:shadow-lg shadow-teal-900/20">
-                                    Schedule Hearing
-                                </button>
-                            </Link>
-                        </div>
-                    ) : (
-                        <div className="flex flex-col gap-4 mb-8">
-                            {initialData.upcomingHearings.slice(0, 3).map((hearing: any) => (
-                                <div key={hearing.id} className="p-5 border border-slate-200 rounded-xl hover:border-[#0f5f5a] hover:bg-[#f8fffe] transition-all cursor-pointer group">
-                                    <div className="flex justify-between items-start">
-                                        <div>
-                                            <div className="font-semibold text-slate-800 text-[15px] mb-1 group-hover:text-[#0f5f5a] transition-colors">{hearing.title}</div>
-                                            <div className="text-sm text-slate-500">
-                                                {new Date(hearing.date).toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })} at {new Date(hearing.date).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}
-                                            </div>
-                                        </div>
-                                        <div className="px-3 py-1 bg-amber-100 text-amber-800 text-xs font-bold rounded-full">
-                                            Upcoming
-                                        </div>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    )}
-
-                    <div className="mt-6 pt-6 border-t border-slate-100">
-                        <div className="text-base font-semibold text-slate-800 mb-3">Quick Actions</div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                            <Link href="/drafting" className="p-4 border border-slate-200 rounded-lg bg-white text-left cursor-pointer transition-all duration-200 text-sm font-medium text-slate-800 hover:border-[#0f5f5a] hover:bg-[#f8fffe] flex items-center gap-3">
-                                <Zap size={16} className="text-amber-500" />
-                                Draft Motion
-                            </Link>
-                            <Link href="/management/clients" className="p-4 border border-slate-200 rounded-lg bg-white text-left cursor-pointer transition-all duration-200 text-sm font-medium text-slate-800 hover:border-[#0f5f5a] hover:bg-[#f8fffe] flex items-center gap-3">
-                                <UserPlus size={16} className="text-blue-500" />
-                                Add Client
-                            </Link>
-                            <Link href="/briefs" className="p-4 border border-slate-200 rounded-lg bg-white text-left cursor-pointer transition-all duration-200 text-sm font-medium text-slate-800 hover:border-[#0f5f5a] hover:bg-[#f8fffe] flex items-center gap-3">
-                                <FilePlus size={16} className="text-emerald-500" />
-                                File Brief
-                            </Link>
-                            <Link href="/analytics" className="p-4 border border-slate-200 rounded-lg bg-white text-left cursor-pointer transition-all duration-200 text-sm font-medium text-slate-800 hover:border-[#0f5f5a] hover:bg-[#f8fffe] flex items-center gap-3">
-                                <BarChart2 size={16} className="text-purple-500" />
-                                View Reports
-                            </Link>
-                        </div>
+            {/* Firmware Pulse Section - Full Width */}
+            <div className="bg-white rounded-xl p-8 shadow-[0_1px_3px_rgba(0,0,0,0.08)] animate-in fade-in slide-in-from-bottom-6 duration-1000 delay-200 fill-mode-both">
+                <div className="flex justify-between items-center mb-8">
+                    <div className="text-2xl font-semibold text-slate-800">Firm Pulse</div>
+                    <div className="inline-flex items-center gap-2 text-emerald-500 text-[13px] font-semibold px-4 py-2 bg-emerald-50 rounded-full">
+                        <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
+                        LIVE
                     </div>
                 </div>
 
-                {/* Large Card 2: Firm Pulse */}
-                <div className="bg-white rounded-xl p-8 shadow-[0_1px_3px_rgba(0,0,0,0.08)] h-full min-h-[500px] flex flex-col">
-                    <div className="flex justify-between items-center mb-6">
-                        <div className="text-xl font-semibold text-slate-800">Firm Pulse</div>
-                        <div className="inline-flex items-center gap-1.5 text-emerald-500 text-[13px] font-bold">
-                            <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
-                            LIVE
-                        </div>
-                    </div>
-
+                <div className="flex flex-col">
                     {initialData.firmPulseLogs.length === 0 ? (
-                        <div className="text-center py-10 px-5 text-slate-400 flex flex-col items-center justify-center flex-1">
+                        <div className="text-center py-16 px-5 text-slate-400">
                             <div className="text-5xl mb-4 opacity-30">📊</div>
                             <div className="text-base font-semibold text-slate-600 mb-2">No recent activity</div>
                             <div className="text-sm">Activity will appear here as your team works</div>
                         </div>
                     ) : (
-                        <div className="flex flex-col gap-5 overflow-y-auto max-h-[600px] pr-2 -mr-2 custom-scrollbar">
-                            {initialData.firmPulseLogs.map((log: any) => (
-                                <div key={log.id} className="flex gap-3 items-start">
-                                    <div className="w-2 h-2 rounded-full bg-[#0f5f5a] mt-1.5 shrink-0 opacity-60"></div>
-                                    <div>
-                                        <div className="text-sm text-slate-800 mb-1 leading-snug">
-                                            <span className="font-semibold">{log.user?.name || log.performedBy || 'System'}</span>
-                                            {' '}{log.description}{' '}
-                                            <span className="font-medium text-slate-600">
-                                                {log.matter?.title || log.brief?.name || ''}
-                                            </span>
-                                        </div>
-                                        <div className="text-xs text-slate-400">
-                                            {formatTimeAgo(new Date(log.timestamp))}
-                                        </div>
+                        initialData.firmPulseLogs.map((log: any) => (
+                            <div key={log.id} className="py-6 border-b border-slate-100 last:border-0 hover:bg-[#f8fffe] hover:-mx-8 hover:px-8 transition-all duration-200 group flex gap-5 items-start">
+                                <div className="flex flex-col items-center gap-2 mt-1 shrink-0">
+                                    <div className="w-3 h-3 rounded-full bg-[#0f5f5a]"></div>
+                                    <div className="w-0.5 h-full bg-slate-200 group-last:hidden"></div>
+                                </div>
+                                <div className="flex-1 pt-0.5">
+                                    <div className="font-bold text-slate-800 text-base mb-2">
+                                        {log.matter?.name || log.brief?.name || 'General Activity'}
+                                    </div>
+                                    <div className="text-[15px] text-slate-600 leading-normal mb-2">
+                                        <span className="font-semibold text-[#0f5f5a]">{log.performedBy || 'System'}</span>
+                                        {' '}
+                                        {/* Normalize description to lowercase but ensure first letter isn't if it's a name, though CSS text-transform is safer if we want strict lowercase. Design shows normal case sentences. */}
+                                        {log.description}
+                                    </div>
+                                    <div className="text-[13px] text-slate-400 font-medium">
+                                        {formatTime(new Date(log.timestamp))} • {formatDate(new Date(log.timestamp))}
                                     </div>
                                 </div>
-                            ))}
-                        </div>
+                            </div>
+                        ))
                     )}
                 </div>
             </div>
+
+            {/* Quick Actions (Keep generic or hidden if only modals requested? User asked for THIS HTML which didn't show the quick actions at bottom, but we can keep them or remove depending on strictness. The user said "this is what i want...". The shared HTML DOES NOT have the 2-column layout with quick actions anymore. It has a single Firmware Pulse section. I will stick to the provided HTML structure.) */}
+
+            {/* Modals */}
+            <PendingTasksModal
+                isOpen={isPendingTasksOpen}
+                onClose={() => setIsPendingTasksOpen(false)}
+                tasks={initialData.tasks}
+            />
+
+            <CourtDatesModal
+                isOpen={isCourtDatesOpen}
+                onClose={() => setIsCourtDatesOpen(false)}
+                hearings={initialData.upcomingHearings}
+            />
+
         </div>
     );
 }
@@ -212,4 +218,12 @@ function formatTimeAgo(date: Date) {
     interval = seconds / 60;
     if (interval > 1) return Math.floor(interval) + "m ago";
     return "just now";
+}
+
+function formatTime(date: Date) {
+    return new Intl.DateTimeFormat('en-US', { hour: 'numeric', minute: 'numeric', hour12: true }).format(date);
+}
+
+function formatDate(date: Date) {
+    return new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }).format(date);
 }
