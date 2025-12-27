@@ -4,7 +4,7 @@ import { useSession } from "next-auth/react";
 import { MetricsRow } from "@/components/dashboard/MetricsRow";
 import { UpcomingHearings } from "@/components/dashboard/UpcomingHearings";
 import { FirmPulse } from "@/components/dashboard/FirmPulse";
-import { TaskAssignmentWidget } from "@/components/dashboard/TaskAssignmentWidget";
+import { MyBriefsWidget } from "@/components/dashboard/MyBriefsWidget";
 import { cn } from "@/lib/utils";
 
 interface DashboardClientProps {
@@ -14,6 +14,7 @@ interface DashboardClientProps {
         firmPulseLogs: any[];
         tasks: any[];
         users: any[];
+        myBriefs: any[];
     }
 }
 
@@ -58,13 +59,9 @@ export default function DashboardClient({ initialData }: DashboardClientProps) {
                         <UpcomingHearings hearings={initialData.upcomingHearings} />
                     </div>
 
-                    {/* Quick Actions (Task Widget) */}
+                    {/* Quick Actions (My Briefs Widget) */}
                     <div className="h-auto">
-                        <TaskAssignmentWidget
-                            initialTasks={initialData.tasks}
-                            users={initialData.users}
-                            currentUserId={user?.id || ''}
-                        />
+                        <MyBriefsWidget briefs={initialData.myBriefs} />
                     </div>
                 </div>
 

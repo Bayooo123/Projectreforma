@@ -30,7 +30,7 @@ const Sidebar = ({ user }: SidebarProps) => {
   const navItems = [
     { name: 'Overview', href: '/management', icon: LayoutDashboard },
     { name: 'Briefs Manager', href: '/briefs', icon: FileText },
-    { name: 'Drafting Studio', href: '/drafting', icon: PenTool },
+    // { name: 'Drafting Studio', href: '/drafting', icon: PenTool },
     { name: 'Litigation', href: '/calendar', icon: Gavel },
     { name: 'Client Manager', href: '/management/clients', icon: Users },
     { name: 'Officer Manager', href: '/management/office', icon: Briefcase },

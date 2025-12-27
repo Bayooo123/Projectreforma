@@ -2,6 +2,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import DashboardClient from "./DashboardClient";
 import { redirect } from "next/navigation";
+import { getMyBriefs } from "@/app/actions/dashboard";
 
 export const dynamic = 'force-dynamic'; // Ensure real-time data
 
@@ -141,7 +142,8 @@ async function getDashboardData(userId: string, workspaceId: string) {
         upcomingHearings,
         firmPulseLogs: combinedLogs,
         tasks,
-        users
+        users,
+        myBriefs: await getMyBriefs(5)
     };
 }
 

@@ -50,6 +50,8 @@ interface BriefDetailClientProps {
     brief: Brief;
 }
 
+import { BriefActivityLogInput } from '@/components/briefs/BriefActivityLogInput';
+
 export default function BriefDetailClient({ brief }: BriefDetailClientProps) {
     const router = useRouter();
     const [documents, setDocuments] = useState(brief.documents);
@@ -175,6 +177,10 @@ export default function BriefDetailClient({ brief }: BriefDetailClientProps) {
             </div>
 
             <div className={styles.content}>
+                <div className="mb-8">
+                    <BriefActivityLogInput briefId={brief.id} />
+                </div>
+
                 <DocumentUpload briefId={brief.id} onUploadComplete={refreshDocuments} />
 
                 <div className={styles.documentsHeader}>
