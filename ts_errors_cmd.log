@@ -1,0 +1,4 @@
+.next/dev/types/validator.ts(287,1): error TS1434: Unexpected keyword or identifier.
+.next/dev/types/validator.ts(287,3): error TS1128: Declaration or statement expected.
+.next/dev/types/validator.ts(287,58): error TS1109: Expression expected.
+.next/dev/types/validator.ts(292,1): error TS1128: Declaration or statement expected.

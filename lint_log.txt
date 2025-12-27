@@ -1,0 +1,902 @@
+
+> reforma-os@0.1.0 lint
+> eslint
+
+
+C:\Users\DELL\.gemini\antigravity\scratch\reforma-os\check_brief_integrity.js
+  1:26  error  A `require()` style import is forbidden  @typescript-eslint/no-require-imports
+
+C:\Users\DELL\.gemini\antigravity\scratch\reforma-os\check_columns.js
+  1:26  error  A `require()` style import is forbidden  @typescript-eslint/no-require-imports
+
+C:\Users\DELL\.gemini\antigravity\scratch\reforma-os\check_db.js
+  1:26  error  A `require()` style import is forbidden  @typescript-eslint/no-require-imports
+
+C:\Users\DELL\.gemini\antigravity\scratch\reforma-os\check_env.js
+  1:1  error  A `require()` style import is forbidden  @typescript-eslint/no-require-imports
+
+C:\Users\DELL\.gemini\antigravity\scratch\reforma-os\create-document-table.js
+  2:26  error  A `require()` style import is forbidden  @typescript-eslint/no-require-imports
+
+C:\Users\DELL\.gemini\antigravity\scratch\reforma-os\debug-audit-integrity.js
+  1:26  error  A `require()` style import is forbidden  @typescript-eslint/no-require-imports
+
+C:\Users\DELL\.gemini\antigravity\scratch\reforma-os\debug-brief-detail.js
+  2:26  error  A `require()` style import is forbidden  @typescript-eslint/no-require-imports
+
+C:\Users\DELL\.gemini\antigravity\scratch\reforma-os\debug-brief-visibility.js
+  2:26  error  A `require()` style import is forbidden  @typescript-eslint/no-require-imports
+
+C:\Users\DELL\.gemini\antigravity\scratch\reforma-os\debug-check-tables.js
+  2:26  error  A `require()` style import is forbidden  @typescript-eslint/no-require-imports
+
+C:\Users\DELL\.gemini\antigravity\scratch\reforma-os\debug-simulate-failure.js
+  2:26  error  A `require()` style import is forbidden  @typescript-eslint/no-require-imports
+
+C:\Users\DELL\.gemini\antigravity\scratch\reforma-os\debug-workspace-owners.js
+  2:26  error  A `require()` style import is forbidden  @typescript-eslint/no-require-imports
+
+C:\Users\DELL\.gemini\antigravity\scratch\reforma-os\fix_db_push.js
+  1:18  error  A `require()` style import is forbidden  @typescript-eslint/no-require-imports
+  2:1   error  A `require()` style import is forbidden  @typescript-eslint/no-require-imports
+
+C:\Users\DELL\.gemini\antigravity\scratch\reforma-os\fix_missing_column.js
+   1:26  error    A `require()` style import is forbidden  @typescript-eslint/no-require-imports
+  28:22  warning  'e' is defined but never used            @typescript-eslint/no-unused-vars
+
+C:\Users\DELL\.gemini\antigravity\scratch\reforma-os\scripts\check-abiola-user.ts
+   9:27  error    Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any
+  22:15  warning  'searchEmail' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  25:22  error    Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any
+  31:31  error    Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any
+
+C:\Users\DELL\.gemini\antigravity\scratch\reforma-os\scripts\check-auth-details.ts
+   9:27  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  10:22  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\DELL\.gemini\antigravity\scratch\reforma-os\scripts\check-schema.js
+  2:26  error  A `require()` style import is forbidden  @typescript-eslint/no-require-imports
+
+C:\Users\DELL\.gemini\antigravity\scratch\reforma-os\scripts\debug-users.ts
+   9:27  error  Unexpected any. Specify a different type                @typescript-eslint/no-explicit-any
+  17:25  error  Unexpected any. Specify a different type                @typescript-eslint/no-explicit-any
+  25:13  error  'ascolpUsers' is never reassigned. Use 'const' instead  prefer-const
+  25:26  error  Unexpected any. Specify a different type                @typescript-eslint/no-explicit-any
+  28:30  error  Unexpected any. Specify a different type                @typescript-eslint/no-explicit-any
+  45:33  error  Unexpected any. Specify a different type                @typescript-eslint/no-explicit-any
+
+C:\Users\DELL\.gemini\antigravity\scratch\reforma-os\scripts\find-client-workspace.ts
+   9:24  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  15:44  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  41:39  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\DELL\.gemini\antigravity\scratch\reforma-os\scripts\find-entity.js
+  2:26  error  A `require()` style import is forbidden  @typescript-eslint/no-require-imports
+
+C:\Users\DELL\.gemini\antigravity\scratch\reforma-os\scripts\fix-schema-raw.js
+  2:26  error  A `require()` style import is forbidden  @typescript-eslint/no-require-imports
+
+C:\Users\DELL\.gemini\antigravity\scratch\reforma-os\scripts\inspect-schema.ts
+   9:28  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  16:33  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  23:35  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  26:40  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\DELL\.gemini\antigravity\scratch\reforma-os\scripts\list-all-workspaces.ts
+   9:27  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  15:37  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\DELL\.gemini\antigravity\scratch\reforma-os\scripts\list-users-concise.ts
+   8:27  error    Unexpected any. Specify a different type                @typescript-eslint/no-explicit-any
+  12:25  error    Unexpected any. Specify a different type                @typescript-eslint/no-explicit-any
+  14:13  error    'ascolpUsers' is never reassigned. Use 'const' instead  prefer-const
+  14:26  error    Unexpected any. Specify a different type                @typescript-eslint/no-explicit-any
+  18:34  error    Unexpected any. Specify a different type                @typescript-eslint/no-explicit-any
+  34:14  warning  'error' is defined but never used                       @typescript-eslint/no-unused-vars
+
+C:\Users\DELL\.gemini\antigravity\scratch\reforma-os\scripts\list-workspace-users-final.ts
+   9:27  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  21:25  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  32:30  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\DELL\.gemini\antigravity\scratch\reforma-os\scripts\list-workspace-users.ts
+   9:27  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  20:29  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  24:25  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  32:30  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\DELL\.gemini\antigravity\scratch\reforma-os\scripts\list-workspaces.js
+  2:26  error  A `require()` style import is forbidden  @typescript-eslint/no-require-imports
+
+C:\Users\DELL\.gemini\antigravity\scratch\reforma-os\scripts\reset-workspace-access.js
+  2:26  error  A `require()` style import is forbidden  @typescript-eslint/no-require-imports
+  3:16  error  A `require()` style import is forbidden  @typescript-eslint/no-require-imports
+
+C:\Users\DELL\.gemini\antigravity\scratch\reforma-os\search_001_2025.js
+  1:26  error  A `require()` style import is forbidden  @typescript-eslint/no-require-imports
+
+C:\Users\DELL\.gemini\antigravity\scratch\reforma-os\src\app\(auth)\auth\reset-password\page.tsx
+  12:11  warning  'router' is assigned a value but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          @typescript-eslint/no-unused-vars
+  19:13  error    Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+C:\Users\DELL\.gemini\antigravity\scratch\reforma-os\src\app\(auth)\auth\reset-password\page.tsx:19:13
+  17 |     useEffect(() => {
+  18 |         if (!token) {
+> 19 |             setMissingToken(true);
+     |             ^^^^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  20 |         }
+  21 |     }, [token]);
+  22 |  react-hooks/set-state-in-effect
+
+C:\Users\DELL\.gemini\antigravity\scratch\reforma-os\src\app\(auth)\forgot-password\page.tsx
+  19:56  error  `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+
+C:\Users\DELL\.gemini\antigravity\scratch\reforma-os\src\app\(auth)\join\page.tsx
+    5:26  warning  'Users' is defined but never used                                                                                    @typescript-eslint/no-unused-vars
+   43:13  error    Use "@ts-expect-error" instead of "@ts-ignore", as "@ts-ignore" will do nothing if the following line is error-free  @typescript-eslint/ban-ts-comment
+   52:18  warning  'err' is defined but never used                                                                                      @typescript-eslint/no-unused-vars
+   75:47  error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`                                                      react/no-unescaped-entities
+  143:73  error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`                                                      react/no-unescaped-entities
+
+C:\Users\DELL\.gemini\antigravity\scratch\reforma-os\src\app\(auth)\layout.tsx
+  5:7  warning  'inter' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\DELL\.gemini\antigravity\scratch\reforma-os\src\app\actions\bank-accounts.ts
+  65:14  warning  'error' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\DELL\.gemini\antigravity\scratch\reforma-os\src\app\actions\briefs.ts
+  227:21  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  312:21  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\DELL\.gemini\antigravity\scratch\reforma-os\src\app\actions\clients.ts
+   29:22  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  484:22  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\DELL\.gemini\antigravity\scratch\reforma-os\src\app\actions\firm-auth.ts
+    5:10  warning  'redirect' is defined but never used                                                                                 @typescript-eslint/no-unused-vars
+   48:13  error    Use "@ts-expect-error" instead of "@ts-ignore", as "@ts-ignore" will do nothing if the following line is error-free  @typescript-eslint/ban-ts-comment
+   52:9   error    Use "@ts-expect-error" instead of "@ts-ignore", as "@ts-ignore" will do nothing if the following line is error-free  @typescript-eslint/ban-ts-comment
+   61:9   error    Use "@ts-expect-error" instead of "@ts-ignore", as "@ts-ignore" will do nothing if the following line is error-free  @typescript-eslint/ban-ts-comment
+  146:17  error    Use "@ts-expect-error" instead of "@ts-ignore", as "@ts-ignore" will do nothing if the following line is error-free  @typescript-eslint/ban-ts-comment
+
+C:\Users\DELL\.gemini\antigravity\scratch\reforma-os\src\app\actions\members.ts
+  68:14  warning  'error' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\DELL\.gemini\antigravity\scratch\reforma-os\src\app\actions\workspace.ts
+  80:21  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\DELL\.gemini\antigravity\scratch\reforma-os\src\app\analytics\page.tsx
+   4:44  warning  'ArrowDown' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 @typescript-eslint/no-unused-vars
+  35:9   error    Error: Cannot access variable before it is declared
+
+`fetchExpenseData` is accessed before it is declared, which prevents the earlier access from updating when this value changes over time.
+
+C:\Users\DELL\.gemini\antigravity\scratch\reforma-os\src\app\analytics\page.tsx:35:9
+  33 |
+  34 |     useEffect(() => {
+> 35 |         fetchExpenseData();
+     |         ^^^^^^^^^^^^^^^^ `fetchExpenseData` accessed before it is declared
+  36 |     }, [filter]);
+  37 |
+  38 |     const fetchExpenseData = async () => {
+
+C:\Users\DELL\.gemini\antigravity\scratch\reforma-os\src\app\analytics\page.tsx:38:5
+  36 |     }, [filter]);
+  37 |
+> 38 |     const fetchExpenseData = async () => {
+     |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 39 |         try {
+     | ^^^^^^^^^^^^^
+> 40 |             const response = await fetch(`/api/expenses?filter=${filter}`);
+     …
+     | ^^^^^^^^^^^^^
+> 47 |         }
+     | ^^^^^^^^^^^^^
+> 48 |     };
+     | ^^^^^^^ `fetchExpenseData` is declared here
+  49 |
+  50 |     const formatCurrency = (amount: number) => {
+  51 |         return `₦${(amount / 100).toLocaleString()}`;  react-hooks/immutability
+  36:8   warning  React Hook useEffect has a missing dependency: 'fetchExpenseData'. Either include it or remove the dependency array                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   react-hooks/exhaustive-deps
+
+C:\Users\DELL\.gemini\antigravity\scratch\reforma-os\src\app\api\admin\delete-user\route.ts
+  40:21  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\DELL\.gemini\antigravity\scratch\reforma-os\src\app\api\admin\fix-schema\route.ts
+  15:21  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  36:21  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  44:21  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  53:21  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\DELL\.gemini\antigravity\scratch\reforma-os\src\app\api\admin\reset-ascolp\route.ts
+  56:21  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\DELL\.gemini\antigravity\scratch\reforma-os\src\app\api\admin\seed-tokens\route.ts
+  48:21  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\DELL\.gemini\antigravity\scratch\reforma-os\src\app\api\cron\daily\route.ts
+  6:27  warning  'request' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\DELL\.gemini\antigravity\scratch\reforma-os\src\app\api\expenses\route.ts
+   23:25  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  104:75  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  153:40  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\DELL\.gemini\antigravity\scratch\reforma-os\src\app\api\invitations\accept\route.ts
+  3:10  warning  'signIn' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\DELL\.gemini\antigravity\scratch\reforma-os\src\app\api\invoices\route.ts
+  66:59  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  91:46  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\DELL\.gemini\antigravity\scratch\reforma-os\src\app\api\upload\letterhead\route.ts
+  46:21  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\DELL\.gemini\antigravity\scratch\reforma-os\src\app\api\upload\route.ts
+  57:21  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\DELL\.gemini\antigravity\scratch\reforma-os\src\app\api\webhooks\email-inbound\route.ts
+  29:15  warning  'html' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\DELL\.gemini\antigravity\scratch\reforma-os\src\app\briefs\BriefsPageClient.tsx
+  18:50  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\DELL\.gemini\antigravity\scratch\reforma-os\src\app\briefs\[id]\BriefDetailClient.tsx
+  6:59  warning  'Upload' is defined but never used  @typescript-eslint/no-unused-vars
+  6:67  warning  'Loader' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\DELL\.gemini\antigravity\scratch\reforma-os\src\app\briefs\[id]\page.tsx
+  48:33  error  `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`                                                                                               react/no-unescaped-entities
+  48:54  error  `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`                                                                                               react/no-unescaped-entities
+  48:73  error  `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`                                                                                               react/no-unescaped-entities
+  51:21  error  Do not use an `<a>` element to navigate to `/briefs/`. Use `<Link />` from `next/link` instead. See: https://nextjs.org/docs/messages/no-html-link-for-pages  @next/next/no-html-link-for-pages
+
+C:\Users\DELL\.gemini\antigravity\scratch\reforma-os\src\app\invite\[token]\page.tsx
+  143:27  error  `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+  164:53  error  `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+
+C:\Users\DELL\.gemini\antigravity\scratch\reforma-os\src\app\join-firm\page.tsx
+   27:13  error    Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+C:\Users\DELL\.gemini\antigravity\scratch\reforma-os\src\app\join-firm\page.tsx:27:13
+  25 |             router.push(`/join-firm/register?${params.toString()}`);
+  26 |         } else {
+> 27 |             setIsSubmitting(false);
+     |             ^^^^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  28 |         }
+  29 |     }, [state, router]);
+  30 |  react-hooks/set-state-in-effect
+   31:27  warning  'e' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          @typescript-eslint/no-unused-vars
+   48:86  error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        react/no-unescaped-entities
+  130:27  error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        react/no-unescaped-entities
+
+C:\Users\DELL\.gemini\antigravity\scratch\reforma-os\src\app\join-firm\register\page.tsx
+   6:8   warning  'Link' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          @typescript-eslint/no-unused-vars
+  45:13  error    Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+C:\Users\DELL\.gemini\antigravity\scratch\reforma-os\src\app\join-firm\register\page.tsx:45:13
+  43 |             router.push('/login?joined=true');
+  44 |         } else {
+> 45 |             setIsSubmitting(false);
+     |             ^^^^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  46 |         }
+  47 |     }, [state, router]);
+  48 |  react-hooks/set-state-in-effect
+
+C:\Users\DELL\.gemini\antigravity\scratch\reforma-os\src\app\landing\LandingPage.tsx
+  80:91  error  `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+
+C:\Users\DELL\.gemini\antigravity\scratch\reforma-os\src\app\lib\actions.ts
+    8:10  warning  'redirect' is defined but never used         @typescript-eslint/no-unused-vars
+  244:15  warning  'result' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\DELL\.gemini\antigravity\scratch\reforma-os\src\app\management\DashboardClient.tsx
+   10:5   warning  'Activity' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        @typescript-eslint/no-unused-vars
+   11:5   warning  'Zap' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             @typescript-eslint/no-unused-vars
+   12:5   warning  'UserPlus' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        @typescript-eslint/no-unused-vars
+   13:5   warning  'FilePlus' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        @typescript-eslint/no-unused-vars
+   14:5   warning  'BarChart2' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       @typescript-eslint/no-unused-vars
+   27:27  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    @typescript-eslint/no-explicit-any
+   28:24  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    @typescript-eslint/no-explicit-any
+   29:16  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    @typescript-eslint/no-explicit-any
+   30:16  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    @typescript-eslint/no-explicit-any
+   31:19  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    @typescript-eslint/no-explicit-any
+   64:91  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    @typescript-eslint/no-explicit-any
+   88:70  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    @typescript-eslint/no-explicit-any
+  116:18  error    Error: Cannot create components during render
+
+Components created during render will reset their state each time they are created. Declare components outside of render.
+
+C:\Users\DELL\.gemini\antigravity\scratch\reforma-os\src\app\management\DashboardClient.tsx:116:18
+  114 |             {/* Dashboard Grid - 3 Cards */}
+  115 |             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 animate-in fade-in slide-in-from-bottom-5 duration-1000 delay-100 fill-mode-both">
+> 116 |                 <Card
+      |                  ^^^^ This component is created during render
+  117 |                     title="Pending Tasks"
+  118 |                     value={initialData.metrics.pendingTasks}
+  119 |                     subtitle="Requires Action"
+
+C:\Users\DELL\.gemini\antigravity\scratch\reforma-os\src\app\management\DashboardClient.tsx:64:18
+   62 |     }).format(new Date());
+   63 |
+>  64 |     const Card = ({ title, value, subtitle, icon: Icon, onClick, isActive, hasDropdown }: any) => (
+      |                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+>  65 |         <div
+      | ^^^^^^^^^^^^
+>  66 |             onClick={onClick}
+      …
+      | ^^^^^^^^^^^^
+>  99 |         </div>
+      | ^^^^^^^^^^^^
+> 100 |     );
+      | ^^^^^^ The component is created during render here
+  101 |
+  102 |     return (
+  103 |         <div className="max-w-[1400px] mx-auto pb-12">  react-hooks/static-components
+  123:18  error    Error: Cannot create components during render
+
+Components created during render will reset their state each time they are created. Declare components outside of render.
+
+C:\Users\DELL\.gemini\antigravity\scratch\reforma-os\src\app\management\DashboardClient.tsx:123:18
+  121 |                     onClick={() => setIsPendingTasksOpen(true)}
+  122 |                 />
+> 123 |                 <Card
+      |                  ^^^^ This component is created during render
+  124 |                     title="Court Dates"
+  125 |                     value={initialData.metrics.upcomingHearings}
+  126 |                     subtitle="Next 7 Days"
+
+C:\Users\DELL\.gemini\antigravity\scratch\reforma-os\src\app\management\DashboardClient.tsx:64:18
+   62 |     }).format(new Date());
+   63 |
+>  64 |     const Card = ({ title, value, subtitle, icon: Icon, onClick, isActive, hasDropdown }: any) => (
+      |                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+>  65 |         <div
+      | ^^^^^^^^^^^^
+>  66 |             onClick={onClick}
+      …
+      | ^^^^^^^^^^^^
+>  99 |         </div>
+      | ^^^^^^^^^^^^
+> 100 |     );
+      | ^^^^^^ The component is created during render here
+  101 |
+  102 |     return (
+  103 |         <div className="max-w-[1400px] mx-auto pb-12">                                                                                                                        react-hooks/static-components
+  133:22  error    Error: Cannot create components during render
+
+Components created during render will reset their state each time they are created. Declare components outside of render.
+
+C:\Users\DELL\.gemini\antigravity\scratch\reforma-os\src\app\management\DashboardClient.tsx:133:22
+  131 |                 {/* Active Briefs with Dropdown */}
+  132 |                 <div ref={dropdownRef} className="relative z-10">
+> 133 |                     <Card
+      |                      ^^^^ This component is created during render
+  134 |                         title="Active Briefs"
+  135 |                         value={initialData.metrics.activeBriefs}
+  136 |                         subtitle="In Progress"
+
+C:\Users\DELL\.gemini\antigravity\scratch\reforma-os\src\app\management\DashboardClient.tsx:64:18
+   62 |     }).format(new Date());
+   63 |
+>  64 |     const Card = ({ title, value, subtitle, icon: Icon, onClick, isActive, hasDropdown }: any) => (
+      |                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+>  65 |         <div
+      | ^^^^^^^^^^^^
+>  66 |             onClick={onClick}
+      …
+      | ^^^^^^^^^^^^
+>  99 |         </div>
+      | ^^^^^^^^^^^^
+> 100 |     );
+      | ^^^^^^ The component is created during render here
+  101 |
+  102 |     return (
+  103 |         <div className="max-w-[1400px] mx-auto pb-12">                                                                   react-hooks/static-components
+  163:61  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    @typescript-eslint/no-explicit-any
+
+C:\Users\DELL\.gemini\antigravity\scratch\reforma-os\src\app\management\clients\ClientsPageClient.tsx
+  16:58  warning  'userId' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\DELL\.gemini\antigravity\scratch\reforma-os\src\app\management\clients\page.tsx
+  1:10  warning  'Plus' is defined but never used      @typescript-eslint/no-unused-vars
+  1:16  warning  'Download' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\DELL\.gemini\antigravity\scratch\reforma-os\src\app\management\drafting\[briefId]\page.tsx
+  3:20  warning  'redirect' is defined but never used   @typescript-eslint/no-unused-vars
+  4:10  warning  'AgentChat' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\DELL\.gemini\antigravity\scratch\reforma-os\src\app\page.tsx
+  115:19  error  `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`  react/no-unescaped-entities
+  115:40  error  `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`  react/no-unescaped-entities
+  118:92  error  `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+  165:73  error  `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`  react/no-unescaped-entities
+  165:91  error  `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`  react/no-unescaped-entities
+  241:30  error  `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+
+C:\Users\DELL\.gemini\antigravity\scratch\reforma-os\src\app\settings\page.tsx
+   5:27  warning  'Lock' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         @typescript-eslint/no-unused-vars
+   5:33  warning  'Save' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         @typescript-eslint/no-unused-vars
+   5:48  warning  'ImageIcon' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    @typescript-eslint/no-unused-vars
+  21:12  warning  'letterheadUrl' is assigned a value but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       @typescript-eslint/no-unused-vars
+  27:54  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 @typescript-eslint/no-explicit-any
+  32:13  error    Error: Cannot access variable before it is declared
+
+`loadSettings` is accessed before it is declared, which prevents the earlier access from updating when this value changes over time.
+
+C:\Users\DELL\.gemini\antigravity\scratch\reforma-os\src\app\settings\page.tsx:32:13
+  30 |     useEffect(() => {
+  31 |         if (session?.user?.workspaceId) {
+> 32 |             loadSettings(session.user.workspaceId);
+     |             ^^^^^^^^^^^^ `loadSettings` accessed before it is declared
+  33 |         }
+  34 |         loadProfile();
+  35 |     }, [session]);
+
+C:\Users\DELL\.gemini\antigravity\scratch\reforma-os\src\app\settings\page.tsx:48:5
+  46 |     };
+  47 |
+> 48 |     const loadSettings = async (workspaceId: string) => {
+     |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 49 |         setIsLoading(true);
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 50 |         const settingsRes = await getWorkspaceSettings(workspaceId);
+     …
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 62 |         setIsLoading(false);
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 63 |     };
+     | ^^^^^^^ `loadSettings` is declared here
+  64 |
+  65 |     const handleSaveJobTitle = async () => {
+  66 |         setIsSaving(true);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 react-hooks/immutability
+  34:9   error    Error: Cannot access variable before it is declared
+
+`loadProfile` is accessed before it is declared, which prevents the earlier access from updating when this value changes over time.
+
+C:\Users\DELL\.gemini\antigravity\scratch\reforma-os\src\app\settings\page.tsx:34:9
+  32 |             loadSettings(session.user.workspaceId);
+  33 |         }
+> 34 |         loadProfile();
+     |         ^^^^^^^^^^^ `loadProfile` accessed before it is declared
+  35 |     }, [session]);
+  36 |
+  37 |     const loadProfile = async () => {
+
+C:\Users\DELL\.gemini\antigravity\scratch\reforma-os\src\app\settings\page.tsx:37:5
+  35 |     }, [session]);
+  36 |
+> 37 |     const loadProfile = async () => {
+     |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 38 |         // We need a way to get the current profile beyond just session
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 39 |         // Using server action for up-to-date data
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 40 |         // For now, assuming session might be stale or strict, let's fetch profile separately if needed 
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 41 |         // or just rely on a new server action getUserProfile()
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 42 |         const res = await getUserProfile();
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 43 |         if (res.success && res.user) {
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 44 |             setJobTitle(res.user.jobTitle || '');
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 45 |         }
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 46 |     };
+     | ^^^^^^^ `loadProfile` is declared here
+  47 |
+  48 |     const loadSettings = async (workspaceId: string) => {
+  49 |         setIsLoading(true);  react-hooks/immutability
+
+C:\Users\DELL\.gemini\antigravity\scratch\reforma-os\src\auth.ts
+    9:16  warning  'getUser' is defined but never used       @typescript-eslint/no-unused-vars
+   40:64  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  140:34  warning  'trigger' is defined but never used       @typescript-eslint/no-unused-vars
+  140:43  warning  'session' is defined but never used       @typescript-eslint/no-unused-vars
+
+C:\Users\DELL\.gemini\antigravity\scratch\reforma-os\src\components\auth\RegisterForm.tsx
+  7:8  warning  'Link' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\DELL\.gemini\antigravity\scratch\reforma-os\src\components\briefs\BriefActivityFeed.tsx
+    4:46   warning  'AlertCircle' is defined but never used                                                                          @typescript-eslint/no-unused-vars
+   13:15   error    Unexpected any. Specify a different type                                                                         @typescript-eslint/no-explicit-any
+   43:8    warning  React Hook useEffect has a missing dependency: 'loadActivity'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+   49:35   error    Unexpected any. Specify a different type                                                                         @typescript-eslint/no-explicit-any
+  145:118  error    Unexpected any. Specify a different type                                                                         @typescript-eslint/no-explicit-any
+  153:92   error    Unexpected any. Specify a different type                                                                         @typescript-eslint/no-explicit-any
+  156:59   error    Unexpected any. Specify a different type                                                                         @typescript-eslint/no-explicit-any
+
+C:\Users\DELL\.gemini\antigravity\scratch\reforma-os\src\components\briefs\BriefList.tsx
+   5:54  warning  'UserPlus' is defined but never used                                                                            @typescript-eslint/no-unused-vars
+  20:37  error    Unexpected any. Specify a different type                                                                        @typescript-eslint/no-explicit-any
+  24:42  error    Unexpected any. Specify a different type                                                                        @typescript-eslint/no-explicit-any
+  28:26  warning  'setStatusFilter' is assigned a value but never used                                                            @typescript-eslint/no-unused-vars
+  31:54  error    Unexpected any. Specify a different type                                                                        @typescript-eslint/no-explicit-any
+  32:56  error    Unexpected any. Specify a different type                                                                        @typescript-eslint/no-explicit-any
+  38:8   warning  React Hook useEffect has a missing dependency: 'fetchBriefs'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  46:67  error    Unexpected any. Specify a different type                                                                        @typescript-eslint/no-explicit-any
+  47:71  error    Unexpected any. Specify a different type                                                                        @typescript-eslint/no-explicit-any
+  62:41  error    Unexpected any. Specify a different type                                                                        @typescript-eslint/no-explicit-any
+  79:48  error    Unexpected any. Specify a different type                                                                        @typescript-eslint/no-explicit-any
+
+C:\Users\DELL\.gemini\antigravity\scratch\reforma-os\src\components\briefs\BriefUploadModal.tsx
+   3:13  warning  'UploadCloud' is defined but never used                                                                      @typescript-eslint/no-unused-vars
+   7:58  warning  'generateBriefNumber' is defined but never used                                                              @typescript-eslint/no-unused-vars
+  12:25  error    Unexpected any. Specify a different type                                                                     @typescript-eslint/no-explicit-any
+  56:8   warning  React Hook useEffect has a missing dependency: 'loadData'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+C:\Users\DELL\.gemini\antigravity\scratch\reforma-os\src\components\briefs\DocumentPreview.tsx
+  90:21  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+C:\Users\DELL\.gemini\antigravity\scratch\reforma-os\src\components\briefs\DocumentUpload.tsx
+  4:18  warning  'X' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\DELL\.gemini\antigravity\scratch\reforma-os\src\components\briefs\EditBriefModal.tsx
+  12:31  error    Unexpected any. Specify a different type                                                                     @typescript-eslint/no-explicit-any
+  13:12  error    Unexpected any. Specify a different type                                                                     @typescript-eslint/no-explicit-any
+  60:8   warning  React Hook useEffect has a missing dependency: 'loadData'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+C:\Users\DELL\.gemini\antigravity\scratch\reforma-os\src\components\calendar\AddMatterModal.tsx
+  32:57  warning  'userId' is defined but never used                                                                           @typescript-eslint/no-unused-vars
+  50:8   warning  React Hook useEffect has a missing dependency: 'loadData'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+C:\Users\DELL\.gemini\antigravity\scratch\reforma-os\src\components\calendar\CalendarGrid.tsx
+  3:10  warning  'useState' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\DELL\.gemini\antigravity\scratch\reforma-os\src\components\dashboard\CourtDatesModal.tsx
+  1:21  warning  'Calendar' is defined but never used  @typescript-eslint/no-unused-vars
+  2:10  warning  'cn' is defined but never used        @typescript-eslint/no-unused-vars
+  3:10  warning  'Button' is defined but never used    @typescript-eslint/no-unused-vars
+
+C:\Users\DELL\.gemini\antigravity\scratch\reforma-os\src\components\dashboard\MetricsRow.tsx
+    1:10  warning  'ArrowUpRight' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  @typescript-eslint/no-unused-vars
+    1:57  warning  'TrendingUp' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    @typescript-eslint/no-unused-vars
+    2:10  warning  'Card' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          @typescript-eslint/no-unused-vars
+   35:8   error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  @typescript-eslint/no-explicit-any
+   72:14  error    Error: Cannot create components during render
+
+Components created during render will reset their state each time they are created. Declare components outside of render.
+
+C:\Users\DELL\.gemini\antigravity\scratch\reforma-os\src\components\dashboard\MetricsRow.tsx:72:14
+  70 |     return (
+  71 |         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+> 72 |             <StatCard
+     |              ^^^^^^^^ This component is created during render
+  73 |                 title="Pending Tasks"
+  74 |                 value={metrics.pendingTasks}
+  75 |                 icon={CheckSquare}
+
+C:\Users\DELL\.gemini\antigravity\scratch\reforma-os\src\components\dashboard\MetricsRow.tsx:26:22
+  24 |     };
+  25 |
+> 26 |     const StatCard = ({
+     |                      ^^
+> 27 |         title,
+     | ^^^^^^^^^^^^^^
+> 28 |         value,
+     …
+     | ^^^^^^^^^^^^^^
+> 67 |         </div>
+     | ^^^^^^^^^^^^^^
+> 68 |     );
+     | ^^^^^^ The component is created during render here
+  69 |
+  70 |     return (
+  71 |         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">  react-hooks/static-components
+   81:14  error    Error: Cannot create components during render
+
+Components created during render will reset their state each time they are created. Declare components outside of render.
+
+C:\Users\DELL\.gemini\antigravity\scratch\reforma-os\src\components\dashboard\MetricsRow.tsx:81:14
+  79 |             />
+  80 |
+> 81 |             <StatCard
+     |              ^^^^^^^^ This component is created during render
+  82 |                 title="Court Dates"
+  83 |                 value={metrics.upcomingHearings}
+  84 |                 icon={Calendar}
+
+C:\Users\DELL\.gemini\antigravity\scratch\reforma-os\src\components\dashboard\MetricsRow.tsx:26:22
+  24 |     };
+  25 |
+> 26 |     const StatCard = ({
+     |                      ^^
+> 27 |         title,
+     | ^^^^^^^^^^^^^^
+> 28 |         value,
+     …
+     | ^^^^^^^^^^^^^^
+> 67 |         </div>
+     | ^^^^^^^^^^^^^^
+> 68 |     );
+     | ^^^^^^ The component is created during render here
+  69 |
+  70 |     return (
+  71 |         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">                                                                                     react-hooks/static-components
+   90:14  error    Error: Cannot create components during render
+
+Components created during render will reset their state each time they are created. Declare components outside of render.
+
+C:\Users\DELL\.gemini\antigravity\scratch\reforma-os\src\components\dashboard\MetricsRow.tsx:90:14
+  88 |             />
+  89 |
+> 90 |             <StatCard
+     |              ^^^^^^^^ This component is created during render
+  91 |                 title="Active Briefs"
+  92 |                 value={metrics.activeBriefs}
+  93 |                 icon={FileText}
+
+C:\Users\DELL\.gemini\antigravity\scratch\reforma-os\src\components\dashboard\MetricsRow.tsx:26:22
+  24 |     };
+  25 |
+> 26 |     const StatCard = ({
+     |                      ^^
+> 27 |         title,
+     | ^^^^^^^^^^^^^^
+> 28 |         value,
+     …
+     | ^^^^^^^^^^^^^^
+> 67 |         </div>
+     | ^^^^^^^^^^^^^^
+> 68 |     );
+     | ^^^^^^ The component is created during render here
+  69 |
+  70 |     return (
+  71 |         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">                                                                                       react-hooks/static-components
+  100:18  error    Error: Cannot create components during render
+
+Components created during render will reset their state each time they are created. Declare components outside of render.
+
+C:\Users\DELL\.gemini\antigravity\scratch\reforma-os\src\components\dashboard\MetricsRow.tsx:100:18
+   98 |
+   99 |             {isPartner ? (
+> 100 |                 <StatCard
+      |                  ^^^^^^^^ This component is created during render
+  101 |                     title="Verified Revenue"
+  102 |                     value={formatCurrency(metrics.monthlyRevenue || 0)}
+  103 |                     gradientClass="bg-emerald-500"
+
+C:\Users\DELL\.gemini\antigravity\scratch\reforma-os\src\components\dashboard\MetricsRow.tsx:26:22
+  24 |     };
+  25 |
+> 26 |     const StatCard = ({
+     |                      ^^
+> 27 |         title,
+     | ^^^^^^^^^^^^^^
+> 28 |         value,
+     …
+     | ^^^^^^^^^^^^^^
+> 67 |         </div>
+     | ^^^^^^^^^^^^^^
+> 68 |     );
+     | ^^^^^^ The component is created during render here
+  69 |
+  70 |     return (
+  71 |         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">      react-hooks/static-components
+  109:18  error    Error: Cannot create components during render
+
+Components created during render will reset their state each time they are created. Declare components outside of render.
+
+C:\Users\DELL\.gemini\antigravity\scratch\reforma-os\src\components\dashboard\MetricsRow.tsx:109:18
+  107 |                 />
+  108 |             ) : (
+> 109 |                 <StatCard
+      |                  ^^^^^^^^ This component is created during render
+  110 |                     title="Firm Utilization"
+  111 |                     value="--"
+  112 |                     icon={BarChart2}
+
+C:\Users\DELL\.gemini\antigravity\scratch\reforma-os\src\components\dashboard\MetricsRow.tsx:26:22
+  24 |     };
+  25 |
+> 26 |     const StatCard = ({
+     |                      ^^
+> 27 |         title,
+     | ^^^^^^^^^^^^^^
+> 28 |         value,
+     …
+     | ^^^^^^^^^^^^^^
+> 67 |         </div>
+     | ^^^^^^^^^^^^^^
+> 68 |     );
+     | ^^^^^^ The component is created during render here
+  69 |
+  70 |     return (
+  71 |         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">                                                   react-hooks/static-components
+
+C:\Users\DELL\.gemini\antigravity\scratch\reforma-os\src\components\dashboard\PendingTasksModal.tsx
+  3:10  warning  'Button' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\DELL\.gemini\antigravity\scratch\reforma-os\src\components\dashboard\TaskAssignmentWidget.tsx
+   2:32  warning  'Plus' is defined but never used           @typescript-eslint/no-unused-vars
+   9:20  error    Unexpected any. Specify a different type   @typescript-eslint/no-explicit-any
+  10:13  error    Unexpected any. Specify a different type   @typescript-eslint/no-explicit-any
+  14:40  warning  'initialTasks' is defined but never used   @typescript-eslint/no-unused-vars
+  14:54  warning  'users' is defined but never used          @typescript-eslint/no-unused-vars
+  14:61  warning  'currentUserId' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\DELL\.gemini\antigravity\scratch\reforma-os\src\components\dashboard\UpcomingHearings.tsx
+    5:10  warning  'cn' is defined but never used            @typescript-eslint/no-unused-vars
+  107:83  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\DELL\.gemini\antigravity\scratch\reforma-os\src\components\drafting\BriefSelector.tsx
+  15:42  error  Unexpected any. Specify a different type                         @typescript-eslint/no-explicit-any
+  96:81  error  `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`  react/no-unescaped-entities
+  96:89  error  `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`  react/no-unescaped-entities
+
+C:\Users\DELL\.gemini\antigravity\scratch\reforma-os\src\components\drafting\DraftingStudio.tsx
+   14:46   error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 @typescript-eslint/no-explicit-any
+   24:54   error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 @typescript-eslint/no-explicit-any
+   33:9    error    Error: Cannot access variable before it is declared
+
+`loadSystem` is accessed before it is declared, which prevents the earlier access from updating when this value changes over time.
+
+C:\Users\DELL\.gemini\antigravity\scratch\reforma-os\src\components\drafting\DraftingStudio.tsx:33:9
+  31 |     // Initial Load
+  32 |     useEffect(() => {
+> 33 |         loadSystem();
+     |         ^^^^^^^^^^ `loadSystem` accessed before it is declared
+  34 |     }, [briefId]);
+  35 |
+  36 |     // Keyboard Shortcuts
+
+C:\Users\DELL\.gemini\antigravity\scratch\reforma-os\src\components\drafting\DraftingStudio.tsx:48:5
+  46 |     }, []);
+  47 |
+> 48 |     const loadSystem = async () => {
+     |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 49 |         setIsLoading(true);
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 50 |         let foundContext: any = null;
+     …
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 89 |         }
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 90 |     };
+     | ^^^^^^^ `loadSystem` is declared here
+  91 |
+  92 |     const handleSendMessage = async () => {
+  93 |         if (!inputValue.trim()) return;  react-hooks/immutability
+   34:8    warning  React Hook useEffect has a missing dependency: 'loadSystem'. Either include it or remove the dependency array                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            react-hooks/exhaustive-deps
+   50:27   error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 @typescript-eslint/no-explicit-any
+  225:108  error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          react/no-unescaped-entities
+  229:174  error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          react/no-unescaped-entities
+
+C:\Users\DELL\.gemini\antigravity\scratch\reforma-os\src\components\layout\AppLayout.tsx
+  10:11  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  11:16  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\DELL\.gemini\antigravity\scratch\reforma-os\src\components\layout\Sidebar.tsx
+  14:3  warning  'PenTool' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\DELL\.gemini\antigravity\scratch\reforma-os\src\components\layout\UserProfileMenu.tsx
+   4:10  warning  'UserCircle' is defined but never used                                                                                                                                                                                                                                                   @typescript-eslint/no-unused-vars
+  76:29  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+C:\Users\DELL\.gemini\antigravity\scratch\reforma-os\src\components\management\AddClientModal.tsx
+  92:18  warning  'err' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\DELL\.gemini\antigravity\scratch\reforma-os\src\components\management\ClientList.tsx
+    4:18  warning  'Filter' is defined but never used        @typescript-eslint/no-unused-vars
+   86:43  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  119:40  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\DELL\.gemini\antigravity\scratch\reforma-os\src\components\management\ClientStats.tsx
+  39:21  error  Use "@ts-expect-error" instead of "@ts-ignore", as "@ts-ignore" will do nothing if the following line is error-free  @typescript-eslint/ban-ts-comment
+
+C:\Users\DELL\.gemini\antigravity\scratch\reforma-os\src\components\management\ExpenseModal.tsx
+  131:18  warning  'err' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\DELL\.gemini\antigravity\scratch\reforma-os\src\components\management\FinancialLog.tsx
+  25:58  error    Unexpected any. Specify a different type                                                                          @typescript-eslint/no-explicit-any
+  63:8   warning  React Hook useEffect has a missing dependency: 'fetchExpenses'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+C:\Users\DELL\.gemini\antigravity\scratch\reforma-os\src\components\management\InvoiceModal.tsx
+    5:25  warning  'generateInvoiceNumber' is defined but never used                                                                             @typescript-eslint/no-unused-vars
+    5:48  warning  'getClientMatters' is defined but never used                                                                                  @typescript-eslint/no-unused-vars
+   29:12  error    Unexpected any. Specify a different type                                                                                      @typescript-eslint/no-explicit-any
+   47:33  error    Unexpected any. Specify a different type                                                                                      @typescript-eslint/no-explicit-any
+   55:27  warning  'setInvoiceNumber' is assigned a value but never used                                                                         @typescript-eslint/no-unused-vars
+   56:21  warning  'setMatters' is assigned a value but never used                                                                               @typescript-eslint/no-unused-vars
+   57:30  warning  'setIsLoadingMatters' is assigned a value but never used                                                                      @typescript-eslint/no-unused-vars
+   83:11  warning  'fetchInvoices' is assigned a value but never used                                                                            @typescript-eslint/no-unused-vars
+   88:44  error    Unexpected any. Specify a different type                                                                                      @typescript-eslint/no-explicit-any
+  133:41  error    React Hook "useState" is called conditionally. React Hooks must be called in the exact same order in every component render   react-hooks/rules-of-hooks
+  134:47  error    React Hook "useState" is called conditionally. React Hooks must be called in the exact same order in every component render   react-hooks/rules-of-hooks
+  135:41  error    React Hook "useState" is called conditionally. React Hooks must be called in the exact same order in every component render   react-hooks/rules-of-hooks
+  136:43  error    React Hook "useState" is called conditionally. React Hooks must be called in the exact same order in every component render   react-hooks/rules-of-hooks
+  137:43  error    React Hook "useState" is called conditionally. React Hooks must be called in the exact same order in every component render   react-hooks/rules-of-hooks
+  138:31  error    React Hook "useState" is called conditionally. React Hooks must be called in the exact same order in every component render   react-hooks/rules-of-hooks
+  140:45  error    React Hook "useState" is called conditionally. React Hooks must be called in the exact same order in every component render   react-hooks/rules-of-hooks
+  140:54  error    Unexpected any. Specify a different type                                                                                      @typescript-eslint/no-explicit-any
+  141:43  error    React Hook "useState" is called conditionally. React Hooks must be called in the exact same order in every component render   react-hooks/rules-of-hooks
+  141:52  error    Unexpected any. Specify a different type                                                                                      @typescript-eslint/no-explicit-any
+  142:49  error    React Hook "useState" is called conditionally. React Hooks must be called in the exact same order in every component render   react-hooks/rules-of-hooks
+  143:59  error    React Hook "useState" is called conditionally. React Hooks must be called in the exact same order in every component render   react-hooks/rules-of-hooks
+  146:5   error    React Hook "useEffect" is called conditionally. React Hooks must be called in the exact same order in every component render  react-hooks/rules-of-hooks
+  185:26  error    Unexpected any. Specify a different type                                                                                      @typescript-eslint/no-explicit-any
+  214:60  error    Unexpected any. Specify a different type                                                                                      @typescript-eslint/no-explicit-any
+
+C:\Users\DELL\.gemini\antigravity\scratch\reforma-os\src\components\management\ManagementTabs.tsx
+  5:17  warning  'Building2' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\DELL\.gemini\antigravity\scratch\reforma-os\src\components\management\PaymentModal.tsx
+  62:8  warning  React Hook useEffect has a missing dependency: 'fetchData'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+C:\Users\DELL\.gemini\antigravity\scratch\reforma-os\src\components\management\WorkspaceSettingsModal.tsx
+    6:10  warning  'put' is defined but never used                                                                                  @typescript-eslint/no-unused-vars
+   24:44  error    Unexpected any. Specify a different type                                                                         @typescript-eslint/no-explicit-any
+   38:8   warning  React Hook useEffect has a missing dependency: 'fetchMembers'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  189:49  error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`                                                  react/no-unescaped-entities
+  392:62  warning  'e' is defined but never used                                                                                    @typescript-eslint/no-unused-vars
+
+C:\Users\DELL\.gemini\antigravity\scratch\reforma-os\src\components\onboarding\WelcomeModal.tsx
+  3:10  warning  'useState' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\DELL\.gemini\antigravity\scratch\reforma-os\src\components\ui\Button.tsx
+  43:34  warning  'asChild' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\DELL\.gemini\antigravity\scratch\reforma-os\src\components\ui\Textarea.tsx
+  6:18  error  An interface declaring no members is equivalent to its supertype  @typescript-eslint/no-empty-object-type
+
+C:\Users\DELL\.gemini\antigravity\scratch\reforma-os\src\lib\briefs.ts
+  135:16  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\DELL\.gemini\antigravity\scratch\reforma-os\src\lib\drafting\drafting-service.ts
+  41:14  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\DELL\.gemini\antigravity\scratch\reforma-os\src\lib\ingestion\text-extractor.ts
+   5:18  error  A `require()` style import is forbidden   @typescript-eslint/no-require-imports
+  44:29  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\DELL\.gemini\antigravity\scratch\reforma-os\src\lib\invoice-pdf.ts
+   50:11  warning  'pageHeight' is assigned a value but never used    @typescript-eslint/no-unused-vars
+  189:11  warning  'footerStartY' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\DELL\.gemini\antigravity\scratch\reforma-os\src\lib\notificationEngine.ts
+  90:5  warning  'thresholdDays' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\DELL\.gemini\antigravity\scratch\reforma-os\src\lib\notifications.ts
+  42:50  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  57:50  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  83:54  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\DELL\.gemini\antigravity\scratch\reforma-os\src\next-auth.d.ts
+  1:8   warning  'NextAuth' is defined but never used  @typescript-eslint/no-unused-vars
+  2:10  warning  'JWT' is defined but never used       @typescript-eslint/no-unused-vars
+
+C:\Users\DELL\.gemini\antigravity\scratch\reforma-os\src\types\next-auth.d.ts
+  1:8   warning  'NextAuth' is defined but never used  @typescript-eslint/no-unused-vars
+  2:10  warning  'JWT' is defined but never used       @typescript-eslint/no-unused-vars
+
+C:\Users\DELL\.gemini\antigravity\scratch\reforma-os\verify_settings.js
+   1:9   warning  'updateWorkspaceSettings' is assigned a value but never used  @typescript-eslint/no-unused-vars
+   1:34  warning  'getWorkspaceSettings' is assigned a value but never used     @typescript-eslint/no-unused-vars
+   1:59  error    A `require()` style import is forbidden                       @typescript-eslint/no-require-imports
+   2:9   warning  'prisma' is assigned a value but never used                   @typescript-eslint/no-unused-vars
+   2:20  error    A `require()` style import is forbidden                       @typescript-eslint/no-require-imports
+  10:26  error    A `require()` style import is forbidden                       @typescript-eslint/no-require-imports
+
+✖ 282 problems (186 errors, 96 warnings)
+  2 errors and 0 warnings potentially fixable with the `--fix` option.
+
