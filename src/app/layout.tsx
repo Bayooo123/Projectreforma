@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { DM_Sans } from "next/font/google";
 import "./globals.css";
 
-import AppLayout from '@/components/layout/AppLayout';
+import ShellWrapper from "@/components/layout/ShellWrapper";
 import PageTransition from "@/components/layout/PageTransition";
 import NextTopLoader from 'nextjs-toploader';
 import { auth } from "@/auth";
@@ -54,12 +54,12 @@ export default async function RootLayout({
         >
           <SessionProvider session={session}>
             {user ? (
-              // Authenticated layout with AppLayout Grid
-              <AppLayout user={user} workspace={workspaceData}>
+              // Authenticated layout with Conditional Shell
+              <ShellWrapper user={user} workspace={workspaceData}>
                 <PageTransition>
                   {children}
                 </PageTransition>
-              </AppLayout>
+              </ShellWrapper>
             ) : (
               // Unauthenticated layout (auth pages handle their own layout)
               <PageTransition>
@@ -72,4 +72,3 @@ export default async function RootLayout({
     </html>
   );
 }
-
