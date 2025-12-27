@@ -5,7 +5,10 @@ import Link from 'next/link';
 import { Search, Filter, MoreVertical, Plus, Trash2, UserPlus, Eye, Briefcase } from 'lucide-react';
 import styles from './BriefList.module.css';
 import FluidLoader from '@/components/ui/FluidLoader';
-import { getBriefs } from '@/app/actions/briefs';
+import { getBriefs, deleteBrief } from '@/app/actions/briefs';
+import EditBriefModal from './EditBriefModal';
+import BriefActivityModal from './BriefActivityModal';
+import { MessageSquare, Edit } from 'lucide-react'; // Imports for new icons
 
 interface BriefListProps {
     onUpload: () => void;
@@ -23,6 +26,10 @@ const BriefList = forwardRef<BriefListRef, BriefListProps>(({ onUpload, workspac
     const [activeActionId, setActiveActionId] = useState<string | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState<string>('all');
+
+    // Modal states
+    const [editingBrief, setEditingBrief] = useState<any | null>(null);
+    const [activityBrief, setActivityBrief] = useState<any | null>(null);
 
     useEffect(() => {
         if (workspaceId) {
@@ -57,6 +64,21 @@ const BriefList = forwardRef<BriefListRef, BriefListProps>(({ onUpload, workspac
             setBriefs(prevBriefs => [brief, ...prevBriefs]);
         }
     }));
+
+    const handleDelete = async (id: string) => {
+        if (confirm('Are you sure you want to delete this brief?')) {
+            const result = await deleteBrief(id);
+            if (result.success) {
+                setBriefs(briefs.filter(b => b.id !== id));
+            } else {
+                alert('Failed to delete brief: ' + result.error);
+            }
+        }
+    };
+
+    const handleUpdateSuccess = (updatedBrief: any) => {
+        setBriefs(briefs.map(b => b.id === updatedBrief.id ? { ...b, ...updatedBrief } : b));
+    };
 
     const toggleActions = (id: string) => {
         setActiveActionId(activeActionId === id ? null : id);
@@ -183,13 +205,34 @@ const BriefList = forwardRef<BriefListRef, BriefListProps>(({ onUpload, workspac
                                             {activeActionId === brief.id && (
                                                 <div className={styles.actionMenu}>
                                                     <Link href={`/briefs/${brief.id}`} className={styles.menuItem}>
-                                                        <Eye size={14} /> Open
+                                                        <Eye size={14} /> Open Brief
                                                     </Link>
-                                                    <button className={styles.menuItem}>
-                                                        <UserPlus size={14} /> Assign
+                                                    <button
+                                                        className={styles.menuItem}
+                                                        onClick={() => {
+                                                            setActivityBrief(brief);
+                                                            setActiveActionId(null);
+                                                        }}
+                                                    >
+                                                        <MessageSquare size={14} /> Add Comment/Activity
                                                     </button>
-                                                    <button className={`${styles.menuItem} ${styles.deleteItem}`}>
-                                                        <Trash2 size={14} /> Delete
+                                                    <button
+                                                        className={styles.menuItem}
+                                                        onClick={() => {
+                                                            setEditingBrief(brief);
+                                                            setActiveActionId(null);
+                                                        }}
+                                                    >
+                                                        <Edit size={14} /> Edit Brief Details
+                                                    </button>
+                                                    <button
+                                                        className={`${styles.menuItem} ${styles.deleteItem}`}
+                                                        onClick={() => {
+                                                            handleDelete(brief.id);
+                                                            setActiveActionId(null);
+                                                        }}
+                                                    >
+                                                        <Trash2 size={14} /> Delete Brief
                                                     </button>
                                                 </div>
                                             )}
@@ -201,6 +244,20 @@ const BriefList = forwardRef<BriefListRef, BriefListProps>(({ onUpload, workspac
                     </div>
                 )
             }
+
+            <EditBriefModal
+                isOpen={!!editingBrief}
+                onClose={() => setEditingBrief(null)}
+                onSuccess={handleUpdateSuccess}
+                brief={editingBrief}
+                workspaceId={workspaceId}
+            />
+
+            <BriefActivityModal
+                isOpen={!!activityBrief}
+                onClose={() => setActivityBrief(null)}
+                brief={activityBrief}
+            />
         </div >
     );
 });
