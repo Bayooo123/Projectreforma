@@ -1,102 +1,95 @@
 .sidebar {
-    width: 100%;
-    height: 100%;
-    background-color: var(--primary-dark);
-    /* Glassmorphism Effect */
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border-right: 1px solid rgba(255, 255, 255, 0.05);
-
-    color: var(--text-inverse);
+    width: 240px;
+    height: 100vh;
+    background-color: #0f5f5a;
+    /* Matching HTML */
+    color: white;
     display: flex;
     flex-direction: column;
-    /* Removed position: fixed to allow Grid to control layout */
+    padding: 24px 0;
+    overflow-y: auto;
 }
 
 .logoContainer {
-    padding: 1.5rem 1.5rem;
+    padding: 0 24px 32px;
 }
 
 .logo {
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: var(--text-inverse);
-    letter-spacing: -0.025em;
+    font-size: 24px;
+    font-weight: 600;
+    color: white;
 }
 
 .nav {
     flex: 1;
-    padding: 0.5rem 0;
-    overflow-y: auto;
 }
 
 .navList {
     list-style: none;
-    display: flex;
-    flex-direction: column;
+    padding: 0;
+    margin: 0;
 }
 
 .navLink {
     display: flex;
     align-items: center;
-    padding: 0.75rem 1.5rem;
-    color: #94A3B8;
-    /* Slate 400 */
-    transition: all 0.2s ease;
-    font-weight: 500;
-    border-left: 3px solid transparent;
+    padding: 12px 24px;
+    color: rgba(255, 255, 255, 0.7);
+    cursor: pointer;
+    transition: all 0.2s;
+    gap: 12px;
+    font-size: 14px;
+    text-decoration: none;
+    border-left: 0;
 }
 
-.navLink:hover {
-    color: var(--text-inverse);
-    background-color: rgba(255, 255, 255, 0.05);
-}
-
+.navLink:hover,
 .active {
-    color: var(--text-inverse);
-    background: linear-gradient(90deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.02) 100%);
-    border-left-color: var(--text-inverse);
-    /* Add a subtle glow/shadow */
-    text-shadow: 0 0 20px rgba(255, 255, 255, 0.3);
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
 }
 
 .navIcon {
-    margin-right: 1rem;
+    /* HTML used spans with icons, we use lucide icons. Keeping sizing generic/inherited is fine or explicit. */
+    width: 20px;
+    height: 20px;
 }
 
+.navText {
+    /* HTML didn't wrap text but we do. */
+}
+
+
 .footer {
-    padding: 1rem 1.5rem;
+    padding: 0 24px 24px;
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    gap: 8px;
+    margin-top: auto;
 }
 
 .footerLink {
     display: flex;
     align-items: center;
-    padding: 0.75rem 1rem;
-    background-color: transparent;
-    color: #94A3B8;
-    border-radius: var(--radius-md);
-    font-weight: 500;
-    cursor: pointer;
+    gap: 12px;
+    padding: 12px 0;
+    /* Adjust to fit visually or match navLink if desired, HTML didn't specify footer details but visual consistency suggests matching nav style or simpler */
+    color: rgba(255, 255, 255, 0.5);
+    background: none;
     border: none;
-    width: 100%;
-    text-align: left;
-    transition: all 0.2s;
+    cursor: pointer;
+    font-size: 14px;
 }
 
 .footerLink:hover {
-    background-color: rgba(255, 255, 255, 0.05);
-    color: var(--text-inverse);
+    color: white;
 }
 
 .userInfo {
     display: flex;
     align-items: center;
-    padding: 0.75rem 0;
-    margin-top: 0.5rem;
+    gap: 12px;
+    padding-top: 12px;
     border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
 
@@ -104,31 +97,20 @@
     width: 32px;
     height: 32px;
     border-radius: 50%;
-    background-color: var(--accent);
-    color: white;
+    background: rgba(255, 255, 255, 0.2);
     display: flex;
     align-items: center;
     justify-content: center;
     font-weight: 600;
-    font-size: 0.875rem;
-    margin-right: 0.75rem;
+    font-size: 12px;
 }
 
 .userDetails {
     display: flex;
     flex-direction: column;
-    overflow: hidden;
 }
 
 .userName {
-    font-size: 0.875rem;
+    font-size: 14px;
     font-weight: 600;
-    color: var(--text-inverse);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.userEmail {
-    display: none;
 }

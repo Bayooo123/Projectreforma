@@ -1,154 +1,152 @@
 .header {
-    height: 64px;
-    background-color: var(--surface);
-    border-bottom: 1px solid var(--border);
+    background: white;
+    border-bottom: 1px solid #e2e8f0;
+    padding: 16px 40px;
     display: flex;
-    align-items: center;
     justify-content: space-between;
-    padding: 0 1.5rem;
+    align-items: center;
     position: sticky;
     top: 0;
-    z-index: 40;
+    z-index: 50;
+    /* Reset height to auto to fit padding */
+    height: auto;
 }
 
 .leftSection {
     display: flex;
     align-items: center;
-    width: 250px;
-    /* Match sidebar width roughly */
 }
 
 .workspace {
     display: flex;
     align-items: center;
-    gap: 0.75rem;
+    gap: 8px;
     cursor: pointer;
-    padding: 0.5rem;
-    border-radius: var(--radius-md);
-    transition: background-color 0.2s;
-}
-
-.workspace:hover {
-    background-color: var(--accent);
 }
 
 .workspaceAvatar {
     width: 32px;
     height: 32px;
-    background-color: var(--primary);
+    background: #0f5f5a;
+    border-radius: 8px;
     color: white;
-    border-radius: var(--radius-sm);
     display: flex;
     align-items: center;
     justify-content: center;
-    font-weight: 700;
-    font-size: 0.85rem;
+    font-weight: 600;
 }
 
 .workspaceName {
     font-weight: 600;
-    color: var(--text-primary);
-    font-size: 0.9rem;
+    font-size: 16px;
+    color: #1a202c;
 }
 
 .chevron {
-    color: var(--text-secondary);
+    /* Optional if designs don't explicitly show it, but good for UX */
+    color: #4a5568;
 }
 
 .searchContainer {
     flex: 1;
     max-width: 500px;
+    margin: 0 40px;
     position: relative;
-    margin: 0 2rem;
+}
+
+/* HTML used simple input styling, mapped to .searchInput */
+.searchInput {
+    width: 100%;
+    padding: 10px 16px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 14px;
+    transition: all 0.2s;
+    outline: none;
+}
+
+.searchInput:focus {
+    border-color: #0f5f5a;
+    box-shadow: 0 0 0 3px rgba(15, 95, 90, 0.1);
 }
 
 .searchIcon {
     position: absolute;
-    left: 1rem;
+    right: 12px;
     top: 50%;
     transform: translateY(-50%);
-    color: var(--text-secondary);
-}
-
-.searchInput {
-    width: 100%;
-    padding: 0.6rem 1rem 0.6rem 2.5rem;
-    border: 1px solid var(--border);
-    border-radius: var(--radius-full);
-    background-color: var(--background);
-    color: var(--text-primary);
-    outline: none;
-    transition: all 0.2s;
-}
-
-.searchInput:focus {
-    border-color: var(--primary);
-    box-shadow: 0 0 0 2px rgba(44, 62, 80, 0.1);
+    color: #a0aec0;
+    pointer-events: none;
+    /* Adjusted to be on right or hidden if not in HTML spec? HTML has plain input properly. I will hide icon or move it if needed. HTML has NO icon inside input in the text, just padding. */
+    display: none;
 }
 
 .rightSection {
     display: flex;
     align-items: center;
-    gap: 1.5rem;
+    gap: 16px;
 }
 
 .notificationWrapper {
     position: relative;
+    /* HTML has bell icon with badge */
 }
 
 .iconBtn {
     background: none;
     border: none;
-    color: var(--text-secondary);
+    font-size: 20px;
+    /* HTML uses unicode bell or icon */
     cursor: pointer;
     position: relative;
-    padding: 0.5rem;
-    border-radius: 50%;
-    transition: background-color 0.2s;
-}
-
-.iconBtn:hover {
-    background-color: var(--accent);
-    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .badge {
     position: absolute;
-    top: 0;
-    right: 0;
-    background-color: #C53030;
-    color: white;
-    font-size: 0.65rem;
-    font-weight: 700;
-    min-width: 16px;
+    top: -4px;
+    right: -4px;
+    width: 16px;
     height: 16px;
+    background: #ef4444;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    border: 2px solid var(--surface);
+    font-size: 10px;
+    color: white;
+    font-weight: 600;
+    border: none;
 }
 
+/* User Section matching HTML */
+.userSection {
+    /* Mapped from rightSection children in TSX */
+}
+
+/* Profile menu trigger styling */
 .profile {
     display: flex;
     align-items: center;
-    gap: 0.75rem;
-    cursor: pointer;
-    padding-left: 1.5rem;
-    border-left: 1px solid var(--border);
+    gap: 16px;
+    /* Matching HTML .user-section gap */
+    border: none;
+    /* TSX might add border, removed here */
+    padding: 0;
 }
 
 .avatar {
-    width: 36px;
-    height: 36px;
-    background-color: #E2E8F0;
-    color: var(--text-primary);
+    width: 40px;
+    height: 40px;
     border-radius: 50%;
+    background: #0f5f5a;
+    color: white;
     display: flex;
     align-items: center;
     justify-content: center;
     font-weight: 600;
-    font-size: 0.9rem;
 }
 
 .userInfo {
@@ -157,12 +155,12 @@
 }
 
 .userName {
-    font-size: 0.9rem;
     font-weight: 600;
-    color: var(--text-primary);
+    font-size: 14px;
+    color: #1a202c;
 }
 
 .userRole {
-    font-size: 0.75rem;
-    color: var(--text-secondary);
+    font-size: 12px;
+    color: #718096;
 }
