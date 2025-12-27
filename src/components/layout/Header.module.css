@@ -164,3 +164,53 @@
     font-size: 12px;
     color: #718096;
 }
+
+/* Dark Mode Overrides */
+:global(.dark) .header {
+    background-color: #0f172a;
+    /* Slate 900 */
+    border-bottom: 1px solid #1e293b;
+}
+
+:global(.dark) .workspaceName {
+    color: #f8fafc;
+}
+
+:global(.dark) .chevron {
+    color: #94a3b8;
+}
+
+:global(.dark) .searchInput {
+    background-color: #1e293b;
+    border-color: #334155;
+    color: #f8fafc;
+}
+
+:global(.dark) .searchInput:focus {
+    border-color: #0f5f5a;
+    /* Keep brand color or adjust to teal-500 */
+    box-shadow: 0 0 0 3px rgba(15, 95, 90, 0.3);
+}
+
+:global(.dark) .iconBtn {
+    color: #94a3b8;
+}
+
+:global(.dark) .iconBtn:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+    color: #f8fafc;
+}
+
+:global(.dark) .userName {
+    color: #f8fafc;
+}
+
+:global(.dark) .userRole {
+    color: #94a3b8;
+}
+
+:global(.dark) .avatar {
+    background-color: #0f5f5a;
+    /* Keep teal brand */
+    color: #f8fafc;
+}

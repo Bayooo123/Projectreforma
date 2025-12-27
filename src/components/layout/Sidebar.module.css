@@ -114,3 +114,42 @@
     font-size: 14px;
     font-weight: 600;
 }
+
+/* Dark Mode Overrides */
+:global(.dark) .sidebar {
+    background-color: #0f172a;
+    /* Slate 900 */
+    border-right: 1px solid #1e293b;
+}
+
+:global(.dark) .logo {
+    color: #f8fafc;
+}
+
+:global(.dark) .navLink {
+    color: #94a3b8;
+    /* Slate 400 */
+}
+
+:global(.dark) .navLink:hover,
+:global(.dark) .active {
+    background: rgba(255, 255, 255, 0.05);
+    color: #f1f5f9;
+}
+
+:global(.dark) .footerLink {
+    color: #64748b;
+}
+
+:global(.dark) .footerLink:hover {
+    color: #f1f5f9;
+}
+
+:global(.dark) .userInfo {
+    border-top-color: #1e293b;
+}
+
+:global(.dark) .userAvatar {
+    background: #1e293b;
+    color: #cbd5e1;
+}
