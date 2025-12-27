@@ -7,11 +7,6 @@ import {
     Check,
     Calendar,
     FileText,
-    Activity,
-    Zap,
-    UserPlus,
-    FilePlus,
-    BarChart2,
 } from 'lucide-react';
 import { PendingTasksModal } from "@/components/dashboard/PendingTasksModal";
 import { CourtDatesModal } from "@/components/dashboard/CourtDatesModal";
@@ -64,32 +59,32 @@ export default function DashboardClient({ initialData }: DashboardClientProps) {
     const Card = ({ title, value, subtitle, icon: Icon, onClick, isActive, hasDropdown }: any) => (
         <div
             onClick={onClick}
-            className={`bg-white rounded-xl p-7 shadow-[0_1px_3px_rgba(0,0,0,0.08)] transition-all duration-300 relative cursor-pointer
-                ${isActive ? '' : 'hover:shadow-[0_4px_12px_rgba(0,0,0,0.12)] hover:-translate-y-0.5'}
+            className={`bg-white rounded-[12px] p-[28px] shadow-[0_1px_3px_rgba(0,0,0,0.08)] transition-all duration-300 relative cursor-pointer
+                ${isActive ? 'active' : 'hover:shadow-[0_4px_12px_rgba(0,0,0,0.12)] hover:-translate-y-[2px]'}
             `}
         >
-            <div className="flex justify-between items-start mb-5">
+            <div className="flex justify-between items-start mb-[20px]">
                 <div>
-                    <div className="text-sm text-slate-500 uppercase tracking-wide font-semibold mb-2">{title}</div>
-                    <div className="text-5xl font-bold text-slate-800 leading-none mb-2">{value}</div>
-                    <div className="text-[13px] text-teal-800 font-medium">{subtitle}</div>
+                    <div className="text-[14px] text-[#718096] uppercase tracking-[0.5px] font-semibold mb-[8px]">{title}</div>
+                    <div className="text-[48px] font-bold text-[#1a202c] leading-none mb-[8px]">{value}</div>
+                    <div className="text-[13px] text-[#0f5f5a] font-medium">{subtitle}</div>
                 </div>
-                <div className="w-12 h-12 rounded-xl bg-[#e6f7f5] text-[#0f5f5a] flex items-center justify-center">
-                    <Icon size={20} strokeWidth={2.5} />
+                <div className="w-[48px] h-[48px] rounded-[12px] bg-[#e6f7f5] text-[#0f5f5a] flex items-center justify-center text-[20px]">
+                    {typeof Icon === 'string' ? Icon : <Icon size={24} strokeWidth={2} />}
                 </div>
             </div>
 
             {/* Dropdown Content */}
             {hasDropdown && isActive && (
-                <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-[0_8px_24px_rgba(0,0,0,0.15)] z-20 max-h-[400px] overflow-y-auto animate-in fade-in zoom-in-95 duration-200">
+                <div className="absolute top-full left-0 right-0 mt-[8px] bg-white rounded-[12px] shadow-[0_8px_24px_rgba(0,0,0,0.15)] z-[10] max-h-[400px] overflow-y-auto block">
                     {initialData.myBriefs.length === 0 ? (
-                        <div className="p-5 text-center text-slate-500 text-sm">No active briefs</div>
+                        <div className="p-5 text-center text-[#718096] text-sm">No active briefs</div>
                     ) : (
                         initialData.myBriefs.slice(0, 8).map((brief: any) => (
                             <Link href={`/briefs/${brief.id}`} key={brief.id}>
-                                <div className="p-4 border-b border-slate-100 last:border-0 hover:bg-[#f8fffe] transition-colors group">
-                                    <div className="font-semibold text-slate-800 text-sm mb-1 group-hover:text-[#0f5f5a]">{brief.name}</div>
-                                    <div className="text-xs text-slate-400">Updated {formatTimeAgo(new Date(brief.updatedAt))}</div>
+                                <div className="p-[16px] px-[20px] border-b border-[#e2e8f0] last:border-b-0 cursor-pointer transition-colors duration-200 hover:bg-[#f8fffe]">
+                                    <div className="font-semibold text-[#1a202c] text-[14px] mb-[4px]">{brief.name}</div>
+                                    <div className="text-[12px] text-[#718096]">Updated {formatTimeAgo(new Date(brief.updatedAt))}</div>
                                 </div>
                             </Link>
                         ))
@@ -100,41 +95,41 @@ export default function DashboardClient({ initialData }: DashboardClientProps) {
     );
 
     return (
-        <div className="max-w-[1400px] mx-auto pb-12">
+        <div className="p-[40px] max-w-[1400px] mx-auto">
             {/* Greeting Section */}
-            <div className="mb-10 animate-in fade-in slide-in-from-top-2 duration-700">
-                <h1 className="text-3xl font-semibold text-slate-800 mb-2">
+            <div className="mb-[8px]">
+                <h1 className="text-[32px] font-semibold text-[#1a202c]">
                     Good morning, {user?.name?.split(' ')[0] || 'Counsel'}
                 </h1>
-                <div className="text-slate-500 text-sm uppercase tracking-wide font-medium">
-                    {currentDate}
-                </div>
+            </div>
+            <div className="text-[#718096] text-[14px] mb-[40px] uppercase tracking-[0.5px]">
+                {currentDate}
             </div>
 
             {/* Dashboard Grid - 3 Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 animate-in fade-in slide-in-from-bottom-5 duration-1000 delay-100 fill-mode-both">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-[24px] mb-[32px]">
                 <Card
                     title="Pending Tasks"
                     value={initialData.metrics.pendingTasks}
-                    subtitle="Requires Action"
-                    icon={Check}
+                    subtitle="From Brief Manager"
+                    icon="✓"
                     onClick={() => setIsPendingTasksOpen(true)}
                 />
                 <Card
                     title="Court Dates"
                     value={initialData.metrics.upcomingHearings}
                     subtitle="Next 7 Days"
-                    icon={Calendar}
+                    icon="📅"
                     onClick={() => setIsCourtDatesOpen(true)}
                 />
 
                 {/* Active Briefs with Dropdown */}
-                <div ref={dropdownRef} className="relative z-10">
+                <div ref={dropdownRef} className="relative z-10 w-full h-full">
                     <Card
                         title="Active Briefs"
                         value={initialData.metrics.activeBriefs}
                         subtitle="In Progress"
-                        icon={FileText}
+                        icon="📄"
                         onClick={() => setIsActiveBriefsOpen(!isActiveBriefsOpen)}
                         isActive={isActiveBriefsOpen}
                         hasDropdown={true}
@@ -142,42 +137,42 @@ export default function DashboardClient({ initialData }: DashboardClientProps) {
                 </div>
             </div>
 
-            {/* Firmware Pulse Section - Full Width */}
-            <div className="bg-white rounded-xl p-8 shadow-[0_1px_3px_rgba(0,0,0,0.08)] animate-in fade-in slide-in-from-bottom-6 duration-1000 delay-200 fill-mode-both">
-                <div className="flex justify-between items-center mb-8">
-                    <div className="text-2xl font-semibold text-slate-800">Firm Pulse</div>
-                    <div className="inline-flex items-center gap-2 text-emerald-500 text-[13px] font-semibold px-4 py-2 bg-emerald-50 rounded-full">
-                        <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
+            {/* Main Section - Firm Pulse */}
+            <div className="bg-white rounded-[12px] p-[32px] shadow-[0_1px_3px_rgba(0,0,0,0.08)]">
+                <div className="flex justify-between items-center mb-[28px]">
+                    <div className="text-[24px] font-semibold text-[#1a202c]">Firm Pulse</div>
+                    <div className="inline-flex items-center gap-[8px] text-[#10b981] text-[13px] font-semibold px-[16px] py-[8px] bg-[#ecfdf5] rounded-[20px]">
+                        <div className="w-[8px] h-[8px] rounded-full bg-[#10b981] animate-pulse"></div>
                         LIVE
                     </div>
                 </div>
 
-                <div className="flex flex-col">
+                <div className="flex flex-col gap-0">
                     {initialData.firmPulseLogs.length === 0 ? (
-                        <div className="text-center py-16 px-5 text-slate-400">
+                        <div className="text-center py-16 px-5 text-[#718096]">
                             <div className="text-5xl mb-4 opacity-30">📊</div>
-                            <div className="text-base font-semibold text-slate-600 mb-2">No recent activity</div>
+                            <div className="text-base font-semibold text-[#1a202c] mb-2">No recent activity</div>
                             <div className="text-sm">Activity will appear here as your team works</div>
                         </div>
                     ) : (
                         initialData.firmPulseLogs.map((log: any) => (
-                            <div key={log.id} className="py-6 border-b border-slate-100 last:border-0 hover:bg-[#f8fffe] hover:-mx-8 hover:px-8 transition-all duration-200 group flex gap-5 items-start">
-                                <div className="flex flex-col items-center gap-2 mt-1 shrink-0">
-                                    <div className="w-3 h-3 rounded-full bg-[#0f5f5a]"></div>
-                                    <div className="w-0.5 h-full bg-slate-200 group-last:hidden"></div>
+                            <div key={log.id} className="py-[24px] border-b border-[#f1f5f9] last:border-b-0 hover:bg-[#f8fffe] hover:-mx-[32px] hover:px-[32px] transition-all duration-200 group flex gap-[20px]">
+                                <div className="flex flex-col items-center gap-[8px]">
+                                    <div className="w-[12px] h-[12px] rounded-full bg-[#0f5f5a] flex-shrink-0"></div>
+                                    <div className="w-[2px] flex-1 bg-[#e2e8f0] group-last:hidden"></div>
                                 </div>
-                                <div className="flex-1 pt-0.5">
-                                    <div className="font-bold text-slate-800 text-base mb-2">
-                                        {log.matter?.name || log.brief?.name || 'General Activity'}
+                                <div className="flex-1 pt-[2px]">
+                                    <div className="font-bold text-[#1a202c] text-[16px] mb-[8px]">
+                                        {log.matter?.title || log.courtCase?.name || log.brief?.name || 'General Activity'}
                                     </div>
-                                    <div className="text-[15px] text-slate-600 leading-normal mb-2">
-                                        <span className="font-semibold text-[#0f5f5a]">{log.performedBy || 'System'}</span>
+                                    <div className="text-[15px] text-[#4a5568] leading-[1.6] mb-[8px]">
+                                        <span className="font-semibold text-[#0f5f5a]">{log.user?.name || log.performedBy || 'System'}</span>
                                         {' '}
-                                        {/* Normalize description to lowercase but ensure first letter isn't if it's a name, though CSS text-transform is safer if we want strict lowercase. Design shows normal case sentences. */}
-                                        {log.description}
+                                        {/* Lowercase the first letter of description to flow with name */}
+                                        {log.description.charAt(0).toLowerCase() + log.description.slice(1)}
                                     </div>
-                                    <div className="text-[13px] text-slate-400 font-medium">
-                                        {formatTime(new Date(log.timestamp))} • {formatDate(new Date(log.timestamp))}
+                                    <div className="text-[13px] text-[#a0aec0] font-medium">
+                                        {formatTime(new Date(log.timestamp))} • {formatDateShort(new Date(log.timestamp))}
                                     </div>
                                 </div>
                             </div>
@@ -185,8 +180,6 @@ export default function DashboardClient({ initialData }: DashboardClientProps) {
                     )}
                 </div>
             </div>
-
-            {/* Quick Actions (Keep generic or hidden if only modals requested? User asked for THIS HTML which didn't show the quick actions at bottom, but we can keep them or remove depending on strictness. The user said "this is what i want...". The shared HTML DOES NOT have the 2-column layout with quick actions anymore. It has a single Firmware Pulse section. I will stick to the provided HTML structure.) */}
 
             {/* Modals */}
             <PendingTasksModal
@@ -224,6 +217,6 @@ function formatTime(date: Date) {
     return new Intl.DateTimeFormat('en-US', { hour: 'numeric', minute: 'numeric', hour12: true }).format(date);
 }
 
-function formatDate(date: Date) {
+function formatDateShort(date: Date) {
     return new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }).format(date);
 }
