@@ -98,7 +98,7 @@ const InvoiceModal = ({ isOpen, onClose, clientName, clientId, workspaceId, lett
         }
     };
 
-    if (!isOpen) return null;
+
 
     const addItem = () => {
         setItems([...items, { description: '', amount: 0, quantity: 1 }]);

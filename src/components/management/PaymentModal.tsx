@@ -93,7 +93,7 @@ const PaymentModal = ({ isOpen, onClose, clientName, clientId, selectedInvoice }
         }
     };
 
-    if (!isOpen) return null;
+
 
     const formatCurrency = (amount: number) => {
         // Amount is in kobo, convert to naira
