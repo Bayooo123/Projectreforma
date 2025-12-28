@@ -188,6 +188,8 @@ model Notification {
   message         String
   recipientId     String
   recipientType   String // 'lawyer' | 'client' | 'partner' | 'staff'
+  priority        String    @default("medium")
+  channels        String?
   relatedMatterId String?
   relatedBriefId  String?
   relatedInvoiceId String?
