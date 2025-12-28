@@ -27,6 +27,44 @@ interface DashboardClientProps {
     }
 }
 
+const Card = ({ title, value, subtitle, icon: Icon, onClick, isActive, hasDropdown, activeBriefs }: any) => (
+    <div
+        onClick={onClick}
+        className={`bg-white dark:bg-slate-800 rounded-[12px] p-[28px] shadow-[0_1px_3px_rgba(0,0,0,0.08)] dark:shadow-none transition-all duration-300 relative cursor-pointer
+            ${isActive ? 'active ring-2 ring-[#0f5f5a] dark:ring-teal-500' : 'hover:shadow-[0_4px_12px_rgba(0,0,0,0.12)] hover:-translate-y-[2px] dark:hover:bg-slate-750'}
+        `}
+    >
+        <div className="flex justify-between items-start mb-[20px]">
+            <div>
+                <div className="text-[14px] text-[#718096] dark:text-slate-400 uppercase tracking-[0.5px] font-semibold mb-[8px]">{title}</div>
+                <div className="text-[48px] font-bold text-[#1a202c] dark:text-slate-100 leading-none mb-[8px]">{value}</div>
+                <div className="text-[13px] text-[#0f5f5a] dark:text-teal-400 font-medium">{subtitle}</div>
+            </div>
+            <div className="w-[48px] h-[48px] rounded-[12px] bg-[#e6f7f5] dark:bg-teal-900/30 text-[#0f5f5a] dark:text-teal-400 flex items-center justify-center text-[20px]">
+                {typeof Icon === 'string' ? Icon : <Icon size={24} strokeWidth={2} />}
+            </div>
+        </div>
+
+        {/* Dropdown Content */}
+        {hasDropdown && isActive && (
+            <div className="absolute top-full left-0 right-0 mt-[8px] bg-white dark:bg-slate-800 rounded-[12px] shadow-[0_8px_24px_rgba(0,0,0,0.15)] dark:shadow-[0_8px_24px_rgba(0,0,0,0.5)] z-[10] max-h-[400px] overflow-y-auto block border border-slate-100 dark:border-slate-700">
+                {(!activeBriefs || activeBriefs.length === 0) ? (
+                    <div className="p-5 text-center text-[#718096] dark:text-slate-400 text-sm">No active briefs</div>
+                ) : (
+                    activeBriefs.slice(0, 8).map((brief: any) => (
+                        <Link href={`/briefs/${brief.id}`} key={brief.id}>
+                            <div className="p-[16px] px-[20px] border-b border-[#e2e8f0] dark:border-slate-700 last:border-b-0 cursor-pointer transition-colors duration-200 hover:bg-[#f8fffe] dark:hover:bg-slate-700/50">
+                                <div className="font-semibold text-[#1a202c] dark:text-slate-200 text-[14px] mb-[4px]">{brief.name}</div>
+                                <div className="text-[12px] text-[#718096] dark:text-slate-400">Updated {formatTimeAgo(new Date(brief.updatedAt))}</div>
+                            </div>
+                        </Link>
+                    ))
+                )}
+            </div>
+        )}
+    </div>
+);
+
 export default function DashboardClient({ initialData }: DashboardClientProps) {
     const { data: session } = useSession();
     const user = session?.user;
@@ -55,44 +93,6 @@ export default function DashboardClient({ initialData }: DashboardClientProps) {
         month: 'long',
         day: 'numeric',
     }).format(new Date());
-
-    const Card = ({ title, value, subtitle, icon: Icon, onClick, isActive, hasDropdown }: any) => (
-        <div
-            onClick={onClick}
-            className={`bg-white dark:bg-slate-800 rounded-[12px] p-[28px] shadow-[0_1px_3px_rgba(0,0,0,0.08)] dark:shadow-none transition-all duration-300 relative cursor-pointer
-                ${isActive ? 'active ring-2 ring-[#0f5f5a] dark:ring-teal-500' : 'hover:shadow-[0_4px_12px_rgba(0,0,0,0.12)] hover:-translate-y-[2px] dark:hover:bg-slate-750'}
-            `}
-        >
-            <div className="flex justify-between items-start mb-[20px]">
-                <div>
-                    <div className="text-[14px] text-[#718096] dark:text-slate-400 uppercase tracking-[0.5px] font-semibold mb-[8px]">{title}</div>
-                    <div className="text-[48px] font-bold text-[#1a202c] dark:text-slate-100 leading-none mb-[8px]">{value}</div>
-                    <div className="text-[13px] text-[#0f5f5a] dark:text-teal-400 font-medium">{subtitle}</div>
-                </div>
-                <div className="w-[48px] h-[48px] rounded-[12px] bg-[#e6f7f5] dark:bg-teal-900/30 text-[#0f5f5a] dark:text-teal-400 flex items-center justify-center text-[20px]">
-                    {typeof Icon === 'string' ? Icon : <Icon size={24} strokeWidth={2} />}
-                </div>
-            </div>
-
-            {/* Dropdown Content */}
-            {hasDropdown && isActive && (
-                <div className="absolute top-full left-0 right-0 mt-[8px] bg-white dark:bg-slate-800 rounded-[12px] shadow-[0_8px_24px_rgba(0,0,0,0.15)] dark:shadow-[0_8px_24px_rgba(0,0,0,0.5)] z-[10] max-h-[400px] overflow-y-auto block border border-slate-100 dark:border-slate-700">
-                    {initialData.myBriefs.length === 0 ? (
-                        <div className="p-5 text-center text-[#718096] dark:text-slate-400 text-sm">No active briefs</div>
-                    ) : (
-                        initialData.myBriefs.slice(0, 8).map((brief: any) => (
-                            <Link href={`/briefs/${brief.id}`} key={brief.id}>
-                                <div className="p-[16px] px-[20px] border-b border-[#e2e8f0] dark:border-slate-700 last:border-b-0 cursor-pointer transition-colors duration-200 hover:bg-[#f8fffe] dark:hover:bg-slate-700/50">
-                                    <div className="font-semibold text-[#1a202c] dark:text-slate-200 text-[14px] mb-[4px]">{brief.name}</div>
-                                    <div className="text-[12px] text-[#718096] dark:text-slate-400">Updated {formatTimeAgo(new Date(brief.updatedAt))}</div>
-                                </div>
-                            </Link>
-                        ))
-                    )}
-                </div>
-            )}
-        </div>
-    );
 
     return (
         <div className="p-[40px] max-w-[1400px] mx-auto">
@@ -133,6 +133,7 @@ export default function DashboardClient({ initialData }: DashboardClientProps) {
                         onClick={() => setIsActiveBriefsOpen(!isActiveBriefsOpen)}
                         isActive={isActiveBriefsOpen}
                         hasDropdown={true}
+                        activeBriefs={initialData.myBriefs}
                     />
                 </div>
             </div>

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "../globals.css";
+import { ThemeToggle } from "@/components/ui/ThemeToggle";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
@@ -14,5 +15,12 @@ export default function AuthLayout({
 }: {
     children: React.ReactNode;
 }) {
-    return children;
+    return (
+        <div className="relative min-h-screen bg-slate-50 dark:bg-slate-900 transition-colors duration-300">
+            <div className="absolute top-4 right-4 z-50">
+                <ThemeToggle />
+            </div>
+            {children}
+        </div>
+    );
 }

@@ -27,13 +27,6 @@ export default function SettingsPage() {
     const [bankAccounts, setBankAccounts] = useState<any[]>([]);
     const [newAccount, setNewAccount] = useState({ bankName: '', accountNumber: '', accountName: '', currency: 'NGN' });
 
-    useEffect(() => {
-        if (session?.user?.workspaceId) {
-            loadSettings(session.user.workspaceId);
-        }
-        loadProfile();
-    }, [session]);
-
     const loadProfile = async () => {
         // We need a way to get the current profile beyond just session
         // Using server action for up-to-date data
@@ -61,6 +54,13 @@ export default function SettingsPage() {
 
         setIsLoading(false);
     };
+
+    useEffect(() => {
+        if (session?.user?.workspaceId) {
+            loadSettings(session.user.workspaceId);
+        }
+        loadProfile();
+    }, [session]);
 
     const handleSaveJobTitle = async () => {
         setIsSaving(true);

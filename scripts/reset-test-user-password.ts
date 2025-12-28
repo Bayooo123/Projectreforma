@@ -15,7 +15,8 @@ async function resetPassword() {
             data: { password: hashedPassword },
         });
 
-        console.log(`Password for ${user.email} reset to '${newPassword}'`);
+        // @ts-ignore
+        console.log(`Found user: ${user.email} (Workspace: ${user.workspaceId})`);
 
         // Also get Firm Code for login
         const workspace = await prisma.workspace.findUnique({

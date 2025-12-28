@@ -643,8 +643,28 @@ const InvoiceModal = ({ isOpen, onClose, clientName, clientId, workspaceId, lett
                                                         color: invoice.status === 'PAID' ? 'var(--success)' : invoice.status === 'OVERDUE' ? 'var(--error)' : 'var(--warning)',
                                                         textTransform: 'uppercase'
                                                     }}>
-                                                        {invoice.status}
+                                                        {invoice.status.replace('_', ' ')}
                                                     </p>
+                                                </div>
+                                            </div>
+
+                                            {/* Financial Breakdown */}
+                                            <div style={{
+                                                display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem',
+                                                background: 'var(--surface-subtle)', padding: '0.5rem', borderRadius: '4px',
+                                                marginBottom: '0.5rem', fontSize: '0.875rem'
+                                            }}>
+                                                <div>
+                                                    <span style={{ color: 'var(--text-secondary)', display: 'block' }}>Paid</span>
+                                                    <span style={{ fontWeight: 500, color: 'var(--success)' }}>
+                                                        {formatCurrencyFromKobo(invoice.paidAmount || 0)}
+                                                    </span>
+                                                </div>
+                                                <div style={{ textAlign: 'right' }}>
+                                                    <span style={{ color: 'var(--text-secondary)', display: 'block' }}>Outstanding</span>
+                                                    <span style={{ fontWeight: 600, color: invoice.totalAmount - (invoice.paidAmount || 0) <= 0 ? 'var(--text-secondary)' : '#DC2626' }}>
+                                                        {formatCurrencyFromKobo(invoice.totalAmount - (invoice.paidAmount || 0))}
+                                                    </span>
                                                 </div>
                                             </div>
 

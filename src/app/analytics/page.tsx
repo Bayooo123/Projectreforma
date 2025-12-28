@@ -31,10 +31,6 @@ export default function AnalyticsPage() {
     const [selectedDate, setSelectedDate] = useState<string | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
 
-    useEffect(() => {
-        fetchExpenseData();
-    }, [filter]);
-
     const fetchExpenseData = async () => {
         try {
             const response = await fetch(`/api/expenses?filter=${filter}`);
@@ -46,6 +42,10 @@ export default function AnalyticsPage() {
             console.error('Failed to fetch expense data:', error);
         }
     };
+
+    useEffect(() => {
+        fetchExpenseData();
+    }, [filter]);
 
     const formatCurrency = (amount: number) => {
         return `₦${(amount / 100).toLocaleString()}`;

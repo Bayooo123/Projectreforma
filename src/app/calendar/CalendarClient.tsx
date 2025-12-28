@@ -29,6 +29,11 @@ interface Matter {
         id: string;
         name: string | null;
     };
+    briefs: {
+        id: string;
+        briefNumber: string;
+        name: string;
+    }[];
 }
 
 interface CalendarClientProps {
@@ -62,7 +67,11 @@ export default function CalendarClient({
                 matter.name.toLowerCase().includes(query) ||
                 matter.caseNumber.toLowerCase().includes(query) ||
                 matter.client?.name.toLowerCase().includes(query) ||
-                matter.court?.toLowerCase().includes(query);
+                matter.court?.toLowerCase().includes(query) ||
+                matter.briefs?.some(b =>
+                    b.name.toLowerCase().includes(query) ||
+                    b.briefNumber.toLowerCase().includes(query)
+                );
             if (!matchesSearch) return false;
         }
 

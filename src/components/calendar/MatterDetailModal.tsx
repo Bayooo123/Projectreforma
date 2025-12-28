@@ -21,6 +21,11 @@ interface Matter {
         id: string;
         name: string | null;
     };
+    briefs: {
+        id: string;
+        briefNumber: string;
+        name: string;
+    }[];
 }
 
 interface MatterDetailModalProps {
@@ -237,6 +242,34 @@ const MatterDetailModal = ({ isOpen, onClose, matter, userId }: MatterDetailModa
                                 <p className={styles.value} style={{ textTransform: 'capitalize' }}>
                                     {matter.status}
                                 </p>
+                            </div>
+                        </div>
+                        <div className={styles.metaItem} style={{ gridColumn: '1 / -1' }}>
+                            <FileText size={16} className={styles.icon} />
+                            <div>
+                                <span className={styles.label}>Related Briefs</span>
+                                <div className={styles.value}>
+                                    {matter.briefs && matter.briefs.length > 0 ? (
+                                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '0.25rem' }}>
+                                            {matter.briefs.map(brief => (
+                                                <span
+                                                    key={brief.id}
+                                                    style={{
+                                                        background: 'var(--surface-subtle)',
+                                                        padding: '2px 8px',
+                                                        borderRadius: '4px',
+                                                        fontSize: '12px',
+                                                        border: '1px solid var(--border)'
+                                                    }}
+                                                >
+                                                    {brief.briefNumber} - {brief.name}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        'No linked briefs'
+                                    )}
+                                </div>
                             </div>
                         </div>
                     </div>

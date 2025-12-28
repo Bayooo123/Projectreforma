@@ -3,7 +3,7 @@
 import { useEffect, useRef } from "react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
-import { ThemeToggle } from "@/components/ThemeToggle";
+import LandingHeader from "./landing/LandingHeader";
 import styles from "./LandingPage.module.css";
 
 export default function LandingPage() {
@@ -49,31 +49,7 @@ export default function LandingPage() {
     <div className={styles.body}>
 
       {/* Navigation */}
-      <nav className={styles.nav}>
-        <div className={styles.navContent}>
-          <div className={styles.logo}>
-            <div className={styles.logoIcon}>R</div>
-            <span className={styles.logoText}>Reforma</span>
-          </div>
-          <div className={styles.navButtons}>
-            <ThemeToggle />
-            {isLoggedIn ? (
-              <Link href="/management" className={styles.navLink}>
-                Dashboard
-              </Link>
-            ) : (
-              <>
-                <Link href="/login" className={styles.navLink}>
-                  Log In
-                </Link>
-                <Link href="/register" className={styles.navCta}>
-                  Get Access
-                </Link>
-              </>
-            )}
-          </div>
-        </div>
-      </nav>
+      <LandingHeader />
 
       {/* Hero Section */}
       <section className={styles.hero}>

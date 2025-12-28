@@ -15,15 +15,16 @@ async function resetPassword() {
             data: { password: hashedPassword },
         });
 
-        console.log(`Password for ${user.email} reset to '${newPassword}'`);
-        
+        // @ts-ignore
+        console.log(`Found user: ${user.email} (Workspace: ${user.workspaceId})`);
+
         const workspace = await prisma.workspace.findUnique({
             where: { id: user.workspaceId! }
         });
 
         if (workspace) {
             console.log(`Firm Code: ${workspace.firmCode}`);
-            console.log(`Firm Password: ${workspace.joinPassword}`); 
+            console.log(`Firm Password: ${workspace.joinPassword}`);
         }
 
     } catch (error) {

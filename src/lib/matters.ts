@@ -27,6 +27,9 @@ export async function getMattersForMonth(
             include: {
                 client: { select: { id: true, name: true } },
                 assignedLawyer: { select: { id: true, name: true } },
+                briefs: {
+                    select: { id: true, briefNumber: true, name: true }
+                }
             },
         });
 
@@ -46,6 +49,9 @@ export async function getMattersForMonth(
                     include: {
                         client: { select: { id: true, name: true } },
                         assignedLawyer: { select: { id: true, name: true } },
+                        briefs: {
+                            select: { id: true, briefNumber: true, name: true }
+                        }
                     }
                 }
             }

@@ -190,15 +190,16 @@ model Notification {
   recipientType   String // 'lawyer' | 'client' | 'partner' | 'staff'
   relatedMatterId String?
   relatedBriefId  String?
-  priority        String // 'low' | 'medium' | 'high' | 'critical'
-  status          String    @default("unread") // 'unread' | 'read' | 'dismissed' | 'actioned'
-  channels        String // JSON array: ['in-app', 'email', 'sms']
-  createdAt       DateTime  @default(now())
-  readAt          DateTime?
-  actionedAt      DateTime?
+  relatedInvoiceId String?
+  relatedPaymentId String?
+  
+  // Generic metadata for flexibility
+  metadata        Json?
 
-  matter Matter? @relation(fields: [relatedMatterId], references: [id])
-  brief  Brief?  @relation(fields: [relatedBriefId], references: [id])
+  matter   Matter?  @relation(fields: [relatedMatterId], references: [id])
+  brief    Brief?   @relation(fields: [relatedBriefId], references: [id])
+  invoice  Invoice? @relation(fields: [relatedInvoiceId], references: [id])
+  payment  Payment? @relation(fields: [relatedPaymentId], references: [id])
 
   @@index([recipientId, status])
   @@index([createdAt])

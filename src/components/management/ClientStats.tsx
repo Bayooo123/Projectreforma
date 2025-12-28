@@ -14,6 +14,7 @@ const ClientStats = ({ workspaceId }: ClientStatsProps) => {
         totalClients: 0,
         activeMatters: 0,
         totalRevenue: 0,
+        outstandingAmount: 0,
     });
     const [isLocked, setIsLocked] = useState(false);
     const [showPinModal, setShowPinModal] = useState(false);
@@ -35,6 +36,7 @@ const ClientStats = ({ workspaceId }: ClientStatsProps) => {
                         totalClients: result.data.totalClients,
                         activeMatters: result.data.activeMatters,
                         totalRevenue: result.data.totalRevenue || 0,
+                        outstandingAmount: result.data.outstandingAmount || 0,
                     });
                     // @ts-ignore - isRevenueLocked added in action but type might lag in IDE
                     if (result.data.isRevenueLocked) {
@@ -203,6 +205,16 @@ const ClientStats = ({ workspaceId }: ClientStatsProps) => {
                         </div>
                     </div>
                 )}
+            </div>
+
+            <div className={styles.statCard}>
+                <div className={styles.iconWrapper} style={{ backgroundColor: '#FEE2E2', color: '#DC2626' }}>
+                    <Briefcase size={20} /> {/* Using Briefcase as placeholder, maybe AlertCircle? */}
+                </div>
+                <div className={styles.content}>
+                    <p className={styles.label}>Outstanding</p>
+                    <p className={styles.value}>{formatCurrency(stats.outstandingAmount)}</p>
+                </div>
             </div>
         </div>
     );

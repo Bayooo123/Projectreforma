@@ -54,7 +54,7 @@ export async function createInvoice(data: CreateInvoiceData) {
         // Get client to verify workspace
         const client = await prisma.client.findUnique({
             where: { id: data.clientId },
-            select: { workspaceId: true },
+            select: { workspaceId: true, name: true },
         });
 
         if (!client) {
@@ -107,6 +107,22 @@ export async function createInvoice(data: CreateInvoiceData) {
 
         revalidatePath('/management/clients');
         revalidatePath('/management/invoices');
+
+        // Notification: New Invoice Created
+        try {
+            const { createNotification } = await import('@/app/actions/notifications');
+            await createNotification({
+                workspaceId: client.workspaceId,
+                title: 'New Invoice Issued',
+                message: `Invoice #${invoiceNumber} for ${client.name} has been created. Total: ₦${(totalAmount / 100).toLocaleString()}`,
+                type: 'info',
+                priority: 'medium',
+                recipients: { role: ['owner', 'partner'] },
+                relatedInvoiceId: invoice.id
+            });
+        } catch (e) {
+            console.error('Notification error:', e);
+        }
 
         return { success: true, data: invoice };
     } catch (error) {
@@ -293,7 +309,7 @@ export async function getInvoiceStats(workspaceId: string) {
             }),
         ]);
 
-        // Calculate total billed
+        // Calculate total billed (Invoices)
         const billedData = await prisma.invoice.aggregate({
             where: {
                 client: { workspaceId },
@@ -303,27 +319,19 @@ export async function getInvoiceStats(workspaceId: string) {
             },
         });
 
-        // Calculate total paid
-        const paidData = await prisma.invoice.aggregate({
+        // Calculate total paid (Actual Payments)
+        const paymentData = await prisma.payment.aggregate({
             where: {
                 client: { workspaceId },
-                status: 'paid',
             },
             _sum: {
-                totalAmount: true,
+                amount: true, // Summing actual payments
             },
         });
 
-        // Calculate outstanding
-        const outstandingData = await prisma.invoice.aggregate({
-            where: {
-                client: { workspaceId },
-                status: { in: ['pending', 'overdue'] },
-            },
-            _sum: {
-                totalAmount: true,
-            },
-        });
+        const totalBilled = billedData._sum.totalAmount || 0;
+        const totalPaid = paymentData._sum.amount || 0;
+        const totalOutstanding = totalBilled - totalPaid;
 
         return {
             success: true,
@@ -332,9 +340,9 @@ export async function getInvoiceStats(workspaceId: string) {
                 paidInvoices,
                 pendingInvoices,
                 overdueInvoices,
-                totalBilled: billedData._sum.totalAmount || 0,
-                totalPaid: paidData._sum.totalAmount || 0,
-                totalOutstanding: outstandingData._sum.totalAmount || 0,
+                totalBilled,
+                totalPaid, // REVENUE
+                totalOutstanding,
             },
         };
     } catch (error) {

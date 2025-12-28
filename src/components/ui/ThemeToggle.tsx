@@ -4,19 +4,20 @@ import * as React from "react"
 import { Moon, Sun } from "lucide-react"
 import { useTheme } from "next-themes"
 
-export function ThemeToggle({ className }: { className?: string }) {
+export function ThemeToggle() {
     const { theme, setTheme } = useTheme()
     const [mounted, setMounted] = React.useState(false)
 
-    // Avoid hydration mismatch
     React.useEffect(() => {
         setMounted(true)
     }, [])
 
     if (!mounted) {
         return (
-            <button className={`p-2 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors ${className}`}>
-                <span className="sr-only">Toggle theme</span>
+            <button
+                className="p-2 rounded-md hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
+                aria-label="Toggle theme"
+            >
                 <div className="w-5 h-5" />
             </button>
         )
@@ -25,7 +26,7 @@ export function ThemeToggle({ className }: { className?: string }) {
     return (
         <button
             onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-            className={`p-2 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-slate-700 dark:text-slate-200 ${className}`}
+            className="p-2 rounded-md hover:bg-black/5 dark:hover:bg-white/5 text-foreground transition-colors"
             aria-label="Toggle theme"
         >
             {theme === "dark" ? (

@@ -222,6 +222,22 @@ export async function createBrief(data: {
         console.log('[createBrief] Calling revalidatePath("/briefs")');
         revalidatePath('/briefs');
 
+        // Notification: New Brief Created
+        try {
+            const { createNotification } = await import('@/app/actions/notifications');
+            await createNotification({
+                workspaceId: data.workspaceId,
+                title: 'New Brief Created',
+                message: `Brief "${data.name}" (${data.briefNumber}) has been created.`,
+                type: 'info',
+                priority: 'medium',
+                recipients: 'ALL',
+                relatedBriefId: result.id
+            });
+        } catch (error) {
+            console.error('Notification error:', error);
+        }
+
         console.log('[createBrief] ========== END ==========');
         return { success: true, brief: result };
     } catch (error: any) {
@@ -329,8 +345,32 @@ export async function assignLawyer(briefId: string, lawyerId: string) {
                         email: true,
                     },
                 },
+                matter: true, // Include matter to check for linkage
             },
         });
+
+        // Create Notification
+        let message = `You have been assigned brief "${brief.name}" (${brief.briefNumber}).`;
+        if (brief.matter) {
+            message += ` This corresponds to matter "${brief.matter.name}" (${brief.matter.caseNumber}). Check the litigation tracker for the report on the case.`;
+        } else {
+            message += ` Please review the brief details.`;
+        }
+
+        await prisma.notification.create({
+            data: {
+                type: 'info',
+                title: 'New Brief Assignment',
+                message: message,
+                recipientId: lawyerId,
+                recipientType: 'lawyer',
+                relatedBriefId: brief.id,
+                relatedMatterId: brief.matterId,
+                priority: 'medium',
+                channels: JSON.stringify(['in-app']),
+            },
+        });
+
         revalidatePath('/briefs');
         revalidatePath(`/briefs/${briefId}`);
         return { success: true, brief };

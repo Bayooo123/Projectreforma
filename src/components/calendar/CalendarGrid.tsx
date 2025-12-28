@@ -25,6 +25,11 @@ interface Matter {
         id: string;
         name: string | null;
     };
+    briefs: {
+        id: string;
+        briefNumber: string;
+        name: string;
+    }[];
 }
 
 interface CalendarGridProps {
