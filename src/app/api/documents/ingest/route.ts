@@ -5,6 +5,7 @@ import { TextExtractor } from '@/lib/ingestion/text-extractor';
 import { Chunker } from '@/lib/ingestion/chunker';
 import { Vectorizer } from '@/lib/ingestion/vectorizer';
 import { nanoid } from 'nanoid';
+import { put } from '@vercel/blob';
 
 // Max file size 10MB
 const MAX_SIZE = 10 * 1024 * 1024;
@@ -23,10 +24,15 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: 'File too large' }, { status: 400 });
         }
 
-        // 1. Create Document Record (Placeholder for Blob Storage URL)
-        // In a real app, upload to Vercel Alob/S3 here first.
-        // For now, we simulate storage and proceed to processing.
+        // 1. Upload to Blob Storage
+        // We read the buffer first to use for both upload and extraction
         const buffer = Buffer.from(await file.arrayBuffer());
+
+        const blob = await put(file.name, buffer, {
+            access: 'public',
+        });
+
+
         const documentId = nanoid();
 
         // Transaction to ensure document exists before chunks
@@ -36,7 +42,7 @@ export async function POST(req: NextRequest) {
                 name: file.name,
                 type: file.type.split('/')[1] || 'unknown',
                 size: file.size,
-                url: `https://placeholder.storage/${file.name}`, // Placeholder
+                url: blob.url,
                 briefId: briefId,
                 ocrStatus: 'processing'
             }

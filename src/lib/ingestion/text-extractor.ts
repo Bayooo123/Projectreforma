@@ -15,6 +15,8 @@ export class TextExtractor {
                 return await this.extractPdf(buffer);
             } else if (mimeType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
                 return await this.extractDocx(buffer);
+            } else if (mimeType.startsWith('image/')) {
+                return await this.extractImage(buffer);
             } else if (mimeType.startsWith('text/')) {
                 return buffer.toString('utf-8');
             } else {
@@ -53,5 +55,13 @@ export class TextExtractor {
     private static async extractDocx(buffer: Buffer): Promise<string> {
         const result = await mammoth.extractRawText({ buffer });
         return result.value;
+    }
+
+    private static async extractImage(buffer: Buffer): Promise<string> {
+        const { createWorker } = require('tesseract.js');
+        const worker = await createWorker('eng');
+        const ret = await worker.recognize(buffer);
+        await worker.terminate();
+        return ret.data.text;
     }
 }

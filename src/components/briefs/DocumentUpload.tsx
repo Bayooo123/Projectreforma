@@ -44,21 +44,24 @@ export default function DocumentUpload({ briefId, onUploadComplete }: DocumentUp
 
         try {
             for (const file of files) {
-                const response = await fetch(
-                    `/api/upload?filename=${encodeURIComponent(file.name)}&briefId=${briefId}`,
-                    {
-                        method: 'POST',
-                        body: file,
-                    }
-                );
+                const formData = new FormData();
+                formData.append('file', file);
+                formData.append('briefId', briefId);
+
+                const response = await fetch('/api/documents/ingest', {
+                    method: 'POST',
+                    body: formData,
+                });
 
                 if (!response.ok) {
                     throw new Error(`Failed to upload ${file.name}`);
                 }
             }
 
-            alert(`Successfully uploaded ${files.length} file(s)`);
-            onUploadComplete();
+            if (files.length > 0) {
+                alert(`Successfully uploaded and processed ${files.length} file(s).`);
+                onUploadComplete();
+            }
         } catch (error) {
             console.error('Upload error:', error);
             alert('Failed to upload files. Please try again.');
