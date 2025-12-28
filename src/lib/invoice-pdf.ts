@@ -51,7 +51,8 @@ export const generateInvoicePDF = async (data: GeneratePDFParams): Promise<Blob>
 
     // 1. Load Letterhead if available
     // 1. Load Letterhead if available
-    if (data.letterheadUrl) {
+    // 1. Load Letterhead if available
+    if (data.letterheadUrl && data.letterheadUrl.match(/\.(jpeg|jpg|png|gif)$/i)) {
         try {
             // Use HTMLImageElement for robust format detection by browser
             const img = new Image();

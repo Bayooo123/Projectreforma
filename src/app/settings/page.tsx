@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
-import { User, Building2, Lock, Save, Image as ImageIcon, Loader } from 'lucide-react';
+import { User, Building2, Lock, Save, Image as ImageIcon, Loader, FileText, AlertCircle } from 'lucide-react';
 import { updateWorkspaceSettings, getWorkspaceSettings } from '@/app/actions/settings';
 import { getUserProfile, updateUserProfile } from '@/app/actions/members';
 import { getBankAccounts, createBankAccount, deleteBankAccount } from '@/app/actions/bank-accounts';
@@ -196,29 +196,49 @@ export default function SettingsPage() {
                                 <input type="text" className={styles.input} value={firmCode} onChange={e => setFirmCode(e.target.value)} />
                             </div>
                             <div className={styles.formGroup}>
-                                <label>Letterhead Image</label>
-                                <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-                                    {editLetterheadUrl && (
-                                        <img src={editLetterheadUrl} alt="Letterhead" style={{ height: '60px', border: '1px solid #ddd' }} />
-                                    )}
-                                    <div style={{ flex: 1 }}>
-                                        <input
-                                            type="file"
-                                            accept="image/*"
-                                            onChange={handleFileUpload}
-                                            disabled={isSaving || isUploading}
-                                            style={{ display: 'block', width: '100%' }}
-                                        />
-                                        <input
-                                            type="text"
-                                            className={styles.input}
-                                            value={editLetterheadUrl}
-                                            onChange={e => setEditLetterheadUrl(e.target.value)}
-                                            placeholder="Or paste URL..."
-                                            style={{ marginTop: '0.5rem' }}
-                                        />
+                                <label>Letterhead / Branding File</label>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                                    <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                                        {editLetterheadUrl && (
+                                            <div style={{ padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px', maxWidth: '300px' }}>
+                                                {editLetterheadUrl.match(/\.(jpeg|jpg|png|gif)$/i) ? (
+                                                    <img src={editLetterheadUrl} alt="Letterhead" style={{ maxHeight: '60px', maxWidth: '100%', objectFit: 'contain' }} />
+                                                ) : (
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem' }}>
+                                                        <FileText size={20} />
+                                                        <span style={{ fontSize: '0.8rem', wordBreak: 'break-all' }}>{editLetterheadUrl.split('/').pop()}</span>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+                                        <div style={{ flex: 1 }}>
+                                            <input
+                                                type="file"
+                                                accept="image/*,.pdf,.doc,.docx"
+                                                onChange={handleFileUpload}
+                                                disabled={isSaving || isUploading}
+                                                style={{ display: 'block', width: '100%' }}
+                                            />
+                                            <input
+                                                type="text"
+                                                className={styles.input}
+                                                value={editLetterheadUrl}
+                                                onChange={e => setEditLetterheadUrl(e.target.value)}
+                                                placeholder="Or paste URL..."
+                                                style={{ marginTop: '0.5rem' }}
+                                            />
+                                        </div>
+                                        {isUploading && <Loader className="spin" size={20} />}
                                     </div>
-                                    {isUploading && <Loader className="spin" size={20} />}
+                                    {!editLetterheadUrl?.match(/\.(jpeg|jpg|png|gif)$/i) && editLetterheadUrl && (
+                                        <div style={{ fontSize: '0.8rem', color: '#eab308', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                            <AlertCircle size={14} />
+                                            <span>
+                                                Note: PDF/Word letterheads cannot be automatically placed on generated invoices.
+                                                Please upload an Image (PNG/JPG) for logo placement, or use these files as reference.
+                                            </span>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                             <div className={styles.actions}>

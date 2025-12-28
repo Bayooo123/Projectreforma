@@ -39,7 +39,7 @@ export interface InvoiceData {
 export async function generateInvoiceDOCX(data: InvoiceData): Promise<Blob> {
     // 1. Fetch Letterhead Image if exists
     let letterheadImage: ArrayBuffer | null = null;
-    if (data.letterheadUrl) {
+    if (data.letterheadUrl && data.letterheadUrl.match(/\.(jpeg|jpg|png|gif)$/i)) {
         try {
             const response = await fetch(data.letterheadUrl);
             letterheadImage = await response.arrayBuffer();
