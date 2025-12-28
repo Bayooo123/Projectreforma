@@ -413,6 +413,7 @@ model Invoice {
   matter   Matter?       @relation(fields: [matterId], references: [id])
   payments Payment[]
   items    InvoiceItem[] // Line items
+  notifications Notification[]
 
   @@index([clientId])
   @@index([matterId])
@@ -448,6 +449,7 @@ model Payment {
 
   client  Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
   invoice Invoice? @relation(fields: [invoiceId], references: [id])
+  notifications Notification[]
 
   @@index([clientId])
   @@index([invoiceId])
