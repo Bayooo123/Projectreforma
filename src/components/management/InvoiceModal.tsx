@@ -3,7 +3,11 @@
 import { useState, useEffect } from 'react';
 import { X, Plus, Trash2, FileText, DollarSign, Loader, Download, CreditCard } from 'lucide-react';
 import { createInvoice, generateInvoiceNumber, getClientMatters, getClientInvoices } from '@/app/actions/invoices';
+import { createInvoice, generateInvoiceNumber, getClientMatters, getClientInvoices } from '@/app/actions/invoices';
+import { getBankAccounts } from '@/app/actions/bank-accounts';
+import { getWorkspaceMembers } from '@/app/actions/members';
 import { generateInvoicePDF } from '@/lib/invoice-pdf';
+import { generateInvoiceDOCX } from '@/lib/invoice-docx';
 import styles from './InvoiceModal.module.css';
 
 interface InvoiceItem {
@@ -146,28 +150,31 @@ const InvoiceModal = ({ isOpen, onClose, clientName, clientId, workspaceId, lett
     useEffect(() => {
         if (isOpen && workspaceId) {
             const loadData = async () => {
-                const { getBankAccounts } = await import('@/app/actions/bank-accounts');
-                const { getWorkspaceMembers } = await import('@/app/actions/members');
+                try {
+                    const [banksRes, membersRes, mattersRes] = await Promise.all([
+                        getBankAccounts(workspaceId),
+                        getWorkspaceMembers(workspaceId),
+                        getClientMatters(clientId)
+                    ]);
 
-                const [banksRes, membersRes] = await Promise.all([
-                    getBankAccounts(workspaceId),
-                    getWorkspaceMembers(workspaceId)
-                ]);
-
-                if (banksRes.success && banksRes.accounts) {
-                    setBankAccounts(banksRes.accounts);
-                    if (banksRes.accounts.length > 0) setSelectedBankId(banksRes.accounts[0].id);
-                }
-                if (membersRes.success && membersRes.data) {
-                    setSignatories(membersRes.data);
-                    // try to select current user? we don't have current user id easily here props-wise?
-                    // just select first lawyer/owner
-                    if (membersRes.data.length > 0) setSelectedSignatoryId(membersRes.data[0].id);
+                    if (banksRes.success && banksRes.accounts) {
+                        setBankAccounts(banksRes.accounts);
+                        if (banksRes.accounts.length > 0) setSelectedBankId(banksRes.accounts[0].id);
+                    }
+                    if (membersRes.success && membersRes.data) {
+                        setSignatories(membersRes.data);
+                        if (membersRes.data.length > 0) setSelectedSignatoryId(membersRes.data[0].id);
+                    }
+                    if (mattersRes.success && mattersRes.data) {
+                        setMatters(mattersRes.data);
+                    }
+                } catch (error) {
+                    console.error('Failed to load form data', error);
                 }
             };
             loadData();
         }
-    }, [isOpen, workspaceId]);
+    }, [isOpen, workspaceId, clientId]);
 
     // ... existing list fetch logic ...
 
@@ -254,6 +261,80 @@ const InvoiceModal = ({ isOpen, onClose, clientName, clientId, workspaceId, lett
             setIsGeneratingPdf(null);
         }
     };
+
+    const handleDownloadDOCX = async (invoice: Invoice | null) => {
+        const isDraft = !invoice;
+        const targetId = isDraft ? 'draft-docx' : invoice!.id + '-docx';
+        setIsGeneratingPdf(targetId); // Reuse state or add new? reusing with suffix is fine
+
+        try {
+            const bank = bankAccounts.find(b => b.id === selectedBankId);
+            const signatory = signatories.find(s => s.id === selectedSignatoryId);
+
+            let data: any = {};
+            if (isDraft) {
+                const calcs = calculateTotals();
+                data = {
+                    invoiceNumber: invoiceNumber,
+                    date: new Date(),
+                    dueDate: undefined,
+                    billTo: { name: billToName, address: billToAddress, city: billToCity, state: billToState, attentionTo },
+                    items: items.map(i => ({ ...i, amount: i.amount * 100 })),
+                    totals: {
+                        subtotal: calcs.subtotal * 100,
+                        vat: calcs.vat * 100,
+                        securityCharge: calcs.securityCharge * 100,
+                        total: calcs.total * 100
+                    },
+                    bankDetails: bank,
+                    signatory: signatory,
+                    letterheadUrl: letterheadUrl
+                };
+            } else {
+                // For saved invoices, reconstruct
+                let subtotal = 0;
+                const pdfItems = invoice!.items.map((item: any) => {
+                    subtotal += (item.amount * item.quantity);
+                    return { ...item };
+                });
+                const vat = subtotal * 0.075;
+                const security = subtotal * 0.01;
+
+                data = {
+                    invoiceNumber: invoice!.invoiceNumber,
+                    date: new Date(invoice!.createdAt),
+                    dueDate: invoice!.dueDate ? new Date(invoice!.dueDate) : undefined,
+                    billTo: {
+                        name: invoice!.billToName,
+                        address: invoice!.billToAddress || undefined,
+                        city: invoice!.billToCity || undefined,
+                        state: invoice!.billToState || undefined,
+                        attentionTo: invoice!.attentionTo || undefined
+                    },
+                    items: pdfItems,
+                    totals: { subtotal, vat, securityCharge: security, total: invoice!.totalAmount },
+                    letterheadUrl: letterheadUrl
+                };
+            }
+
+            const blob = await generateInvoiceDOCX(data);
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `Invoice-${data.invoiceNumber}.docx`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+
+        } catch (error) {
+            console.error('Error generating DOCX', error);
+            alert('Failed to generate Word document');
+        } finally {
+            setIsGeneratingPdf(null);
+        }
+    };
+
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
@@ -583,6 +664,21 @@ const InvoiceModal = ({ isOpen, onClose, clientName, clientId, workspaceId, lett
                                     {isGeneratingPdf === 'draft' ? <Loader className="spin" size={16} /> : <Download size={16} />}
                                     Preview PDF
                                 </button>
+                                <button
+                                    type="button"
+                                    className={styles.iconBtn}
+                                    onClick={() => handleDownloadDOCX(null)}
+                                    disabled={isGeneratingPdf === 'draft-docx' || isSubmitting}
+                                    style={{
+                                        display: 'flex', alignItems: 'center', gap: '0.25rem',
+                                        padding: '0.5rem 0.75rem', fontSize: '0.875rem',
+                                        border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)',
+                                        background: 'var(--surface)', cursor: 'pointer'
+                                    }}
+                                >
+                                    {isGeneratingPdf === 'draft-docx' ? <Loader className="spin" size={16} /> : <FileText size={16} />}
+                                    Word
+                                </button>
                                 <div style={{ flex: 1 }} />
                                 <button type="button" className={styles.cancelBtn} onClick={onClose} disabled={isSubmitting}>
                                     Cancel
@@ -687,6 +783,25 @@ const InvoiceModal = ({ isOpen, onClose, clientName, clientId, workspaceId, lett
                                                         <Download size={14} />
                                                     )}
                                                     PDF
+                                                </button>
+                                                <button
+                                                    onClick={() => handleDownloadDOCX(invoice)}
+                                                    className={styles.iconBtn}
+                                                    title="Download Word"
+                                                    disabled={isGeneratingPdf === invoice.id + '-docx'}
+                                                    style={{
+                                                        display: 'flex', alignItems: 'center', gap: '0.25rem',
+                                                        padding: '0.5rem 0.75rem', fontSize: '0.875rem',
+                                                        border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)',
+                                                        background: 'var(--surface)', cursor: 'pointer'
+                                                    }}
+                                                >
+                                                    {isGeneratingPdf === invoice.id + '-docx' ? (
+                                                        <Loader size={14} className="spin" />
+                                                    ) : (
+                                                        <FileText size={14} />
+                                                    )}
+                                                    Word
                                                 </button>
 
                                                 {invoice.status !== 'PAID' && onRecordPayment && (

@@ -12,20 +12,20 @@ export async function POST(request: Request): Promise<NextResponse> {
         const filename = searchParams.get('filename');
         const briefId = searchParams.get('briefId');
 
-        if (!filename || !briefId) {
+        if (!filename) {
             return NextResponse.json(
-                { error: 'Filename and Brief ID are required' },
+                { error: 'Filename is required' },
                 { status: 400 }
             );
         }
 
         // 2. Security: File Type Validation
-        const allowedExtensions = ['pdf', 'doc', 'docx', 'txt', 'ppt', 'pptx'];
+        const allowedExtensions = ['pdf', 'doc', 'docx', 'txt', 'ppt', 'pptx', 'png', 'jpg', 'jpeg'];
         const extension = filename.split('.').pop()?.toLowerCase();
 
         if (!extension || !allowedExtensions.includes(extension)) {
             return NextResponse.json(
-                { error: 'Invalid file type. Allowed: PDF, DOC, DOCX, PPT, PPTX, TXT' },
+                { error: 'Invalid file type.' },
                 { status: 400 }
             );
         }
@@ -42,16 +42,18 @@ export async function POST(request: Request): Promise<NextResponse> {
             access: 'public',
         });
 
-        // 4. Database Record
-        await prisma.document.create({
-            data: {
-                name: filename,
-                url: blob.url,
-                type: extension,
-                size: parseInt(request.headers.get('content-length') || '0'), // Vercel Blob put result doesn't explicitly guarantee size in type
-                briefId: briefId,
-            },
-        });
+        // 4. Database Record (Only if linked to a brief)
+        if (briefId) {
+            await prisma.document.create({
+                data: {
+                    name: filename,
+                    url: blob.url,
+                    type: extension,
+                    size: parseInt(request.headers.get('content-length') || '0'),
+                    briefId: briefId,
+                },
+            });
+        }
 
         return NextResponse.json(blob);
     } catch (error: any) {

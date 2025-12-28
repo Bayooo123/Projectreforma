@@ -15,6 +15,7 @@ export default function SettingsPage() {
     // Config State
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
+    const [isUploading, setIsUploading] = useState(false);
 
     // Firm Settings
     const [firmCode, setFirmCode] = useState('');
@@ -106,6 +107,28 @@ export default function SettingsPage() {
         setIsSaving(false);
     };
 
+    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        setIsUploading(true);
+        try {
+            const res = await fetch(`/api/upload?filename=${encodeURIComponent(file.name)}`, {
+                method: 'POST',
+                body: file,
+            });
+
+            if (!res.ok) throw new Error('Upload failed');
+            const blob = await res.json();
+            setEditLetterheadUrl(blob.url);
+        } catch (error) {
+            console.error(error);
+            alert('Upload failed');
+        } finally {
+            setIsUploading(false);
+        }
+    };
+
     if (isLoading && !session) return <div className={styles.loading}><Loader className="spin" /> Loading...</div>;
 
     return (
@@ -173,8 +196,30 @@ export default function SettingsPage() {
                                 <input type="text" className={styles.input} value={firmCode} onChange={e => setFirmCode(e.target.value)} />
                             </div>
                             <div className={styles.formGroup}>
-                                <label>Letterhead URL</label>
-                                <input type="text" className={styles.input} value={editLetterheadUrl} onChange={e => setEditLetterheadUrl(e.target.value)} />
+                                <label>Letterhead Image</label>
+                                <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                                    {editLetterheadUrl && (
+                                        <img src={editLetterheadUrl} alt="Letterhead" style={{ height: '60px', border: '1px solid #ddd' }} />
+                                    )}
+                                    <div style={{ flex: 1 }}>
+                                        <input
+                                            type="file"
+                                            accept="image/*"
+                                            onChange={handleFileUpload}
+                                            disabled={isSaving || isUploading}
+                                            style={{ display: 'block', width: '100%' }}
+                                        />
+                                        <input
+                                            type="text"
+                                            className={styles.input}
+                                            value={editLetterheadUrl}
+                                            onChange={e => setEditLetterheadUrl(e.target.value)}
+                                            placeholder="Or paste URL..."
+                                            style={{ marginTop: '0.5rem' }}
+                                        />
+                                    </div>
+                                    {isUploading && <Loader className="spin" size={20} />}
+                                </div>
                             </div>
                             <div className={styles.actions}>
                                 <button type="submit" className={styles.saveBtn} disabled={isSaving}>Save Configuration</button>
