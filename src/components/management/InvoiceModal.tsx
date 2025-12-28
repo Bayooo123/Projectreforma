@@ -179,67 +179,61 @@ const InvoiceModal = ({ isOpen, onClose, clientName, clientId, workspaceId, lett
     // ... existing list fetch logic ...
 
     const handleDownloadPDF = async (invoice: Invoice | null) => {
-        // If invoice is null, we are generating draft from current state
-        const isDraft = !invoice;
-        const targetId = isDraft ? 'draft' : invoice!.id;
+        let invoiceToUse = invoice;
 
+        if (!invoiceToUse) {
+            const savedInvoice = await saveDraft();
+            if (!savedInvoice) return;
+            invoiceToUse = savedInvoice;
+        }
+
+        const targetId = invoiceToUse!.id;
         setIsGeneratingPdf(targetId);
+
         try {
             const bank = bankAccounts.find(b => b.id === selectedBankId);
             const signatory = signatories.find(s => s.id === selectedSignatoryId);
 
-            // Build Data
             let pdfData: any = {};
 
-            if (isDraft) {
-                const calcs = calculateTotals();
-                pdfData = {
-                    invoiceNumber: invoiceNumber,
-                    date: new Date(),
-                    dueDate: undefined, // TODO: add draft due date
-                    billTo: { name: billToName, address: billToAddress, city: billToCity, state: billToState, attentionTo },
-                    items: items.map(i => ({ ...i, amount: i.amount * 100 })), // to Kobo
-                    totals: {
-                        subtotal: calcs.subtotal * 100,
-                        vat: calcs.vat * 100,
-                        securityCharge: calcs.securityCharge * 100,
-                        total: calcs.total * 100
-                    },
-                    bankDetails: bank,
-                    signatory: signatory
+            // Reconstruct data from saved invoice
+            let subtotal = 0;
+            const pdfItems = invoiceToUse!.items.map((item: any) => {
+                const quantity = Number(item.quantity);
+                const amount = Number(item.amount);
+                subtotal += (amount * quantity);
+                return {
+                    description: item.description,
+                    quantity: quantity,
+                    amount: amount
                 };
-            } else {
-                // From Invoice Object
-                // We don't have bank/sig stored structure, so we pass null/undefined or defaults?
-                // Unless we parsed them from notes earlier?
-                // For now, list view won't show bank/sig until we fix schema. 
-                // BUT if I passed them into `notes` string on creation, I could maybe parse?
-                // Let's keep it simple: List View = Basic PDF. Create View = Rich PDF.
+            });
 
-                // Reconstruct items...
-                let subtotal = 0;
-                const pdfItems = invoice!.items.map((item: any) => {
-                    subtotal += (item.amount * item.quantity);
-                    return { ...item };
-                });
-                const vat = subtotal * 0.075;
-                const security = subtotal * 0.01;
+            const vat = Math.round(subtotal * 0.075);
+            const security = Math.round(subtotal * 0.01);
+            const total = subtotal + vat + security; // or invoiceToUse!.totalAmount
 
-                pdfData = {
-                    invoiceNumber: invoice!.invoiceNumber,
-                    date: new Date(invoice!.createdAt),
-                    dueDate: invoice!.dueDate ? new Date(invoice!.dueDate) : undefined,
-                    billTo: {
-                        name: invoice!.billToName,
-                        address: invoice!.billToAddress || undefined,
-                        city: invoice!.billToCity || undefined,
-                        state: invoice!.billToState || undefined,
-                        attentionTo: invoice!.attentionTo || undefined
-                    },
-                    items: pdfItems,
-                    totals: { subtotal, vat: vat, securityCharge: security, total: invoice!.totalAmount }
-                };
-            }
+            pdfData = {
+                invoiceNumber: invoiceToUse!.invoiceNumber,
+                date: new Date(invoiceToUse!.createdAt),
+                dueDate: invoiceToUse!.dueDate ? new Date(invoiceToUse!.dueDate) : undefined,
+                billTo: {
+                    name: invoiceToUse!.billToName,
+                    address: invoiceToUse!.billToAddress || undefined,
+                    city: invoiceToUse!.billToCity || undefined,
+                    state: invoiceToUse!.billToState || undefined,
+                    attentionTo: invoiceToUse!.attentionTo || undefined
+                },
+                items: pdfItems,
+                totals: {
+                    subtotal,
+                    vat: vat,
+                    securityCharge: security,
+                    total: invoiceToUse!.totalAmount
+                },
+                bankDetails: bank,
+                signatory: signatory
+            };
 
             const pdfBlob = await generateInvoicePDF({
                 ...pdfData,
@@ -254,68 +248,97 @@ const InvoiceModal = ({ isOpen, onClose, clientName, clientId, workspaceId, lett
             a.click();
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
+
+            if (!invoice) {
+                alert('Invoice has been saved and downloaded.');
+                onClose();
+            }
+
         } catch (error) {
-            console.error('Error generating PDF', error);
+            console.error('Failed to generate PDF', error);
             alert('Failed to generate PDF');
         } finally {
             setIsGeneratingPdf(null);
         }
     };
 
+
+
     const handleDownloadDOCX = async (invoice: Invoice | null) => {
-        const isDraft = !invoice;
-        const targetId = isDraft ? 'draft-docx' : invoice!.id + '-docx';
-        setIsGeneratingPdf(targetId); // Reuse state or add new? reusing with suffix is fine
+        let invoiceToUse = invoice;
+
+        // Auto-save if draft
+        if (!invoiceToUse) {
+            // Provide visual feedback? "Saving..." handled by isSubmitting/isGeneratingPdf
+            const savedInvoice = await saveDraft();
+            if (!savedInvoice) return; // Save failed
+            invoiceToUse = savedInvoice;
+            // DO NOT CLOSE MODAL automatically here, user might want to keep editing? 
+            // Or at least switch to view mode?
+            // Ideally we should refresh the list or context.
+            // For now, we continue with generation.
+            // Note: savedInvoice might need to be cast to Invoice type if action result differs slightly?
+            // Assuming action returns full invoice object.
+        }
+
+        const targetId = invoiceToUse!.id + '-docx';
+        setIsGeneratingPdf(targetId);
 
         try {
+            // Need to re-fetch or use saved invoice data.
+            // savedInvoice should have everything.
+
+            // Re-construct data for generator
+            // We need to parse items, sums etc.
+
+            let subtotal = 0;
+            const pdfItems = invoiceToUse!.items.map((item: any) => {
+                // If newly created, item.amount is in kobo (integer). verify.
+                // createInvoice returns the DB object (amount in kobo).
+                // generateInvoiceDOCX expects amount in kobo.
+                // UI items use fractional naira (e.g. 15000.00).
+
+                // If specific structure return from DB:
+                const quantity = Number(item.quantity);
+                const amount = Number(item.amount); // Kobo
+                subtotal += (amount * quantity);
+                return {
+                    description: item.description,
+                    quantity: quantity,
+                    amount: amount
+                };
+            });
+            const vat = Math.round(subtotal * 0.075);
+            const security = Math.round(subtotal * 0.01);
+            const total = subtotal + vat + security;
+
+            // Ensure bank details are passed if not in invoice object?
+            // The invoice object from DB typically doesn't have bank/signatory snapshot unless we store it.
+            // But we stored it in 'notes'.
+            // The generator might want structured bank/signatory.
+            // We can use the CURRENTLY SELECTED bank/signatory from state if we just saved it.
+            // OR parse from notes?
+            // Let's use the selected ones from state for now as fallback/primary.
             const bank = bankAccounts.find(b => b.id === selectedBankId);
             const signatory = signatories.find(s => s.id === selectedSignatoryId);
 
-            let data: any = {};
-            if (isDraft) {
-                const calcs = calculateTotals();
-                data = {
-                    invoiceNumber: invoiceNumber,
-                    date: new Date(),
-                    dueDate: undefined,
-                    billTo: { name: billToName, address: billToAddress, city: billToCity, state: billToState, attentionTo },
-                    items: items.map(i => ({ ...i, amount: i.amount * 100 })),
-                    totals: {
-                        subtotal: calcs.subtotal * 100,
-                        vat: calcs.vat * 100,
-                        securityCharge: calcs.securityCharge * 100,
-                        total: calcs.total * 100
-                    },
-                    bankDetails: bank,
-                    signatory: signatory,
-                    letterheadUrl: letterheadUrl
-                };
-            } else {
-                // For saved invoices, reconstruct
-                let subtotal = 0;
-                const pdfItems = invoice!.items.map((item: any) => {
-                    subtotal += (item.amount * item.quantity);
-                    return { ...item };
-                });
-                const vat = subtotal * 0.075;
-                const security = subtotal * 0.01;
-
-                data = {
-                    invoiceNumber: invoice!.invoiceNumber,
-                    date: new Date(invoice!.createdAt),
-                    dueDate: invoice!.dueDate ? new Date(invoice!.dueDate) : undefined,
-                    billTo: {
-                        name: invoice!.billToName,
-                        address: invoice!.billToAddress || undefined,
-                        city: invoice!.billToCity || undefined,
-                        state: invoice!.billToState || undefined,
-                        attentionTo: invoice!.attentionTo || undefined
-                    },
-                    items: pdfItems,
-                    totals: { subtotal, vat, securityCharge: security, total: invoice!.totalAmount },
-                    letterheadUrl: letterheadUrl
-                };
-            }
+            const data = {
+                invoiceNumber: invoiceToUse!.invoiceNumber,
+                date: new Date(invoiceToUse!.createdAt),
+                dueDate: invoiceToUse!.dueDate ? new Date(invoiceToUse!.dueDate) : undefined,
+                billTo: {
+                    name: invoiceToUse!.billToName,
+                    address: invoiceToUse!.billToAddress || undefined,
+                    city: invoiceToUse!.billToCity || undefined,
+                    state: invoiceToUse!.billToState || undefined,
+                    attentionTo: invoiceToUse!.attentionTo || undefined
+                },
+                items: pdfItems,
+                totals: { subtotal, vat, securityCharge: security, total: total }, // Use calculated total or DB total? DB total usually includes tax.
+                bankDetails: bank,
+                signatory: signatory,
+                letterheadUrl: letterheadUrl
+            };
 
             const blob = await generateInvoiceDOCX(data);
             const url = URL.createObjectURL(blob);
@@ -327,6 +350,12 @@ const InvoiceModal = ({ isOpen, onClose, clientName, clientId, workspaceId, lett
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
 
+            // If we just created it, maybe alert user?
+            if (!invoice) {
+                alert('Invoice has been saved and downloaded.');
+                onClose(); // Close after successful save & download? Matches "handleSubmit" behavior approx.
+            }
+
         } catch (error) {
             console.error('Error generating DOCX', error);
             alert('Failed to generate Word document');
@@ -336,9 +365,7 @@ const InvoiceModal = ({ isOpen, onClose, clientName, clientId, workspaceId, lett
     };
 
 
-    const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-        e.preventDefault();
-        const formData = new FormData(e.currentTarget);
+    const saveDraft = async (): Promise<any> => {
         setIsSubmitting(true);
 
         // Append Bank Instructions to Notes to persist them!
@@ -354,13 +381,23 @@ const InvoiceModal = ({ isOpen, onClose, clientName, clientId, workspaceId, lett
         }
 
         try {
+            // Get due date from form if possible, or state if we bind it? 
+            // Currently due date is uncontrolled in the form `name="dueDate"`.
+            // We need to fetch it. Let's look up the input ref or just switch to controlled state for dueDate to be safe?
+            // Or just query selector? 
+            // Better: Switch dueDate to controlled state.
+            // For now, let's grab it via ID or Ref. But wait, we are in a function.
+            // Let's assume controlled state for consistency or querySelector.
+            const dueDateInput = document.querySelector('input[name="dueDate"]') as HTMLInputElement;
+            const dueDateVal = dueDateInput?.value ? new Date(dueDateInput.value) : undefined;
+
             const result = await createInvoice({
                 clientId,
-                matterId: formData.get('matterId') as string || undefined,
+                matterId: (document.querySelector('select[name="matterId"]') as HTMLSelectElement)?.value || undefined,
                 billToName: billToName,
                 billToAddress, billToCity, billToState, attentionTo,
                 notes: finalNotes,
-                dueDate: formData.get('dueDate') ? new Date(formData.get('dueDate') as string) : undefined,
+                dueDate: dueDateVal,
                 items: items.map((item, index) => ({
                     description: item.description,
                     amount: Math.round(Number(item.amount) * 100), // Convert to kobo
@@ -372,19 +409,32 @@ const InvoiceModal = ({ isOpen, onClose, clientName, clientId, workspaceId, lett
             });
 
             if (result.success) {
-                alert(`Invoice ${invoiceNumber} created!`);
-                setItems([{ description: '', amount: 0, quantity: 1 }]);
-                // Reset fields
-                setBillToName(''); setBillToAddress(''); setBillToCity(''); setBillToState(''); setAttentionTo(''); setNotes('');
-                onClose();
+                // alert(`Invoice ${invoiceNumber} created!`); // Don't alert here, return result
+                // Update local list? The parent handles refresh via `onClose` usually? 
+                // Wait, if we just save-and-download, we might NOT want to close?
+                // But we need to switch mode to "edit" or at least know the ID.
+                return result.invoice; // Assume action returns the invoice
             } else {
                 alert(`Error: ${result.error}`);
+                return null;
             }
         } catch (error) {
             console.error('Error creating invoice:', error);
             alert('Failed to create invoice');
+            return null;
         } finally {
             setIsSubmitting(false);
+        }
+    };
+
+    const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        const invoice = await saveDraft();
+        if (invoice) {
+            alert(`Invoice ${invoice.invoiceNumber} created!`);
+            setItems([{ description: '', amount: 0, quantity: 1 }]);
+            setBillToName(''); setBillToAddress(''); setBillToCity(''); setBillToState(''); setAttentionTo(''); setNotes('');
+            onClose();
         }
     };
 

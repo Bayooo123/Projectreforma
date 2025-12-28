@@ -15,6 +15,8 @@ import {
 } from 'lucide-react';
 import styles from './Sidebar.module.css';
 import { signOut } from 'next-auth/react'; // Use client-side signOut
+import { useEffect } from 'react';
+import { checkOverdueInvoices } from '@/app/actions/notifications';
 
 interface SidebarProps {
   user?: {
@@ -26,6 +28,18 @@ interface SidebarProps {
 
 const Sidebar = ({ user }: SidebarProps) => {
   const pathname = usePathname();
+
+  useEffect(() => {
+    // Check for invoice follow-ups on mount (once per session/refresh)
+    const runChecks = async () => {
+      try {
+        await checkOverdueInvoices();
+      } catch (e) {
+        console.error(e);
+      }
+    };
+    runChecks();
+  }, []);
 
   const navItems = [
     { name: 'Overview', href: '/management', icon: LayoutDashboard },

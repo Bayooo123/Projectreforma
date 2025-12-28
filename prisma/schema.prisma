@@ -400,6 +400,7 @@ model Invoice {
   // Additional Fields
   attentionTo String? // e.g., "Sven Hanson"
   notes       String? // Additional notes or payment instructions
+  followUpSent Boolean @default(false)
 
   // Amounts (stored in kobo/cents)
   subtotal             Int   @default(0)

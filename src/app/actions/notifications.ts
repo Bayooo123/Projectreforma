@@ -143,3 +143,57 @@ export async function markAllAsRead() {
         return { success: false };
     }
 }
+
+export async function checkOverdueInvoices() {
+    const user = await requireAuth();
+    if (!user) return { success: false };
+
+    try {
+        // Find workspaces user is part of
+        const memberships = await prisma.workspaceMember.findMany({
+            where: { userId: user.id },
+            select: { workspaceId: true }
+        });
+        const workspaceIds = memberships.map(m => m.workspaceId);
+
+        if (workspaceIds.length === 0) return { success: true };
+
+        const fiveDaysAgo = new Date();
+        fiveDaysAgo.setDate(fiveDaysAgo.getDate() - 5);
+
+        // Find invoices that need follow-up
+        const overdueInvoices = await prisma.invoice.findMany({
+            where: {
+                client: { workspaceId: { in: workspaceIds } },
+                status: { notIn: ['paid', 'PAID', 'draft', 'DRAFT'] },
+                createdAt: { lte: fiveDaysAgo },
+                followUpSent: false
+            },
+            include: { client: true }
+        });
+
+        let count = 0;
+        for (const invoice of overdueInvoices) {
+            await createNotification({
+                workspaceId: invoice.client.workspaceId,
+                title: 'Payment Follow-up Required',
+                message: `Invoice #${invoice.invoiceNumber} for ${invoice?.client?.name} is 5 days old. Please follow up.`,
+                type: 'warning',
+                priority: 'high',
+                recipients: 'ALL',
+                relatedInvoiceId: invoice.id
+            });
+
+            await prisma.invoice.update({
+                where: { id: invoice.id },
+                data: { followUpSent: true }
+            });
+            count++;
+        }
+
+        return { success: true, processed: count };
+    } catch (error) {
+        console.error('Check overdue invoices error:', error);
+        return { success: false };
+    }
+}
