@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { X, Plus, Trash2, FileText, DollarSign, Loader, Download, CreditCard } from 'lucide-react';
 import { createInvoice, generateInvoiceNumber, getClientMatters, getClientInvoices } from '@/app/actions/invoices';
-import { createInvoice, generateInvoiceNumber, getClientMatters, getClientInvoices } from '@/app/actions/invoices';
+
 import { getBankAccounts } from '@/app/actions/bank-accounts';
 import { getWorkspaceMembers } from '@/app/actions/members';
 import { generateInvoicePDF } from '@/lib/invoice-pdf';
