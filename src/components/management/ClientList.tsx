@@ -255,22 +255,26 @@ const ClientList = ({ workspaceId, letterheadUrl }: ClientListProps) => {
                 </>
             )}
 
-            <InvoiceModal
-                isOpen={isInvoiceModalOpen}
-                onClose={() => setIsInvoiceModalOpen(false)}
-                clientName={selectedClient?.name || ''}
-                clientId={selectedClient?.id || ''}
-                workspaceId={workspaceId}
-                letterheadUrl={letterheadUrl}
-                onRecordPayment={handlePayInvoice}
-            />
-            <PaymentModal
-                isOpen={isPaymentModalOpen}
-                onClose={() => setIsPaymentModalOpen(false)}
-                clientName={selectedClient?.name || ''}
-                clientId={selectedClient?.id || ''}
-                selectedInvoice={selectedInvoice}
-            />
+            {isInvoiceModalOpen && (
+                <InvoiceModal
+                    isOpen={isInvoiceModalOpen}
+                    onClose={() => setIsInvoiceModalOpen(false)}
+                    clientName={selectedClient?.name || ''}
+                    clientId={selectedClient?.id || ''}
+                    workspaceId={workspaceId}
+                    letterheadUrl={letterheadUrl}
+                    onRecordPayment={handlePayInvoice}
+                />
+            )}
+            {isPaymentModalOpen && (
+                <PaymentModal
+                    isOpen={isPaymentModalOpen}
+                    onClose={() => setIsPaymentModalOpen(false)}
+                    clientName={selectedClient?.name || ''}
+                    clientId={selectedClient?.id || ''}
+                    selectedInvoice={selectedInvoice}
+                />
+            )}
         </div>
     );
 };
