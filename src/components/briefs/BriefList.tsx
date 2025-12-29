@@ -122,7 +122,7 @@ const BriefList = forwardRef<BriefListRef, BriefListProps>(({ onUpload, workspac
                 </div>
                 <button className={styles.uploadBtn} onClick={onUpload}>
                     <Plus size={18} />
-                    <span>Upload New Brief</span>
+                    <span>Create Brief</span>
                 </button>
             </div>
 
@@ -149,11 +149,11 @@ const BriefList = forwardRef<BriefListRef, BriefListProps>(({ onUpload, workspac
                         <div className={styles.emptyIcon}>
                             <Briefcase size={48} />
                         </div>
-                        <h3 className={styles.emptyTitle}>No Briefs Uploaded</h3>
-                        <p className={styles.emptyText}>Upload your first brief to get started managing your legal documents.</p>
+                        <h3 className={styles.emptyTitle}>No Briefs Created</h3>
+                        <p className={styles.emptyText}>Create your first brief to get started managing your legal documents.</p>
                         <button className={styles.uploadBtn} onClick={onUpload} style={{ marginTop: '1.5rem' }}>
                             <Plus size={18} />
-                            <span>Upload New Brief</span>
+                            <span>Create Brief</span>
                         </button>
                     </div>
                 ) : (
