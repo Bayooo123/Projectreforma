@@ -5,7 +5,7 @@
     bottom: 0;
     width: 240px;
     background: var(--bg-sidebar);
-    color: white;
+    color: var(--text-inverse);
     padding: 24px 0;
     z-index: 100;
     display: flex;
@@ -19,7 +19,7 @@
 .logo {
     font-size: 24px;
     font-weight: 600;
-    color: white;
+    color: var(--text-inverse);
 }
 
 .nav {
@@ -53,12 +53,12 @@
 .navLink.active,
 .active {
     background: rgba(255, 255, 255, 0.1);
-    color: white;
+    color: var(--text-inverse);
     border-left-color: rgba(255, 255, 255, 0.5);
 }
 
 .navIcon {
-    /* Lucide icons are sized via props, but can add margin here if needed */
+    /* props handle size */
 }
 
 .navText {
@@ -89,7 +89,7 @@
 }
 
 .footerLink:hover {
-    color: white;
+    color: var(--text-inverse);
 }
 
 .userInfo {
@@ -111,7 +111,7 @@
     justify-content: center;
     font-weight: 600;
     font-size: 12px;
-    color: white;
+    color: var(--text-inverse);
 }
 
 .userDetails {
@@ -124,7 +124,7 @@
     display: block;
     font-size: 14px;
     font-weight: 500;
-    color: white;
+    color: var(--text-inverse);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;

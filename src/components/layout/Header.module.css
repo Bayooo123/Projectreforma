@@ -1,6 +1,6 @@
 .header {
-    background: white;
-    border-bottom: 1px solid #e2e8f0;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
     padding: 16px 40px;
     display: flex;
     justify-content: space-between;
@@ -8,7 +8,6 @@
     position: sticky;
     top: 0;
     z-index: 50;
-    /* Reset height to auto to fit padding */
     height: auto;
 }
 
@@ -27,9 +26,9 @@
 .workspaceAvatar {
     width: 32px;
     height: 32px;
-    background: #0f5f5a;
+    background: var(--bg-sidebar);
     border-radius: 8px;
-    color: white;
+    color: var(--text-inverse);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -39,12 +38,11 @@
 .workspaceName {
     font-weight: 600;
     font-size: 16px;
-    color: #1a202c;
+    color: var(--text-primary);
 }
 
 .chevron {
-    /* Optional if designs don't explicitly show it, but good for UX */
-    color: #4a5568;
+    color: var(--text-secondary);
 }
 
 .searchContainer {
@@ -54,30 +52,25 @@
     position: relative;
 }
 
-/* HTML used simple input styling, mapped to .searchInput */
 .searchInput {
     width: 100%;
     padding: 10px 16px;
-    border: 1px solid #e2e8f0;
+    border: 1px solid var(--border);
     border-radius: 8px;
     font-size: 14px;
     transition: all 0.2s;
     outline: none;
+    background: var(--surface);
+    color: var(--text-primary);
 }
 
 .searchInput:focus {
-    border-color: #0f5f5a;
-    box-shadow: 0 0 0 3px rgba(15, 95, 90, 0.1);
+    border-color: var(--bg-sidebar);
+    box-shadow: 0 0 0 3px var(--hover-bg);
 }
 
 .searchIcon {
-    position: absolute;
-    right: 12px;
-    top: 50%;
-    transform: translateY(-50%);
-    color: #a0aec0;
-    pointer-events: none;
-    /* Adjusted to be on right or hidden if not in HTML spec? HTML has plain input properly. I will hide icon or move it if needed. HTML has NO icon inside input in the text, just padding. */
+    /* Hidden per previous edit */
     display: none;
 }
 
@@ -89,19 +82,22 @@
 
 .notificationWrapper {
     position: relative;
-    /* HTML has bell icon with badge */
 }
 
 .iconBtn {
     background: none;
     border: none;
     font-size: 20px;
-    /* HTML uses unicode bell or icon */
     cursor: pointer;
     position: relative;
     display: flex;
     align-items: center;
     justify-content: center;
+    color: var(--text-secondary);
+}
+
+.iconBtn:hover {
+    color: var(--text-primary);
 }
 
 .badge {
@@ -110,7 +106,7 @@
     right: -4px;
     width: 16px;
     height: 16px;
-    background: #ef4444;
+    background: var(--danger);
     border-radius: 50%;
     display: flex;
     align-items: center;
@@ -121,19 +117,13 @@
     border: none;
 }
 
-/* User Section matching HTML */
-.userSection {
-    /* Mapped from rightSection children in TSX */
-}
 
-/* Profile menu trigger styling */
+
 .profile {
     display: flex;
     align-items: center;
     gap: 16px;
-    /* Matching HTML .user-section gap */
     border: none;
-    /* TSX might add border, removed here */
     padding: 0;
 }
 
@@ -141,8 +131,8 @@
     width: 40px;
     height: 40px;
     border-radius: 50%;
-    background: #0f5f5a;
-    color: white;
+    background: var(--bg-sidebar);
+    color: var(--text-inverse);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -157,60 +147,10 @@
 .userName {
     font-weight: 600;
     font-size: 14px;
-    color: #1a202c;
+    color: var(--text-primary);
 }
 
 .userRole {
     font-size: 12px;
-    color: #718096;
-}
-
-/* Dark Mode Overrides */
-:global(.dark) .header {
-    background-color: #0f172a;
-    /* Slate 900 */
-    border-bottom: 1px solid #1e293b;
-}
-
-:global(.dark) .workspaceName {
-    color: #f8fafc;
-}
-
-:global(.dark) .chevron {
-    color: #94a3b8;
-}
-
-:global(.dark) .searchInput {
-    background-color: #1e293b;
-    border-color: #334155;
-    color: #f8fafc;
-}
-
-:global(.dark) .searchInput:focus {
-    border-color: #0f5f5a;
-    /* Keep brand color or adjust to teal-500 */
-    box-shadow: 0 0 0 3px rgba(15, 95, 90, 0.3);
-}
-
-:global(.dark) .iconBtn {
-    color: #94a3b8;
-}
-
-:global(.dark) .iconBtn:hover {
-    background-color: rgba(255, 255, 255, 0.05);
-    color: #f8fafc;
-}
-
-:global(.dark) .userName {
-    color: #f8fafc;
-}
-
-:global(.dark) .userRole {
-    color: #94a3b8;
-}
-
-:global(.dark) .avatar {
-    background-color: #0f5f5a;
-    /* Keep teal brand */
-    color: #f8fafc;
+    color: var(--text-secondary);
 }

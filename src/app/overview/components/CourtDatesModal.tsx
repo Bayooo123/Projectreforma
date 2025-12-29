@@ -51,13 +51,13 @@ export function CourtDatesModal({ isOpen, onClose }: CourtDatesModalProps) {
                             animate={{ opacity: 1, scale: 1 }}
                             exit={{ opacity: 0, scale: 0.95 }}
                             transition={{ duration: 0.2 }}
-                            className="w-[90%] max-w-[700px] max-h-[80vh] bg-white dark:bg-slate-900 rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.3)] pointer-events-auto flex flex-col overflow-hidden"
+                            className="w-[90%] max-w-[700px] max-h-[80vh] bg-surface rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.3)] pointer-events-auto flex flex-col overflow-hidden"
                         >
-                            <div className="flex items-center justify-between p-8 border-b border-slate-200 dark:border-slate-800 shrink-0">
-                                <h2 className="text-xl font-semibold text-slate-900 dark:text-white">Upcoming Court Dates</h2>
+                            <div className="flex items-center justify-between p-8 border-b border-border shrink-0">
+                                <h2 className="text-xl font-semibold text-primary">Upcoming Court Dates</h2>
                                 <button
                                     onClick={onClose}
-                                    className="text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white transition-colors"
+                                    className="text-secondary hover:text-primary transition-colors"
                                 >
                                     <X size={24} />
                                 </button>
@@ -67,11 +67,11 @@ export function CourtDatesModal({ isOpen, onClose }: CourtDatesModalProps) {
                                 {isLoading ? (
                                     <div className="space-y-4">
                                         {[1, 2, 3].map(i => (
-                                            <div key={i} className="h-20 animate-pulse rounded-lg bg-slate-100 dark:bg-slate-800" />
+                                            <div key={i} className="h-20 animate-pulse rounded-lg bg-surface-subtle" />
                                         ))}
                                     </div>
                                 ) : dates.length === 0 ? (
-                                    <div className="text-center py-12 text-slate-500">
+                                    <div className="text-center py-12 text-secondary">
                                         No upcoming court dates in the next 14 days.
                                     </div>
                                 ) : (
@@ -81,16 +81,16 @@ export function CourtDatesModal({ isOpen, onClose }: CourtDatesModalProps) {
                                             : 'TBD';
 
                                         return (
-                                            <div key={date.id} className="p-5 border border-slate-200 dark:border-slate-700 rounded-[10px] transition-all duration-200 hover:border-[#0f5f5a] hover:bg-[#f8fffe] dark:hover:border-teal-500 dark:hover:bg-teal-900/10">
-                                                <div className="inline-block px-3 py-1 bg-[#0f5f5a] dark:bg-teal-600 text-white rounded-md text-xs font-semibold mb-3">
+                                            <div key={date.id} className="p-5 border border-border rounded-[10px] transition-all duration-200 hover:border-teal-text hover:bg-hover-bg">
+                                                <div className="inline-block px-3 py-1 bg-[var(--bg-sidebar)] text-white rounded-md text-xs font-semibold mb-3">
                                                     {dateStr} • {date.time}
                                                 </div>
 
-                                                <div className="font-semibold text-[15px] text-slate-900 dark:text-white mb-2">
+                                                <div className="font-semibold text-[15px] text-primary mb-2">
                                                     {date.caseName}
                                                 </div>
 
-                                                <div className="flex flex-col gap-1 text-[13px] text-slate-500 dark:text-slate-400">
+                                                <div className="flex flex-col gap-1 text-[13px] text-secondary">
                                                     <div>📍 {date.courtLocation || 'Court TBD'}</div>
                                                     <div>⚖️ {date.hearingType}</div>
                                                     <div>👨‍⚖️ {date.judge || 'Judge TBD'}</div>

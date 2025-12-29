@@ -46,11 +46,11 @@ export function OverviewClient({ stats, firstName }: OverviewClientProps) {
             {/* Header */}
             <div className="mb-10">
                 <div className="mb-2">
-                    <h1 className="text-[32px] font-semibold text-slate-900 dark:text-white leading-tight">
+                    <h1 className="text-[32px] font-semibold text-primary leading-tight">
                         {getGreeting()}, {firstName}
                     </h1>
                 </div>
-                <p className="text-sm font-normal text-slate-500 dark:text-slate-400 uppercase tracking-[0.5px]">
+                <p className="text-sm font-normal text-secondary uppercase tracking-[0.5px]">
                     {currentDate}
                 </p>
             </div>
