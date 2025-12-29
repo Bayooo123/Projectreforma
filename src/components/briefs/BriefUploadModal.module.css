@@ -18,7 +18,8 @@
     width: 100%;
     max-width: 550px;
     max-height: 90vh;
-    overflow-y: auto;
+    overflow: hidden;
+    /* Changed from overflow-y: auto */
     box-shadow: var(--shadow-lg);
     display: flex;
     flex-direction: column;
@@ -38,11 +39,14 @@
 }
 
 .header {
-    padding: 1.5rem;
+    padding: 1.25rem 1.5rem;
+    /* Slightly reduced padding */
     border-bottom: 1px solid var(--border);
     display: flex;
     justify-content: space-between;
     align-items: center;
+    background-color: var(--background);
+    z-index: 10;
 }
 
 .title {
@@ -65,21 +69,28 @@
     color: var(--text-primary);
 }
 
+/* Updated .content to be the scrollable area */
 .content {
     padding: 1.5rem;
+    overflow-y: auto;
+    flex: 1;
 }
 
+/* Updated .form to fill space */
 .form {
     display: flex;
     flex-direction: column;
-    gap: 1rem;
+    flex: 1;
+    overflow: hidden;
+    /* Contains the scrollable content */
 }
 
 .formGroup {
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
-    flex: 1;
+    margin-bottom: 1rem;
+    /* Added margin for spacing between groups */
 }
 
 .row {
@@ -207,6 +218,7 @@
     background-color: var(--surface);
 }
 
+/* Footer now sticks to bottom nicely */
 .footer {
     padding: 1.25rem 1.5rem;
     border-top: 1px solid var(--border);
@@ -214,6 +226,7 @@
     justify-content: flex-end;
     gap: 1rem;
     background-color: var(--surface);
+    /* Radius isn't strictly needed if parent overflows hidden, but good for safety */
     border-bottom-left-radius: var(--radius-lg);
     border-bottom-right-radius: var(--radius-lg);
 }

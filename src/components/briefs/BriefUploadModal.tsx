@@ -169,13 +169,13 @@ const BriefUploadModal = ({ isOpen, onClose, onSuccess, workspaceId }: BriefUplo
                     </button>
                 </div>
 
-                <div className={styles.content}>
-                    {isLoadingData ? (
-                        <div className="flex justify-center items-center py-12">
-                            <Loader className="animate-spin text-gray-500" size={32} />
-                        </div>
-                    ) : (
-                        <form className={styles.form} onSubmit={handleSubmit}>
+                {isLoadingData ? (
+                    <div className="flex justify-center items-center py-12 flex-1">
+                        <Loader className="animate-spin text-gray-500" size={32} />
+                    </div>
+                ) : (
+                    <form className={styles.form} onSubmit={handleSubmit}>
+                        <div className={styles.content}>
                             <div className={styles.row}>
                                 <div className={styles.formGroup}>
                                     <label className={styles.label}>Brief Number *</label>
@@ -317,25 +317,25 @@ const BriefUploadModal = ({ isOpen, onClose, onSuccess, workspaceId }: BriefUplo
                                     rows={3}
                                 />
                             </div>
+                        </div>
 
-                            <div className={styles.footer}>
-                                <button type="button" onClick={handleClose} className={styles.cancelBtn} disabled={isSubmitting}>
-                                    Cancel
-                                </button>
-                                <button type="submit" className={styles.submitBtn} disabled={isSubmitting || lawyers.length === 0}>
-                                    {isSubmitting ? (
-                                        <>
-                                            <Loader size={16} className="animate-spin mr-2" />
-                                            Creating...
-                                        </>
-                                    ) : (
-                                        'Create Brief'
-                                    )}
-                                </button>
-                            </div>
-                        </form>
-                    )}
-                </div>
+                        <div className={styles.footer}>
+                            <button type="button" onClick={handleClose} className={styles.cancelBtn} disabled={isSubmitting}>
+                                Cancel
+                            </button>
+                            <button type="submit" className={styles.submitBtn} disabled={isSubmitting || lawyers.length === 0}>
+                                {isSubmitting ? (
+                                    <>
+                                        <Loader size={16} className="animate-spin mr-2" />
+                                        Creating...
+                                    </>
+                                ) : (
+                                    'Create Brief'
+                                )}
+                            </button>
+                        </div>
+                    </form>
+                )}
             </div>
         </div>
     );
