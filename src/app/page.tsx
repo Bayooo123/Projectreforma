@@ -219,7 +219,7 @@ export default function LandingPage() {
             Join the forward-thinking firms scaling their operations with Reforma.
           </p>
           <div className={styles.ctaButtons}>
-            <Link href={isLoggedIn ? "/management" : "/register"} className={styles.btnPrimary}>
+            <Link href={isLoggedIn ? "/overview" : "/register"} className={styles.btnPrimary}>
               {isLoggedIn ? "Go to Dashboard" : "Get Started"}
             </Link>
             <Link href="mailto:sales@reforma.ng" className={styles.btnSecondary}>Contact Sales</Link>

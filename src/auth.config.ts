@@ -12,7 +12,8 @@ export const authConfig = {
                 nextUrl.pathname.startsWith('/briefs') ||
                 nextUrl.pathname.startsWith('/analytics') ||
                 nextUrl.pathname.startsWith('/calendar') ||
-                nextUrl.pathname.startsWith('/onboarding');
+                nextUrl.pathname.startsWith('/onboarding') ||
+                nextUrl.pathname.startsWith('/overview');
 
             if (isOnProtectedRoute) {
                 if (isLoggedIn) return true;
@@ -20,7 +21,7 @@ export const authConfig = {
             } else if (isLoggedIn) {
                 // Redirect logged-in users away from login/register pages to dashboard
                 if (['/', '/login', '/register', '/join', '/forgot-password'].includes(nextUrl.pathname)) {
-                    return Response.redirect(new URL('/management', nextUrl));
+                    return Response.redirect(new URL('/overview', nextUrl));
                 }
             }
             return true;
