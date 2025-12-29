@@ -413,7 +413,7 @@ const InvoiceModal = ({ isOpen, onClose, clientName, clientId, workspaceId, lett
                 // Update local list? The parent handles refresh via `onClose` usually? 
                 // Wait, if we just save-and-download, we might NOT want to close?
                 // But we need to switch mode to "edit" or at least know the ID.
-                return result.invoice; // Assume action returns the invoice
+                return result.data; // Action returns the invoice in 'data' field
             } else {
                 alert(`Error: ${result.error}`);
                 return null;
