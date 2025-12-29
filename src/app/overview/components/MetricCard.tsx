@@ -6,40 +6,40 @@ interface MetricCardProps {
     title: string;
     value: string | number;
     subtitle?: string;
-    icon: LucideIcon;
+    icon: LucideIcon | string; // Allow string for emoji if needed, though snippet used icons
     onClick?: () => void;
     className?: string;
 }
 
 export function MetricCard({ title, value, subtitle, icon: Icon, onClick, className }: MetricCardProps) {
+    const isLucide = typeof Icon !== 'string';
+
     return (
-        <Card
+        <div
             onClick={onClick}
             className={cn(
-                "relative overflow-hidden border-none p-6 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md cursor-pointer group bg-white dark:bg-slate-800",
+                "metric-card bg-white dark:bg-slate-800 rounded-xl p-7 shadow-[0_1px_3px_rgba(0,0,0,0.08)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.12)] hover:-translate-y-[2px] transition-all duration-300 cursor-pointer relative",
                 className
             )}
         >
-            <div className="flex items-start justify-between">
+            <div className="flex justify-between items-start mb-5">
                 <div>
-                    <h3 className="text-xs font-medium uppercase tracking-wider text-muted-foreground dark:text-slate-400">
+                    <div className="text-sm font-semibold uppercase tracking-[0.5px] text-slate-500 mb-2">
                         {title}
-                    </h3>
-                    <div className="mt-2 flex items-baseline gap-2">
-                        <span className="text-4xl font-bold tracking-tight text-slate-900 dark:text-white">
-                            {value}
-                        </span>
+                    </div>
+                    <div className="text-5xl font-bold text-slate-900 dark:text-white leading-none mb-2">
+                        {value}
                     </div>
                     {subtitle && (
-                        <p className="mt-1 text-sm font-medium text-teal-600 dark:text-teal-400">
+                        <div className="text-[13px] font-medium text-teal-700 dark:text-teal-400">
                             {subtitle}
-                        </p>
+                        </div>
                     )}
                 </div>
-                <div className="rounded-xl bg-teal-50 p-3 text-teal-600 dark:bg-teal-900/30 dark:text-teal-400 transition-colors group-hover:bg-teal-100 dark:group-hover:bg-teal-900/50">
-                    <Icon size={24} strokeWidth={2} />
+                <div className="w-12 h-12 rounded-xl flex items-center justify-center text-xl bg-[#e6f7f5] text-[#0f5f5a] dark:bg-teal-900/30 dark:text-teal-400">
+                    {isLucide ? <Icon size={24} /> : <span className="text-2xl">{Icon}</span>}
                 </div>
             </div>
-        </Card>
+        </div>
     );
 }

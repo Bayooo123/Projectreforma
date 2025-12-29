@@ -1,13 +1,15 @@
 .sidebar {
+    position: fixed;
+    left: 0;
+    top: 0;
+    bottom: 0;
     width: 240px;
-    height: 100vh;
-    background-color: #0f5f5a;
-    /* Matching HTML */
+    background: var(--bg-sidebar);
     color: white;
+    padding: 24px 0;
+    z-index: 100;
     display: flex;
     flex-direction: column;
-    padding: 24px 0;
-    overflow-y: auto;
 }
 
 .logoContainer {
@@ -22,49 +24,53 @@
 
 .nav {
     flex: 1;
+    overflow-y: auto;
 }
 
 .navList {
     list-style: none;
     padding: 0;
     margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
 }
 
 .navLink {
-    display: flex;
-    align-items: center;
     padding: 12px 24px;
     color: rgba(255, 255, 255, 0.7);
     cursor: pointer;
     transition: all 0.2s;
+    display: flex;
+    align-items: center;
     gap: 12px;
-    font-size: 14px;
     text-decoration: none;
-    border-left: 0;
+    font-size: 14px;
+    border-left: 3px solid transparent;
 }
 
 .navLink:hover,
+.navLink.active,
 .active {
     background: rgba(255, 255, 255, 0.1);
     color: white;
+    border-left-color: rgba(255, 255, 255, 0.5);
 }
 
 .navIcon {
-    /* HTML used spans with icons, we use lucide icons. Keeping sizing generic/inherited is fine or explicit. */
-    width: 20px;
-    height: 20px;
+    /* Lucide icons are sized via props, but can add margin here if needed */
 }
 
 .navText {
-    /* HTML didn't wrap text but we do. */
+    font-weight: 500;
 }
 
-
 .footer {
-    padding: 0 24px 24px;
+    padding: 24px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 12px;
     margin-top: auto;
 }
 
@@ -72,13 +78,14 @@
     display: flex;
     align-items: center;
     gap: 12px;
-    padding: 12px 0;
-    /* Adjust to fit visually or match navLink if desired, HTML didn't specify footer details but visual consistency suggests matching nav style or simpler */
-    color: rgba(255, 255, 255, 0.5);
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 14px;
+    transition: color 0.2s;
     background: none;
     border: none;
     cursor: pointer;
-    font-size: 14px;
+    width: 100%;
+    padding: 8px 0;
 }
 
 .footerLink:hover {
@@ -89,6 +96,7 @@
     display: flex;
     align-items: center;
     gap: 12px;
+    margin-top: 12px;
     padding-top: 12px;
     border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
@@ -103,53 +111,21 @@
     justify-content: center;
     font-weight: 600;
     font-size: 12px;
+    color: white;
 }
 
 .userDetails {
     display: flex;
     flex-direction: column;
+    overflow: hidden;
 }
 
 .userName {
+    display: block;
     font-size: 14px;
-    font-weight: 600;
-}
-
-/* Dark Mode Overrides */
-:global(.dark) .sidebar {
-    background-color: #0f172a;
-    /* Slate 900 */
-    border-right: 1px solid #1e293b;
-}
-
-:global(.dark) .logo {
-    color: #f8fafc;
-}
-
-:global(.dark) .navLink {
-    color: #94a3b8;
-    /* Slate 400 */
-}
-
-:global(.dark) .navLink:hover,
-:global(.dark) .active {
-    background: rgba(255, 255, 255, 0.05);
-    color: #f1f5f9;
-}
-
-:global(.dark) .footerLink {
-    color: #64748b;
-}
-
-:global(.dark) .footerLink:hover {
-    color: #f1f5f9;
-}
-
-:global(.dark) .userInfo {
-    border-top-color: #1e293b;
-}
-
-:global(.dark) .userAvatar {
-    background: #1e293b;
-    color: #cbd5e1;
+    font-weight: 500;
+    color: white;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }

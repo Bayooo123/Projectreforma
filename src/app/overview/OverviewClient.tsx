@@ -39,18 +39,20 @@ export function OverviewClient({ stats, firstName }: OverviewClientProps) {
         day: 'numeric',
         month: 'long',
         year: 'numeric'
-    }).toUpperCase();
+    });
 
     return (
-        <div className="mx-auto max-w-[1400px] p-6 lg:p-10 space-y-10">
+        <div className="mx-auto max-w-[1400px] p-10">
             {/* Header */}
-            <div className="space-y-1">
-                <p className="text-sm font-semibold tracking-wider text-muted-foreground dark:text-slate-400">
+            <div className="mb-10">
+                <div className="mb-2">
+                    <h1 className="text-[32px] font-semibold text-slate-900 dark:text-white leading-tight">
+                        {getGreeting()}, {firstName}
+                    </h1>
+                </div>
+                <p className="text-sm font-normal text-slate-500 dark:text-slate-400 uppercase tracking-[0.5px]">
                     {currentDate}
                 </p>
-                <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
-                    {getGreeting()}, {firstName}
-                </h1>
             </div>
 
             {/* Metrics Grid */}

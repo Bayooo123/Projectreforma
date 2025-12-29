@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
 import { getMyBriefs } from "@/app/actions/dashboard";
 import Link from "next/link";
-import { FileText, ArrowRight, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 
 interface Brief {
     id: string;
@@ -59,13 +59,10 @@ export function ActiveBriefsDropdown({ isOpen, onClose, anchorRef }: ActiveBrief
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: 10, scale: 0.95 }}
                     transition={{ duration: 0.2 }}
-                    className="absolute z-50 mt-2 w-full origin-top rounded-xl border border-slate-200 bg-white shadow-xl dark:border-slate-700 dark:bg-slate-800 left-0"
-                    style={{
-                        // Ensure it aligns with the card width
-                        width: anchorRef.current?.offsetWidth || '100%',
-                    }}
+                    className="absolute z-50 top-full left-0 right-0 mt-2 bg-white dark:bg-slate-800 rounded-xl shadow-[0_8px_24px_rgba(0,0,0,0.15)] overflow-hidden max-h-[400px] overflow-y-auto border border-slate-100 dark:border-slate-700"
+                    style={{ minWidth: '300px' }}
                 >
-                    <div className="p-2">
+                    <div>
                         {isLoading ? (
                             <div className="flex justify-center p-4">
                                 <Loader2 className="animate-spin text-slate-400" size={20} />
@@ -75,30 +72,20 @@ export function ActiveBriefsDropdown({ isOpen, onClose, anchorRef }: ActiveBrief
                                 No active briefs found.
                             </div>
                         ) : (
-                            <div className="space-y-1">
-                                {briefs.map(brief => (
-                                    <Link
-                                        key={brief.id}
-                                        href={`/briefs`}
-                                        className="group flex items-center justify-between rounded-lg p-3 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
-                                    >
-                                        <div className="flex items-center gap-3 overflow-hidden">
-                                            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-teal-50 text-teal-600 dark:bg-teal-900/30 dark:text-teal-400">
-                                                <FileText size={16} />
-                                            </div>
-                                            <div className="min-w-0">
-                                                <p className="font-medium text-slate-900 truncate dark:text-white text-sm">
-                                                    {brief.name}
-                                                </p>
-                                                <p className="text-xs text-slate-500 font-mono">
-                                                    {brief.briefNumber}
-                                                </p>
-                                            </div>
-                                        </div>
-                                        <ArrowRight size={14} className="opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all text-slate-400" />
-                                    </Link>
-                                ))}
-                            </div>
+                            briefs.map(brief => (
+                                <Link
+                                    key={brief.id}
+                                    href={`/briefs`}
+                                    className="block p-5 border-b border-slate-100 dark:border-slate-700 last:border-0 hover:bg-[#f8fffe] dark:hover:bg-slate-700/30 transition-colors cursor-pointer text-left w-full"
+                                >
+                                    <div className="font-semibold text-[#1a202c] dark:text-white text-[14px] mb-[4px]">
+                                        {brief.name}
+                                    </div>
+                                    <div className="text-[12px] text-[#718096] dark:text-slate-400">
+                                        Updated {new Date(brief.updatedAt).toLocaleDateString()}
+                                    </div>
+                                </Link>
+                            ))
                         )}
                     </div>
                 </motion.div>

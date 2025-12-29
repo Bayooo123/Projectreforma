@@ -42,13 +42,13 @@ const Sidebar = ({ user }: SidebarProps) => {
   }, []);
 
   const navItems = [
-    { name: 'Overview', href: '/management', icon: LayoutDashboard },
-    { name: 'Briefs Manager', href: '/briefs', icon: FileText },
-    // { name: 'Drafting Studio', href: '/drafting', icon: PenTool },
-    { name: 'Litigation', href: '/calendar', icon: Gavel },
-    { name: 'Client Manager', href: '/management/clients', icon: Users },
-    { name: 'Officer Manager', href: '/management/office', icon: Briefcase },
-    { name: 'Analytics', href: '/analytics', icon: BarChart2 },
+    { name: 'Overview', href: '/overview', emoji: '📊', icon: LayoutDashboard },
+    { name: 'Briefs Manager', href: '/briefs', emoji: '📋', icon: FileText },
+    { name: 'Drafting Studio', href: '/drafting', emoji: '✏️', icon: PenTool },
+    { name: 'Litigation', href: '/calendar', emoji: '⚖️', icon: Gavel },
+    { name: 'Client Manager', href: '/management/clients', emoji: '👥', icon: Users },
+    { name: 'Officer Manager', href: '/management/office', emoji: '👔', icon: Briefcase },
+    { name: 'Analytics', href: '/analytics', emoji: '📈', icon: BarChart2 },
   ];
 
   const isActive = (path: string) => {
@@ -73,7 +73,8 @@ const Sidebar = ({ user }: SidebarProps) => {
                 href={item.href}
                 className={`${styles.navLink} ${isActive(item.href) ? styles.active : ''}`}
               >
-                <item.icon size={20} className={styles.navIcon} />
+                {/* User requested emojis instead of Lucide icons */}
+                <span className="text-xl" role="img" aria-label={item.name}>{item.emoji}</span>
                 <span className={styles.navText}>{item.name}</span>
               </Link>
             </li>
