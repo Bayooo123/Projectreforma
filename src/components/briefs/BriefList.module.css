@@ -114,6 +114,21 @@
     border-bottom: none;
 }
 
+/* Sticky Actions Column */
+.table th:last-child,
+.table td:last-child {
+    position: sticky;
+    right: 0;
+    background-color: var(--surface);
+    z-index: 1;
+    box-shadow: -2px 0 5px rgba(0, 0, 0, 0.05);
+}
+
+.table th:last-child {
+    z-index: 2;
+    /* Header on top */
+}
+
 .checkboxCell {
     width: 40px;
     text-align: center;

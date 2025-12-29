@@ -27,6 +27,8 @@
 
   /* Functional Colors */
   --border: #E2E8F0;
+  --primary: #0F766E;
+  --primary-hover: #0D6962;
   --success: #10B981;
   --success-bg: #D1FAE5;
   --warning: #F59E0B;
