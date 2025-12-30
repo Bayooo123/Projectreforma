@@ -1,4 +1,4 @@
-import { Activity, FileText, UserPlus, Scale, MessageSquare } from 'lucide-react';
+import { Activity, FileText, UserPlus, Scale, MessageSquare, Mail } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/ScrollArea';
 import Link from 'next/link';
 
@@ -33,6 +33,7 @@ export function FirmPulse({ logs }: FirmPulseProps) {
     };
 
     const getIcon = (activityType: string) => {
+        if (activityType.includes('email')) return <Mail className="w-4 h-4 text-blue-600" />;
         if (activityType.includes('document')) return <FileText className="w-4 h-4 text-teal-600" />;
         if (activityType.includes('client')) return <UserPlus className="w-4 h-4 text-emerald-600" />;
         if (activityType.includes('court')) return <Scale className="w-4 h-4 text-teal-700" />;
@@ -41,6 +42,7 @@ export function FirmPulse({ logs }: FirmPulseProps) {
     };
 
     const getIconBg = (activityType: string) => {
+        if (activityType.includes('email')) return 'bg-blue-50';
         if (activityType.includes('document')) return 'bg-teal-50';
         if (activityType.includes('client')) return 'bg-emerald-50';
         if (activityType.includes('court')) return 'bg-teal-50';
