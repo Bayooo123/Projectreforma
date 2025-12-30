@@ -1,16 +1,36 @@
-import { Resend } from 'resend';
+import nodemailer from 'nodemailer';
 
-// Lazy initialize Resend client to avoid build-time errors
-let resendClient: Resend | null = null;
-const getResendClient = () => {
-    if (!resendClient && process.env.RESEND_API_KEY) {
-        resendClient = new Resend(process.env.RESEND_API_KEY);
+/**
+ * Zoho Mail SMTP Configuration
+ * 
+ * Required environment variables:
+ * - SMTP_HOST: smtp.zoho.com (or smtp.zoho.eu for EU)
+ * - SMTP_PORT: 465 (SSL) or 587 (TLS)
+ * - SMTP_USER: your-email@yourdomain.com
+ * - SMTP_PASSWORD: your app-specific password
+ * - SMTP_FROM_EMAIL: noreply@yourdomain.com (or same as SMTP_USER)
+ */
+
+// Test mode flag - true when SMTP credentials are not configured
+const isTestMode = !process.env.SMTP_USER || !process.env.SMTP_PASSWORD;
+
+// Create reusable transporter (lazy initialized)
+let transporter: nodemailer.Transporter | null = null;
+
+function getTransporter() {
+    if (!transporter && !isTestMode) {
+        transporter = nodemailer.createTransport({
+            host: process.env.SMTP_HOST || 'smtp.zoho.com',
+            port: parseInt(process.env.SMTP_PORT || '465'),
+            secure: (process.env.SMTP_PORT || '465') === '465', // true for 465, false for 587
+            auth: {
+                user: process.env.SMTP_USER,
+                pass: process.env.SMTP_PASSWORD,
+            },
+        });
     }
-    return resendClient;
-};
-
-// Test mode flag - true when API key is not configured
-const isTestMode = !process.env.RESEND_API_KEY || process.env.RESEND_API_KEY === 're_YOUR_API_KEY_HERE';
+    return transporter;
+}
 
 interface InvitationEmailParams {
     to: string;
@@ -27,41 +47,44 @@ export async function sendInvitationEmail({
     inviteLink,
     role,
 }: InvitationEmailParams) {
+    const fromEmail = process.env.SMTP_FROM_EMAIL || process.env.SMTP_USER || 'noreply@reforma.app';
+    const subject = `You've been invited to join ${workspaceName} on Reforma`;
+
     // TEST MODE: Skip actual email sending
     if (isTestMode) {
         console.log('📧 [TEST MODE] Email sending skipped - would have sent:');
         console.log({
             to,
-            from: process.env.RESEND_FROM_EMAIL || 'Reforma <onboarding@reforma.app>',
-            subject: `You've been invited to join ${workspaceName} on Reforma`,
+            from: fromEmail,
+            subject,
             workspaceName,
             inviterName,
             inviteLink,
             role,
         });
-        console.log('💡 To enable real email sending, configure RESEND_API_KEY in .env');
+        console.log('💡 To enable real email sending, configure SMTP_USER and SMTP_PASSWORD in .env');
+        console.log('   For Zoho: Use your Zoho email and app-specific password');
 
         // Return mock success response
         return {
-            id: `test_${Date.now()}`,
-            from: process.env.RESEND_FROM_EMAIL || 'Reforma <onboarding@reforma.app>',
+            messageId: `test_${Date.now()}`,
+            from: fromEmail,
             to,
-            created_at: new Date().toISOString(),
         };
     }
 
-    // PRODUCTION MODE: Send actual email
+    // PRODUCTION MODE: Send actual email via Zoho SMTP
     try {
-        const resend = getResendClient();
+        const transport = getTransporter();
 
-        if (!resend) {
-            throw new Error('Resend client not initialized. Please configure RESEND_API_KEY.');
+        if (!transport) {
+            throw new Error('SMTP transporter not initialized. Please configure SMTP credentials.');
         }
 
-        const { data, error } = await resend.emails.send({
-            from: process.env.RESEND_FROM_EMAIL || 'Reforma <onboarding@reforma.app>',
-            to: [to],
-            subject: `You've been invited to join ${workspaceName} on Reforma`,
+        const info = await transport.sendMail({
+            from: `Reforma <${fromEmail}>`,
+            to,
+            subject,
             html: getInvitationEmailHTML({
                 workspaceName,
                 inviterName,
@@ -70,13 +93,8 @@ export async function sendInvitationEmail({
             }),
         });
 
-        if (error) {
-            console.error('Resend error:', error);
-            throw new Error(`Failed to send email: ${error.message}`);
-        }
-
-        console.log('✅ Invitation email sent successfully:', { to, emailId: data?.id });
-        return data;
+        console.log('✅ Invitation email sent successfully:', { to, messageId: info.messageId });
+        return info;
     } catch (error) {
         console.error('❌ Error sending invitation email:', error);
         throw error;
@@ -150,7 +168,7 @@ function getInvitationEmailHTML({
                     <tr>
                         <td style="background-color: #f9fafb; padding: 24px 40px; text-align: center; border-top: 1px solid #e5e7eb;">
                             <p style="margin: 0; color: #999; font-size: 13px;">
-                                © 2024 Reforma. All rights reserved.
+                                © ${new Date().getFullYear()} Reforma. All rights reserved.
                             </p>
                         </td>
                     </tr>
@@ -162,4 +180,3 @@ function getInvitationEmailHTML({
 </html>
     `.trim();
 }
-
