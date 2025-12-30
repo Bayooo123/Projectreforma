@@ -100,9 +100,9 @@ export async function getFirmPulse(limit: number = 10) {
     const session = await auth();
     if (!session?.user?.id) return [];
 
-    // Fetch activities from both Matters and Briefs
+    // Fetch activities from Matters, Briefs, and Invitations
     // Note: In a real high-scale app, we'd have a unified Activity/Audit table. 
-    // Here we query both and merge.
+    // Here we query multiple sources and merge.
 
     const matterLogs = await prisma.matterActivityLog.findMany({
         take: limit,
@@ -122,13 +122,23 @@ export async function getFirmPulse(limit: number = 10) {
         }
     });
 
-    // Merge and sort
+    // Fetch recent invitations sent
+    const invitations = await prisma.invitation.findMany({
+        take: limit,
+        orderBy: { createdAt: 'desc' },
+        include: {
+            inviter: { select: { name: true } },
+            workspace: { select: { name: true } }
+        }
+    });
+
+    // Merge and sort all activities
     const allActivities = [
         ...matterLogs.map(log => ({
             id: log.id,
             caseName: log.matter.name,
             person: log.user.name || 'Unknown',
-            action: log.description, // e.g. "note_added" -> need to format this for display
+            action: log.description,
             type: log.activityType,
             timestamp: log.timestamp,
             source: 'Matter'
@@ -141,6 +151,15 @@ export async function getFirmPulse(limit: number = 10) {
             type: log.activityType,
             timestamp: log.timestamp,
             source: 'Brief'
+        })),
+        ...invitations.map(inv => ({
+            id: inv.id,
+            caseName: inv.workspace.name,
+            person: inv.inviter.name || 'Unknown',
+            action: `invited ${inv.email} as ${inv.role}`,
+            type: 'invitation_sent',
+            timestamp: inv.createdAt,
+            source: 'Workspace'
         }))
     ].sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime()).slice(0, limit);
 
