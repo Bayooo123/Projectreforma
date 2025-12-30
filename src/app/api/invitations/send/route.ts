@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma';
 import { isWorkspaceOwner } from '@/lib/workspace';
 import { sendInvitationEmail } from '@/lib/email';
 import { nanoid } from 'nanoid';
+import { isValidRole, canInviteMembers, canAssignRole } from '@/lib/roles';
 
 export async function POST(request: NextRequest) {
     try {
@@ -27,18 +28,35 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        if (!role || !['Partner', 'Lawyer', 'Staff'].includes(role)) {
+        if (!role || !isValidRole(role)) {
             return NextResponse.json(
                 { error: 'Invalid role' },
                 { status: 400 }
             );
         }
 
-        // Check if user is workspace owner
+        // Get user's membership to check permissions
+        const membership = await prisma.workspaceMember.findFirst({
+            where: {
+                workspaceId,
+                userId: session.user.id,
+            },
+        });
+
         const isOwner = await isWorkspaceOwner(session.user.id, workspaceId);
-        if (!isOwner) {
+
+        // Check if user can invite members (owners, Partners, Managing Partners)
+        if (!canInviteMembers(membership?.role, isOwner)) {
             return NextResponse.json(
-                { error: 'Only workspace owners can send invitations' },
+                { error: 'You do not have permission to send invitations' },
+                { status: 403 }
+            );
+        }
+
+        // Check if user can assign the requested role
+        if (!canAssignRole(membership?.role || '', role, isOwner)) {
+            return NextResponse.json(
+                { error: 'You cannot assign a role higher than your own' },
                 { status: 403 }
             );
         }

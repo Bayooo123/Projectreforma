@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { X, Mail, UserPlus, Loader2 } from 'lucide-react';
 import styles from './InviteTeamModal.module.css';
+import { ROLES } from '@/lib/roles';
 
 interface InviteTeamModalProps {
     workspaceId: string;
@@ -10,15 +11,9 @@ interface InviteTeamModalProps {
     onClose: () => void;
 }
 
-const ROLES = [
-    { value: 'Partner', label: 'Partner' },
-    { value: 'Lawyer', label: 'Lawyer' },
-    { value: 'Staff', label: 'Staff' },
-];
-
 const InviteTeamModal = ({ workspaceId, workspaceName, onClose }: InviteTeamModalProps) => {
     const [emails, setEmails] = useState(['']);
-    const [role, setRole] = useState('Lawyer');
+    const [role, setRole] = useState('Associate');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');

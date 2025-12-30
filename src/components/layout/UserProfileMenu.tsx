@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import { UserCircle, UserPlus, Settings, LogOut, ChevronDown } from 'lucide-react';
 import { signOut } from 'next-auth/react';
 import InviteTeamModal from '../invitations/InviteTeamModal';
+import { canInviteMembers } from '@/lib/roles';
 import styles from './UserProfileMenu.module.css';
 
 interface UserProfileMenuProps {
@@ -110,10 +111,12 @@ const UserProfileMenu = ({ user, workspace }: UserProfileMenuProps) => {
                         <div className={styles.dropdownDivider} />
 
                         <div className={styles.dropdownMenu}>
-                            {workspace?.isOwner && (
+                            {canInviteMembers(workspace?.role, workspace?.isOwner) && (
                                 <button
                                     className={styles.menuItem}
                                     onClick={handleInviteClick}
+                                    title="Invite Members"
+                                    aria-label="Invite Team Members"
                                 >
                                     <UserPlus size={18} />
                                     <span>Invite Team Members</span>
