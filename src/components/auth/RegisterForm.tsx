@@ -90,42 +90,6 @@ export default function RegisterForm({ inviteToken, firmName }: { inviteToken?: 
                     </div>
 
                     <div className={styles.formGroup}>
-                        <label htmlFor="firmCode" className={styles.label}>
-                            Firm Code (Unique ID)
-                        </label>
-                        <input
-                            id="firmCode"
-                            name="firmCode"
-                            type="text"
-                            required
-                            className={styles.input}
-                            placeholder="DOE-LAW-001"
-                            minLength={3}
-                        />
-                        <p className={styles.hint}>
-                            This code will be used by your team to join the firm.
-                        </p>
-                    </div>
-
-                    <div className={styles.formGroup}>
-                        <label htmlFor="firmPassword" className={styles.label}>
-                            Firm Join Password
-                        </label>
-                        <input
-                            id="firmPassword"
-                            name="firmPassword"
-                            type="text"
-                            required
-                            className={styles.input}
-                            placeholder="SecureFirmPass123"
-                            minLength={6}
-                        />
-                        <p className={styles.hint}>
-                            Share this password only with your team members.
-                        </p>
-                    </div>
-
-                    <div className={styles.formGroup}>
                         <label htmlFor="role" className={styles.label}>
                             Your Role
                         </label>
@@ -142,9 +106,6 @@ export default function RegisterForm({ inviteToken, firmName }: { inviteToken?: 
                                 </option>
                             ))}
                         </select>
-                        <p className={styles.hint}>
-                            Only senior management can set up a firm workspace
-                        </p>
                     </div>
                 </>
             )}

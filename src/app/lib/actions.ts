@@ -52,14 +52,16 @@ export async function register(
     const password = formData.get('password') as string;
     const phone = formData.get('phone') as string;
     const firmName = formData.get('firmName') as string;
-    const firmCode = formData.get('firmCode') as string;
-    const firmPassword = formData.get('firmPassword') as string;
     const role = formData.get('role') as string;
 
-    console.log('🔵 Registration attempt started for:', { email, name, firmName, firmCode, role });
+    // Auto-generate firm code and join password for simplified onboarding
+    const firmCode = firmName.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 4) + '-' + nanoid(6);
+    const firmPassword = nanoid(12);
 
-    // Validate required fields
-    if (!name || !email || !password || !phone || !firmName || !firmCode || !firmPassword || !role) {
+    console.log('🔵 Registration attempt started for:', { email, name, firmName, role });
+
+    // Validate required fields (simplified - no firmCode/firmPassword from user)
+    if (!name || !email || !password || !phone || !firmName || !role) {
         console.log('❌ Validation failed: Missing required fields');
         return 'Please fill in all fields.';
     }
@@ -90,7 +92,7 @@ export async function register(
 
     if (!ADMIN_ROLES.includes(role)) {
         console.log('❌ Validation failed: Invalid role');
-        return 'Invalid role. Only senior management can create a firm workspace.';
+        return 'Invalid role selected.';
     }
 
     try {

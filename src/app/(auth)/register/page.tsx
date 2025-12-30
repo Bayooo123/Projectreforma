@@ -1,6 +1,6 @@
 'use client';
 
-import { Scale, Building2, UserPlus } from 'lucide-react';
+import { Scale, UserPlus, Shield } from 'lucide-react';
 import Link from 'next/link';
 import styles from '../auth.module.css';
 import RegisterForm from '@/components/auth/RegisterForm';
@@ -26,17 +26,17 @@ export default function RegisterPage() {
 
                     <div className={styles.features}>
                         <div className={styles.feature}>
-                            <Building2 className={styles.featureIcon} />
-                            <div className={styles.featureContent}>
-                                <h3>Multi-Workspace Support</h3>
-                                <p>Manage multiple firms from one account</p>
-                            </div>
-                        </div>
-                        <div className={styles.feature}>
                             <UserPlus className={styles.featureIcon} />
                             <div className={styles.featureContent}>
                                 <h3>Invite Your Team</h3>
                                 <p>Add team members and assign roles easily</p>
+                            </div>
+                        </div>
+                        <div className={styles.feature}>
+                            <Shield className={styles.featureIcon} />
+                            <div className={styles.featureContent}>
+                                <h3>Secure & Private</h3>
+                                <p>Your firm's data is protected and encrypted</p>
                             </div>
                         </div>
                     </div>
@@ -53,8 +53,6 @@ export default function RegisterPage() {
                     <div className={styles.formHeader}>
                         <h2 className={styles.formTitle}>Create your firm</h2>
                         <p className={styles.formSubtitle}>
-                            Joining a team? <Link href="/join">Find your firm</Link>
-                            <span className={styles.divider}> · </span>
                             Already have an account? <Link href="/login">Sign in</Link>
                         </p>
                     </div>
