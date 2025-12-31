@@ -34,6 +34,11 @@
     animation: slideUp 0.3s ease;
 }
 
+:global(.dark) .modal {
+    background: #1e293b;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+
 @keyframes slideUp {
     from {
         opacity: 0;
@@ -78,10 +83,18 @@
     margin: 0 0 4px 0;
 }
 
+:global(.dark) .title {
+    color: #f1f5f9;
+}
+
 .subtitle {
     font-size: 14px;
     color: #666;
     margin: 0;
+}
+
+:global(.dark) .subtitle {
+    color: #94a3b8;
 }
 
 .closeButton {
@@ -97,6 +110,15 @@
 .closeButton:hover {
     background: #f3f4f6;
     color: #1a1a1a;
+}
+
+:global(.dark) .closeButton {
+    color: #94a3b8;
+}
+
+:global(.dark) .closeButton:hover {
+    background: #334155;
+    color: #f1f5f9;
 }
 
 .form {
@@ -115,6 +137,10 @@
     font-weight: 500;
     color: #1a1a1a;
     margin-bottom: 8px;
+}
+
+:global(.dark) .label {
+    color: #e2e8f0;
 }
 
 .emailInputGroup {
@@ -190,9 +216,22 @@
     border: 1px solid #e5e7eb;
     border-radius: 8px;
     font-size: 14px;
+    color: #1a1a1a;
     background: white;
     cursor: pointer;
     transition: all 0.15s ease;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+    background-position: right 12px center;
+    background-repeat: no-repeat;
+    background-size: 20px;
+}
+
+:global(.dark) .select {
+    background-color: #1e293b;
+    border-color: #475569;
+    color: #e2e8f0;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%2394a3b8' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
 }
 
 .select:focus {
