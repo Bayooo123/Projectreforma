@@ -176,6 +176,7 @@ const BriefUploadModal = ({ isOpen, onClose, onSuccess, workspaceId }: BriefUplo
                 ) : (
                     <form className={styles.form} onSubmit={handleSubmit}>
                         <div className={styles.content}>
+                            {/* Row 1: Brief Number + Brief Name */}
                             <div className={styles.row}>
                                 <div className={styles.formGroup}>
                                     <label className={styles.label}>Brief Number *</label>
@@ -201,6 +202,7 @@ const BriefUploadModal = ({ isOpen, onClose, onSuccess, workspaceId }: BriefUplo
                                 </div>
                             </div>
 
+                            {/* Row 2: Client */}
                             <div className={styles.formGroup}>
                                 <label className={styles.label}>Client *</label>
                                 {!showQuickClient ? (
@@ -223,7 +225,7 @@ const BriefUploadModal = ({ isOpen, onClose, onSuccess, workspaceId }: BriefUplo
                                             className={styles.quickAddBtn}
                                             onClick={() => setShowQuickClient(true)}
                                         >
-                                            <Plus size={14} /> New Client
+                                            <Plus size={14} /> New
                                         </button>
                                     </div>
                                 ) : (
@@ -254,6 +256,7 @@ const BriefUploadModal = ({ isOpen, onClose, onSuccess, workspaceId }: BriefUplo
                                 )}
                             </div>
 
+                            {/* Row 3: Lawyer */}
                             <div className={styles.formGroup}>
                                 <label className={styles.label}>Lawyer in Charge *</label>
                                 <select
@@ -269,11 +272,9 @@ const BriefUploadModal = ({ isOpen, onClose, onSuccess, workspaceId }: BriefUplo
                                         </option>
                                     ))}
                                 </select>
-                                {lawyers.length === 0 && (
-                                    <p className={styles.hint}>No lawyers found. Invite team members first.</p>
-                                )}
                             </div>
 
+                            {/* Row 4: Category + Status */}
                             <div className={styles.row}>
                                 <div className={styles.formGroup}>
                                     <label className={styles.label}>Category *</label>
@@ -283,7 +284,7 @@ const BriefUploadModal = ({ isOpen, onClose, onSuccess, workspaceId }: BriefUplo
                                         onChange={e => setCategory(e.target.value)}
                                         required
                                     >
-                                        <option value="">Select Category...</option>
+                                        <option value="">Select...</option>
                                         <option>Litigation</option>
                                         <option>ADR</option>
                                         <option>Tax advisory</option>
@@ -305,17 +306,6 @@ const BriefUploadModal = ({ isOpen, onClose, onSuccess, workspaceId }: BriefUplo
                                         <option value="finalized">Finalized</option>
                                     </select>
                                 </div>
-                            </div>
-
-                            <div className={styles.formGroup}>
-                                <label className={styles.label}>Description (Optional)</label>
-                                <textarea
-                                    className={styles.textarea}
-                                    placeholder="Brief description..."
-                                    value={description}
-                                    onChange={e => setDescription(e.target.value)}
-                                    rows={3}
-                                />
                             </div>
                         </div>
 
