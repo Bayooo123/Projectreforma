@@ -45,6 +45,14 @@ export async function GET() {
             results.push(`⚠️ Failed to add letterheadUrl: ${e.message}`);
         }
 
+        // 4. Add 'followUpSent' to Invoice table
+        try {
+            await prisma.$executeRawUnsafe(`ALTER TABLE "Invoice" ADD COLUMN IF NOT EXISTS "followUpSent" BOOLEAN DEFAULT false;`);
+            results.push("✅ Added 'followUpSent' to Invoice table.");
+        } catch (e: any) {
+            results.push(`⚠️ Failed to add followUpSent: ${e.message}`);
+        }
+
         return NextResponse.json({
             message: 'Schema Fix Attempted',
             results
