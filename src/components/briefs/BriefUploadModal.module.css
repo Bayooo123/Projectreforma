@@ -75,10 +75,9 @@
     color: var(--text-primary);
 }
 
-/* Updated .content to be the scrollable area */
+/* Updated .content - no scrolling needed, just display all */
 .content {
     padding: 1rem 1.25rem;
-    overflow-y: auto;
     flex: 1;
 }
 
@@ -87,8 +86,6 @@
     display: flex;
     flex-direction: column;
     flex: 1;
-    overflow: hidden;
-    /* Contains the scrollable content */
 }
 
 .formGroup {
