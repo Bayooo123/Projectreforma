@@ -127,7 +127,9 @@ export async function createInvoice(data: CreateInvoiceData) {
         return { success: true, data: invoice };
     } catch (error) {
         console.error('Error creating invoice:', error);
-        return { success: false, error: 'Failed to create invoice' };
+        // Return the actual error message for debugging
+        const errorMessage = error instanceof Error ? error.message : 'Failed to create invoice';
+        return { success: false, error: errorMessage };
     }
 }
 
