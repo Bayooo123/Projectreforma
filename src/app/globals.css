@@ -104,6 +104,7 @@
   --primary-dark: #134E4A;
   --primary-light: #5EEAD4;
   --primary-soft: rgba(45, 212, 191, 0.1);
+  --primary-glow: 0 0 20px rgba(45, 212, 191, 0.25);
 
   --accent: #1E293B;
   --accent-hover: #334155;
@@ -113,22 +114,40 @@
   --text-tertiary: #64748B;
 
   --background: #0F172A;
-  /* Slate 900 */
   --surface: #1E293B;
-  /* Slate 800 */
   --surface-subtle: #020617;
-  /* Slate 950 */
+  --surface-elevated: #334155;
 
   --glass-bg: rgba(30, 41, 59, 0.7);
   --glass-border: rgba(255, 255, 255, 0.05);
 
   /* Dashboard Specifics - Dark Mode */
   --bg-sidebar: #0a3d3a;
-  --teal-bg: rgba(15, 95, 90, 0.2);
+  --teal-bg: rgba(45, 212, 191, 0.15);
   --teal-text: #5eead4;
-  --hover-bg: rgba(15, 95, 90, 0.1);
+  --hover-bg: rgba(45, 212, 191, 0.08);
 
   --border: #334155;
+  --border-subtle: #1e293b;
+
+  /* Table Improvements */
+  --table-header-bg: #1e293b;
+  --table-row-hover: rgba(45, 212, 191, 0.06);
+  --table-row-alternate: rgba(30, 41, 59, 0.5);
+
+  /* Status Badge Colors */
+  --status-active-bg: rgba(16, 185, 129, 0.15);
+  --status-active-text: #34D399;
+  --status-active-border: rgba(16, 185, 129, 0.3);
+  --status-inactive-bg: rgba(251, 191, 36, 0.15);
+  --status-inactive-text: #FBBF24;
+  --status-inactive-border: rgba(251, 191, 36, 0.3);
+  --status-finalized-bg: rgba(59, 130, 246, 0.15);
+  --status-finalized-text: #60A5FA;
+  --status-finalized-border: rgba(59, 130, 246, 0.3);
+
+  /* Input Focus Glow */
+  --input-focus-glow: 0 0 0 3px rgba(45, 212, 191, 0.2);
 
   --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
   --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
@@ -142,7 +161,6 @@
   --text-lp-secondary: #cbd5e1;
   --text-lp-tertiary: #64748b;
   --primary-color: #14b8a6;
-  /* Brighter teal for dark mode */
   --primary-hover: #0d9488;
 
   --card-bg: #1e293b;
@@ -150,10 +168,8 @@
 
   --section-hero-bg: #0f172a;
   --section-problem-bg: #1e293b;
-  /* Slightly lighter than page bg */
   --section-system-bg: #0f172a;
   --section-drafter-bg: #020617;
-  /* Even darker */
 
   --icon-bg: #1e293b;
   --icon-border: #334155;
