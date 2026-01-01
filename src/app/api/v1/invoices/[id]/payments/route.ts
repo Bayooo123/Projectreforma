@@ -39,7 +39,7 @@ export async function POST(
         }
 
         const body = await request.json();
-        const { amount, paymentMethod, reference, date, notes } = body;
+        const { amount, method, reference, date } = body;
 
         if (!amount || amount <= 0) {
             return errorResponse('VALIDATION_ERROR', 'Payment amount is required and must be positive', 400, 'amount');
@@ -51,10 +51,9 @@ export async function POST(
                 invoiceId: invoice.id,
                 clientId: invoice.clientId,
                 amount,
-                paymentMethod,
+                method: method || 'bank_transfer',
                 reference,
                 date: date ? new Date(date) : new Date(),
-                notes,
             },
         });
 
@@ -77,10 +76,9 @@ export async function POST(
                 id: payment.id,
                 invoiceId: payment.invoiceId,
                 amount: payment.amount,
-                paymentMethod: payment.paymentMethod,
+                method: payment.method,
                 reference: payment.reference,
                 date: payment.date,
-                notes: payment.notes,
                 createdAt: payment.createdAt,
             },
             invoice: {
