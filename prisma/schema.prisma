@@ -119,6 +119,7 @@ model User {
   BriefActivityLog     BriefActivityLog[]
   draftingTemplates    DraftingTemplate[]
   draftingSessions     DraftingSession[]
+  apiKeys              ApiKey[]
 
   @@index([email])
 }
@@ -137,8 +138,24 @@ model BankAccount {
   workspace     Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 }
 
+// API Keys for external integrations (e.g., Bica)
+model ApiKey {
+  id          String   @id @default(cuid())
+  userId      String
+  workspaceId String
+  name        String   // e.g., "Bica Integration"
+  keyHash     String   @unique // SHA-256 hash of the key
+  keyPrefix   String   // First 8 chars for identification (rf_sk_xxxx)
+  lastUsedAt  DateTime?
+  expiresAt   DateTime?
+  revokedAt   DateTime?
+  createdAt   DateTime @default(now())
 
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@index([keyHash])
+  @@index([userId])
+}
 model Account {
   id                String  @id @default(cuid())
   userId            String
