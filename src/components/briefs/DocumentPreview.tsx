@@ -24,7 +24,7 @@ interface DocumentPreviewProps {
 
 export default function DocumentPreview({ document, onClose, onNavigate, canNavigate }: DocumentPreviewProps) {
     const [numPages, setNumPages] = useState<number>(0);
-    const [pageNumber, setPageNumber] = useState<number>(1);
+    // const [pageNumber, setPageNumber] = useState<number>(1); // Removed for continuous scroll
     const [loading, setLoading] = useState(true);
 
     if (!document) return null;
@@ -49,36 +49,23 @@ export default function DocumentPreview({ document, onClose, onNavigate, canNavi
                         file={document.url}
                         onLoadSuccess={onDocumentLoadSuccess}
                         loading={<div className={styles.loading}>Loading PDF...</div>}
-                        error={<div className={styles.error}>Failed to load PDF</div>}
+                        error={<div className={styles.error}>Failed to load PDF. Please download to view.</div>}
+                        className={styles.pdfDocument}
                     >
-                        <Page
-                            pageNumber={pageNumber}
-                            renderTextLayer={true}
-                            renderAnnotationLayer={true}
-                            className={styles.pdfPage}
-                        />
+                        {Array.from(new Array(numPages), (el, index) => (
+                            <Page
+                                key={`page_${index + 1}`}
+                                pageNumber={index + 1}
+                                renderTextLayer={true}
+                                renderAnnotationLayer={true}
+                                className={styles.pdfPage}
+                                scale={1.2} // Slightly larger default scale
+                                loading={
+                                    <div className="h-[800px] w-[600px] bg-white animate-pulse mb-8 rounded shadow" />
+                                }
+                            />
+                        ))}
                     </Document>
-                    {numPages > 1 && (
-                        <div className={styles.pdfControls}>
-                            <button
-                                onClick={() => setPageNumber(Math.max(1, pageNumber - 1))}
-                                disabled={pageNumber <= 1}
-                                className={styles.pdfButton}
-                            >
-                                Previous
-                            </button>
-                            <span className={styles.pageInfo}>
-                                Page {pageNumber} of {numPages}
-                            </span>
-                            <button
-                                onClick={() => setPageNumber(Math.min(numPages, pageNumber + 1))}
-                                disabled={pageNumber >= numPages}
-                                className={styles.pdfButton}
-                            >
-                                Next
-                            </button>
-                        </div>
-                    )}
                 </div>
             );
         }

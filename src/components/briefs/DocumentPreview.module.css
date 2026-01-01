@@ -116,6 +116,18 @@
 .pdfPage {
     max-width: 100%;
     height: auto;
+    margin-bottom: 2rem;
+    /* Spacing between pages */
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    /* Subtle shadow for depth */
+}
+
+/* Ensure canvas helper classes don't break layout */
+.pdfPage canvas {
+    max-width: 100% !important;
+    height: auto !important;
+    border-radius: 4px;
+    /* Optional: smooth corners */
 }
 
 .pdfControls {
