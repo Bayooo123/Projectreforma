@@ -8,7 +8,8 @@ import 'react-pdf/dist/Page/TextLayer.css';
 import styles from './DocumentPreview.module.css';
 
 // Configure PDF.js worker
-pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
+// Pinning version to match package.json pdfjs-dist (3.11.174) to avoid "Setting up fake worker" warning or failures
+pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js`;
 
 interface DocumentPreviewProps {
     document: {
@@ -48,8 +49,19 @@ export default function DocumentPreview({ document, onClose, onNavigate, canNavi
                     <Document
                         file={document.url}
                         onLoadSuccess={onDocumentLoadSuccess}
+                        onLoadError={(error) => {
+                            console.error('PDF Load Error:', error);
+                            setLoading(false);
+                            // Set a visible error state variable if needed, or just rely on the fallback
+                        }}
                         loading={<div className={styles.loading}>Loading PDF...</div>}
-                        error={<div className={styles.error}>Failed to load PDF. Please download to view.</div>}
+                        error={(error: { message?: string }) => (
+                            <div className={styles.error}>
+                                <p>Failed to load PDF.</p>
+                                <p className="text-xs mt-2 opacity-75">{error?.message || 'Unknown error'}</p>
+                                <a href={document.url} download className="mt-4 underline">Download Original</a>
+                            </div>
+                        )}
                         className={styles.pdfDocument}
                     >
                         {Array.from(new Array(numPages), (el, index) => (
