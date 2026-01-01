@@ -2,15 +2,16 @@
 
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
-import { User, Building2, Lock, Save, Image as ImageIcon, Loader, FileText, AlertCircle } from 'lucide-react';
+import { User, Building2, Lock, Save, Image as ImageIcon, Loader, FileText, AlertCircle, Key, Copy, Trash2, Plus, Eye, EyeOff } from 'lucide-react';
 import { updateWorkspaceSettings, getWorkspaceSettings } from '@/app/actions/settings';
 import { getUserProfile, updateUserProfile } from '@/app/actions/members';
 import { getBankAccounts, createBankAccount, deleteBankAccount } from '@/app/actions/bank-accounts';
+import { generateApiKey, listApiKeys, revokeApiKey } from '@/app/actions/api-keys';
 import styles from './page.module.css';
 
 export default function SettingsPage() {
     const { data: session } = useSession();
-    const [activeTab, setActiveTab] = useState<'profile' | 'firm'>('profile');
+    const [activeTab, setActiveTab] = useState<'profile' | 'firm' | 'apikeys'>('profile');
 
     // Config State
     const [isLoading, setIsLoading] = useState(true);
@@ -28,14 +29,25 @@ export default function SettingsPage() {
     const [bankAccounts, setBankAccounts] = useState<any[]>([]);
     const [newAccount, setNewAccount] = useState({ bankName: '', accountNumber: '', accountName: '', currency: 'NGN' });
 
+    // API Keys State
+    const [apiKeys, setApiKeys] = useState<any[]>([]);
+    const [newKeyName, setNewKeyName] = useState('');
+    const [generatedKey, setGeneratedKey] = useState<string | null>(null);
+    const [isGenerating, setIsGenerating] = useState(false);
+    const [showKey, setShowKey] = useState(false);
+
     const loadProfile = async () => {
-        // We need a way to get the current profile beyond just session
-        // Using server action for up-to-date data
-        // For now, assuming session might be stale or strict, let's fetch profile separately if needed 
-        // or just rely on a new server action getUserProfile()
         const res = await getUserProfile();
         if (res.success && res.user) {
             setJobTitle(res.user.jobTitle || '');
+        }
+    };
+
+    const loadApiKeys = async () => {
+        if (!session?.user?.id) return;
+        const res = await listApiKeys(session.user.id);
+        if (res.success && res.data) {
+            setApiKeys(res.data);
         }
     };
 
@@ -59,6 +71,7 @@ export default function SettingsPage() {
     useEffect(() => {
         if (session?.user?.workspaceId) {
             loadSettings(session.user.workspaceId);
+            loadApiKeys();
         }
         loadProfile();
     }, [session]);
@@ -91,7 +104,39 @@ export default function SettingsPage() {
         setBankAccounts(bankAccounts.filter(a => a.id !== id));
     };
 
-    // ... handleSaveFirmSettings logic remains ...
+    const handleGenerateApiKey = async () => {
+        if (!newKeyName.trim() || !session?.user?.id || !session?.user?.workspaceId) return;
+        setIsGenerating(true);
+        const res = await generateApiKey(
+            session.user.id,
+            session.user.workspaceId,
+            newKeyName.trim(),
+            365 // 1 year expiry
+        );
+        if (res.success && res.data) {
+            setGeneratedKey(res.data.key);
+            setNewKeyName('');
+            loadApiKeys();
+        } else {
+            alert('Failed to generate API key');
+        }
+        setIsGenerating(false);
+    };
+
+    const handleRevokeKey = async (keyId: string) => {
+        if (!confirm('Revoke this API key? This cannot be undone.')) return;
+        if (!session?.user?.id) return;
+        const res = await revokeApiKey(keyId, session.user.id);
+        if (res.success) {
+            loadApiKeys();
+        }
+    };
+
+    const copyToClipboard = (text: string) => {
+        navigator.clipboard.writeText(text);
+        alert('Copied to clipboard!');
+    };
+
     const handleSaveFirmSettings = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!session?.user?.workspaceId) return;
@@ -129,24 +174,31 @@ export default function SettingsPage() {
         }
     };
 
+    // Check if user can manage API keys (owner/partner only)
+    const canManageApiKeys = session?.user?.role === 'owner' || session?.user?.role === 'partner';
+
     if (isLoading && !session) return <div className={styles.loading}><Loader className="spin" /> Loading...</div>;
 
     return (
         <div className={styles.container}>
             <header className={styles.header}>
                 <h1>Settings</h1>
-                <p>Manage your personal profile and firm preferences.</p>
+                <p>Manage your personal profile, firm preferences, and integrations.</p>
             </header>
 
             <div className={styles.tabsContainer}>
-                {/* Tabs logic remains same */}
                 <div className={styles.tabs}>
                     <button className={`${styles.tab} ${activeTab === 'profile' ? styles.activeTab : ''}`} onClick={() => setActiveTab('profile')}>
-                        <User size={18} /> Personal Profile
+                        <User size={18} /> Profile
                     </button>
                     <button className={`${styles.tab} ${activeTab === 'firm' ? styles.activeTab : ''}`} onClick={() => setActiveTab('firm')}>
-                        <Building2 size={18} /> Firm Settings
+                        <Building2 size={18} /> Firm
                     </button>
+                    {canManageApiKeys && (
+                        <button className={`${styles.tab} ${activeTab === 'apikeys' ? styles.activeTab : ''}`} onClick={() => setActiveTab('apikeys')}>
+                            <Key size={18} /> API Keys
+                        </button>
+                    )}
                 </div>
             </div>
 
@@ -190,7 +242,6 @@ export default function SettingsPage() {
                                 <Building2 className={styles.icon} />
                                 <h2>Branding & Identity</h2>
                             </div>
-                            {/* Letterhead & Firm Code inputs same as before */}
                             <div className={styles.formGroup}>
                                 <label>Firm Code</label>
                                 <input type="text" className={styles.input} value={firmCode} onChange={e => setFirmCode(e.target.value)} />
@@ -281,6 +332,115 @@ export default function SettingsPage() {
                                 </div>
                                 <button onClick={handleCreateBankAccount} className={styles.secondaryBtn} disabled={isSaving}>Add Bank Account</button>
                             </div>
+                        </div>
+                    </>
+                )}
+
+                {activeTab === 'apikeys' && canManageApiKeys && (
+                    <>
+                        {/* Generated Key Alert */}
+                        {generatedKey && (
+                            <div className={styles.card} style={{ background: 'rgba(16, 185, 129, 0.1)', borderColor: 'rgba(16, 185, 129, 0.3)' }}>
+                                <div className={styles.cardHeader}>
+                                    <Key className={styles.icon} style={{ color: '#10B981' }} />
+                                    <h2 style={{ color: '#10B981' }}>API Key Generated!</h2>
+                                </div>
+                                <p style={{ marginBottom: '1rem', color: 'var(--text-secondary)' }}>
+                                    Copy this key now. It will not be shown again.
+                                </p>
+                                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', background: 'var(--surface)', padding: '1rem', borderRadius: '8px', fontFamily: 'monospace' }}>
+                                    <code style={{ flex: 1, wordBreak: 'break-all', fontSize: '0.9rem' }}>
+                                        {showKey ? generatedKey : '•'.repeat(40)}
+                                    </code>
+                                    <button onClick={() => setShowKey(!showKey)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}>
+                                        {showKey ? <EyeOff size={18} /> : <Eye size={18} />}
+                                    </button>
+                                    <button onClick={() => copyToClipboard(generatedKey)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--primary)' }}>
+                                        <Copy size={18} />
+                                    </button>
+                                </div>
+                                <button
+                                    onClick={() => setGeneratedKey(null)}
+                                    style={{ marginTop: '1rem', padding: '0.5rem 1rem', background: 'transparent', border: '1px solid var(--border)', borderRadius: '6px', cursor: 'pointer', color: 'var(--text-secondary)' }}
+                                >
+                                    I've saved the key
+                                </button>
+                            </div>
+                        )}
+
+                        {/* Generate New Key */}
+                        <div className={styles.card}>
+                            <div className={styles.cardHeader}>
+                                <Key className={styles.icon} />
+                                <h2>API Keys</h2>
+                            </div>
+                            <p style={{ color: 'var(--text-secondary)', marginBottom: '1rem' }}>
+                                Generate API keys for external integrations like Bica. Keys are scoped to this workspace.
+                            </p>
+                            <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1.5rem' }}>
+                                <input
+                                    type="text"
+                                    className={styles.input}
+                                    placeholder="Key name (e.g. Bica Integration)"
+                                    value={newKeyName}
+                                    onChange={e => setNewKeyName(e.target.value)}
+                                    style={{ flex: 1 }}
+                                />
+                                <button
+                                    onClick={handleGenerateApiKey}
+                                    disabled={!newKeyName.trim() || isGenerating}
+                                    className={styles.saveBtn}
+                                    style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+                                >
+                                    {isGenerating ? <Loader className="spin" size={16} /> : <Plus size={16} />}
+                                    Generate
+                                </button>
+                            </div>
+
+                            {/* Existing Keys */}
+                            <h3 style={{ fontSize: '1rem', marginBottom: '0.75rem', color: 'var(--text-secondary)' }}>Active Keys</h3>
+                            {apiKeys.length === 0 ? (
+                                <p style={{ color: 'var(--text-tertiary)', textAlign: 'center', padding: '2rem' }}>No API keys generated yet.</p>
+                            ) : (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                    {apiKeys.map(key => (
+                                        <div key={key.id} style={{
+                                            display: 'flex',
+                                            justifyContent: 'space-between',
+                                            alignItems: 'center',
+                                            padding: '0.75rem 1rem',
+                                            background: 'var(--surface)',
+                                            borderRadius: '8px',
+                                            border: '1px solid var(--border)'
+                                        }}>
+                                            <div>
+                                                <div style={{ fontWeight: 600 }}>{key.name}</div>
+                                                <div style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)', fontFamily: 'monospace' }}>
+                                                    {key.keyPrefix}••••••••
+                                                </div>
+                                                <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', marginTop: '0.25rem' }}>
+                                                    Created: {new Date(key.createdAt).toLocaleDateString()}
+                                                    {key.lastUsedAt && ` • Last used: ${new Date(key.lastUsedAt).toLocaleDateString()}`}
+                                                </div>
+                                            </div>
+                                            <button
+                                                onClick={() => handleRevokeKey(key.id)}
+                                                style={{
+                                                    background: 'rgba(239, 68, 68, 0.1)',
+                                                    border: 'none',
+                                                    padding: '0.5rem',
+                                                    borderRadius: '6px',
+                                                    cursor: 'pointer',
+                                                    color: '#EF4444'
+                                                }}
+                                                title="Revoke key"
+                                            >
+                                                <Trash2 size={16} />
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
                         </div>
                     </>
                 )}
