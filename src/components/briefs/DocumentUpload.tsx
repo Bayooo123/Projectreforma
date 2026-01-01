@@ -43,25 +43,52 @@ export default function DocumentUpload({ briefId, onUploadComplete }: DocumentUp
         setIsUploading(true);
 
         try {
+            // Standardizing approach: Use Server Actions + Client Blob Upload
+            // This unifies logic with DocumentList.tsx and bypasses 4.5MB limit.
+            const { upload } = await import('@vercel/blob/client');
+            const { createDocument } = await import('@/app/actions/documents');
+
+            let successCount = 0;
+
             for (const file of files) {
-                const formData = new FormData();
-                formData.append('file', file);
-                formData.append('briefId', briefId);
+                try {
+                    // 1. Upload to Blob (Client Side)
+                    const newBlob = await upload(file.name, file, {
+                        access: 'public',
+                        handleUploadUrl: '/api/upload/handle',
+                    });
 
-                const response = await fetch('/api/documents/ingest', {
-                    method: 'POST',
-                    body: formData,
-                });
+                    // 2. Create DB Record via Server Action
+                    const docType = file.type.includes('image') ? 'image' :
+                        file.type.includes('pdf') ? 'pdf' :
+                            file.name.endsWith('.docx') ? 'docx' : 'pdf';
 
-                if (!response.ok) {
-                    throw new Error(`Failed to upload ${file.name}`);
+                    const result = await createDocument({
+                        name: file.name,
+                        url: newBlob.url,
+                        type: docType,
+                        size: file.size,
+                        briefId: briefId,
+                    });
+
+                    if (result.success) {
+                        successCount++;
+                    } else {
+                        console.error('DB Create failed:', result.error);
+                        throw new Error(result.error || 'Failed to record document');
+                    }
+
+                } catch (innerError) {
+                    console.error(`Failed to process ${file.name}:`, innerError);
+                    alert(`Failed to upload ${file.name}: ${(innerError as Error).message}`);
                 }
             }
 
-            if (files.length > 0) {
-                alert(`Successfully uploaded and processed ${files.length} file(s).`);
+            if (successCount > 0) {
+                // Trigger refresh
                 onUploadComplete();
             }
+
         } catch (error) {
             console.error('Upload error:', error);
             alert('Failed to upload files. Please try again.');
