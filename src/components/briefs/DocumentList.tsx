@@ -93,28 +93,33 @@ const DocumentList = ({ briefId, onDocumentClick }: DocumentListProps) => {
         setUploadProgress(10);
 
         try {
+            // Dynamic import to avoid SSR issues with client-side library
+            const { upload } = await import('@vercel/blob/client');
+
             for (let i = 0; i < files.length; i++) {
                 const file = files[i];
 
-                // 1. Upload to Vercel Blob
-                const response = await fetch(
-                    `/api/upload?filename=${file.name}`,
-                    {
-                        method: 'POST',
-                        body: file,
+                // 1. Upload directly to Vercel Blob (Bypasses 4.5MB Serverless Limit)
+                const newBlob = await upload(file.name, file, {
+                    access: 'public',
+                    handleUploadUrl: '/api/upload/handle',
+                    onUploadProgress: (progressEvent) => {
+                        setUploadProgress(Math.round((progressEvent.percentage / 100) * 90));
                     },
-                );
+                });
 
-                if (!response.ok) throw new Error('Upload failed');
-
-                const newBlob = (await response.json()) as PutBlobResult;
-                setUploadProgress(50);
+                setUploadProgress(95);
 
                 // 2. Create Document record in DB
+                // We map generalized types to our schema
+                const docType = file.type.includes('image') ? 'image' :
+                    file.type.includes('pdf') ? 'pdf' :
+                        file.name.endsWith('.docx') ? 'docx' : 'pdf';
+
                 const result = await createDocument({
                     name: file.name,
                     url: newBlob.url,
-                    type: file.type.includes('image') ? 'image' : 'pdf', // Simple type detection
+                    type: docType,
                     size: file.size,
                     briefId: briefId,
                 });
@@ -124,7 +129,7 @@ const DocumentList = ({ briefId, onDocumentClick }: DocumentListProps) => {
                         ...result.document!,
                         type: result.document!.type as Document['type'],
                         ocrStatus: result.document!.ocrStatus as Document['ocrStatus'],
-                        ocrText: result.document!.ocrText ?? undefined, // Convert null to undefined
+                        ocrText: result.document!.ocrText ?? undefined,
                     };
                     setDocuments(prev => [newDoc, ...prev]);
                 }
@@ -132,7 +137,7 @@ const DocumentList = ({ briefId, onDocumentClick }: DocumentListProps) => {
             setUploadProgress(100);
         } catch (error) {
             console.error('Upload error:', error);
-            alert('Failed to upload file');
+            alert('Failed to upload file. ' + (error as Error).message);
         } finally {
             setIsUploading(false);
             setUploadProgress(0);
