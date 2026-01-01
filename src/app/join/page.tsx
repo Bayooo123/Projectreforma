@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Scale, Users, Shield, Loader2 } from 'lucide-react';
 import Link from 'next/link';
-import styles from './(auth)/auth.module.css';
+import styles from '../(auth)/auth.module.css';
 import { registerWithFirmCode } from '@/app/actions/workspace';
 import { signIn } from 'next-auth/react';
 
