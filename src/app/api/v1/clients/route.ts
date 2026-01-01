@@ -94,7 +94,7 @@ export async function POST(request: NextRequest) {
 
     try {
         const body = await request.json();
-        const { name, email, phone, company, industry, address } = body;
+        const { name, email, phone, company, industry } = body;
 
         if (!name) {
             return errorResponse('VALIDATION_ERROR', 'Client name is required', 400, 'name');
@@ -107,7 +107,6 @@ export async function POST(request: NextRequest) {
                 phone,
                 company,
                 industry,
-                address,
                 status: 'active',
                 workspaceId: auth!.workspaceId,
             },

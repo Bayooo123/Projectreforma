@@ -112,7 +112,7 @@ export async function PATCH(
         }
 
         const body = await request.json();
-        const { name, email, phone, company, industry, address, status } = body;
+        const { name, email, phone, company, industry, status } = body;
 
         const updateData: any = {};
         if (name !== undefined) updateData.name = name;
@@ -120,7 +120,6 @@ export async function PATCH(
         if (phone !== undefined) updateData.phone = phone;
         if (company !== undefined) updateData.company = company;
         if (industry !== undefined) updateData.industry = industry;
-        if (address !== undefined) updateData.address = address;
         if (status !== undefined) updateData.status = status;
 
         const client = await prisma.client.update({
