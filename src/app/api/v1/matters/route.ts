@@ -102,7 +102,6 @@ export async function POST(request: NextRequest) {
                 assignedLawyerId: assignedLawyerId || auth!.userId,
                 court,
                 judge,
-                description,
                 nextCourtDate: nextCourtDate ? new Date(nextCourtDate) : null,
                 status: 'active',
                 workspaceId: auth!.workspaceId,
@@ -117,8 +116,9 @@ export async function POST(request: NextRequest) {
         await prisma.matterActivityLog.create({
             data: {
                 matterId: matter.id,
-                action: 'Matter created via API',
-                performedById: auth!.userId,
+                activityType: 'api_action',
+                description: 'Matter created via API',
+                performedBy: auth!.userId,
             },
         });
 

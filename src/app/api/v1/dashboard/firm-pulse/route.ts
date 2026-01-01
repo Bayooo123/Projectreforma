@@ -27,9 +27,9 @@ export async function GET(request: NextRequest) {
                 },
                 include: {
                     matter: { select: { name: true, caseNumber: true } },
-                    performedBy: { select: { name: true } },
+                    user: { select: { name: true } },
                 },
-                orderBy: { createdAt: 'desc' },
+                orderBy: { timestamp: 'desc' },
                 take: limit,
             }),
             // Brief activity logs
@@ -39,9 +39,9 @@ export async function GET(request: NextRequest) {
                 },
                 include: {
                     brief: { select: { name: true, briefNumber: true } },
-                    performedBy: { select: { name: true } },
+                    user: { select: { name: true } },
                 },
-                orderBy: { createdAt: 'desc' },
+                orderBy: { timestamp: 'desc' },
                 take: limit,
             }),
             // Recent payments
@@ -74,11 +74,11 @@ export async function GET(request: NextRequest) {
             activities.push({
                 id: log.id,
                 type: 'matter_activity',
-                actor: log.performedBy?.name || 'System',
-                action: log.action,
+                actor: log.user?.name || 'System',
+                action: log.description,
                 target: log.matter.caseNumber,
                 caseName: log.matter.name,
-                timestamp: log.createdAt,
+                timestamp: log.timestamp,
             });
         });
 
@@ -86,11 +86,11 @@ export async function GET(request: NextRequest) {
             activities.push({
                 id: log.id,
                 type: 'brief_activity',
-                actor: log.performedBy?.name || 'System',
-                action: log.action,
+                actor: log.user?.name || 'System',
+                action: log.description,
                 target: log.brief.briefNumber,
                 caseName: log.brief.name,
-                timestamp: log.createdAt,
+                timestamp: log.timestamp,
             });
         });
 

@@ -124,8 +124,9 @@ export async function POST(request: NextRequest) {
         await prisma.briefActivityLog.create({
             data: {
                 briefId: brief.id,
-                action: 'Brief created via API',
-                performedById: auth!.userId,
+                activityType: 'api_action',
+                description: 'Brief created via API',
+                performedBy: auth!.userId,
                 metadata: { source: 'bica_api', apiKeyName: auth!.apiKeyName },
             },
         });
