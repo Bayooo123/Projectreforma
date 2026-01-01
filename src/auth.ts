@@ -1,10 +1,14 @@
 import NextAuth from "next-auth"
+import type { User } from "next-auth"
 import { PrismaAdapter } from "@auth/prisma-adapter"
 import { prisma } from "@/lib/prisma"
 import Credentials from "next-auth/providers/credentials"
 import { authConfig } from "./auth.config"
 import { z } from "zod"
 import bcrypt from "bcryptjs"
+
+// Valid role types for type safety
+const ALLOWED_ROLES = ["owner", "partner", "associate", "admin", "member"] as const;
 
 export const { auth, signIn, signOut, handlers } = NextAuth({
     ...authConfig,
@@ -38,14 +42,15 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
                         const membership = user.workspaces.find(ws => ws.workspaceId === workspace.id);
                         const role = membership?.role || 'associate';
 
-                        // Return ONLY identity fields
-                        return {
+                        // Return typed User object
+                        const authUser: User = {
                             id: user.id,
                             email: user.email,
                             name: user.name,
-                            role: role,
+                            role: role as User["role"],
                             workspaceId: workspace.id,
                         };
+                        return authUser;
                     }
                     return null;
                 }
@@ -86,25 +91,27 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
                         const membership = user.workspaces.find(ws => ws.workspaceId === workspaceId);
                         if (!membership) throw new Error('You are not a member of this firm.');
 
-                        // Return ONLY identity fields
-                        return {
+                        // Return typed User object
+                        const authUser: User = {
                             id: user.id,
                             email: user.email,
                             name: user.name,
-                            role: membership.role,
+                            role: membership.role as User["role"],
                             workspaceId: workspaceId,
                         };
+                        return authUser;
                     }
 
                     // Login without firmCode - use first workspace
                     const firstMembership = user.workspaces[0];
-                    return {
+                    const authUser: User = {
                         id: user.id,
                         email: user.email,
                         name: user.name,
-                        role: firstMembership?.role || 'member',
+                        role: (firstMembership?.role || 'member') as User["role"],
                         workspaceId: firstMembership?.workspaceId || '',
                     };
+                    return authUser;
                 }
 
                 console.log('Invalid credentials format');
