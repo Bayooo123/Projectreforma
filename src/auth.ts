@@ -6,23 +6,10 @@ import { authConfig } from "./auth.config"
 import { z } from "zod"
 import bcrypt from "bcryptjs"
 
-async function getUser(email: string) {
-    try {
-        const user = await prisma.user.findUnique({ where: { email } });
-        if (!user) {
-            console.log(`User not found for email: ${email}`);
-        }
-        return user;
-    } catch (error) {
-        console.error('Failed to fetch user:', error);
-        throw new Error('Failed to fetch user.');
-    }
-}
-
 export const { auth, signIn, signOut, handlers } = NextAuth({
     ...authConfig,
     adapter: PrismaAdapter(prisma),
-    session: { strategy: "jwt" }, // Use JWT for credentials provider compatibility
+    session: { strategy: "jwt" },
     providers: [
         Credentials({
             async authorize(credentials) {
@@ -39,57 +26,31 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
 
                     const { email, password } = credentials as any;
 
-                    // Verify User Logic (check if exists, etc)
                     const user = await prisma.user.findUnique({
                         where: { email },
                         include: { workspaces: true }
                     });
 
                     if (user) {
-                        // User exists, verify password
                         const passwordMatch = await bcrypt.compare(password, user.password || '');
                         if (!passwordMatch) return null;
 
-                        // Check membership
                         const membership = user.workspaces.find(ws => ws.workspaceId === workspace.id);
-                        if (!membership) {
-                            // Auto-join logic could go here, or throw error saying "User exists but not member"
-                            // Ideally, we auto-join them here or return user and let middleware handle it?
-                            // Simple: Just return user with new workspaceId context
-                            return { ...user, workspaceId: workspace.id };
-                        }
-                        return { ...user, workspaceId: workspace.id };
-                    } else {
-                        // New User via Token? 
-                        // Usually authorize() is for LOGIN. For SIGNUP, we use a separate Server Action which creates user then logs in.
-                        // But if using Credentials provider for "Sign In", we need user to exist.
+                        const role = membership?.role || 'associate';
 
-                        // If this is strictly "Sign In with Token", user must exist.
-                        // But for "Join", we usually "Register".
-                        // The Register Form calculates creates the user via Action, THEN calls signIn().
-                        // So signIn() just needs to verify user password.
-                        // Wait, if I register via Action, the Action should add user to workspace.
-                        // Then signIn just logs them in.
-
-                        // So:
-                        // 1. User visits /join/[token]
-                        // 2. Enters Name/Email/Password
-                        // 3. Submit -> Server Action `registerWithToken`
-                        // 4. Action: Creates User, Adds to Workspace, Then calls `signIn('credentials', { email, password })`.
-                        // 5. `signIn` calls this `authorize`.
-
-                        // Standard `signIn` works if user is ALREADY added.
-                        // So I might NOT need to change `auth.ts` extensively if the registration action handles the heavy lifting.
-                        // BUT, existing `auth.ts` requires `firmCode/firmPassword` to enforce structure?
-                        // Line 33: `firmCode: z.string().min(1)`
-                        // Line 34: `firmPassword: z.string().min(1)`
-
-                        // I MUST relax this Zod schema.
-                        return null;
+                        // Return ONLY identity fields
+                        return {
+                            id: user.id,
+                            email: user.email,
+                            name: user.name,
+                            role: role,
+                            workspaceId: workspace.id,
+                        };
                     }
+                    return null;
                 }
 
-                // Standard Flow (Legacy)
+                // Standard Flow
                 const parsedCredentials = z
                     .object({
                         email: z.string().email(),
@@ -103,7 +64,7 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
                     const { email, password, firmCode, firmPassword } = parsedCredentials.data;
 
                     // If firmCode provided, Validate Firm
-                    let workspaceId = null;
+                    let workspaceId: string | null = null;
                     if (firmCode && firmPassword) {
                         const workspace = await prisma.workspace.findUnique({ where: { firmCode } });
                         if (!workspace || !workspace.joinPassword) throw new Error('Invalid Firm Code');
@@ -124,11 +85,26 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
                     if (workspaceId) {
                         const membership = user.workspaces.find(ws => ws.workspaceId === workspaceId);
                         if (!membership) throw new Error('You are not a member of this firm.');
-                        return { ...user, workspaceId };
+
+                        // Return ONLY identity fields
+                        return {
+                            id: user.id,
+                            email: user.email,
+                            name: user.name,
+                            role: membership.role,
+                            workspaceId: workspaceId,
+                        };
                     }
 
-                    // Allow login without firmCode (dashboard selection)
-                    return { ...user, workspaceId: user.workspaces[0]?.workspaceId };
+                    // Login without firmCode - use first workspace
+                    const firstMembership = user.workspaces[0];
+                    return {
+                        id: user.id,
+                        email: user.email,
+                        name: user.name,
+                        role: firstMembership?.role || 'member',
+                        workspaceId: firstMembership?.workspaceId || '',
+                    };
                 }
 
                 console.log('Invalid credentials format');
@@ -137,8 +113,9 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
         }),
     ],
     callbacks: {
-        async jwt({ token, user, trigger, session }) {
+        async jwt({ token, user }) {
             if (user) {
+                token.role = user.role;
                 token.workspaceId = user.workspaceId;
             }
             return token;
@@ -146,6 +123,7 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
         async session({ session, token }) {
             if (session.user && token.sub) {
                 session.user.id = token.sub;
+                session.user.role = token.role as any;
                 session.user.workspaceId = token.workspaceId as string;
             }
             return session;
