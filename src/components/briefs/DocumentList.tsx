@@ -100,7 +100,11 @@ const DocumentList = ({ briefId, onDocumentClick }: DocumentListProps) => {
                 const file = files[i];
 
                 // 1. Upload directly to Vercel Blob (Bypasses 4.5MB Serverless Limit)
-                const newBlob = await upload(file.name, file, {
+                // Manual unique filename to avoid 'Blob already exists' error
+                const timestamp = Date.now();
+                const uniqueFilename = `${timestamp}-${file.name}`;
+
+                const newBlob = await upload(uniqueFilename, file, {
                     access: 'public',
                     handleUploadUrl: '/api/upload/handle',
                     onUploadProgress: (progressEvent) => {

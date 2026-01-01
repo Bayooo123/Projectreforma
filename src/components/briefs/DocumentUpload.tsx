@@ -53,7 +53,9 @@ export default function DocumentUpload({ briefId, onUploadComplete }: DocumentUp
             for (const file of files) {
                 try {
                     // 1. Upload to Blob (Client Side)
-                    const newBlob = await upload(file.name, file, {
+                    // Manual unique filename to avoid 'Blob already exists' error
+                    const uniqueFilename = `${Date.now()}-${file.name}`;
+                    const newBlob = await upload(uniqueFilename, file, {
                         access: 'public',
                         handleUploadUrl: '/api/upload/handle',
                     });
