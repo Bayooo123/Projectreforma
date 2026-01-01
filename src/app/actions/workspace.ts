@@ -105,3 +105,94 @@ export async function updateWorkspaceAccess(
         };
     }
 }
+
+/**
+ * Register a new user and join an existing workspace using firmCode + firmPassword
+ */
+export async function registerWithFirmCode(data: {
+    firmCode: string;
+    firmPassword: string;
+    name: string;
+    email: string;
+    password: string;
+}): Promise<{ success: boolean; error?: string }> {
+    try {
+        const { firmCode, firmPassword, name, email, password } = data;
+
+        // Find workspace by firmCode
+        const workspace = await prisma.workspace.findUnique({
+            where: { firmCode },
+        });
+
+        if (!workspace) {
+            return { success: false, error: 'Invalid firm code. Please check and try again.' };
+        }
+
+        if (!workspace.joinPassword) {
+            return { success: false, error: 'This firm has not enabled public joining. Contact your admin.' };
+        }
+
+        // Verify firm password
+        const passwordMatch = await bcrypt.compare(firmPassword, workspace.joinPassword);
+        if (!passwordMatch) {
+            return { success: false, error: 'Invalid firm password. Please check and try again.' };
+        }
+
+        // Check if user already exists
+        const existingUser = await prisma.user.findUnique({
+            where: { email },
+        });
+
+        if (existingUser) {
+            // Check if already a member of this workspace
+            const existingMembership = await prisma.workspaceMember.findFirst({
+                where: {
+                    userId: existingUser.id,
+                    workspaceId: workspace.id,
+                },
+            });
+
+            if (existingMembership) {
+                return { success: false, error: 'You are already a member of this firm. Please sign in instead.' };
+            }
+
+            // Add existing user to workspace
+            await prisma.workspaceMember.create({
+                data: {
+                    userId: existingUser.id,
+                    workspaceId: workspace.id,
+                    role: 'associate', // Default role for joiners
+                },
+            });
+
+            return { success: true };
+        }
+
+        // Create new user
+        const hashedPassword = await bcrypt.hash(password, 10);
+        const newUser = await prisma.user.create({
+            data: {
+                name,
+                email,
+                password: hashedPassword,
+            },
+        });
+
+        // Add user to workspace
+        await prisma.workspaceMember.create({
+            data: {
+                userId: newUser.id,
+                workspaceId: workspace.id,
+                role: 'associate', // Default role for joiners
+            },
+        });
+
+        return { success: true };
+    } catch (error: any) {
+        console.error('Register with firm code error:', error);
+        if (error.code === 'P2002') {
+            return { success: false, error: 'An account with this email already exists.' };
+        }
+        return { success: false, error: 'Failed to join firm. Please try again.' };
+    }
+}
