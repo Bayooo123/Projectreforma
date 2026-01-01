@@ -27,12 +27,14 @@ export default function DocumentPreview({ document, onClose, onNavigate, canNavi
     const [numPages, setNumPages] = useState<number>(0);
     // const [pageNumber, setPageNumber] = useState<number>(1); // Removed for continuous scroll
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<Error | null>(null);
 
     if (!document) return null;
 
     const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
         setNumPages(numPages);
         setLoading(false);
+        setError(null);
     };
 
     const getFileExtension = (filename: string) => {
@@ -49,19 +51,19 @@ export default function DocumentPreview({ document, onClose, onNavigate, canNavi
                     <Document
                         file={document.url}
                         onLoadSuccess={onDocumentLoadSuccess}
-                        onLoadError={(error) => {
-                            console.error('PDF Load Error:', error);
+                        onLoadError={(err) => {
+                            console.error('PDF Load Error:', err);
                             setLoading(false);
-                            // Set a visible error state variable if needed, or just rely on the fallback
+                            setError(err);
                         }}
                         loading={<div className={styles.loading}>Loading PDF...</div>}
-                        error={(error: { message?: string }) => (
+                        error={
                             <div className={styles.error}>
                                 <p>Failed to load PDF.</p>
                                 <p className="text-xs mt-2 opacity-75">{error?.message || 'Unknown error'}</p>
                                 <a href={document.url} download className="mt-4 underline">Download Original</a>
                             </div>
-                        )}
+                        }
                         className={styles.pdfDocument}
                     >
                         {Array.from(new Array(numPages), (el, index) => (
