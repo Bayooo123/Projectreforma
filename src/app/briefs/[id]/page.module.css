@@ -219,6 +219,11 @@
     min-height: 0;
     display: flex;
     flex-direction: column;
+    /* Enable vertical scroll, prevent horizontal overflow */
+    overflow-y: auto;
+    overflow-x: hidden;
+    /* Add padding for scrollbar spacing */
+    padding-right: 0.5rem;
 }
 
 .documentsHeader {

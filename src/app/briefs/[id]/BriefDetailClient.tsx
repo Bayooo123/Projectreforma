@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { ArrowLeft, Clock, Tag, User, Building, Calendar, Upload, Loader, FileText, Trash2, Edit } from 'lucide-react';
 import DocumentUpload from '@/components/briefs/DocumentUpload';
 import DocumentPreview from '@/components/briefs/DocumentPreview';
-import BriefActivityFeed from '@/components/briefs/BriefActivityFeed';
+// import BriefActivityFeed from '@/components/briefs/BriefActivityFeed'; // Removed for UI cleanup per request
 import EditBriefModal from '@/components/briefs/EditBriefModal';
 import styles from './page.module.css';
 
@@ -51,7 +51,7 @@ interface BriefDetailClientProps {
     brief: Brief;
 }
 
-import { BriefActivityLogInput } from '@/components/briefs/BriefActivityLogInput';
+// import { BriefActivityLogInput } from '@/components/briefs/BriefActivityLogInput'; // Removed
 import { getDocuments } from '@/app/actions/documents';
 
 export default function BriefDetailClient({ brief }: BriefDetailClientProps) {
@@ -199,11 +199,9 @@ export default function BriefDetailClient({ brief }: BriefDetailClientProps) {
             </div>
 
             <div className={styles.content}>
-                <div className="mb-8">
-                    <BriefActivityLogInput briefId={brief.id} />
+                <div className="mb-6">
+                    <DocumentUpload briefId={brief.id} onUploadComplete={refreshDocuments} />
                 </div>
-
-                <DocumentUpload briefId={brief.id} onUploadComplete={refreshDocuments} />
 
                 <div className={styles.documentsHeader}>
                     <div className="flex items-center gap-2">
@@ -262,9 +260,6 @@ export default function BriefDetailClient({ brief }: BriefDetailClientProps) {
                         ))}
                     </div>
                 )}
-
-
-                <BriefActivityFeed briefId={brief.id} inboundEmailId={brief.inboundEmailId} />
             </div>
 
             <EditBriefModal
