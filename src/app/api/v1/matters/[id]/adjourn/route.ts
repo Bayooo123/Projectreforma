@@ -10,15 +10,16 @@ export const dynamic = 'force-dynamic';
  */
 export async function PATCH(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
+    const { id } = await params;
     const { auth, error } = await withApiAuth(request);
     if (error) return error;
 
     try {
         const matter = await prisma.matter.findFirst({
             where: {
-                id: params.id,
+                id,
                 workspaceId: auth!.workspaceId,
             },
         });
@@ -39,22 +40,13 @@ export async function PATCH(
 
         // Update the matter
         const updatedMatter = await prisma.matter.update({
-            where: { id: params.id },
+            where: { id },
             data: {
                 nextCourtDate: newDateTime,
             },
             include: {
                 client: { select: { id: true, name: true } },
                 assignedLawyer: { select: { id: true, name: true } },
-            },
-        });
-
-        // Log the adjournment
-        await prisma.matterActivityLog.create({
-            data: {
-                matterId: matter.id,
-                action: `Matter adjourned via API from ${oldDate?.toISOString().split('T')[0] || 'N/A'} to ${newDate}${reason ? `. Reason: ${reason}` : ''}`,
-                performedById: auth!.userId,
             },
         });
 

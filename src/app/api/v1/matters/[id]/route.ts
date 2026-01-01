@@ -10,15 +10,16 @@ export const dynamic = 'force-dynamic';
  */
 export async function GET(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
+    const { id } = await params;
     const { auth, error } = await withApiAuth(request);
     if (error) return error;
 
     try {
         const matter = await prisma.matter.findFirst({
             where: {
-                id: params.id,
+                id,
                 workspaceId: auth!.workspaceId,
             },
             include: {
@@ -31,16 +32,6 @@ export async function GET(
                         name: true,
                         status: true,
                     },
-                },
-                activityLogs: {
-                    select: {
-                        id: true,
-                        action: true,
-                        performedBy: { select: { name: true } },
-                        createdAt: true,
-                    },
-                    orderBy: { createdAt: 'desc' },
-                    take: 20,
                 },
             },
         });
@@ -63,15 +54,16 @@ export async function GET(
  */
 export async function PATCH(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
+    const { id } = await params;
     const { auth, error } = await withApiAuth(request);
     if (error) return error;
 
     try {
         const existing = await prisma.matter.findFirst({
             where: {
-                id: params.id,
+                id,
                 workspaceId: auth!.workspaceId,
             },
         });
@@ -93,20 +85,11 @@ export async function PATCH(
         if (assignedLawyerId !== undefined) updateData.assignedLawyerId = assignedLawyerId;
 
         const matter = await prisma.matter.update({
-            where: { id: params.id },
+            where: { id },
             data: updateData,
             include: {
                 client: { select: { id: true, name: true } },
                 assignedLawyer: { select: { id: true, name: true } },
-            },
-        });
-
-        // Log activity
-        await prisma.matterActivityLog.create({
-            data: {
-                matterId: matter.id,
-                action: `Matter updated via API: ${Object.keys(updateData).join(', ')}`,
-                performedById: auth!.userId,
             },
         });
 
@@ -124,8 +107,9 @@ export async function PATCH(
  */
 export async function DELETE(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
+    const { id } = await params;
     const { auth, error } = await withApiAuth(request);
     if (error) return error;
 
@@ -136,7 +120,7 @@ export async function DELETE(
     try {
         const matter = await prisma.matter.findFirst({
             where: {
-                id: params.id,
+                id,
                 workspaceId: auth!.workspaceId,
             },
         });
@@ -146,7 +130,7 @@ export async function DELETE(
         }
 
         await prisma.matter.delete({
-            where: { id: params.id },
+            where: { id },
         });
 
         return successResponse({ deleted: true });

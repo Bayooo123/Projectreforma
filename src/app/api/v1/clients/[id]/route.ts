@@ -10,15 +10,16 @@ export const dynamic = 'force-dynamic';
  */
 export async function GET(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
+    const { id } = await params;
     const { auth, error } = await withApiAuth(request);
     if (error) return error;
 
     try {
         const client = await prisma.client.findFirst({
             where: {
-                id: params.id,
+                id,
                 workspaceId: auth!.workspaceId,
             },
             include: {
@@ -92,15 +93,16 @@ export async function GET(
  */
 export async function PATCH(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
+    const { id } = await params;
     const { auth, error } = await withApiAuth(request);
     if (error) return error;
 
     try {
         const existing = await prisma.client.findFirst({
             where: {
-                id: params.id,
+                id,
                 workspaceId: auth!.workspaceId,
             },
         });
@@ -122,7 +124,7 @@ export async function PATCH(
         if (status !== undefined) updateData.status = status;
 
         const client = await prisma.client.update({
-            where: { id: params.id },
+            where: { id },
             data: updateData,
         });
 
@@ -140,8 +142,9 @@ export async function PATCH(
  */
 export async function DELETE(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
+    const { id } = await params;
     const { auth, error } = await withApiAuth(request);
     if (error) return error;
 
@@ -152,7 +155,7 @@ export async function DELETE(
     try {
         const client = await prisma.client.findFirst({
             where: {
-                id: params.id,
+                id,
                 workspaceId: auth!.workspaceId,
             },
         });
@@ -163,7 +166,7 @@ export async function DELETE(
 
         // Soft delete by archiving
         await prisma.client.update({
-            where: { id: params.id },
+            where: { id },
             data: { status: 'archived' },
         });
 

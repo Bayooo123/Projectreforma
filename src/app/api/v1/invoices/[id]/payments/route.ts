@@ -10,8 +10,9 @@ export const dynamic = 'force-dynamic';
  */
 export async function POST(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
+    const { id } = await params;
     const { auth, error } = await withApiAuth(request);
     if (error) return error;
 
@@ -24,7 +25,7 @@ export async function POST(
         // Find the invoice
         const invoice = await prisma.invoice.findFirst({
             where: {
-                id: params.id,
+                id,
                 client: { workspaceId: auth!.workspaceId },
             },
             include: {
@@ -104,15 +105,16 @@ export async function POST(
  */
 export async function GET(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
+    const { id } = await params;
     const { auth, error } = await withApiAuth(request);
     if (error) return error;
 
     try {
         const invoice = await prisma.invoice.findFirst({
             where: {
-                id: params.id,
+                id,
                 client: { workspaceId: auth!.workspaceId },
             },
             include: {

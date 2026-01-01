@@ -10,41 +10,21 @@ export const dynamic = 'force-dynamic';
  */
 export async function GET(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
+    const { id } = await params;
     const { auth, error } = await withApiAuth(request);
     if (error) return error;
 
     try {
         const brief = await prisma.brief.findFirst({
             where: {
-                id: params.id,
+                id,
                 workspaceId: auth!.workspaceId,
             },
             include: {
                 client: { select: { id: true, name: true, email: true } },
                 lawyer: { select: { id: true, name: true, email: true } },
-                documents: {
-                    select: {
-                        id: true,
-                        name: true,
-                        type: true,
-                        size: true,
-                        url: true,
-                        createdAt: true,
-                    },
-                    orderBy: { createdAt: 'desc' },
-                },
-                activityLogs: {
-                    select: {
-                        id: true,
-                        action: true,
-                        performedBy: { select: { name: true } },
-                        createdAt: true,
-                    },
-                    orderBy: { createdAt: 'desc' },
-                    take: 20,
-                },
             },
         });
 
@@ -52,15 +32,7 @@ export async function GET(
             return notFoundResponse('Brief');
         }
 
-        return successResponse({
-            ...brief,
-            activities: brief.activityLogs.map(log => ({
-                id: log.id,
-                action: log.action,
-                actor: log.performedBy?.name || 'System',
-                timestamp: log.createdAt,
-            })),
-        });
+        return successResponse(brief);
 
     } catch (err) {
         console.error('Error fetching brief:', err);
@@ -74,8 +46,9 @@ export async function GET(
  */
 export async function PATCH(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
+    const { id } = await params;
     const { auth, error } = await withApiAuth(request);
     if (error) return error;
 
@@ -83,7 +56,7 @@ export async function PATCH(
         // Verify brief exists in workspace
         const existing = await prisma.brief.findFirst({
             where: {
-                id: params.id,
+                id,
                 workspaceId: auth!.workspaceId,
             },
         });
@@ -104,21 +77,11 @@ export async function PATCH(
         if (dueDate !== undefined) updateData.dueDate = dueDate ? new Date(dueDate) : null;
 
         const brief = await prisma.brief.update({
-            where: { id: params.id },
+            where: { id },
             data: updateData,
             include: {
                 client: { select: { id: true, name: true } },
                 lawyer: { select: { id: true, name: true } },
-            },
-        });
-
-        // Log activity
-        await prisma.briefActivityLog.create({
-            data: {
-                briefId: brief.id,
-                action: `Brief updated via API: ${Object.keys(updateData).join(', ')}`,
-                performedById: auth!.userId,
-                metadata: { source: 'bica_api', changes: updateData },
             },
         });
 
@@ -136,8 +99,9 @@ export async function PATCH(
  */
 export async function DELETE(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
+    const { id } = await params;
     const { auth, error } = await withApiAuth(request);
     if (error) return error;
 
@@ -149,7 +113,7 @@ export async function DELETE(
     try {
         const brief = await prisma.brief.findFirst({
             where: {
-                id: params.id,
+                id,
                 workspaceId: auth!.workspaceId,
             },
         });
@@ -159,7 +123,7 @@ export async function DELETE(
         }
 
         await prisma.brief.delete({
-            where: { id: params.id },
+            where: { id },
         });
 
         return successResponse({ deleted: true });
