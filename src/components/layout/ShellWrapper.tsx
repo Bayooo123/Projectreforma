@@ -19,6 +19,7 @@ export default function ShellWrapper({ children, user, workspace }: ShellWrapper
         pathname === '/login' ||
         pathname === '/register' ||
         pathname === '/forgot-password' ||
+        pathname === '/join' ||
         pathname.startsWith('/join/');
 
     if (isPublicRoute) {
