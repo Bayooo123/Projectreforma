@@ -113,7 +113,7 @@ const AddMatterModal = ({ isOpen, onClose, workspaceId, userId, onSuccess }: Add
                 onSuccess?.();
                 onClose();
             } else {
-                alert('Failed to create matter: ' + result.error);
+                alert(result.error);
             }
         } catch (error) {
             console.error('Error creating matter:', error);

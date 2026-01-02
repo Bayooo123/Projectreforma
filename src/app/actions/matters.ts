@@ -165,9 +165,15 @@ export async function createMatter(data: {
         revalidatePath('/calendar');
         revalidatePath('/management/clients');
         return { success: true, matter };
-    } catch (error) {
+    } catch (error: any) {
         console.error('Error creating matter:', error);
-        return { success: false, error: 'Failed to create matter' };
+        // Return detailed error for debugging (in production, sanitize this)
+        const errorMessage = error?.message || 'Failed to create matter';
+        // Check for unique constraint violation (P2002)
+        if (error?.code === 'P2002' && error?.meta?.target?.includes('caseNumber')) {
+            return { success: false, error: 'Case Number already exists. Please use a unique Number.' };
+        }
+        return { success: false, error: errorMessage };
     }
 }
 
