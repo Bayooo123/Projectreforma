@@ -110,6 +110,7 @@ export async function createMatter(data: {
     judge?: string;
     nextCourtDate?: Date;
     status?: string;
+    proceduralStatus?: string;
 }) {
     try {
         const matter = await prisma.matter.create({
@@ -123,6 +124,7 @@ export async function createMatter(data: {
                 judge: data.judge,
                 nextCourtDate: data.nextCourtDate,
                 status: data.status || 'active',
+                proceduralStatus: data.proceduralStatus,
             },
             include: {
                 client: true,
@@ -146,6 +148,20 @@ export async function createMatter(data: {
             },
         });
 
+        // If nextCourtDate was set during creation, create an initial CourtDate entry
+        if (data.nextCourtDate) {
+            await prisma.courtDate.create({
+                data: {
+                    matterId: matter.id,
+                    date: data.nextCourtDate,
+                    title: 'Initial Hearing',
+                    // By default, the assigned lawyer is the appearance? 
+                    // Probably better to leave appearances empty or explicitly set if the UI supported it.
+                    // For now, we'll just create the date record.
+                }
+            });
+        }
+
         revalidatePath('/calendar');
         revalidatePath('/management/clients');
         return { success: true, matter };
@@ -168,6 +184,7 @@ export async function updateMatter(
         judge?: string;
         nextCourtDate?: Date | null;
         status?: string;
+        proceduralStatus?: string;
     },
     performedBy: string
 ) {
@@ -231,14 +248,45 @@ export async function deleteMatter(id: string) {
 /**
  * Adjourn a matter to a new date
  */
+/**
+ * Adjourn a matter to a new date (and record the previous sitting)
+ */
 export async function adjournMatter(
     matterId: string,
     newDate: Date,
-    reason: string,
+    proceedings: string,
     adjournedFor: string,
-    performedBy: string
+    performedBy: string,
+    appearanceLawyerIds?: string[] // Optional array of lawyer IDs who appeared
 ) {
     try {
+        // 1. Get the current matter to see the PREVIOUS (or current) court date
+        const currentMatter = await prisma.matter.findUnique({
+            where: { id: matterId },
+            select: { nextCourtDate: true }
+        });
+
+        // 2. Identify the date of the proceeding being recorded
+        // If the matter had a 'nextCourtDate', that is likely the date that just happened/is happening.
+        // If not, we fall back to "today".
+        const proceedingDate = currentMatter?.nextCourtDate || new Date();
+
+        // 3. Create a CourtDate record for the COMPLETED/ONGOING sitting
+        const courtDateRecord = await prisma.courtDate.create({
+            data: {
+                matterId,
+                date: proceedingDate,
+                proceedings: proceedings,
+                adjournedFor: adjournedFor,
+                nextDate: newDate,
+                // Link Appearing Lawyers
+                appearances: appearanceLawyerIds && appearanceLawyerIds.length > 0 ? {
+                    connect: appearanceLawyerIds.map(id => ({ id }))
+                } : undefined
+            }
+        });
+
+        // 4. Update the Matter's next court date
         const matter = await prisma.matter.update({
             where: { id: matterId },
             data: {
@@ -247,12 +295,22 @@ export async function adjournMatter(
             },
         });
 
-        // Log adjournment
+        // 5. Create a placeholder CourtDate record for the FUTURE date
+        // This ensures it appears on calendars/lists that query CourtDates table specifically
+        await prisma.courtDate.create({
+            data: {
+                matterId,
+                date: newDate,
+                title: adjournedFor // e.g. "Ruling", "Hearing" will be the title of the next event
+            }
+        });
+
+        // Log adjournment activity
         await prisma.matterActivityLog.create({
             data: {
                 matterId,
                 activityType: 'court_date_changed',
-                description: `Court date adjourned to ${newDate.toLocaleDateString()}. Reason: ${reason}. Adjourned for: ${adjournedFor}`,
+                description: `Court date adjourned to ${newDate.toLocaleDateString()}. Reason: ${adjournedFor}`,
                 performedBy,
             },
         });

@@ -1,12 +1,14 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { X, Calendar, User, MapPin, FileText, AlertCircle, Loader, Building, Edit, Trash2 } from 'lucide-react';
 import { adjournMatter, addMatterNote, updateMatter, deleteMatter } from '@/app/actions/matters';
+import { getLawyersForWorkspace } from '@/lib/briefs';
 import styles from './MatterDetailModal.module.css';
 
 interface Matter {
     id: string;
+    workspaceId: string; // Added workspaceId
     caseNumber: string;
     name: string;
     court: string | null;
@@ -35,14 +37,63 @@ interface MatterDetailModalProps {
     userId: string;
 }
 
+interface Lawyer {
+    id: string;
+    name: string | null;
+    email: string | null;
+    role: string;
+}
+
 const MatterDetailModal = ({ isOpen, onClose, matter, userId }: MatterDetailModalProps) => {
     const [newDate, setNewDate] = useState('');
     const [adjournedFor, setAdjournedFor] = useState('');
     const [proceedings, setProceedings] = useState('');
     const [observations, setObservations] = useState('');
+    const [selectedLawyerIds, setSelectedLawyerIds] = useState<string[]>([]);
+
+    const [lawyers, setLawyers] = useState<Lawyer[]>([]);
+    const [isLoadingLawyers, setIsLoadingLawyers] = useState(false);
+
+    // We need lists of lawyers to select from. Ideally pass this in or fetch it.
+    // For now, assuming we might need to fetch workspace lawyers if not passed.
+    // OPTIMIZATION: Just use the assignedLawyer as a default, but we need the full list.
+    // Ideally, MatterDetailModal should receive the list of workspace lawyers or fetch them.
+    // But since we can't easily change the props interface without changing the parent, 
+    // we might need to fetch them client side on open.
+
     const [isEditMode, setIsEditMode] = useState(false);
     const [editedMatter, setEditedMatter] = useState(matter);
     const [isSubmitting, setIsSubmitting] = useState(false);
+
+    useEffect(() => {
+        if (isOpen && matter.workspaceId) {
+            fetchLawyers();
+        }
+    }, [isOpen, matter.workspaceId]);
+
+    const fetchLawyers = async () => {
+        setIsLoadingLawyers(true);
+        try {
+            const data = await getLawyersForWorkspace(matter.workspaceId);
+            setLawyers(data);
+            // Default to assigned lawyer if available
+            if (matter.assignedLawyer?.id) {
+                setSelectedLawyerIds([matter.assignedLawyer.id]);
+            }
+        } catch (error) {
+            console.error('Error fetching lawyers:', error);
+        } finally {
+            setIsLoadingLawyers(false);
+        }
+    };
+
+    const toggleLawyer = (lawyerId: string) => {
+        setSelectedLawyerIds(prev =>
+            prev.includes(lawyerId)
+                ? prev.filter(id => id !== lawyerId)
+                : [...prev, lawyerId]
+        );
+    };
 
     if (!isOpen) return null;
 
@@ -63,7 +114,8 @@ const MatterDetailModal = ({ isOpen, onClose, matter, userId }: MatterDetailModa
                 new Date(newDate),
                 proceedings || 'Court adjourned',
                 adjournedFor,
-                userId
+                userId,
+                selectedLawyerIds
             );
 
             if (result.success) {
@@ -224,7 +276,7 @@ const MatterDetailModal = ({ isOpen, onClose, matter, userId }: MatterDetailModa
                         <div className={styles.metaItem}>
                             <User size={16} className={styles.icon} />
                             <div>
-                                <span className={styles.label}>Lawyer</span>
+                                <span className={styles.label}>Lead Counsel</span>
                                 <p className={styles.value}>{matter.assignedLawyer.name || 'Unassigned'}</p>
                             </div>
                         </div>
@@ -276,15 +328,37 @@ const MatterDetailModal = ({ isOpen, onClose, matter, userId }: MatterDetailModa
 
                     <div className={styles.section}>
                         <h3 className={styles.sectionTitle}>
-                            <FileText size={16} /> Summary of Proceedings
+                            <FileText size={16} /> Summary of Proceedings / Outcome
                         </h3>
                         <textarea
                             className={styles.textarea}
-                            placeholder="Enter what happened in court today..."
-                            rows={3}
+                            placeholder="Enter narrative description of what transpired in court..."
+                            rows={4}
                             value={proceedings}
                             onChange={(e) => setProceedings(e.target.value)}
                         />
+                    </div>
+
+                    <div className={styles.section}>
+                        <h3 className={styles.sectionTitle}>
+                            <User size={16} /> Appearance By
+                        </h3>
+                        {isLoadingLawyers ? (
+                            <div className="text-sm text-gray-500">Loading lawyers...</div>
+                        ) : (
+                            <div className={styles.lawyerGrid} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '0.5rem' }}>
+                                {lawyers.map(lawyer => (
+                                    <label key={lawyer.id} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.9rem', cursor: 'pointer' }}>
+                                        <input
+                                            type="checkbox"
+                                            checked={selectedLawyerIds.includes(lawyer.id)}
+                                            onChange={() => toggleLawyer(lawyer.id)}
+                                        />
+                                        <span>{lawyer.name || lawyer.email}</span>
+                                    </label>
+                                ))}
+                            </div>
+                        )}
                     </div>
 
                     <div className={styles.section}>

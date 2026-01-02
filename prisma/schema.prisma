@@ -112,6 +112,7 @@ model User {
   // App Relations
   ownedWorkspaces      Workspace[]           @relation("WorkspaceOwner")
   assignedMatters      Matter[]              @relation("AssignedMatters")
+  courtAppearances     CourtDate[]           @relation("CourtAppearances")
   activityLogs         MatterActivityLog[]
   clientCommunications ClientCommunication[]
   assignedTasks        Task[]                @relation("AssignedTasks")
@@ -254,6 +255,7 @@ model Matter {
   court             String?
   judge             String?
   status            String    @default("active") // 'active' | 'inactive' | 'closed'
+  proceduralStatus  String?   // 'Mention', 'CMC', 'Trial', 'Judgment', 'Appeal'
   nextCourtDate     DateTime?
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
@@ -263,6 +265,7 @@ model Matter {
   workspace            Workspace             @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   client               Client                @relation(fields: [clientId], references: [id])
   assignedLawyer       User                  @relation("AssignedMatters", fields: [assignedLawyerId], references: [id])
+  courtDates           CourtDate[]
   activityLogs         MatterActivityLog[]
   clientCommunications ClientCommunication[]
   notifications        Notification[]
@@ -274,6 +277,30 @@ model Matter {
   @@index([workspaceId])
   @@index([lastActivityAt])
   @@index([nextCourtDate])
+}
+
+model CourtDate {
+  id            String   @id @default(cuid())
+  matterId      String
+  date          DateTime
+  
+  // Proceedings / Outcome
+  title         String?  // Optional title/heading e.g. "Mention", "Ruling"
+  proceedings   String?  @db.Text // "Court Proceedings / Outcome"
+  outcome       String?  // Structured outcome if needed
+  
+  // Adjournment details (if this date resulted in an adjournment)
+  adjournedFor  String?  // "Ruling", "Hearing" etc.
+  nextDate      DateTime? 
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  matter        Matter   @relation(fields: [matterId], references: [id], onDelete: Cascade)
+  appearances   User[]   @relation("CourtAppearances")
+
+  @@index([matterId])
+  @@index([date])
 }
 
 model MatterActivityLog {

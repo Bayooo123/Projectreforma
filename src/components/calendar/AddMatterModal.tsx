@@ -37,6 +37,7 @@ const AddMatterModal = ({ isOpen, onClose, workspaceId, userId, onSuccess }: Add
     const [court, setCourt] = useState('');
     const [judge, setJudge] = useState('');
     const [nextCourtDate, setNextCourtDate] = useState('');
+    const [proceduralStatus, setProceduralStatus] = useState('');
 
     const [clients, setClients] = useState<Client[]>([]);
     const [lawyers, setLawyers] = useState<Lawyer[]>([]);
@@ -82,10 +83,7 @@ const AddMatterModal = ({ isOpen, onClose, workspaceId, userId, onSuccess }: Add
             return;
         }
 
-        if (!nextCourtDate) {
-            alert('Please select a court date');
-            return;
-        }
+        // if (!nextCourtDate) -> Removed validation per requirement
 
         setIsSubmitting(true);
 
@@ -98,7 +96,8 @@ const AddMatterModal = ({ isOpen, onClose, workspaceId, userId, onSuccess }: Add
                 workspaceId,
                 court: court || undefined,
                 judge: judge || undefined,
-                nextCourtDate: new Date(nextCourtDate),
+                nextCourtDate: nextCourtDate ? new Date(nextCourtDate) : undefined,
+                proceduralStatus: proceduralStatus || undefined,
             });
 
             if (result.success) {
@@ -157,28 +156,33 @@ const AddMatterModal = ({ isOpen, onClose, workspaceId, userId, onSuccess }: Add
 
                             <div className={styles.row}>
                                 <div className={styles.formGroup}>
-                                    <label className={styles.label}>Case Number</label>
+                                    <label className={styles.label}>Case Number *</label>
                                     <input
                                         type="text"
                                         className={styles.input}
                                         value={caseNumber}
                                         onChange={(e) => setCaseNumber(e.target.value)}
                                         required
-                                        disabled
+                                        placeholder="e.g. FHC/L/CS/..."
                                     />
-                                    <p style={{ fontSize: '0.75rem', color: '#666', marginTop: '0.25rem' }}>
-                                        Auto-generated
-                                    </p>
                                 </div>
                                 <div className={styles.formGroup}>
-                                    <label className={styles.label}>Next Court Date *</label>
-                                    <input
-                                        type="date"
-                                        className={styles.input}
-                                        value={nextCourtDate}
-                                        onChange={(e) => setNextCourtDate(e.target.value)}
-                                        required
-                                    />
+                                    <label className={styles.label}>Procedural Status</label>
+                                    <select
+                                        className={styles.select}
+                                        value={proceduralStatus}
+                                        onChange={(e) => setProceduralStatus(e.target.value)}
+                                    >
+                                        <option value="">Select Status...</option>
+                                        <option value="Mention">Mention</option>
+                                        <option value="CMC">Case Management Conference (CMC)</option>
+                                        <option value="Hearing">Hearing</option>
+                                        <option value="Trial">Trial</option>
+                                        <option value="Adoption of Address">Adoption of Address</option>
+                                        <option value="Judgment">Judgment</option>
+                                        <option value="Appeal">Appeal</option>
+                                        <option value="Ruling">Ruling</option>
+                                    </select>
                                 </div>
                             </div>
 
@@ -207,8 +211,9 @@ const AddMatterModal = ({ isOpen, onClose, workspaceId, userId, onSuccess }: Add
                                     onChange={(e) => setCourt(e.target.value)}
                                 >
                                     <option value="">Select Court...</option>
-                                    <option>High Court of Lagos State</option>
+                                    <option>State High Court</option>
                                     <option>Federal High Court</option>
+                                    <option>National Industrial Court</option>
                                     <option>Court of Appeal</option>
                                     <option>Supreme Court</option>
                                     <option>Magistrate Court</option>
@@ -229,7 +234,7 @@ const AddMatterModal = ({ isOpen, onClose, workspaceId, userId, onSuccess }: Add
                             </div>
 
                             <div className={styles.formGroup}>
-                                <label className={styles.label}>Lawyer Assigned *</label>
+                                <label className={styles.label}>Lead Counsel *</label>
                                 <select
                                     className={styles.select}
                                     value={lawyerId}
@@ -248,6 +253,16 @@ const AddMatterModal = ({ isOpen, onClose, workspaceId, userId, onSuccess }: Add
                                         No lawyers found. Invite team members first.
                                     </p>
                                 )}
+                            </div>
+
+                            <div className={styles.formGroup}>
+                                <label className={styles.label}>Next Court Date (Optional)</label>
+                                <input
+                                    type="date"
+                                    className={styles.input}
+                                    value={nextCourtDate}
+                                    onChange={(e) => setNextCourtDate(e.target.value)}
+                                />
                             </div>
                         </form>
                     )}
