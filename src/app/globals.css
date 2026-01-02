@@ -3,23 +3,23 @@
 
 :root {
   --accent: #FDF2F4;
-  /* Very light burgundy wash */
   --accent-hover: #FBE6E9;
 
   /* Text Colors */
-  --text-primary: #191825;
-  /* Dark Charcoal */
-  --text-secondary: #81808C;
-  /* Generic Grey */
-  --text-tertiary: #A0AEC0;
+  --text-primary: #1F2937;
+  /* Gray 800 - Replacing Black */
+  --text-secondary: #6B7280;
+  /* Gray 500 */
+  --text-tertiary: #9CA3AF;
+  /* Gray 400 */
   --text-inverse: #FFFFFF;
 
   /* Backgrounds */
-  --background: #F9FAFB;
-  /* Light Grey Foundation */
+  --background: #F3F4F6;
+  /* Gray 100 - More pronounced Gray foundation */
   --surface: #FFFFFF;
-  --surface-subtle: #FDF2F4;
-  /* Subtle burgundy tint */
+  --surface-subtle: #F9FAFB;
+  /* Gray 50 */
 
   /* Glassmorphism */
   --glass-bg: rgba(255, 255, 255, 0.9);
@@ -27,16 +27,18 @@
   --glass-shadow: 0 4px 30px rgba(0, 0, 0, 0.03);
 
   /* Functional Colors */
-  --border: #E2E8F0;
+  --border: #E5E7EB;
+  /* Gray 200 */
   --primary: #8E2F39;
-  /* ASCO Burgundy */
+  /* Burgundy - MAJOR */
   --primary-hover: #72222B;
-  --success: #10B981;
-  --success-bg: #D1FAE5;
-  --warning: #F59E0B;
-  --warning-bg: #FEF3C7;
-  --danger: #EF4444;
-  --danger-bg: #FEE2E2;
+  --success: #059669;
+  /* Emerald 600 - Muted */
+  --success-bg: #ECFDF5;
+  --warning: #D97706;
+  --warning-bg: #FFFBEB;
+  --danger: #DC2626;
+  --danger-bg: #FEF2F2;
 
   /* Spacing & Radius */
   --radius-sm: 8px;
@@ -45,50 +47,51 @@
   --radius-xl: 32px;
 
   /* Shadows */
-  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.05),
-    0 2px 4px -1px rgba(0, 0, 0, 0.03);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.05),
-    0 4px 6px -2px rgba(0, 0, 0, 0.025);
-  --shadow-soft: 0 20px 40px -10px rgba(0, 0, 0, 0.08);
+  --shadow-sm: 0 1px 2px 0 rgba(31, 41, 55, 0.05);
+  /* Gray-based shadow */
+  --shadow-md: 0 4px 6px -1px rgba(31, 41, 55, 0.05),
+    0 2px 4px -1px rgba(31, 41, 55, 0.03);
+  --shadow-lg: 0 10px 15px -3px rgba(31, 41, 55, 0.05),
+    0 4px 6px -2px rgba(31, 41, 55, 0.025);
+  --shadow-soft: 0 20px 40px -10px rgba(31, 41, 55, 0.08);
   --shadow-glow: 0 0 20px rgba(142, 47, 57, 0.2);
 
   /* Dashboard Specifics */
-  --bg-sidebar: #0A090F;
-  /* Dark Footer Color for Sidebar */
+  --bg-sidebar: #374151;
+  /* Gray 700 - Replaces Black */
   --teal-bg: #FDF2F4;
-  /* Renamed concept, kept var name for compat */
   --teal-text: #8E2F39;
-  --hover-bg: #FBE6E9;
+  --hover-bg: #E5E7EB;
+  /* Gray Hover */
 
   /* Animation Timing */
   --ease-fluid: cubic-bezier(0.4, 0, 0.2, 1);
   --ease-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
 
   /* Landing Page Specific Globals */
-  --bg-page: #FFFFFF;
+  --bg-page: #F3F4F6;
   --bg-nav: rgba(255, 255, 255, 0.95);
-  --border-color: #E2E8F0;
-  --text-lp-primary: #191825;
-  --text-lp-secondary: #81808C;
-  --text-lp-tertiary: #94a3b8;
+  --border-color: #E5E7EB;
+  --text-lp-primary: #1F2937;
+  --text-lp-secondary: #6B7280;
+  --text-lp-tertiary: #9CA3AF;
   --primary-color: #8E2F39;
   --primary-hover: #72222B;
 
-  --card-bg: #ffffff;
-  --card-hover-bg: rgba(142, 47, 57, 0.03);
+  --card-bg: #FFFFFF;
+  --card-hover-bg: #F3F4F6;
 
-  --section-hero-bg: #FFFFFF;
-  --section-problem-bg: #FDF2F4;
-  --section-system-bg: #FFFFFF;
-  --section-drafter-bg: #191825;
+  --section-hero-bg: #F3F4F6;
+  --section-problem-bg: #FFFFFF;
+  --section-system-bg: #F3F4F6;
+  --section-drafter-bg: #374151;
 
-  --icon-bg: #FDF2F4;
-  --icon-border: #FBE6E9;
+  --icon-bg: #F3F4F6;
+  --icon-border: #E5E7EB;
 
   --btn-secondary-bg: #FFFFFF;
-  --btn-secondary-border: #E2E8F0;
-  --btn-secondary-text: #191825;
+  --btn-secondary-border: #E5E7EB;
+  --btn-secondary-text: #374151;
   --btn-secondary-hover: #F9FAFB;
 }
 
@@ -96,42 +99,47 @@
 .dark {
   /* Brand Colors - Dark Mode */
   --primary: #8E2F39;
-  /* Keep Burgundy, it's strong enough */
-  --primary-dark: #5C1C23;
+  --primary-dark: #72222B;
   --primary-light: #B84A56;
   --primary-soft: rgba(142, 47, 57, 0.2);
   --primary-glow: 0 0 25px rgba(142, 47, 57, 0.4);
 
-  --accent: #15141A;
-  --accent-hover: #23222B;
+  --accent: #374151;
+  /* Gray 700 */
+  --accent-hover: #4B5563;
+  /* Gray 600 */
 
-  --text-primary: #FFFFFF;
-  --text-secondary: #A0A0A0;
-  --text-tertiary: #6E6D7A;
+  --text-primary: #F3F4F6;
+  /* Gray 100 - Off-white text */
+  --text-secondary: #9CA3AF;
+  /* Gray 400 */
+  --text-tertiary: #6B7280;
+  /* Gray 500 */
 
-  --background: #0A090F;
-  /* ASCO Footer Color */
-  --surface: #15141A;
-  /* Slightly Lighter than BG */
-  --surface-subtle: #050508;
-  --surface-elevated: #1E1D26;
+  --background: #111827;
+  /* Gray 900 - Rich Dark Gray (Not Black) */
+  --surface: #1F2937;
+  /* Gray 800 - Lighter Gray Surface */
+  --surface-subtle: #111827;
+  --surface-elevated: #374151;
 
-  --glass-bg: rgba(10, 9, 15, 0.8);
+  --glass-bg: rgba(31, 41, 55, 0.85);
+  /* Gray base */
   --glass-border: rgba(255, 255, 255, 0.08);
 
   /* Dashboard Specifics - Dark Mode */
-  --bg-sidebar: #050508;
-  /* Deepest black for sidebar */
+  --bg-sidebar: #0F172A;
+  /* Slate 900 - Slightly cooler check */
   --teal-bg: rgba(142, 47, 57, 0.15);
   --teal-text: #E68A94;
-  /* Lighter burgundy/pink for text readability */
   --hover-bg: rgba(142, 47, 57, 0.1);
 
-  --border: #2E2D36;
-  --border-subtle: #191825;
+  --border: #374151;
+  /* Gray 700 */
+  --border-subtle: #1F2937;
 
   /* Table Improvements */
-  --table-header-bg: #15141A;
+  --table-header-bg: #1F2937;
   --table-row-hover: rgba(142, 47, 57, 0.05);
   --table-row-alternate: rgba(255, 255, 255, 0.02);
 
@@ -154,30 +162,31 @@
   --shadow-soft: 0 20px 40px -10px rgba(0, 0, 0, 0.7);
 
   /* Landing Page Overrides */
-  --bg-page: #0A090F;
-  --bg-nav: rgba(10, 9, 15, 0.95);
-  --border-color: #2E2D36;
-  --text-lp-primary: #FFFFFF;
-  --text-lp-secondary: #A0A0A0;
-  --text-lp-tertiary: #6E6D7A;
+  --bg-page: #111827;
+  --bg-nav: rgba(17, 24, 39, 0.95);
+  --border-color: #374151;
+  --text-lp-primary: #F3F4F6;
+  --text-lp-secondary: #D1D5DB;
+  --text-lp-tertiary: #9CA3AF;
   --primary-color: #8E2F39;
   --primary-hover: #72222B;
 
-  --card-bg: #15141A;
+  --card-bg: #1F2937;
   --card-hover-bg: rgba(142, 47, 57, 0.1);
 
-  --section-hero-bg: #0A090F;
-  --section-problem-bg: #15141A;
-  --section-system-bg: #0A090F;
-  --section-drafter-bg: #050508;
+  --section-hero-bg: #111827;
+  --section-problem-bg: #1F2937;
+  --section-system-bg: #111827;
+  --section-drafter-bg: #030712;
+  /* Gray 950 */
 
-  --icon-bg: #1E1D26;
-  --icon-border: #2E2D36;
+  --icon-bg: #374151;
+  --icon-border: #4B5563;
 
-  --btn-secondary-bg: #15141A;
-  --btn-secondary-border: #2E2D36;
-  --btn-secondary-text: #E2E8F0;
-  --btn-secondary-hover: #23222B;
+  --btn-secondary-bg: #1F2937;
+  --btn-secondary-border: #374151;
+  --btn-secondary-text: #E5E7EB;
+  --btn-secondary-hover: #374151;
 }
 
 * {
