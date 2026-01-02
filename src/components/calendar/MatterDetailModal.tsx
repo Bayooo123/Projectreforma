@@ -328,12 +328,12 @@ const MatterDetailModal = ({ isOpen, onClose, matter, userId }: MatterDetailModa
 
                     <div className={styles.section}>
                         <h3 className={styles.sectionTitle}>
-                            <FileText size={16} /> Summary of Proceedings / Outcome
+                            <FileText size={16} /> What Happened in Court
                         </h3>
                         <textarea
                             className={styles.textarea}
-                            placeholder="Enter narrative description of what transpired in court..."
-                            rows={4}
+                            placeholder="Enter detailed narrative of the court proceedings..."
+                            rows={8}
                             value={proceedings}
                             onChange={(e) => setProceedings(e.target.value)}
                         />

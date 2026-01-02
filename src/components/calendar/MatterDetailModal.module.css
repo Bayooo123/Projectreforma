@@ -16,7 +16,7 @@
     background-color: var(--surface);
     border-radius: var(--radius-lg);
     width: 100%;
-    max-width: 600px;
+    max-width: 800px;
     box-shadow: var(--shadow-lg);
     display: flex;
     flex-direction: column;
