@@ -57,12 +57,12 @@
   --shadow-glow: 0 0 20px rgba(142, 47, 57, 0.2);
 
   /* Dashboard Specifics */
-  --bg-sidebar: #374151;
-  /* Gray 700 - Replaces Black */
+  --bg-sidebar: #5C1C23;
+  /* Deep Burgundy - Priority for Sidebar */
   --teal-bg: #FDF2F4;
   --teal-text: #8E2F39;
-  --hover-bg: #E5E7EB;
-  /* Gray Hover */
+  --hover-bg: #72222B;
+  /* Deep Burgundy Hover */
 
   /* Animation Timing */
   --ease-fluid: cubic-bezier(0.4, 0, 0.2, 1);
@@ -128,8 +128,8 @@
   --glass-border: rgba(255, 255, 255, 0.08);
 
   /* Dashboard Specifics - Dark Mode */
-  --bg-sidebar: #0F172A;
-  /* Slate 900 - Slightly cooler check */
+  --bg-sidebar: #2A0C10;
+  /* Very Dark Burgundy for Dark Mode */
   --teal-bg: rgba(142, 47, 57, 0.15);
   --teal-text: #E68A94;
   --hover-bg: rgba(142, 47, 57, 0.1);
