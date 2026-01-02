@@ -2,6 +2,7 @@
 
 import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
+import { createNotification, RecipientType } from '@/lib/notifications';
 
 /**
  * Get all matters for a workspace
@@ -320,6 +321,41 @@ export async function adjournMatter(
                 performedBy,
             },
         });
+
+        // NOTIFICATION LOGIC (Firm-wide / Assigned Lawyer)
+        // 1. Notify the assigned lawyer (if different from performer)
+        const matterDetails = await prisma.matter.findUnique({
+            where: { id: matterId },
+            include: { assignedLawyer: true }
+        });
+
+        if (matterDetails && matterDetails.assignedLawyerId !== performedBy) {
+            await createNotification({
+                title: 'Case Adjourned',
+                message: `Matter ${matterDetails.caseNumber} adjourned to ${newDate.toLocaleDateString()}. Please update proceedings.`,
+                recipientId: matterDetails.assignedLawyerId,
+                recipientType: 'lawyer',
+                type: 'info',
+                priority: 'high',
+                relatedMatterId: matterId
+            });
+        }
+
+        // 2. Also notify the 'Appearing Lawyers' if they are different
+        if (appearanceLawyerIds && appearanceLawyerIds.length > 0) {
+            for (const lawyerId of appearanceLawyerIds) {
+                if (lawyerId !== performedBy && lawyerId !== matterDetails?.assignedLawyerId) {
+                    await createNotification({
+                        title: 'Court Appearance Recorded',
+                        message: `You were marked as appearing in ${matterDetails?.caseNumber || 'a matter'}. Adjourned to ${newDate.toLocaleDateString()}.`,
+                        recipientId: lawyerId,
+                        recipientType: 'lawyer',
+                        type: 'info',
+                        relatedMatterId: matterId
+                    });
+                }
+            }
+        }
 
         revalidatePath('/calendar');
         return { success: true, matter };

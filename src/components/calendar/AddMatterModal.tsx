@@ -53,15 +53,14 @@ const AddMatterModal = ({ isOpen, onClose, workspaceId, userId, onSuccess }: Add
     const loadData = async () => {
         setIsLoadingData(true);
         try {
-            const [clientsData, lawyersData, generatedNumber] = await Promise.all([
+            const [clientsData, lawyersData] = await Promise.all([
                 getClientsForWorkspace(workspaceId),
                 getLawyersForWorkspace(workspaceId),
-                generateCaseNumber(workspaceId),
             ]);
 
             setClients(clientsData);
             setLawyers(lawyersData);
-            setCaseNumber(generatedNumber);
+            setCaseNumber(''); // Default to empty for manual entry
         } catch (error) {
             console.error('Error loading data:', error);
             alert('Failed to load clients and lawyers');
