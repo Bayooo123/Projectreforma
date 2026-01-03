@@ -4,44 +4,33 @@ import { useState } from 'react';
 import { ChevronLeft, ChevronRight, Gavel, Loader } from 'lucide-react';
 import styles from './CalendarGrid.module.css';
 
-interface Matter {
+interface CourtEvent {
     id: string;
-    caseNumber: string;
-    name: string;
-    clientId: string;
-    assignedLawyerId: string;
-    workspaceId: string;
-    court: string | null;
-    judge: string | null;
-    status: string;
-    nextCourtDate: Date | null;
-    createdAt: Date;
-    updatedAt: Date;
-    client: {
+    date: Date;
+    title: string | null;
+    proceedings: string | null;
+    adjournedFor: string | null;
+    matterId: string;
+    matter: {
         id: string;
+        caseNumber: string;
         name: string;
+        client: { name: string };
+        assignedLawyer: { id: string; name: string | null };
     };
-    assignedLawyer: {
-        id: string;
-        name: string | null;
-    };
-    briefs: {
-        id: string;
-        briefNumber: string;
-        name: string;
-    }[];
+    appearances: { id: string; name: string | null; image: string | null }[];
 }
 
 interface CalendarGridProps {
-    matters: Matter[];
+    events: CourtEvent[];
     currentDate: Date;
     onDateChange: (date: Date) => void;
-    onEventClick: (matter: Matter) => void;
+    onEventClick: (event: CourtEvent) => void;
     isLoading?: boolean;
 }
 
 const CalendarGrid = ({
-    matters,
+    events,
     currentDate,
     onDateChange,
     onEventClick,
@@ -66,47 +55,67 @@ const CalendarGrid = ({
         onDateChange(new Date());
     };
 
-    // Group matters by day of month
-    const mattersByDay: Record<number, Matter[]> = {};
-    matters.forEach(matter => {
-        if (matter.nextCourtDate) {
-            const courtDate = new Date(matter.nextCourtDate);
-            const day = courtDate.getDate();
-            if (!mattersByDay[day]) {
-                mattersByDay[day] = [];
+    // Group events by day of month
+    // Note: We need to filter events that match the current month first? 
+    // Or just map them. Ideally events passed are already relevant or we handle date checking.
+    // If we passed ALL workspace events, we must check month here.
+    const eventsByDay: Record<number, CourtEvent[]> = {};
+
+    events.forEach(event => {
+        const eventDate = new Date(event.date);
+        // Only include if in current month/year view
+        if (
+            eventDate.getMonth() === currentDate.getMonth() &&
+            eventDate.getFullYear() === currentDate.getFullYear()
+        ) {
+            const day = eventDate.getDate();
+            if (!eventsByDay[day]) {
+                eventsByDay[day] = [];
             }
-            mattersByDay[day].push(matter);
+            eventsByDay[day].push(event);
         }
     });
 
-    const renderEvent = (day: number) => {
-        const dayMatters = mattersByDay[day];
-        if (!dayMatters || dayMatters.length === 0) return null;
+    const renderEventsForDay = (day: number) => {
+        const dayEvents = eventsByDay[day];
+        if (!dayEvents || dayEvents.length === 0) return null;
 
-        return dayMatters.map((matter) => {
-            const isPast = matter.status === 'past_hearing';
+        return dayEvents.map((event) => {
+            // Determine styling based on status or type
+            // e.g. past events vs new
+            const isPast = new Date(event.date) < new Date() && new Date(event.date).getDate() !== new Date().getDate();
+
             return (
                 <div
-                    key={matter.id}
+                    key={event.id}
                     className={styles.caseItem}
                     onClick={(e) => {
                         e.stopPropagation();
-                        onEventClick(matter);
+                        onEventClick(event);
                     }}
                     style={{
                         cursor: 'pointer',
                         opacity: isPast ? 0.6 : 1,
                         backgroundColor: isPast ? '#f3f4f6' : undefined,
-                        borderLeft: isPast ? '2px solid #9ca3af' : undefined
+                        borderLeft: isPast ? '2px solid #9ca3af' : '2px solid var(--primary)',
+                        marginBottom: '2px',
+                        padding: '2px 4px',
+                        fontSize: '11px',
+                        borderRadius: '2px'
                     }}
+                    title={`${event.title || 'Hearing'} - ${event.matter.name}`}
                 >
                     <Gavel size={10} className={styles.caseIcon} />
                     <span className={styles.caseName}>
-                        {isPast ? '(Held) ' : ''}{matter.name}
+                        {maybeTruncate(event.matter.name)}
                     </span>
                 </div>
             );
         });
+    };
+
+    const maybeTruncate = (str: string) => {
+        return str.length > 20 ? str.substring(0, 20) + '...' : str;
     };
 
     const daysInMonth = new Date(
@@ -163,7 +172,7 @@ const CalendarGrid = ({
                         <div key={day} className={styles.dayCell}>
                             <span className={styles.dayNumber}>{day}</span>
                             <div className={styles.events}>
-                                {renderEvent(day)}
+                                {renderEventsForDay(day)}
                             </div>
                         </div>
                     ))}

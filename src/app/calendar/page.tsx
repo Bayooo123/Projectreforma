@@ -1,7 +1,7 @@
 import { auth } from '@/auth';
 import { redirect } from 'next/navigation';
 import { getCurrentUserWithWorkspace } from '@/lib/workspace';
-import { getMattersForMonth } from '@/lib/matters';
+import { getCourtEvents } from '@/app/actions/court-dates';
 import CalendarClient from './CalendarClient';
 
 export default async function CalendarPage() {
@@ -23,17 +23,12 @@ export default async function CalendarPage() {
         );
     }
 
-    // Get current month's matters
-    const now = new Date();
-    const matters = await getMattersForMonth(
-        data.workspace.id,
-        now.getFullYear(),
-        now.getMonth()
-    );
+    // Get all court events (past and future)
+    const events = await getCourtEvents(data.workspace.id);
 
     return (
         <CalendarClient
-            initialMatters={matters}
+            initialEvents={events}
             workspaceId={data.workspace.id}
             userId={session.user.id!}
         />

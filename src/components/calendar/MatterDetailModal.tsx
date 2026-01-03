@@ -327,9 +327,46 @@ const MatterDetailModal = ({ isOpen, onClose, matter, userId }: MatterDetailModa
                     </div>
 
                     <div className={styles.section}>
-                        <h3 className={styles.sectionTitle}>
-                            <FileText size={16} /> What Happened in Court
-                        </h3>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                            <h3 className={styles.sectionTitle} style={{ margin: 0 }}>
+                                <FileText size={16} /> What Happened in Court
+                            </h3>
+                            <button
+                                onClick={async () => {
+                                    /* 
+                                     * Note: We need the ID of the specific CourtDate we are editing.
+                                     * Currently, MatterDetailModal shows 'nextCourtDate' which is a single Date object on the Matter model.
+                                     * To edit the 'proceedings' of a specific court date, we need to know WHICH court date record to update.
+                                     * 
+                                     * If this modal is showing the Matter context generally, 'proceedings' usually refers to the MOST RECENT or NEXT sitting.
+                                     * However, the 'adjournMatter' action creates a NEW CourtDate record for the completed sitting.
+                                     * 
+                                     * CRITICAL SYSTEM FIX NEEDED:
+                                     * The 'proceedings' state in this modal is somewhat ambiguous. 
+                                     * Is it for the *upcoming* date (as instructions/notes)? 
+                                     * Or is it retracing what just happened?
+                                     * 
+                                     * If it's "What Happened", it implies a PAST event.
+                                     * We need to fetch the specific 'CourtDate' record that corresponds to 'today' or the 'last active' date to update it truly.
+                                     * 
+                                     * For now, sticking to existing behavior: This field is primarily used during Adjournment. 
+                                     * I will enable the button but warn that it saves as a genric note if not adjourning, 
+                                     * UNLESS we allow creating a standalone CourtDate record here.
+                                     */
+                                    if (proceedings.trim()) {
+                                        setIsSubmitting(true);
+                                        await addMatterNote(matter.id, `Proceedings Note: ${proceedings}`, userId);
+                                        setIsSubmitting(false);
+                                        alert('Saved as generic note. Use "Adjourn" to finalize the court date record.');
+                                    }
+                                }}
+                                className={styles.secondaryActionBtn}
+                                disabled={isSubmitting || !proceedings.trim()}
+                                style={{ fontSize: '12px', padding: '4px 8px' }}
+                            >
+                                Save Note
+                            </button>
+                        </div>
                         <textarea
                             className={styles.textarea}
                             placeholder="Enter detailed narrative of the court proceedings..."

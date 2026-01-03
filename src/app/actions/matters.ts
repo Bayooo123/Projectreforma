@@ -267,6 +267,19 @@ export async function adjournMatter(
     appearanceLawyerIds?: string[] // Optional array of lawyer IDs who appeared
 ) {
     try {
+        // RBAC Check
+        const matterCheck = await prisma.matter.findUnique({
+            where: { id: matterId },
+            include: { workspace: true }
+        });
+
+        if (!matterCheck) return { success: false, error: 'Matter not found' };
+
+        // Allow Assigned Lawyer OR Workspace Owner
+        if (matterCheck.assignedLawyerId !== performedBy && matterCheck.workspace.ownerId !== performedBy) {
+            return { success: false, error: 'Permission denied: Only the assigned lawyer or owner can adjourn a matter.' };
+        }
+
         // 1. Get the current matter to see the PREVIOUS (or current) court date
         const currentMatter = await prisma.matter.findUnique({
             where: { id: matterId },
@@ -437,5 +450,49 @@ export async function updateMatterStatus(
     } catch (error) {
         console.error('Error updating status:', error);
         return { success: false, error: 'Failed to update status' };
+    }
+}
+
+/**
+ * Update specifically the "What Happened in Court" (proceedings) for a given Court Date
+ * Note: This allows updating the narrative without adjourning.
+ */
+export async function updateCourtProceedings(
+    courtDateId: string,
+    proceedings: string,
+    performedBy: string
+) {
+    try {
+        const courtDate = await prisma.courtDate.findUnique({
+            where: { id: courtDateId },
+            include: {
+                matter: {
+                    include: { workspace: true }
+                }
+            }
+        });
+
+        if (!courtDate) return { success: false, error: 'Court date record not found' };
+
+        // RBAC Check
+        const { matter } = courtDate;
+        if (matter.assignedLawyerId !== performedBy && matter.workspace.ownerId !== performedBy) {
+            return { success: false, error: 'Permission denied: Only the assigned lawyer or owner can update proceedings.' };
+        }
+
+        // Update the record
+        const updatedRecord = await prisma.courtDate.update({
+            where: { id: courtDateId },
+            data: { proceedings }
+        });
+
+        revalidatePath('/calendar');
+        revalidatePath(`/calendar/${matter.id}`);
+
+        return { success: true, courtDate: updatedRecord };
+
+    } catch (error) {
+        console.error('Error updating proceedings:', error);
+        return { success: false, error: 'Failed to update proceedings' };
     }
 }
