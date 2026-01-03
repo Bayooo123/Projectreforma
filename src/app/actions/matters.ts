@@ -112,6 +112,7 @@ export async function createMatter(data: {
     nextCourtDate?: Date;
     status?: string;
     proceduralStatus?: string;
+    proceedings?: string;
 }) {
     try {
         const matter = await prisma.matter.create({
@@ -156,6 +157,7 @@ export async function createMatter(data: {
                     matterId: matter.id,
                     date: data.nextCourtDate,
                     title: 'Initial Hearing',
+                    proceedings: data.proceedings, // Save court summary here
                     // By default, the assigned lawyer is the appearance? 
                     // Probably better to leave appearances empty or explicitly set if the UI supported it.
                     // For now, we'll just create the date record.

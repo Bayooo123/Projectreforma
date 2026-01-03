@@ -37,6 +37,7 @@ const AddMatterModal = ({ isOpen, onClose, workspaceId, userId, onSuccess }: Add
     const [court, setCourt] = useState('');
     const [judge, setJudge] = useState('');
     const [nextCourtDate, setNextCourtDate] = useState('');
+    const [courtSummary, setCourtSummary] = useState('');
     const [proceduralStatus, setProceduralStatus] = useState('');
 
     const [clients, setClients] = useState<Client[]>([]);
@@ -82,8 +83,6 @@ const AddMatterModal = ({ isOpen, onClose, workspaceId, userId, onSuccess }: Add
             return;
         }
 
-        // if (!nextCourtDate) -> Removed validation per requirement
-
         setIsSubmitting(true);
 
         try {
@@ -97,6 +96,7 @@ const AddMatterModal = ({ isOpen, onClose, workspaceId, userId, onSuccess }: Add
                 judge: judge || undefined,
                 nextCourtDate: nextCourtDate ? new Date(nextCourtDate) : undefined,
                 proceduralStatus: proceduralStatus || undefined,
+                proceedings: courtSummary || undefined, // Pass summary
             });
 
             if (result.success) {
@@ -107,6 +107,7 @@ const AddMatterModal = ({ isOpen, onClose, workspaceId, userId, onSuccess }: Add
                 setCourt('');
                 setJudge('');
                 setNextCourtDate('');
+                setCourtSummary(''); // Reset summary
 
                 alert('Matter created successfully!');
                 onSuccess?.();
@@ -261,6 +262,17 @@ const AddMatterModal = ({ isOpen, onClose, workspaceId, userId, onSuccess }: Add
                                     className={styles.input}
                                     value={nextCourtDate}
                                     onChange={(e) => setNextCourtDate(e.target.value)}
+                                />
+                            </div>
+
+                            <div className={styles.formGroup}>
+                                <label className={styles.label}>What happened in court / Court summary (Optional)</label>
+                                <textarea
+                                    className={styles.input}
+                                    style={{ height: '100px', resize: 'vertical' }}
+                                    placeholder="Brief summary of proceedings on the selected date..."
+                                    value={courtSummary}
+                                    onChange={(e) => setCourtSummary(e.target.value)}
                                 />
                             </div>
                         </form>
