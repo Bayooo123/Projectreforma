@@ -59,16 +59,6 @@ export async function getBriefs(workspaceId: string) {
                         email: true,
                     },
                 },
-                documents: {
-                    select: {
-                        id: true,
-                        name: true,
-                        url: true,
-                        type: true,
-                        size: true,
-                        uploadedAt: true,
-                    },
-                },
                 _count: {
                     select: {
                         documents: true,

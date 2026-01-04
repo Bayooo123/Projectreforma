@@ -37,6 +37,12 @@ export default function CalendarClient({
     userId,
 }: CalendarClientProps) {
     const [events, setEvents] = useState<CourtEvent[]>(initialEvents);
+
+    // Sync state with props when revalidation occurs
+    useEffect(() => {
+        setEvents(initialEvents);
+    }, [initialEvents]);
+
     const [currentDate, setCurrentDate] = useState(new Date());
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);

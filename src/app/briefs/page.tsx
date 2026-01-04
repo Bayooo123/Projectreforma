@@ -2,6 +2,9 @@ import { auth } from '@/auth';
 import { redirect } from 'next/navigation';
 import { getCurrentUserWithWorkspace } from '@/lib/workspace';
 import BriefsPageClient from './BriefsPageClient';
+import { Suspense } from 'react';
+import BriefsTable from '@/components/briefs/BriefsTable';
+import BriefTableSkeleton from '@/components/briefs/BriefTableSkeleton';
 
 export default async function BriefsPage() {
     const session = await auth();
@@ -22,5 +25,11 @@ export default async function BriefsPage() {
         );
     }
 
-    return <BriefsPageClient workspaceId={data.workspace.id} />;
+    return (
+        <BriefsPageClient workspaceId={data.workspace.id}>
+            <Suspense fallback={<BriefTableSkeleton />}>
+                <BriefsTable workspaceId={data.workspace.id} />
+            </Suspense>
+        </BriefsPageClient>
+    );
 }

@@ -3,16 +3,14 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import BriefUploadModal from '@/components/briefs/BriefUploadModal';
-import { Suspense } from 'react';
-import BriefsTable from '@/components/briefs/BriefsTable';
-import BriefTableSkeleton from '@/components/briefs/BriefTableSkeleton';
 import styles from './page.module.css';
 
 interface BriefsPageClientProps {
     workspaceId: string;
+    children: React.ReactNode;
 }
 
-export default function BriefsPageClient({ workspaceId }: BriefsPageClientProps) {
+export default function BriefsPageClient({ workspaceId, children }: BriefsPageClientProps) {
     const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
     const router = useRouter();
 
@@ -23,9 +21,7 @@ export default function BriefsPageClient({ workspaceId }: BriefsPageClientProps)
 
     return (
         <div className={styles.page}>
-            <Suspense fallback={<BriefTableSkeleton />}>
-                <BriefsTable workspaceId={workspaceId} />
-            </Suspense>
+            {children}
 
             <BriefUploadModal
                 isOpen={isUploadModalOpen}
