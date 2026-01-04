@@ -132,6 +132,16 @@ export async function getFirmPulse(limit: number = 10) {
         }
     });
 
+    // Fetch recent tasks (especially from email)
+    const taskLogs = await prisma.task.findMany({
+        take: limit,
+        orderBy: { createdAt: 'desc' },
+        include: {
+            assignedBy: { select: { name: true } }, // The "creator" (sender for emails)
+            assignedTo: { select: { name: true } }
+        }
+    });
+
     // Merge and sort all activities
     const allActivities = [
         ...matterLogs.map(log => ({
@@ -160,6 +170,15 @@ export async function getFirmPulse(limit: number = 10) {
             type: 'invitation_sent',
             timestamp: inv.createdAt,
             source: 'Workspace'
+        })),
+        ...taskLogs.map(task => ({
+            id: task.id,
+            caseName: 'Task Manager',
+            person: task.source === 'email' ? (task.sourceEmail || 'Email') : (task.assignedTo?.name || 'System'),
+            action: task.title, // "📧 Email: Subject"
+            type: task.source === 'email' ? 'email_received' : 'task_created',
+            timestamp: task.createdAt,
+            source: 'Task'
         }))
     ].sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime()).slice(0, limit);
 
