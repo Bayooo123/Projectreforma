@@ -176,7 +176,7 @@ export async function getTodaysActivity(workspaceId: string) {
             id: true,
             name: true,
             briefNumber: true,
-            assignedLawyer: { select: { name: true } }
+            lawyer: { select: { name: true } }
         }
     });
 
@@ -197,7 +197,7 @@ export async function getTodaysActivity(workspaceId: string) {
             title: `Deadline: ${b.name}`,
             subtitle: `Brief ${b.briefNumber}`,
             status: 'Due Today',
-            assignee: b.assignedLawyer?.name || 'Unassigned',
+            assignee: b.lawyer?.name || 'Unassigned',
             time: '5:00 PM'
         }))
     ];
