@@ -49,7 +49,7 @@ export default function OverviewCockpit({ workspaceId, userId, userName, clients
     );
 
     return (
-        <div className="w-full mb-8">
+        <div className="w-full">
             {/* Primary Action Buttons (2-Grid) */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                 <button
@@ -57,7 +57,7 @@ export default function OverviewCockpit({ workspaceId, userId, userName, clients
                     className="bg-gradient-to-br from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white p-6 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-200 flex flex-col items-center gap-3 group backdrop-blur-sm"
                 >
                     <Briefcase className="w-8 h-8 group-hover:scale-110 transition-transform duration-200" />
-                    <div className="text-center">
+                    <div>
                         <div className="font-semibold text-lg">New Brief</div>
                         <div className="text-blue-100 text-sm">Research & Writing</div>
                     </div>
@@ -68,7 +68,7 @@ export default function OverviewCockpit({ workspaceId, userId, userName, clients
                     className="bg-gradient-to-br from-violet-600 to-violet-700 hover:from-violet-700 hover:to-violet-800 text-white p-6 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-200 flex flex-col items-center gap-3 group backdrop-blur-sm"
                 >
                     <Gavel className="w-8 h-8 group-hover:scale-110 transition-transform duration-200" />
-                    <div className="text-center">
+                    <div>
                         <div className="font-semibold text-lg">Add Matter</div>
                         <div className="text-violet-100 text-sm">Litigation Tracker</div>
                     </div>
@@ -79,9 +79,9 @@ export default function OverviewCockpit({ workspaceId, userId, userName, clients
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
                 <button
                     onClick={() => handleActionClick('invoice')}
-                    className="bg-white/60 dark:bg-slate-800/40 backdrop-blur-xl hover:bg-white/80 dark:hover:bg-slate-800/60 border border-slate-200/50 dark:border-white/5 p-4 rounded-xl transition-all duration-200 flex items-center gap-3 shadow-sm hover:shadow-md group"
+                    className="bg-white/60 dark:bg-slate-800/40 backdrop-blur-xl hover:bg-white/80 dark:hover:bg-slate-800/60 border border-slate-200/50 dark:border-white/5 p-4 rounded-xl transition-all duration-200 flex items-center gap-3 shadow-sm hover:shadow-md"
                 >
-                    <div className="p-2 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg group-hover:bg-emerald-200 dark:group-hover:bg-emerald-900/50 transition-colors">
+                    <div className="p-2 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg">
                         <FileText className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
                     </div>
                     <div className="text-left">
@@ -92,9 +92,9 @@ export default function OverviewCockpit({ workspaceId, userId, userName, clients
 
                 <button
                     onClick={() => handleActionClick('payment')}
-                    className="bg-white/60 dark:bg-slate-800/40 backdrop-blur-xl hover:bg-white/80 dark:hover:bg-slate-800/60 border border-slate-200/50 dark:border-white/5 p-4 rounded-xl transition-all duration-200 flex items-center gap-3 shadow-sm hover:shadow-md group"
+                    className="bg-white/60 dark:bg-slate-800/40 backdrop-blur-xl hover:bg-white/80 dark:hover:bg-slate-800/60 border border-slate-200/50 dark:border-white/5 p-4 rounded-xl transition-all duration-200 flex items-center gap-3 shadow-sm hover:shadow-md"
                 >
-                    <div className="p-2 bg-amber-100 dark:bg-amber-900/30 rounded-lg group-hover:bg-amber-200 dark:group-hover:bg-amber-900/50 transition-colors">
+                    <div className="p-2 bg-amber-100 dark:bg-amber-900/30 rounded-lg">
                         <DollarSign className="w-6 h-6 text-amber-600 dark:text-amber-400" />
                     </div>
                     <div className="text-left">
@@ -104,7 +104,7 @@ export default function OverviewCockpit({ workspaceId, userId, userName, clients
                 </button>
             </div>
 
-            {/* Client Picker Modal (Previous Logic Retained) */}
+            {/* Client Picker Modal */}
             {showClientPicker && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
                     <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-white/10 w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200 ring-1 ring-black/5">

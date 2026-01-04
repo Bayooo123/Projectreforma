@@ -56,11 +56,11 @@ export default async function OverviewPage() {
 
     // Calculate activity summary for header
     const activityCount = todaysActivity.length;
-    const activityText = activityCount === 1 ? "1 action item" : `${activityCount} action items`;
+    const activityText = activityCount === 1 ? "1 matter active" : `${activityCount} matters active`;
 
     return (
-        <main className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-900 dark:to-slate-800 pb-20">
-            <div className="max-w-7xl mx-auto px-6 py-10">
+        <main className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-900 dark:to-slate-800 p-6">
+            <div className="max-w-7xl mx-auto">
                 {/* Header */}
                 <div className="mb-8">
                     <div className="flex items-center justify-between mb-2">
@@ -68,12 +68,12 @@ export default async function OverviewPage() {
                             <h1 className="text-3xl font-bold text-slate-900 dark:text-white">
                                 {getGreeting()}, {firstName}
                             </h1>
-                            <p className="text-slate-500 dark:text-slate-400 mt-1 uppercase tracking-wider text-xs font-semibold">
-                                {dateStr} &bull; FIRM PULSE
+                            <p className="text-slate-500 dark:text-slate-400 mt-1">
+                                {dateStr} • FIRM PULSE
                             </p>
                         </div>
                         <div className="text-right hidden sm:block">
-                            <div className="text-sm text-slate-600 dark:text-slate-400">Today&apos;s Agenda</div>
+                            <div className="text-sm text-slate-600 dark:text-slate-400">Today&apos;s Activity</div>
                             <div className="text-lg font-semibold text-slate-900 dark:text-white">{activityText}</div>
                         </div>
                     </div>
