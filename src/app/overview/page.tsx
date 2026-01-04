@@ -58,8 +58,8 @@ export default async function OverviewPage() {
     ]);
 
     return (
-        <main className="min-h-screen bg-slate-50 dark:bg-slate-900 pb-20">
-            <div className="max-w-7xl mx-auto px-6 py-10 space-y-8">
+        <main className="min-h-screen pb-20">
+            <div className="max-w-7xl mx-auto px-8 py-12 space-y-12">
                 {/* Header */}
                 <header>
                     <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">

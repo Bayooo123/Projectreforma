@@ -54,59 +54,59 @@ export default function OverviewCockpit({ workspaceId, userId, userName, clients
     );
 
     return (
-        <div className="w-full mb-8">
+        <div className="w-full mb-12">
             {/* Quick Action Bar */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
                 <button
                     onClick={() => setActiveModal('brief')}
-                    className="relative overflow-hidden flex flex-col items-center justify-center p-6 rounded-2xl border border-white/20 dark:border-white/10 shadow-lg hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 group bg-white/60 dark:bg-slate-900/40 backdrop-blur-xl"
+                    className="relative overflow-hidden flex flex-col items-center justify-center p-8 rounded-3xl border border-white/40 dark:border-white/5 shadow-2xl hover:shadow-[0_20px_50px_-12px_rgba(59,130,246,0.1)] hover:-translate-y-1.5 transition-all duration-300 group bg-white/40 dark:bg-gradient-to-b dark:from-slate-800/40 dark:to-slate-900/40 backdrop-blur-2xl"
                 >
-                    <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                    <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
 
-                    <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-600 shadow-blue-500/20 shadow-lg flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300 relative z-10">
-                        <Briefcase className="h-7 w-7 text-white" />
+                    <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-600 shadow-lg shadow-blue-500/20 flex items-center justify-center mb-5 group-hover:scale-110 transition-transform duration-300 relative z-10">
+                        <Briefcase className="h-8 w-8 text-white" />
                     </div>
-                    <span className="font-bold text-slate-800 dark:text-slate-100 text-lg relative z-10">New Brief</span>
-                    <span className="text-xs font-medium text-slate-500 dark:text-slate-400 mt-1 relative z-10">Research & Writing</span>
+                    <span className="font-bold text-slate-800 dark:text-white text-xl relative z-10">New Brief</span>
+                    <span className="text-sm font-medium text-slate-500 dark:text-slate-400 mt-2 relative z-10">Research & Writing</span>
                 </button>
 
                 <button
                     onClick={() => setActiveModal('matter')}
-                    className="relative overflow-hidden flex flex-col items-center justify-center p-6 rounded-2xl border border-white/20 dark:border-white/10 shadow-lg hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 group bg-white/60 dark:bg-slate-900/40 backdrop-blur-xl"
+                    className="relative overflow-hidden flex flex-col items-center justify-center p-8 rounded-3xl border border-white/40 dark:border-white/5 shadow-2xl hover:shadow-[0_20px_50px_-12px_rgba(168,85,247,0.1)] hover:-translate-y-1.5 transition-all duration-300 group bg-white/40 dark:bg-gradient-to-b dark:from-slate-800/40 dark:to-slate-900/40 backdrop-blur-2xl"
                 >
-                    <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                    <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
 
-                    <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-purple-500 to-purple-600 shadow-purple-500/20 shadow-lg flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300 relative z-10">
-                        <Gavel className="h-7 w-7 text-white" />
+                    <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-purple-500 to-purple-600 shadow-lg shadow-purple-500/20 flex items-center justify-center mb-5 group-hover:scale-110 transition-transform duration-300 relative z-10">
+                        <Gavel className="h-8 w-8 text-white" />
                     </div>
-                    <span className="font-bold text-slate-800 dark:text-slate-100 text-lg relative z-10">Add Matter</span>
-                    <span className="text-xs font-medium text-slate-500 dark:text-slate-400 mt-1 relative z-10">Litigation Tracker</span>
+                    <span className="font-bold text-slate-800 dark:text-white text-xl relative z-10">Add Matter</span>
+                    <span className="text-sm font-medium text-slate-500 dark:text-slate-400 mt-2 relative z-10">Litigation Tracker</span>
                 </button>
 
                 <button
                     onClick={() => handleActionClick('invoice')}
-                    className="relative overflow-hidden flex flex-col items-center justify-center p-6 rounded-2xl border border-white/20 dark:border-white/10 shadow-lg hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 group bg-white/60 dark:bg-slate-900/40 backdrop-blur-xl"
+                    className="relative overflow-hidden flex flex-col items-center justify-center p-8 rounded-3xl border border-white/40 dark:border-white/5 shadow-2xl hover:shadow-[0_20px_50px_-12px_rgba(16,185,129,0.1)] hover:-translate-y-1.5 transition-all duration-300 group bg-white/40 dark:bg-gradient-to-b dark:from-slate-800/40 dark:to-slate-900/40 backdrop-blur-2xl"
                 >
-                    <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                    <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
 
-                    <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-emerald-500 to-emerald-600 shadow-emerald-500/20 shadow-lg flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300 relative z-10">
-                        <FileText className="h-7 w-7 text-white" />
+                    <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-emerald-500 to-emerald-600 shadow-lg shadow-emerald-500/20 flex items-center justify-center mb-5 group-hover:scale-110 transition-transform duration-300 relative z-10">
+                        <FileText className="h-8 w-8 text-white" />
                     </div>
-                    <span className="font-bold text-slate-800 dark:text-slate-100 text-lg relative z-10">Create Invoice</span>
-                    <span className="text-xs font-medium text-slate-500 dark:text-slate-400 mt-1 relative z-10">Billing & Finance</span>
+                    <span className="font-bold text-slate-800 dark:text-white text-xl relative z-10">Create Invoice</span>
+                    <span className="text-sm font-medium text-slate-500 dark:text-slate-400 mt-2 relative z-10">Billing & Finance</span>
                 </button>
 
                 <button
                     onClick={() => handleActionClick('payment')}
-                    className="relative overflow-hidden flex flex-col items-center justify-center p-6 rounded-2xl border border-white/20 dark:border-white/10 shadow-lg hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 group bg-white/60 dark:bg-slate-900/40 backdrop-blur-xl"
+                    className="relative overflow-hidden flex flex-col items-center justify-center p-8 rounded-3xl border border-white/40 dark:border-white/5 shadow-2xl hover:shadow-[0_20px_50px_-12px_rgba(245,158,11,0.1)] hover:-translate-y-1.5 transition-all duration-300 group bg-white/40 dark:bg-gradient-to-b dark:from-slate-800/40 dark:to-slate-900/40 backdrop-blur-2xl"
                 >
-                    <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                    <div className="absolute inset-0 bg-gradient-to-br from-amber-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
 
-                    <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-amber-500 to-amber-600 shadow-amber-500/20 shadow-lg flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300 relative z-10">
-                        <DollarSign className="h-7 w-7 text-white" />
+                    <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-amber-500 to-amber-600 shadow-lg shadow-amber-500/20 flex items-center justify-center mb-5 group-hover:scale-110 transition-transform duration-300 relative z-10">
+                        <DollarSign className="h-8 w-8 text-white" />
                     </div>
-                    <span className="font-bold text-slate-800 dark:text-slate-100 text-lg relative z-10">Record Payment</span>
-                    <span className="text-xs font-medium text-slate-500 dark:text-slate-400 mt-1 relative z-10">Receipts & Tracking</span>
+                    <span className="font-bold text-slate-800 dark:text-white text-xl relative z-10">Record Payment</span>
+                    <span className="text-sm font-medium text-slate-500 dark:text-slate-400 mt-2 relative z-10">Receipts & Tracking</span>
                 </button>
             </div>
 
