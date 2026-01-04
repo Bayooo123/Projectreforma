@@ -90,51 +90,75 @@ export async function POST(req: NextRequest) {
             });
         }
 
-        // 7. Fallback: Try to find user by sender email and log to MatterActivityLog
+        // 7. Fallback: Create a Task for the email (Routed or Unrouted)
+
+        // Try to identify the sender as a user
         const user = await prisma.user.findUnique({
             where: { email: fromEmail }
         });
+
+        let targetWorkspaceId = null;
+        let assignedById = user?.id; // If user exists, they are the "creator"
 
         if (user) {
             // Find user's primary workspace
             const membership = await prisma.workspaceMember.findFirst({
                 where: { userId: user.id }
             });
+            targetWorkspaceId = membership?.workspaceId;
+        }
 
-            if (membership) {
-                // Create a task to track the unrouted email
-                await prisma.task.create({
-                    data: {
-                        title: `📧 Email: ${subject || '(No Subject)'}`,
-                        description: body?.substring(0, 500) || 'Email received via Zoho',
-                        status: 'pending',
-                        priority: 'medium',
-                        source: 'email',
-                        sourceEmail: fromEmail,
-                        emailSubject: subject,
-                        emailBody: body,
-                        assignedById: user.id,
-                        workspaceId: membership.workspaceId
-                    }
-                });
+        // If no user or no membership found, find *any* workspace to dump this email into
+        // In a single-tenant feel app, usually the first workspace is the main firm.
+        if (!targetWorkspaceId) {
+            const fallbackWorkspace = await prisma.workspace.findFirst({
+                orderBy: { createdAt: 'asc' }, // Oldest workspace (likely the main firm)
+                select: { id: true, ownerId: true }
+            });
 
-                console.log(`[Zoho Webhook] Created task for unrouted email from known user: ${fromEmail}`);
-
-                return NextResponse.json({
-                    success: true,
-                    message: 'Email logged as Task (no brief match)',
-                    routingMethod: 'User Fallback'
-                });
+            if (fallbackWorkspace) {
+                targetWorkspaceId = fallbackWorkspace.id;
+                // If sender is unknown, assign "creation" to the workspace owner so the FK is valid
+                if (!assignedById) {
+                    assignedById = fallbackWorkspace.ownerId;
+                }
             }
         }
 
-        // 8. No match at all - still return 200 to prevent retries
-        console.log(`[Zoho Webhook] Could not route email from: ${fromEmail}`);
+        if (targetWorkspaceId && assignedById) {
+            // Create the Task
+            const newTask = await prisma.task.create({
+                data: {
+                    title: `📧 ${subject || '(No Subject)'}`, // Cleaner title
+                    description: body?.substring(0, 1000) || 'Email received via Zoho', // Cap at 1000 chars
+                    status: 'pending',
+                    priority: 'medium',
+                    source: 'email',
+                    sourceEmail: fromEmail, // Store the actual sender
+                    emailSubject: subject,
+                    emailBody: body, // Store full body
+                    assignedById: assignedById, // The "creator" (User or Workspace Owner)
+                    assignedToId: assignedById, // Default assign to same person for triage
+                    workspaceId: targetWorkspaceId
+                }
+            });
+
+            console.log(`[Zoho Webhook] Created task for email from: ${fromEmail} in Workspace: ${targetWorkspaceId}`);
+
+            return NextResponse.json({
+                success: true,
+                message: 'Email logged as Task',
+                routingMethod: user ? 'User Match' : 'Fallback Workspace',
+                taskId: newTask.id
+            });
+        }
+
+        // 8. If absolutely no workspace exists in DB (Rare)
+        console.log(`[Zoho Webhook] Could not route email from: ${fromEmail} - No workspaces found in DB`);
         return NextResponse.json({
             success: false,
-            message: 'Email received but could not be routed',
-            hint: 'Sender not recognized and no brief ID in recipient'
-        }, { status: 200 }); // 200 to prevent webhook retries
+            message: 'Email received but could not be routed - No Workspaces available',
+        }, { status: 200 }); // 200 to prevent retries
 
     } catch (error) {
         console.error('[Zoho Webhook] Error processing email:', error);
