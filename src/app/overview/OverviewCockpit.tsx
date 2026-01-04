@@ -2,9 +2,8 @@
 
 import { useState } from 'react';
 import {
-    Plus, Gavel, FileText, DollarSign,
-    Briefcase, Users, LayoutDashboard,
-    ChevronRight, CreditCard, X, Search
+    Briefcase, Gavel, FileText, DollarSign,
+    ChevronRight, X, Search
 } from 'lucide-react';
 import BriefUploadModal from '@/components/briefs/BriefUploadModal';
 import AddMatterModal from '@/components/calendar/AddMatterModal';
@@ -27,8 +26,6 @@ interface OverviewCockpitProps {
 export default function OverviewCockpit({ workspaceId, userId, userName, clients }: OverviewCockpitProps) {
     const [activeModal, setActiveModal] = useState<'brief' | 'matter' | 'invoice' | 'payment' | null>(null);
     const [showClientPicker, setShowClientPicker] = useState<'invoice' | 'payment' | null>(null);
-
-    // For Invoice/Payment, we first need to pick a client
     const [targetClientId, setTargetClientId] = useState<string>('');
     const [targetClientName, setTargetClientName] = useState<string>('');
     const [searchTerm, setSearchTerm] = useState('');
@@ -41,9 +38,7 @@ export default function OverviewCockpit({ workspaceId, userId, userName, clients
     const handleClientSelect = (client: Client) => {
         setTargetClientId(client.id);
         setTargetClientName(client.name);
-
-        // Switch from picker to actual modal
-        const nextModal = showClientPicker; // 'invoice' or 'payment'
+        const nextModal = showClientPicker;
         setShowClientPicker(null);
         setActiveModal(nextModal);
     };
@@ -54,63 +49,62 @@ export default function OverviewCockpit({ workspaceId, userId, userName, clients
     );
 
     return (
-        <div className="w-full mb-12">
-            {/* Quick Action Bar */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="w-full mb-8">
+            {/* Primary Action Buttons (2-Grid) */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                 <button
                     onClick={() => setActiveModal('brief')}
-                    className="relative overflow-hidden flex flex-col items-center justify-center p-8 rounded-3xl border border-white/40 dark:border-white/5 shadow-2xl hover:shadow-[0_20px_50px_-12px_rgba(59,130,246,0.1)] hover:-translate-y-1.5 transition-all duration-300 group bg-white/40 dark:bg-gradient-to-b dark:from-slate-800/40 dark:to-slate-900/40 backdrop-blur-2xl"
+                    className="bg-gradient-to-br from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white p-6 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-200 flex flex-col items-center gap-3 group backdrop-blur-sm"
                 >
-                    <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-
-                    <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-600 shadow-lg shadow-blue-500/20 flex items-center justify-center mb-5 group-hover:scale-110 transition-transform duration-300 relative z-10">
-                        <Briefcase className="h-8 w-8 text-white" />
+                    <Briefcase className="w-8 h-8 group-hover:scale-110 transition-transform duration-200" />
+                    <div className="text-center">
+                        <div className="font-semibold text-lg">New Brief</div>
+                        <div className="text-blue-100 text-sm">Research & Writing</div>
                     </div>
-                    <span className="font-bold text-slate-800 dark:text-white text-xl relative z-10">New Brief</span>
-                    <span className="text-sm font-medium text-slate-500 dark:text-slate-400 mt-2 relative z-10">Research & Writing</span>
                 </button>
 
                 <button
                     onClick={() => setActiveModal('matter')}
-                    className="relative overflow-hidden flex flex-col items-center justify-center p-8 rounded-3xl border border-white/40 dark:border-white/5 shadow-2xl hover:shadow-[0_20px_50px_-12px_rgba(168,85,247,0.1)] hover:-translate-y-1.5 transition-all duration-300 group bg-white/40 dark:bg-gradient-to-b dark:from-slate-800/40 dark:to-slate-900/40 backdrop-blur-2xl"
+                    className="bg-gradient-to-br from-violet-600 to-violet-700 hover:from-violet-700 hover:to-violet-800 text-white p-6 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-200 flex flex-col items-center gap-3 group backdrop-blur-sm"
                 >
-                    <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-
-                    <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-purple-500 to-purple-600 shadow-lg shadow-purple-500/20 flex items-center justify-center mb-5 group-hover:scale-110 transition-transform duration-300 relative z-10">
-                        <Gavel className="h-8 w-8 text-white" />
+                    <Gavel className="w-8 h-8 group-hover:scale-110 transition-transform duration-200" />
+                    <div className="text-center">
+                        <div className="font-semibold text-lg">Add Matter</div>
+                        <div className="text-violet-100 text-sm">Litigation Tracker</div>
                     </div>
-                    <span className="font-bold text-slate-800 dark:text-white text-xl relative z-10">Add Matter</span>
-                    <span className="text-sm font-medium text-slate-500 dark:text-slate-400 mt-2 relative z-10">Litigation Tracker</span>
                 </button>
+            </div>
 
+            {/* Secondary Actions (2-Grid) */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
                 <button
                     onClick={() => handleActionClick('invoice')}
-                    className="relative overflow-hidden flex flex-col items-center justify-center p-8 rounded-3xl border border-white/40 dark:border-white/5 shadow-2xl hover:shadow-[0_20px_50px_-12px_rgba(16,185,129,0.1)] hover:-translate-y-1.5 transition-all duration-300 group bg-white/40 dark:bg-gradient-to-b dark:from-slate-800/40 dark:to-slate-900/40 backdrop-blur-2xl"
+                    className="bg-white/60 dark:bg-slate-800/40 backdrop-blur-xl hover:bg-white/80 dark:hover:bg-slate-800/60 border border-slate-200/50 dark:border-white/5 p-4 rounded-xl transition-all duration-200 flex items-center gap-3 shadow-sm hover:shadow-md group"
                 >
-                    <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-
-                    <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-emerald-500 to-emerald-600 shadow-lg shadow-emerald-500/20 flex items-center justify-center mb-5 group-hover:scale-110 transition-transform duration-300 relative z-10">
-                        <FileText className="h-8 w-8 text-white" />
+                    <div className="p-2 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg group-hover:bg-emerald-200 dark:group-hover:bg-emerald-900/50 transition-colors">
+                        <FileText className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
                     </div>
-                    <span className="font-bold text-slate-800 dark:text-white text-xl relative z-10">Create Invoice</span>
-                    <span className="text-sm font-medium text-slate-500 dark:text-slate-400 mt-2 relative z-10">Billing & Finance</span>
+                    <div className="text-left">
+                        <div className="font-medium text-slate-900 dark:text-white">Create Invoice</div>
+                        <div className="text-slate-500 dark:text-slate-400 text-sm">Billing & Finance</div>
+                    </div>
                 </button>
 
                 <button
                     onClick={() => handleActionClick('payment')}
-                    className="relative overflow-hidden flex flex-col items-center justify-center p-8 rounded-3xl border border-white/40 dark:border-white/5 shadow-2xl hover:shadow-[0_20px_50px_-12px_rgba(245,158,11,0.1)] hover:-translate-y-1.5 transition-all duration-300 group bg-white/40 dark:bg-gradient-to-b dark:from-slate-800/40 dark:to-slate-900/40 backdrop-blur-2xl"
+                    className="bg-white/60 dark:bg-slate-800/40 backdrop-blur-xl hover:bg-white/80 dark:hover:bg-slate-800/60 border border-slate-200/50 dark:border-white/5 p-4 rounded-xl transition-all duration-200 flex items-center gap-3 shadow-sm hover:shadow-md group"
                 >
-                    <div className="absolute inset-0 bg-gradient-to-br from-amber-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-
-                    <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-amber-500 to-amber-600 shadow-lg shadow-amber-500/20 flex items-center justify-center mb-5 group-hover:scale-110 transition-transform duration-300 relative z-10">
-                        <DollarSign className="h-8 w-8 text-white" />
+                    <div className="p-2 bg-amber-100 dark:bg-amber-900/30 rounded-lg group-hover:bg-amber-200 dark:group-hover:bg-amber-900/50 transition-colors">
+                        <DollarSign className="w-6 h-6 text-amber-600 dark:text-amber-400" />
                     </div>
-                    <span className="font-bold text-slate-800 dark:text-white text-xl relative z-10">Record Payment</span>
-                    <span className="text-sm font-medium text-slate-500 dark:text-slate-400 mt-2 relative z-10">Receipts & Tracking</span>
+                    <div className="text-left">
+                        <div className="font-medium text-slate-900 dark:text-white">Record Payment</div>
+                        <div className="text-slate-500 dark:text-slate-400 text-sm">Receipts & Tracking</div>
+                    </div>
                 </button>
             </div>
 
-            {/* Client Picker Modal */}
+            {/* Client Picker Modal (Previous Logic Retained) */}
             {showClientPicker && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
                     <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-white/10 w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200 ring-1 ring-black/5">
@@ -120,7 +114,6 @@ export default function OverviewCockpit({ workspaceId, userId, userName, clients
                                 <X size={20} />
                             </button>
                         </div>
-
                         <div className="p-5">
                             <div className="relative mb-4 group">
                                 <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
@@ -133,11 +126,10 @@ export default function OverviewCockpit({ workspaceId, userId, userName, clients
                                     autoFocus
                                 />
                             </div>
-
                             <div className="max-h-64 overflow-y-auto space-y-1 custom-scrollbar pr-1">
                                 {filteredClients.length === 0 ? (
                                     <div className="text-center py-8">
-                                        <p className="text-sm text-gray-500">No clients found matching "{searchTerm}"</p>
+                                        <p className="text-sm text-gray-500">No matching clients</p>
                                     </div>
                                 ) : (
                                     filteredClients.map(client => (
@@ -164,14 +156,13 @@ export default function OverviewCockpit({ workspaceId, userId, userName, clients
                 </div>
             )}
 
-            {/* App Modals */}
+            {/* Application Modals */}
             <BriefUploadModal
                 isOpen={activeModal === 'brief'}
                 onClose={() => setActiveModal(null)}
                 onSuccess={() => setActiveModal(null)}
                 workspaceId={workspaceId}
             />
-
             <AddMatterModal
                 isOpen={activeModal === 'matter'}
                 onClose={() => setActiveModal(null)}
@@ -179,7 +170,6 @@ export default function OverviewCockpit({ workspaceId, userId, userName, clients
                 userId={userId}
                 onSuccess={() => { }}
             />
-
             {targetClientId && (
                 <>
                     <InvoiceModal
@@ -189,7 +179,6 @@ export default function OverviewCockpit({ workspaceId, userId, userName, clients
                         clientId={targetClientId}
                         workspaceId={workspaceId}
                     />
-
                     <PaymentModal
                         isOpen={activeModal === 'payment'}
                         onClose={() => setActiveModal(null)}

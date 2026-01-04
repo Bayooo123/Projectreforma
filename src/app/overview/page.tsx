@@ -3,11 +3,8 @@ import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { prisma } from "@/lib/prisma";
 import StatsGrid, { StatsGridSkeleton } from "./StatsGrid";
-// FirmPulse is in components/dashboard, but check if local proxy exists. 
-// Assuming standard import based on component location.
-import { FirmPulse } from "@/components/dashboard/FirmPulse";
 import OverviewCockpit from "./OverviewCockpit";
-import TodaysActivityPanel from "./TodaysActivityPanel";
+import ActivityFeed from "./ActivityFeed";
 
 import {
     getOperationalMetrics,
@@ -57,20 +54,32 @@ export default async function OverviewPage() {
         getClientsForWorkspace(workspaceId)
     ]);
 
-    return (
-        <main className="min-h-screen pb-20">
-            <div className="max-w-7xl mx-auto px-8 py-12 space-y-12">
-                {/* Header */}
-                <header>
-                    <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">
-                        {getGreeting()}, {firstName}
-                    </h1>
-                    <p className="text-sm font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide">
-                        {dateStr} &bull; Firm Pulse
-                    </p>
-                </header>
+    // Calculate activity summary for header
+    const activityCount = todaysActivity.length;
+    const activityText = activityCount === 1 ? "1 action item" : `${activityCount} action items`;
 
-                {/* 1. Quick Action Cockpit */}
+    return (
+        <main className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-900 dark:to-slate-800 pb-20">
+            <div className="max-w-7xl mx-auto px-6 py-10">
+                {/* Header */}
+                <div className="mb-8">
+                    <div className="flex items-center justify-between mb-2">
+                        <div>
+                            <h1 className="text-3xl font-bold text-slate-900 dark:text-white">
+                                {getGreeting()}, {firstName}
+                            </h1>
+                            <p className="text-slate-500 dark:text-slate-400 mt-1 uppercase tracking-wider text-xs font-semibold">
+                                {dateStr} &bull; FIRM PULSE
+                            </p>
+                        </div>
+                        <div className="text-right hidden sm:block">
+                            <div className="text-sm text-slate-600 dark:text-slate-400">Today&apos;s Agenda</div>
+                            <div className="text-lg font-semibold text-slate-900 dark:text-white">{activityText}</div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Quick Action Cockpit (Primary + Secondary) */}
                 <OverviewCockpit
                     workspaceId={workspaceId}
                     userId={session.user.id}
@@ -78,30 +87,13 @@ export default async function OverviewPage() {
                     clients={clients}
                 />
 
-                {/* 2. Operational Metrics (Read-only) */}
+                {/* Operational Metrics Grid */}
                 <Suspense fallback={<StatsGridSkeleton />}>
                     <StatsGrid metrics={metrics} />
                 </Suspense>
 
-                {/* 3. Operational Grid: Today's Activity + Audit Feed */}
-                <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
-                    {/* Left/Center: Today's Critical Activity (2/3 width on large screens) */}
-                    <div className="xl:col-span-2">
-                        <section>
-                            <h2 className="text-lg font-semibold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
-                                Today&apos;s Agenda
-                            </h2>
-                            <TodaysActivityPanel activities={todaysActivity} />
-                        </section>
-
-                        {/* Space for future widgets or "Matters on Watchlist" */}
-                    </div>
-
-                    {/* Right: Firm Pulse / System Feed (1/3 width) */}
-                    <div className="xl:col-span-1 h-full min-h-[500px]">
-                        <FirmPulse logs={firmPulseLogs} />
-                    </div>
-                </div>
+                {/* Activity Feed (Tabbed) */}
+                <ActivityFeed logs={firmPulseLogs} />
             </div>
         </main>
     );
