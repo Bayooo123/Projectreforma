@@ -5,11 +5,9 @@ import { prisma } from "@/lib/prisma";
 
 export async function getMyBriefs(limit: number = 5) {
     const session = await auth();
-    if (!session?.user?.id) {
-        return [];
-    }
+    if (!session?.user?.id) return [];
 
-    const briefs = await prisma.brief.findMany({
+    return await prisma.brief.findMany({
         where: {
             lawyerId: session.user.id,
             status: 'active'
@@ -23,25 +21,21 @@ export async function getMyBriefs(limit: number = 5) {
             client: { select: { name: true } },
             dueDate: true,
             status: true,
-            updatedAt: true // Added for "Last updated" calculation
+            updatedAt: true
         }
     });
-
-    return briefs;
 }
 
 export async function getPendingTasks(limit: number = 5) {
     const session = await auth();
-    if (!session?.user?.id) {
-        return [];
-    }
+    if (!session?.user?.id) return [];
 
-    const tasks = await prisma.task.findMany({
+    return await prisma.task.findMany({
         where: {
             assignedToId: session.user.id,
             status: { not: 'completed' }
         },
-        orderBy: { dueDate: 'asc' }, // Urgent first
+        orderBy: { dueDate: 'asc' },
         take: limit,
         select: {
             id: true,
@@ -51,15 +45,11 @@ export async function getPendingTasks(limit: number = 5) {
             priority: true
         }
     });
-
-    return tasks;
 }
 
 export async function getCourtDates(days: number = 7) {
     const session = await auth();
-    if (!session?.user?.id) {
-        return [];
-    }
+    if (!session?.user?.id) return [];
 
     const today = new Date();
     const futureDate = new Date();
@@ -90,21 +80,131 @@ export async function getCourtDates(days: number = 7) {
         caseName: m.name,
         courtLocation: m.court,
         judge: m.judge,
-        // Mocking 'time' and 'hearingType' as they aren't in schema yet, referencing "Mention" or "Hearing" could be added if schema allowed
         hearingType: "Mention",
         time: m.nextCourtDate ? m.nextCourtDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : "09:00 AM"
     }));
 }
 
-export async function getFirmPulse(limit: number = 10) {
-    const session = await auth();
-    if (!session?.user?.id) return [];
+export async function getOperationalMetrics(workspaceId: string) {
+    if (!workspaceId) return { activeMatters: 0, hearingWeek: 0, invoicesOutstanding: 0, invoicesIssued: 0 };
+
+    const today = new Date();
+    const nextWeek = new Date();
+    nextWeek.setDate(today.getDate() + 14); // 2 weeks lookahead
+
+    const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+    const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+
+    // Run parallel queries
+    const [activeMatters, hearingWeek, invoicesOutstanding, invoicesIssued] = await Promise.all([
+        prisma.matter.count({ where: { workspaceId, status: { not: 'Closed' } } }),
+        prisma.matter.count({
+            where: {
+                workspaceId,
+                nextCourtDate: {
+                    gte: today,
+                    lte: nextWeek
+                }
+            }
+        }),
+        prisma.invoice.count({ where: { workspaceId, status: { notIn: ['PAID', 'VOID', 'DRAFT'] } } }), // SENT, OVERDUE, PARTIAL
+        prisma.invoice.count({
+            where: {
+                workspaceId,
+                createdAt: {
+                    gte: startOfMonth,
+                    lte: endOfMonth
+                }
+            }
+        })
+    ]);
+
+    return {
+        activeMatters,
+        hearingWeek,
+        invoicesOutstanding,
+        invoicesIssued
+    };
+}
+
+export async function getTodaysActivity(workspaceId: string) {
+    if (!workspaceId) return [];
+
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
+
+    const endOfDay = new Date();
+    endOfDay.setHours(23, 59, 59, 999);
+
+    // 1. Court Appearances Today
+    const courtMatters = await prisma.matter.findMany({
+        where: {
+            workspaceId,
+            nextCourtDate: {
+                gte: startOfDay,
+                lte: endOfDay
+            }
+        },
+        select: {
+            id: true,
+            name: true,
+            caseNumber: true,
+            court: true,
+            judge: true,
+            assignedLawyer: { select: { name: true } },
+            proceduralStatus: true
+        }
+    });
+
+    // 2. Deadlines / Briefs Due Today
+    const dueBriefs = await prisma.brief.findMany({
+        where: {
+            workspaceId,
+            dueDate: {
+                gte: startOfDay,
+                lte: endOfDay
+            },
+            status: 'active'
+        },
+        select: {
+            id: true,
+            name: true,
+            briefNumber: true,
+            assignedLawyer: { select: { name: true } }
+        }
+    });
+
+    // Combine
+    const activities = [
+        ...courtMatters.map(m => ({
+            id: m.id,
+            type: 'court_appearance',
+            title: `Appearing in ${m.court || 'Court'}`,
+            subtitle: `${m.name} (${m.caseNumber})`,
+            status: m.proceduralStatus || 'Scheduled',
+            assignee: m.assignedLawyer?.name || 'Unassigned',
+            time: '09:00 AM'
+        })),
+        ...dueBriefs.map(b => ({
+            id: b.id,
+            type: 'deadline',
+            title: `Deadline: ${b.name}`,
+            subtitle: `Brief ${b.briefNumber}`,
+            status: 'Due Today',
+            assignee: b.assignedLawyer?.name || 'Unassigned',
+            time: '5:00 PM'
+        }))
+    ];
+
+    return activities;
+}
+
+export async function getFirmPulse(limit: number = 20, workspaceId?: string) {
+    if (!workspaceId) return [];
 
     // Fetch activities from Matters, Briefs, and Invitations
-    // Note: In a real high-scale app, we'd have a unified Activity/Audit table. 
-    // Here we query multiple sources and merge.
-
     const matterLogs = await prisma.matterActivityLog.findMany({
+        where: { matter: { workspaceId } },
         take: limit,
         orderBy: { timestamp: 'desc' },
         include: {
@@ -114,6 +214,7 @@ export async function getFirmPulse(limit: number = 10) {
     });
 
     const briefLogs = await prisma.briefActivityLog.findMany({
+        where: { brief: { workspaceId } },
         take: limit,
         orderBy: { timestamp: 'desc' },
         include: {
@@ -122,110 +223,75 @@ export async function getFirmPulse(limit: number = 10) {
         }
     });
 
-    // Fetch recent invitations sent
-    const invitations = await prisma.invitation.findMany({
+    // Fetch recent invoices
+    const invoiceLogs = await prisma.invoice.findMany({
+        where: { workspaceId },
         take: limit,
         orderBy: { createdAt: 'desc' },
         include: {
-            inviter: { select: { name: true } },
-            workspace: { select: { name: true } }
+            client: { select: { name: true } }
         }
     });
 
-    // Fetch recent tasks (especially from email)
-    const taskLogs = await prisma.task.findMany({
+    // Fetch recent payments
+    const paymentLogs = await prisma.payment.findMany({
+        where: { invoice: { workspaceId } },
         take: limit,
-        orderBy: { createdAt: 'desc' },
+        orderBy: { date: 'desc' },
         include: {
-            assignedBy: { select: { name: true } }, // The "creator" (sender for emails)
-            assignedTo: { select: { name: true } }
-        }
-    });
-
-    // Merge and sort all activities
-    const allActivities = [
-        ...matterLogs.map(log => ({
-            id: log.id,
-            caseName: log.matter.name,
-            person: log.user.name || 'Unknown',
-            action: log.description,
-            type: log.activityType,
-            timestamp: log.timestamp,
-            source: 'Matter'
-        })),
-        ...briefLogs.map(log => ({
-            id: log.id,
-            caseName: log.brief.name,
-            person: log.user?.name || 'System',
-            action: log.description,
-            type: log.activityType,
-            timestamp: log.timestamp,
-            source: 'Brief'
-        })),
-        ...invitations.map(inv => ({
-            id: inv.id,
-            caseName: inv.workspace.name,
-            person: inv.inviter.name || 'Unknown',
-            action: `invited ${inv.email} as ${inv.role}`,
-            type: 'invitation_sent',
-            timestamp: inv.createdAt,
-            source: 'Workspace'
-        })),
-        ...taskLogs.map(task => ({
-            id: task.id,
-            caseName: 'Task Manager',
-            person: task.source === 'email' ? (task.sourceEmail || 'Email') : (task.assignedTo?.name || 'System'),
-            action: task.title, // "📧 Email: Subject"
-            type: task.source === 'email' ? 'email_received' : 'task_created',
-            timestamp: task.createdAt,
-            source: 'Task'
-        }))
-    ].sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime()).slice(0, limit);
-
-    return allActivities;
-}
-
-export async function getDashboardStats() {
-    const session = await auth();
-    if (!session?.user?.id) {
-        return {
-            pendingTasks: 0,
-            courtDates: 0,
-            activeBriefs: 0
-        };
-    }
-
-    const today = new Date();
-    const futureDate = new Date();
-    futureDate.setDate(today.getDate() + 7);
-
-    const [pendingTasks, courtDates, activeBriefs] = await Promise.all([
-        prisma.task.count({
-            where: {
-                assignedToId: session.user.id,
-                status: { not: 'completed' }
-            }
-        }),
-        prisma.matter.count({
-            where: {
-                assignedLawyerId: session.user.id,
-                nextCourtDate: {
-                    gte: today,
-                    lte: futureDate
+            invoice: {
+                include: {
+                    client: { select: { name: true } }
                 }
             }
-        }),
-        prisma.brief.count({
-            where: {
-                lawyerId: session.user.id,
-                status: 'active'
-            }
-        })
-    ]);
+        }
+    });
 
-    return {
-        pendingTasks,
-        courtDates,
-        activeBriefs
-    };
+    const allActivities: any[] = [
+        ...matterLogs.map(l => ({
+            id: l.id,
+            type: 'matter',
+            description: l.description,
+            activityType: l.activityType, // Pass raw type for icon mapping
+            timestamp: l.timestamp,
+            performedBy: l.user?.name || 'System',
+            entityName: l.matter.name
+        })),
+        ...briefLogs.map(l => ({
+            id: l.id,
+            type: 'brief',
+            description: l.description,
+            activityType: l.activityType,
+            timestamp: l.timestamp,
+            performedBy: l.user?.name || 'System',
+            entityName: l.brief.name
+        })),
+        ...invoiceLogs.map(i => ({
+            id: i.id,
+            type: 'invoice',
+            description: `Generated invoice #${i.invoiceNumber}`,
+            activityType: 'document_created', // Map to something generic icon
+            timestamp: i.createdAt,
+            performedBy: 'Billing System',
+            entityName: i.client.name
+        })),
+        ...paymentLogs.map(p => ({
+            id: p.id,
+            type: 'payment',
+            description: `Recorded payment of ₦${(p.amount / 100).toLocaleString()}`,
+            activityType: 'document_created', // Re-use doc/payment icon
+            timestamp: p.date,
+            performedBy: 'Billing System',
+            entityName: p.invoice?.client.name || 'Unknown'
+        }))
+    ];
+
+    return allActivities
+        .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+        .slice(0, limit);
+}
+
+// Deprecated stub to satisfy any lingering imports
+export async function getDashboardStats() {
+    return { pendingTasks: 0, courtDates: 0, activeBriefs: 0 };
 }
