@@ -107,10 +107,16 @@ export async function getOperationalMetrics(workspaceId: string) {
                 }
             }
         }),
-        prisma.invoice.count({ where: { workspaceId, status: { notIn: ['PAID', 'VOID', 'DRAFT'] } } }), // SENT, OVERDUE, PARTIAL
+        // FIX: Invoice doesn't have workspaceId, verified via Client
         prisma.invoice.count({
             where: {
-                workspaceId,
+                client: { workspaceId },
+                status: { notIn: ['PAID', 'VOID', 'DRAFT'] }
+            }
+        }),
+        prisma.invoice.count({
+            where: {
+                client: { workspaceId },
                 createdAt: {
                     gte: startOfMonth,
                     lte: endOfMonth
@@ -223,9 +229,9 @@ export async function getFirmPulse(limit: number = 20, workspaceId?: string) {
         }
     });
 
-    // Fetch recent invoices
+    // Fetch recent invoices - FIX: Filter by client.workspaceId
     const invoiceLogs = await prisma.invoice.findMany({
-        where: { workspaceId },
+        where: { client: { workspaceId } },
         take: limit,
         orderBy: { createdAt: 'desc' },
         include: {
@@ -233,9 +239,9 @@ export async function getFirmPulse(limit: number = 20, workspaceId?: string) {
         }
     });
 
-    // Fetch recent payments
+    // Fetch recent payments - FIX: Filter by client.workspaceId
     const paymentLogs = await prisma.payment.findMany({
-        where: { invoice: { workspaceId } },
+        where: { client: { workspaceId } },
         take: limit,
         orderBy: { date: 'desc' },
         include: {
@@ -243,7 +249,8 @@ export async function getFirmPulse(limit: number = 20, workspaceId?: string) {
                 include: {
                     client: { select: { name: true } }
                 }
-            }
+            },
+            client: { select: { name: true } }
         }
     });
 
@@ -282,7 +289,7 @@ export async function getFirmPulse(limit: number = 20, workspaceId?: string) {
             activityType: 'document_created', // Re-use doc/payment icon
             timestamp: p.date,
             performedBy: 'Billing System',
-            entityName: p.invoice?.client.name || 'Unknown'
+            entityName: p.client.name // Payment has clientId
         }))
     ];
 
