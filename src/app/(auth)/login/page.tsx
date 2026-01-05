@@ -1,13 +1,24 @@
 'use client';
 
-import { useActionState } from 'react';
+import { useActionState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { authenticate } from '@/app/lib/actions';
 import { Loader2, Scale, Shield, Users } from 'lucide-react';
 import Link from 'next/link';
 import styles from '../auth.module.css';
 
 export default function LoginPage() {
-    const [errorMessage, dispatch, isPending] = useActionState(authenticate, undefined);
+    const [state, dispatch, isPending] = useActionState(authenticate, undefined);
+    const router = useRouter();
+
+    useEffect(() => {
+        if (state?.success) {
+            // Force a hard refresh of the session data before navigating
+            router.refresh();
+            // Immediate transition to workspace
+            router.push('/briefs');
+        }
+    }, [state?.success, router]);
 
     return (
         <div className={styles.authContainer}>
@@ -28,14 +39,18 @@ export default function LoginPage() {
 
                     <div className={styles.features}>
                         <div className={styles.feature}>
-                            <Shield className={styles.featureIcon} />
+                            <div className={styles.featureIconWrapper}>
+                                <Shield className={styles.featureIcon} />
+                            </div>
                             <div className={styles.featureContent}>
                                 <h3>Secure & Compliant</h3>
                                 <p>Built in line with Nigerian and global data protection provisions.</p>
                             </div>
                         </div>
                         <div className={styles.feature}>
-                            <Users className={styles.featureIcon} />
+                            <div className={styles.featureIconWrapper}>
+                                <Users className={styles.featureIcon} />
+                            </div>
                             <div className={styles.featureContent}>
                                 <h3>Team Collaboration</h3>
                                 <p>Work seamlessly with your entire firm</p>
@@ -122,9 +137,9 @@ export default function LoginPage() {
                             />
                         </div>
 
-                        {errorMessage && (
+                        {state?.message && (
                             <div className={styles.error}>
-                                {errorMessage}
+                                {state.message}
                             </div>
                         )}
 
@@ -137,13 +152,13 @@ export default function LoginPage() {
 
                         <button
                             type="submit"
-                            disabled={isPending}
+                            disabled={isPending || state?.success}
                             className={styles.submitButton}
                         >
-                            {isPending ? (
+                            {isPending || state?.success ? (
                                 <>
                                     <Loader2 className={styles.spinner} size={20} />
-                                    Signing in...
+                                    {state?.success ? 'Redirecting...' : 'Signing in...'}
                                 </>
                             ) : (
                                 'Sign in'

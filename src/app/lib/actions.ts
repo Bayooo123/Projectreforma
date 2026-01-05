@@ -7,36 +7,49 @@ import bcrypt from 'bcryptjs';
 import { nanoid } from 'nanoid';
 import { redirect } from 'next/navigation';
 
+// Define AuthState type
+export type AuthState = {
+    message?: string;
+    success?: boolean;
+};
+
 export async function authenticate(
-    prevState: string | undefined,
+    prevState: AuthState | undefined,
     formData: FormData,
-) {
+): Promise<AuthState | undefined> {
     try {
-        await signIn('credentials', formData);
+        await signIn('credentials', {
+            ...Object.fromEntries(formData),
+            redirect: false, // Disable server-side redirect
+        });
+
+        // If signIn doesn't throw, it means success (with redirect: false)
+        return { success: true };
+
     } catch (error) {
         if ((error as Error).message.includes('Pending Approval')) {
-            return 'Your account is pending firm approval. Please contact your administrator.';
+            return { message: 'Your account is pending firm approval. Please contact your administrator.' };
         }
         if (error instanceof AuthError) {
             // Check for our custom errors wrapped in AuthError
             if (error.cause?.err?.message) {
-                return error.cause.err.message;
+                return { message: error.cause.err.message };
             }
             // Or check the message directly if it propagates
-            if (error.message.includes('Invalid Firm Code')) return 'Invalid Firm Code.';
-            if (error.message.includes('Invalid Firm Password')) return 'Invalid Firm Password.';
-            if (error.message.includes('not a member')) return 'You are not a member of this firm.';
+            if (error.message.includes('Invalid Firm Code')) return { message: 'Invalid Firm Code.' };
+            if (error.message.includes('Invalid Firm Password')) return { message: 'Invalid Firm Password.' };
+            if (error.message.includes('not a member')) return { message: 'You are not a member of this firm.' };
 
             switch (error.type) {
                 case 'CredentialsSignin':
-                    return 'Invalid email or password.';
+                    return { message: 'Invalid email or password.' };
                 case 'CallbackRouteError':
                     // Often where the thrown Error ends up
-                    if (error.message.includes('Invalid Firm Code')) return 'Invalid Firm Code.';
-                    if (error.message.includes('Invalid Firm Password')) return 'Invalid Firm Password.';
-                    return 'Authentication failed.';
+                    if (error.message.includes('Invalid Firm Code')) return { message: 'Invalid Firm Code.' };
+                    if (error.message.includes('Invalid Firm Password')) return { message: 'Invalid Firm Password.' };
+                    return { message: 'Authentication failed.' };
                 default:
-                    return 'Something went wrong.';
+                    return { message: 'Something went wrong.' };
             }
         }
         throw error;
