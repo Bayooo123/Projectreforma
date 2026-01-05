@@ -287,7 +287,7 @@ export async function registerMember(
             email,
             password,
             inviteToken,
-            redirectTo: '/management' // Go to dashboard
+            redirectTo: '/briefs' // Go to brief manager
         });
 
     } catch (error) {

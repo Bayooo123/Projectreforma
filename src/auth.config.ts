@@ -21,7 +21,7 @@ export const authConfig = {
             } else if (isLoggedIn) {
                 // Redirect logged-in users away from login/register pages to dashboard
                 if (['/', '/login', '/register', '/join', '/forgot-password'].includes(nextUrl.pathname)) {
-                    return Response.redirect(new URL('/overview', nextUrl));
+                    return Response.redirect(new URL('/briefs', nextUrl));
                 }
             }
             return true;
