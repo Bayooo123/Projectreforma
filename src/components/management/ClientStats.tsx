@@ -54,6 +54,12 @@ const ClientStats = ({ workspaceId }: ClientStatsProps) => {
         fetchStats();
     }, [workspaceId]);
 
+    const handleCardClick = (filter?: string) => {
+        const params = new URLSearchParams();
+        if (filter) params.set('filter', filter);
+        router.push(`/management/clients?${params.toString()}`);
+    };
+
     const handlePinChange = (index: number, value: string) => {
         if (value.length > 1) return; // Prevent multiple chars
         const newPin = [...pin];

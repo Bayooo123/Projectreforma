@@ -57,6 +57,25 @@ const ClientList = ({ workspaceId, letterheadUrl }: ClientListProps) => {
     const filterParam = searchParams.get('filter') || undefined;
 
     // Data State
+    const [clients, setClients] = useState<Client[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+
+    // Pagination & Filter State
+    const [page, setPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
+    const limit = 10;
+
+    const [searchQuery, setSearchQuery] = useState('');
+    const [statusFilter, setStatusFilter] = useState('all');
+
+    // Debounce search to prevent server hammer
+    const debouncedSearch = useDebounceValue(searchQuery, 400);
+
+    // Modal State
+    const [selectedClient, setSelectedClient] = useState<{ name: string; id: string } | null>(null);
+    const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
+    const [isInvoiceModalOpen, setIsInvoiceModalOpen] = useState(false);
+    const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
 
     const fetchClients = useCallback(async () => {
         setIsLoading(true);
