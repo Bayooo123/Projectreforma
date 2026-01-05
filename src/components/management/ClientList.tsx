@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { Search, Filter, MoreVertical, FileText, DollarSign, ChevronLeft, ChevronRight } from 'lucide-react';
 import { getClients } from '@/app/actions/clients';
 import InvoiceModal from './InvoiceModal';
@@ -51,14 +52,11 @@ interface ClientListProps {
     letterheadUrl?: string | null;
 }
 
-import { useSearchParams } from 'next/navigation';
-// ... imports
-
 const ClientList = ({ workspaceId, letterheadUrl }: ClientListProps) => {
     const searchParams = useSearchParams();
     const filterParam = searchParams.get('filter') || undefined;
 
-    // ... existing state
+    // Data State
 
     const fetchClients = useCallback(async () => {
         setIsLoading(true);
@@ -68,7 +66,7 @@ const ClientList = ({ workspaceId, letterheadUrl }: ClientListProps) => {
                 limit,
                 query: debouncedSearch,
                 status: statusFilter !== 'all' ? statusFilter : undefined,
-                filter: filterParam // Pass the active interaction filter
+                filter: filterParam
             });
 
             if (result.success && result.data) {
@@ -82,7 +80,7 @@ const ClientList = ({ workspaceId, letterheadUrl }: ClientListProps) => {
         } finally {
             setIsLoading(false);
         }
-    }, [workspaceId, page, limit, debouncedSearch, statusFilter, filterParam]); // Added filterParam dependency
+    }, [workspaceId, page, limit, debouncedSearch, statusFilter, filterParam]);
 
     // Fetch when dependencies change
     useEffect(() => {

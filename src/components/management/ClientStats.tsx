@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Users, Briefcase, DollarSign, Loader } from 'lucide-react';
 import { getClientStats } from '@/app/actions/clients';
 import styles from './ClientStats.module.css';
@@ -112,159 +113,137 @@ const ClientStats = ({ workspaceId }: ClientStatsProps) => {
         );
     }
 
-    import { useRouter } from 'next/navigation';
-    // ... (existing imports)
-
-    const ClientStats = ({ workspaceId }: ClientStatsProps) => {
-        const router = useRouter();  // Initialize Router
-        // ... (existing state)
-
-        // ... (existing useEffect)
-
-        // Navigation Handler
-        const handleCardClick = (filter?: string) => {
-            const params = new URLSearchParams();
-            if (filter) params.set('filter', filter);
-            router.push(`/management/clients?${params.toString()}`);
-        };
-
-        // ... (existing helper functions)
-
-        if (isLoading) {
-            // ... (loading state)
-        }
-
-        return (
-            <div className={styles.container}>
-                {/* Total Clients -> Reset Filter */}
-                <div
-                    className={`${styles.statCard} cursor-pointer hover:shadow-md transition-all`}
-                    onClick={() => handleCardClick()}
-                >
-                    <div className={styles.iconWrapper} style={{ backgroundColor: '#DBEAFE', color: '#2563EB' }}>
-                        <Users size={20} />
-                    </div>
-                    <div className={styles.content}>
-                        <p className={styles.label}>Total Clients</p>
-                        <p className={styles.value}>{stats.totalClients}</p>
-                    </div>
+    return (
+        <div className={styles.container}>
+            {/* Total Clients -> Reset Filter */}
+            <div
+                className={`${styles.statCard} cursor-pointer hover:shadow-md transition-all`}
+                onClick={() => handleCardClick()}
+            >
+                <div className={styles.iconWrapper} style={{ backgroundColor: '#DBEAFE', color: '#2563EB' }}>
+                    <Users size={20} />
                 </div>
-
-                {/* Active Matters -> Filter active_matters */}
-                <div
-                    className={`${styles.statCard} cursor-pointer hover:shadow-md transition-all`}
-                    onClick={() => handleCardClick('active_matters')}
-                >
-                    <div className={styles.iconWrapper} style={{ backgroundColor: '#FEF3C7', color: '#D97706' }}>
-                        <Briefcase size={20} />
-                    </div>
-                    <div className={styles.content}>
-                        <p className={styles.label}>Active Matters</p>
-                        <p className={styles.value}>{stats.activeMatters}</p>
-                    </div>
-                </div>
-
-                {/* Total Revenue -> Filter revenue */}
-                <div
-                    className={`${styles.statCard} cursor-pointer hover:shadow-md transition-all`}
-                    style={{ position: 'relative' }}
-                    onClick={(e) => {
-                        // Prevent navigation if clicking unlock button
-                        if ((e.target as HTMLElement).closest('button')) return;
-                        if (!isLocked) handleCardClick('revenue');
-                    }}
-                >
-                    <div className={styles.iconWrapper} style={{ backgroundColor: '#D1FAE5', color: '#059669' }}>
-                        <DollarSign size={20} />
-                    </div>
-                    <div className={styles.content}>
-                        <p className={styles.label}>Total Revenue</p>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                            {isLocked ? (
-                                <button
-                                    onClick={() => setShowPinModal(true)}
-                                    style={{
-                                        border: 'none',
-                                        background: 'rgba(0,0,0,0.05)',
-                                        padding: '4px 8px',
-                                        borderRadius: '4px',
-                                        cursor: 'pointer',
-                                        fontSize: '0.8rem',
-                                        fontWeight: 600,
-                                        color: '#059669', // Match icon color
-                                        display: 'flex', alignItems: 'center', gap: '4px'
-                                    }}
-                                >
-                                    <LockIcon size={12} /> View
-                                </button>
-                            ) : (
-                                <p className={styles.value}>{formatCurrency(stats.totalRevenue)}</p>
-                            )}
-                        </div>
-                    </div>
-
-                    {/* PIN Modal / Popover */}
-                    {showPinModal && (
-                        <div className={styles.overlay} onClick={() => setShowPinModal(false)}
-                            style={{
-                                position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-                                background: 'rgba(0,0,0,0.4)', zIndex: 100,
-                                display: 'flex', alignItems: 'center', justifyContent: 'center'
-                            }}>
-                            <div onClick={e => e.stopPropagation()}
-                                style={{ background: 'white', padding: '1.5rem', borderRadius: '8px', width: '300px', boxShadow: '0 10px 25px rgba(0,0,0,0.1)' }}>
-                                <h3 style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '1rem', textAlign: 'center' }}>Enter Security PIN</h3>
-                                <form onSubmit={handleUnlock}>
-                                    <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', marginBottom: '1rem' }}>
-                                        {pin.map((digit, idx) => (
-                                            <input
-                                                key={idx}
-                                                id={`pin-${idx}`}
-                                                type="password"
-                                                value={digit}
-                                                onChange={e => handlePinChange(idx, e.target.value)}
-                                                style={{
-                                                    width: '40px', height: '40px', textAlign: 'center', fontSize: '1.25rem',
-                                                    border: '1px solid #e5e7eb', borderRadius: '4px'
-                                                }}
-                                                maxLength={1}
-                                            />
-                                        ))}
-                                    </div>
-                                    {pinError && <p style={{ color: 'red', fontSize: '0.8rem', textAlign: 'center', marginBottom: '1rem' }}>{pinError}</p>}
-                                    <button
-                                        type="submit" disabled={verifying}
-                                        style={{
-                                            width: '100%', padding: '0.75rem', background: '#059669', color: 'white',
-                                            border: 'none', borderRadius: '4px', fontWeight: 600, cursor: 'pointer'
-                                        }}>
-                                        {verifying ? <Loader className="spin" size={16} /> : 'Unlock Revenue'}
-                                    </button>
-                                </form>
-                            </div>
-                        </div>
-                    )}
-                </div>
-
-                <div className={styles.statCard}>
-                    <div className={styles.iconWrapper} style={{ backgroundColor: '#FEE2E2', color: '#DC2626' }}>
-                        <Briefcase size={20} /> {/* Using Briefcase as placeholder, maybe AlertCircle? */}
-                    </div>
-                    <div className={styles.content}>
-                        <p className={styles.label}>Outstanding</p>
-                        <p className={styles.value}>{formatCurrency(stats.outstandingAmount)}</p>
-                    </div>
+                <div className={styles.content}>
+                    <p className={styles.label}>Total Clients</p>
+                    <p className={styles.value}>{stats.totalClients}</p>
                 </div>
             </div>
-        );
-    };
 
-    // Helper Icon
-    const LockIcon = ({ size }: { size: number }) => (
-        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
-        </svg>
+            {/* Active Matters -> Filter active_matters */}
+            <div
+                className={`${styles.statCard} cursor-pointer hover:shadow-md transition-all`}
+                onClick={() => handleCardClick('active_matters')}
+            >
+                <div className={styles.iconWrapper} style={{ backgroundColor: '#FEF3C7', color: '#D97706' }}>
+                    <Briefcase size={20} />
+                </div>
+                <div className={styles.content}>
+                    <p className={styles.label}>Active Matters</p>
+                    <p className={styles.value}>{stats.activeMatters}</p>
+                </div>
+            </div>
+
+            {/* Total Revenue -> Filter revenue */}
+            <div
+                className={`${styles.statCard} cursor-pointer hover:shadow-md transition-all`}
+                style={{ position: 'relative' }}
+                onClick={(e) => {
+                    // Prevent navigation if clicking unlock button
+                    if ((e.target as HTMLElement).closest('button')) return;
+                    if (!isLocked) handleCardClick('revenue');
+                }}
+            >
+                <div className={styles.iconWrapper} style={{ backgroundColor: '#D1FAE5', color: '#059669' }}>
+                    <DollarSign size={20} />
+                </div>
+                <div className={styles.content}>
+                    <p className={styles.label}>Total Revenue</p>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        {isLocked ? (
+                            <button
+                                onClick={() => setShowPinModal(true)}
+                                style={{
+                                    border: 'none',
+                                    background: 'rgba(0,0,0,0.05)',
+                                    padding: '4px 8px',
+                                    borderRadius: '4px',
+                                    cursor: 'pointer',
+                                    fontSize: '0.8rem',
+                                    fontWeight: 600,
+                                    color: '#059669', // Match icon color
+                                    display: 'flex', alignItems: 'center', gap: '4px'
+                                }}
+                            >
+                                <LockIcon size={12} /> View
+                            </button>
+                        ) : (
+                            <p className={styles.value}>{formatCurrency(stats.totalRevenue)}</p>
+                        )}
+                    </div>
+                </div>
+
+                {/* PIN Modal / Popover */}
+                {showPinModal && (
+                    <div className={styles.overlay} onClick={() => setShowPinModal(false)}
+                        style={{
+                            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                            background: 'rgba(0,0,0,0.4)', zIndex: 100,
+                            display: 'flex', alignItems: 'center', justifyContent: 'center'
+                        }}>
+                        <div onClick={e => e.stopPropagation()}
+                            style={{ background: 'white', padding: '1.5rem', borderRadius: '8px', width: '300px', boxShadow: '0 10px 25px rgba(0,0,0,0.1)' }}>
+                            <h3 style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '1rem', textAlign: 'center' }}>Enter Security PIN</h3>
+                            <form onSubmit={handleUnlock}>
+                                <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', marginBottom: '1rem' }}>
+                                    {pin.map((digit, idx) => (
+                                        <input
+                                            key={idx}
+                                            id={`pin-${idx}`}
+                                            type="password"
+                                            value={digit}
+                                            onChange={e => handlePinChange(idx, e.target.value)}
+                                            style={{
+                                                width: '40px', height: '40px', textAlign: 'center', fontSize: '1.25rem',
+                                                border: '1px solid #e5e7eb', borderRadius: '4px'
+                                            }}
+                                            maxLength={1}
+                                        />
+                                    ))}
+                                </div>
+                                {pinError && <p style={{ color: 'red', fontSize: '0.8rem', textAlign: 'center', marginBottom: '1rem' }}>{pinError}</p>}
+                                <button
+                                    type="submit" disabled={verifying}
+                                    style={{
+                                        width: '100%', padding: '0.75rem', background: '#059669', color: 'white',
+                                        border: 'none', borderRadius: '4px', fontWeight: 600, cursor: 'pointer'
+                                    }}>
+                                    {verifying ? <Loader className="spin" size={16} /> : 'Unlock Revenue'}
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                )}
+            </div>
+
+            <div className={styles.statCard}>
+                <div className={styles.iconWrapper} style={{ backgroundColor: '#FEE2E2', color: '#DC2626' }}>
+                    <Briefcase size={20} /> {/* Using Briefcase as placeholder, maybe AlertCircle? */}
+                </div>
+                <div className={styles.content}>
+                    <p className={styles.label}>Outstanding</p>
+                    <p className={styles.value}>{formatCurrency(stats.outstandingAmount)}</p>
+                </div>
+            </div>
+        </div>
     );
+};
 
-    export default ClientStats;
+// Helper Icon
+const LockIcon = ({ size }: { size: number }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+        <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+    </svg>
+);
+
+export default ClientStats;
