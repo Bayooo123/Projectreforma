@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from 'react';
+import Link from 'next/link';
 import { Search, Filter, MoreVertical, FileText, DollarSign, ChevronLeft, ChevronRight } from 'lucide-react';
 import { getClients } from '@/app/actions/clients';
 import InvoiceModal from './InvoiceModal';
@@ -50,27 +51,14 @@ interface ClientListProps {
     letterheadUrl?: string | null;
 }
 
+import { useSearchParams } from 'next/navigation';
+// ... imports
+
 const ClientList = ({ workspaceId, letterheadUrl }: ClientListProps) => {
-    // Data State
-    const [clients, setClients] = useState<Client[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
+    const searchParams = useSearchParams();
+    const filterParam = searchParams.get('filter') || undefined;
 
-    // Pagination & Filter State
-    const [page, setPage] = useState(1);
-    const [totalPages, setTotalPages] = useState(1);
-    const limit = 10;
-
-    const [searchQuery, setSearchQuery] = useState('');
-    const [statusFilter, setStatusFilter] = useState('all');
-
-    // Debounce search to prevent server hammer
-    const debouncedSearch = useDebounceValue(searchQuery, 400);
-
-    // Modal State
-    const [selectedClient, setSelectedClient] = useState<{ name: string; id: string } | null>(null);
-    const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
-    const [isInvoiceModalOpen, setIsInvoiceModalOpen] = useState(false);
-    const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+    // ... existing state
 
     const fetchClients = useCallback(async () => {
         setIsLoading(true);
@@ -79,11 +67,12 @@ const ClientList = ({ workspaceId, letterheadUrl }: ClientListProps) => {
                 page,
                 limit,
                 query: debouncedSearch,
-                status: statusFilter !== 'all' ? statusFilter : undefined
+                status: statusFilter !== 'all' ? statusFilter : undefined,
+                filter: filterParam // Pass the active interaction filter
             });
 
             if (result.success && result.data) {
-                setClients(result.data as any); // Type assertion for now to match strict strict local types if they diverge slightly
+                setClients(result.data as any);
                 if (result.meta) {
                     setTotalPages(result.meta.totalPages);
                 }
@@ -93,7 +82,7 @@ const ClientList = ({ workspaceId, letterheadUrl }: ClientListProps) => {
         } finally {
             setIsLoading(false);
         }
-    }, [workspaceId, page, limit, debouncedSearch, statusFilter]);
+    }, [workspaceId, page, limit, debouncedSearch, statusFilter, filterParam]); // Added filterParam dependency
 
     // Fetch when dependencies change
     useEffect(() => {

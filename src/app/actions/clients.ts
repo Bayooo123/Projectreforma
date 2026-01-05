@@ -15,6 +15,7 @@ export type GetClientsParams = {
     query?: string;
     status?: string;
     industry?: string;
+    filter?: string;
 };
 
 export async function getClients(workspaceId: string, params: GetClientsParams = {}) {
@@ -42,6 +43,20 @@ export async function getClients(workspaceId: string, params: GetClientsParams =
 
         if (params.industry && params.industry !== 'all') {
             where.industry = params.industry;
+        }
+
+        // New Interaction Filters
+        if (params.filter === 'active_matters') {
+            where.matters = { some: { status: 'active' } };
+        }
+
+        if (params.filter === 'outstanding') {
+            where.invoices = { some: { status: { in: ['pending', 'overdue'] } } };
+        }
+
+        if (params.filter === 'revenue') {
+            // Clients who have made at least one payment
+            where.payments = { some: {} };
         }
 
         // Execute Transaction for Count + Data
