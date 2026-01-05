@@ -1,7 +1,6 @@
 'use client';
 
 import { useActionState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import { authenticate } from '@/app/lib/actions';
 import { Loader2, Scale, Shield, Users } from 'lucide-react';
 import Link from 'next/link';
@@ -9,16 +8,16 @@ import styles from '../auth.module.css';
 
 export default function LoginPage() {
     const [state, dispatch, isPending] = useActionState(authenticate, undefined);
-    const router = useRouter();
 
     useEffect(() => {
         if (state?.success) {
-            // Force a hard refresh of the session data before navigating
-            router.refresh();
-            // Immediate transition to workspace
-            router.push('/briefs');
+            // Use hard navigation to ensure:
+            // 1. Router cache is completely cleared
+            // 2. Fresh data is fetched from server
+            // 3. Session cookies are strictly applied
+            window.location.href = '/briefs';
         }
-    }, [state?.success, router]);
+    }, [state?.success]);
 
     return (
         <div className={styles.authContainer}>
