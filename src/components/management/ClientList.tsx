@@ -165,6 +165,22 @@ const ClientList = ({ workspaceId, letterheadUrl }: ClientListProps) => {
                 </select>
             </div>
 
+            {/* Active Filter Indicator */}
+            {filterParam && (
+                <div className="flex items-center gap-2 mb-4 px-1">
+                    <span className="text-sm font-medium text-slate-500">Filtered by:</span>
+                    <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-sm font-medium">
+                        {filterParam === 'active_matters' && 'Active Matters'}
+                        {filterParam === 'outstanding' && 'Outstanding Balance'}
+                        {filterParam === 'revenue' && 'Revenue Contribution'}
+                        <Link href="/management/clients" className="ml-2 hover:text-blue-900">×</Link>
+                    </span>
+                    <Link href="/management/clients" className="text-xs text-slate-400 hover:text-slate-600 underline">
+                        Clear all
+                    </Link>
+                </div>
+            )}
+
             {isLoading ? (
                 <div className="py-8">
                     <TableSkeleton rows={5} />
