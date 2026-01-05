@@ -9,6 +9,7 @@ import bcrypt from "bcryptjs"
 
 // Valid role types for type safety
 const ALLOWED_ROLES = ["owner", "partner", "associate", "admin", "member"] as const;
+type RoleType = typeof ALLOWED_ROLES[number];
 
 export const { auth, signIn, signOut, handlers } = NextAuth({
     ...authConfig,
@@ -47,7 +48,7 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
                             id: user.id,
                             email: user.email,
                             name: user.name,
-                            role: role as User["role"],
+                            role: (role as RoleType),
                             workspaceId: workspace.id,
                         };
                         return authUser;
@@ -96,7 +97,7 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
                             id: user.id,
                             email: user.email,
                             name: user.name,
-                            role: membership.role as User["role"],
+                            role: (membership.role as RoleType),
                             workspaceId: workspaceId,
                         };
                         return authUser;
@@ -108,7 +109,7 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
                         id: user.id,
                         email: user.email,
                         name: user.name,
-                        role: (firstMembership?.role || 'member') as User["role"],
+                        role: ((firstMembership?.role || 'member') as RoleType),
                         workspaceId: firstMembership?.workspaceId || '',
                     };
                     return authUser;
@@ -130,7 +131,7 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
         async session({ session, token }) {
             if (session.user && token.sub) {
                 session.user.id = token.sub;
-                session.user.role = token.role as any;
+                session.user.role = token.role as RoleType;
                 session.user.workspaceId = token.workspaceId as string;
             }
             return session;

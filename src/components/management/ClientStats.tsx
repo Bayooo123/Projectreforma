@@ -11,6 +11,7 @@ interface ClientStatsProps {
 }
 
 const ClientStats = ({ workspaceId }: ClientStatsProps) => {
+    const router = useRouter();
     const [stats, setStats] = useState({
         totalClients: 0,
         activeMatters: 0,
