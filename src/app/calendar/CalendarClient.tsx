@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { Plus } from 'lucide-react';
+import { Plus, Gavel } from 'lucide-react';
 import CalendarGrid from '@/components/calendar/CalendarGrid';
 import AddMatterModal from '@/components/calendar/AddMatterModal';
+import RecordProceedingModal from '@/components/calendar/RecordProceedingModal'; // New Import
 import MatterDetailModal from '@/components/calendar/MatterDetailModal';
 import { getMattersForMonth } from '@/lib/matters';
 import styles from './page.module.css';
@@ -45,70 +46,47 @@ export default function CalendarClient({
 
     const [currentDate, setCurrentDate] = useState(new Date());
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+    const [isRecordModalOpen, setIsRecordModalOpen] = useState(false); // New state
     const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
-    // Note: selectedMatter is still needed for the detail modal, 
-    // but the EVENT might be what we click.
-    // For now, when clicking an event, we'll fetch the full matter details?
-    // Or just pass the partial matter data from the event. 
-    // MatterDetailModal needs a 'Matter' object. 
-    // Let's stick to existing modal for continuity, we can fetch full matter on click if needed.
+
+    // ... (keep existing state)
     const [selectedMatter, setSelectedMatter] = useState<any | null>(null);
-    const [selectedMatterId, setSelectedMatterId] = useState<string | null>(null);
     const [isLoadingMonth, setIsLoadingMonth] = useState(false);
-
-    // Search and filter state
     const [searchQuery, setSearchQuery] = useState('');
-    const [statusFilter, setStatusFilter] = useState<string>('all');
 
-    // Filter events based on search
+    // ... (keep filtering logic)
     const filteredEvents = events.filter(event => {
-        // Search filter
         if (searchQuery) {
             const query = searchQuery.toLowerCase();
-            const matchesSearch =
+            return (
                 event.matter.name.toLowerCase().includes(query) ||
                 event.matter.caseNumber.toLowerCase().includes(query) ||
                 event.matter.client?.name.toLowerCase().includes(query) ||
-                (event.title && event.title.toLowerCase().includes(query));
-
-            if (!matchesSearch) return false;
+                (event.title && event.title.toLowerCase().includes(query))
+            );
         }
         return true;
     });
 
-    // We no longer need to fetch "matters for month" because we fetch ALL events upfront usually?
-    // Or we should fetch events for the month if the dataset is huge.
-    // The previous implementation fetched for specific month.
-    // 'getCourtEvents' fetched everything.
-    // If we want to stick to month-based fetching, we should have added month params to getCourtEvents.
-    // For now, let's assume getCourtEvents returns enough data (or all).
-    // If we need to refresh data:
-
+    // ... (keep refreshEvents)
     const refreshEvents = async () => {
-        setIsLoadingMonth(true);
+        console.log('Refreshing events...'); // Debug log
         try {
             const { getCourtEvents } = await import('@/app/actions/court-dates');
             const newEvents = await getCourtEvents(workspaceId);
             setEvents(newEvents);
         } catch (e) {
             console.error(e);
-        } finally {
-            setIsLoadingMonth(false);
         }
     };
 
+    // ... (keep handleEventClick, handleDetailClose)
     const handleEventClick = async (event: CourtEvent) => {
-        setIsLoadingMonth(true); // Re-use loading state or add specific one
+        setIsLoadingMonth(true);
         try {
-            // Dynamically import to avoid server-action-in-client-bundle issues if any, 
-            // though we can import at top level usually.
             const { getMatterById } = await import('@/app/actions/matters');
-            // We need to fetch the matter to show details
-            // Ideally we shouldn't fetch if we have it, but we need relations like Briefs
             const matter = await getMatterById(event.matterId);
             if (matter) {
-                // Cast to compatible type if needed or ensure getMatterById returns compatible type
-                // The Matter interface here is local, we might need to update it or cast
                 setSelectedMatter(matter as any);
                 setIsDetailModalOpen(true);
             }
@@ -118,10 +96,6 @@ export default function CalendarClient({
         } finally {
             setIsLoadingMonth(false);
         }
-    };
-
-    const handleAddSuccess = () => {
-        refreshEvents();
     };
 
     const handleDetailClose = () => {
@@ -147,13 +121,24 @@ export default function CalendarClient({
                             onChange={(e) => setSearchQuery(e.target.value)}
                         />
                     </div>
-                    {/* Status filter might be less relevant for events, but could filter by matter status if we map it */}
+
+                    {/* Secondary: Add New Matter */}
                     <button
-                        className={styles.addBtn}
+                        className={styles.secondaryBtn} // Define this style or use a lighter variant
                         onClick={() => setIsAddModalOpen(true)}
+                        style={{ background: 'white', color: '#475569', border: '1px solid #cbd5e1', padding: '0.5rem 1rem', borderRadius: '6px', marginRight: '0.5rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
                     >
                         <Plus size={18} />
-                        <span>Add matter</span>
+                        <span>New Matter</span>
+                    </button>
+
+                    {/* Primary: Record Proceeding */}
+                    <button
+                        className={styles.addBtn}
+                        onClick={() => setIsRecordModalOpen(true)}
+                    >
+                        <Gavel size={18} />
+                        <span>Record Proceeding</span>
                     </button>
                 </div>
             </div>
@@ -171,7 +156,15 @@ export default function CalendarClient({
                 onClose={() => setIsAddModalOpen(false)}
                 workspaceId={workspaceId}
                 userId={userId}
-                onSuccess={handleAddSuccess}
+                onSuccess={refreshEvents}
+            />
+
+            <RecordProceedingModal
+                isOpen={isRecordModalOpen}
+                onClose={() => setIsRecordModalOpen(false)}
+                workspaceId={workspaceId}
+                userId={userId}
+                onSuccess={refreshEvents}
             />
 
             {selectedMatter && (

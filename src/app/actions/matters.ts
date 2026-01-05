@@ -89,6 +89,19 @@ export async function getMatterById(id: string) {
                         briefNumber: true,
                     },
                 },
+                // Fetch full court date history
+                courtDates: {
+                    orderBy: { date: 'desc' }, // Newest first for timeline
+                    include: {
+                        appearances: {
+                            select: {
+                                id: true,
+                                name: true,
+                                image: true
+                            }
+                        }
+                    }
+                }
             },
         });
         return matter;

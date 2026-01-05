@@ -28,6 +28,14 @@ interface Matter {
         briefNumber: string;
         name: string;
     }[];
+    courtDates?: {
+        id: string;
+        date: Date;
+        title: string | null;
+        proceedings: string | null;
+        adjournedFor: string | null;
+        appearances: { id: string; name: string | null }[];
+    }[];
 }
 
 interface MatterDetailModalProps {
@@ -327,94 +335,73 @@ const MatterDetailModal = ({ isOpen, onClose, matter, userId }: MatterDetailModa
                     </div>
 
                     <div className={styles.section}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                            <h3 className={styles.sectionTitle} style={{ margin: 0 }}>
-                                <FileText size={16} /> What Happened in Court
-                            </h3>
-                            <button
-                                onClick={async () => {
-                                    /* 
-                                     * Note: We need the ID of the specific CourtDate we are editing.
-                                     * Currently, MatterDetailModal shows 'nextCourtDate' which is a single Date object on the Matter model.
-                                     * To edit the 'proceedings' of a specific court date, we need to know WHICH court date record to update.
-                                     * 
-                                     * If this modal is showing the Matter context generally, 'proceedings' usually refers to the MOST RECENT or NEXT sitting.
-                                     * However, the 'adjournMatter' action creates a NEW CourtDate record for the completed sitting.
-                                     * 
-                                     * CRITICAL SYSTEM FIX NEEDED:
-                                     * The 'proceedings' state in this modal is somewhat ambiguous. 
-                                     * Is it for the *upcoming* date (as instructions/notes)? 
-                                     * Or is it retracing what just happened?
-                                     * 
-                                     * If it's "What Happened", it implies a PAST event.
-                                     * We need to fetch the specific 'CourtDate' record that corresponds to 'today' or the 'last active' date to update it truly.
-                                     * 
-                                     * For now, sticking to existing behavior: This field is primarily used during Adjournment. 
-                                     * I will enable the button but warn that it saves as a genric note if not adjourning, 
-                                     * UNLESS we allow creating a standalone CourtDate record here.
-                                     */
-                                    if (proceedings.trim()) {
-                                        setIsSubmitting(true);
-                                        await addMatterNote(matter.id, `Proceedings Note: ${proceedings}`, userId);
-                                        setIsSubmitting(false);
-                                        alert('Saved as generic note. Use "Adjourn" to finalize the court date record.');
-                                    }
-                                }}
-                                className={styles.secondaryActionBtn}
-                                disabled={isSubmitting || !proceedings.trim()}
-                                style={{ fontSize: '12px', padding: '4px 8px' }}
-                            >
-                                Save Note
-                            </button>
-                        </div>
-                        <textarea
-                            className={styles.textarea}
-                            placeholder="Enter detailed narrative of the court proceedings..."
-                            rows={8}
-                            value={proceedings}
-                            onChange={(e) => setProceedings(e.target.value)}
-                        />
-                    </div>
-
-                    <div className={styles.section}>
                         <h3 className={styles.sectionTitle}>
-                            <User size={16} /> Appearance By
+                            <FileText size={16} /> Case History & Proceedings
                         </h3>
-                        {isLoadingLawyers ? (
-                            <div className="text-sm text-gray-500">Loading lawyers...</div>
-                        ) : (
-                            <div className={styles.lawyerGrid} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '0.5rem' }}>
-                                {lawyers.map(lawyer => (
-                                    <label key={lawyer.id} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.9rem', cursor: 'pointer' }}>
-                                        <input
-                                            type="checkbox"
-                                            checked={selectedLawyerIds.includes(lawyer.id)}
-                                            onChange={() => toggleLawyer(lawyer.id)}
-                                        />
-                                        <span>{lawyer.name || lawyer.email}</span>
-                                    </label>
+
+                        {(matter.courtDates && matter.courtDates.length > 0) ? (
+                            <div className="flex flex-col gap-4 mt-3">
+                                {matter.courtDates.map((date, idx) => (
+                                    <div key={date.id} className="relative pl-6 border-l-2 border-slate-200 pb-4 last:pb-0 last:border-0">
+                                        {/* Timestamp Dot */}
+                                        <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-slate-300 border-2 border-white"></div>
+
+                                        <div className="flex flex-col gap-1">
+                                            <div className="flex justify-between items-start">
+                                                <span className="font-semibold text-sm text-slate-800">
+                                                    {new Date(date.date).toLocaleDateString(undefined, { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' })}
+                                                </span>
+                                                {date.title && (
+                                                    <span className="text-xs px-2 py-0.5 bg-blue-50 text-blue-700 rounded-full font-medium">
+                                                        {date.title}
+                                                    </span>
+                                                )}
+                                            </div>
+
+                                            {/* Proceedings Narrative */}
+                                            {date.proceedings ? (
+                                                <div className="text-sm text-slate-600 bg-slate-50 p-3 rounded-md mt-1 whitespace-pre-wrap">
+                                                    {date.proceedings}
+                                                </div>
+                                            ) : (
+                                                <span className="text-sm text-slate-400 italic">No proceedings recorded.</span>
+                                            )}
+
+                                            {/* Appearances */}
+                                            {date.appearances && date.appearances.length > 0 && (
+                                                <div className="flex gap-1 mt-1">
+                                                    {date.appearances.map(lawyer => (
+                                                        <span key={lawyer.id} className="text-xs text-slate-500 bg-white border border-slate-200 px-2 py-0.5 rounded-sm">
+                                                            {lawyer.name}
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                            )}
+
+                                            {/* Footer or outcome info */}
+                                            {date.adjournedFor && (
+                                                <div className="text-xs text-slate-500 mt-1">
+                                                    Adjourned for: <span className="font-medium">{date.adjournedFor}</span>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
                                 ))}
+                            </div>
+                        ) : (
+                            <div className="text-center py-8 text-slate-400 text-sm bg-slate-50 rounded-lg border border-dashed border-slate-200">
+                                No court proceedings recorded yet.
                             </div>
                         )}
                     </div>
 
-                    <div className={styles.section}>
+                    <div className={styles.section} style={{ marginTop: '2rem', paddingTop: '1rem', borderTop: '1px solid #e2e8f0' }}>
                         <h3 className={styles.sectionTitle}>
-                            <AlertCircle size={16} /> Observations
+                            <Calendar size={16} /> Quick Adjourn (Next Date)
                         </h3>
-                        <textarea
-                            className={styles.textarea}
-                            placeholder="Any important observations or notes..."
-                            rows={2}
-                            value={observations}
-                            onChange={(e) => setObservations(e.target.value)}
-                        />
-                    </div>
-
-                    <div className={styles.section}>
-                        <h3 className={styles.sectionTitle}>
-                            <Calendar size={16} /> Adjournment Details
-                        </h3>
+                        <p className="text-xs text-slate-500 mb-3">
+                            Use this to record a new adjournment if you haven't already. This creates a new future calendar entry.
+                        </p>
                         <form onSubmit={handleAdjourn} className={styles.adjournForm}>
                             <div className={styles.formRow}>
                                 <div className={styles.formGroup}>
