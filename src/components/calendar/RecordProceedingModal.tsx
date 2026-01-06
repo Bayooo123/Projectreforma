@@ -162,7 +162,7 @@ const RecordProceedingModal = ({ isOpen, onClose, workspaceId, userId, onSuccess
                     adjournedFor,
                     userId,
                     selectedLawyerIds,
-                    // TODO: Pass explicit proceedingDate: new Date(courtDate)
+                    new Date(courtDate) // Pass explicit proceedingDate
                 );
 
                 if (result.success) {
@@ -200,6 +200,64 @@ const RecordProceedingModal = ({ isOpen, onClose, workspaceId, userId, onSuccess
         m.client.name.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
+    // New State for Creation
+    const [newMatterName, setNewMatterName] = useState('');
+    const [newCaseNumber, setNewCaseNumber] = useState('');
+    const [newClientId, setNewClientId] = useState('');
+    const [clients, setClients] = useState<{ id: string, name: string }[]>([]);
+
+    useEffect(() => {
+        // Load clients only if we enter creation mode
+        if (isOpen && (step === 'select_matter' || step === 'create_new_matter')) {
+            getClientsForWorkspace(workspaceId).then(setClients).catch(console.error);
+        }
+    }, [step, isOpen, workspaceId]);
+
+    const handleCreateMatter = async () => {
+        if (!newMatterName || !newCaseNumber || !newClientId) {
+            alert('Please fill in all required fields to create a matter.');
+            return;
+        }
+
+        setIsSubmitting(true);
+        try {
+            // Create the matter
+            const result = await createMatter({
+                name: newMatterName,
+                caseNumber: newCaseNumber,
+                clientId: newClientId,
+                assignedLawyerId: userId, // Auto-assign creator
+                workspaceId,
+                status: 'active'
+            });
+
+            if (result.success && result.matter) {
+                // Switch to recording mode with this new matter
+                const m = result.matter;
+                const summary: MatterSummary = {
+                    id: m.id,
+                    caseNumber: m.caseNumber,
+                    name: m.name,
+                    nextCourtDate: null,
+                    client: m.client, // Assuming result includes client
+                    assignedLawyer: m.assignedLawyer // Assuming result includes lawyer
+                };
+
+                // Refresh list silently
+                loadInitialData();
+
+                handleMatterSelect(summary);
+            } else {
+                alert(result.error);
+            }
+        } catch (e) {
+            console.error(e);
+            alert('Failed to create matter.');
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
     if (!isOpen) return null;
 
     return (
@@ -207,7 +265,7 @@ const RecordProceedingModal = ({ isOpen, onClose, workspaceId, userId, onSuccess
             <div className={styles.modal} style={{ maxWidth: '600px' }}>
                 <div className={styles.header}>
                     <h2 className={styles.title}>
-                        {step === 'select_matter' ? 'Select Court Matter' : 'Record Proceeding'}
+                        {step === 'select_matter' ? 'Select Court Matter' : step === 'create_new_matter' ? 'Create New Matter' : 'Record Proceeding'}
                     </h2>
                     <button onClick={onClose} className={styles.closeBtn}>
                         <X size={20} />
@@ -217,6 +275,16 @@ const RecordProceedingModal = ({ isOpen, onClose, workspaceId, userId, onSuccess
                 <div className={styles.content}>
                     {step === 'select_matter' && (
                         <div className={styles.selectionStep}>
+                            {/* Toggle for Create New */}
+                            <div className="flex justify-end mb-2">
+                                <button
+                                    className="text-sm text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1"
+                                    onClick={() => setStep('create_new_matter')}
+                                >
+                                    + Create New Matter
+                                </button>
+                            </div>
+
                             <div className={styles.searchWrapper}>
                                 <Search size={18} className={styles.searchIcon} />
                                 <input
@@ -248,11 +316,62 @@ const RecordProceedingModal = ({ isOpen, onClose, workspaceId, userId, onSuccess
                                         </div>
                                     ))
                                 ) : (
-                                    <div className="py-8 text-center text-slate-500">
-                                        No matters found.
-                                        {/* Future: Add "Create New" button here */}
+                                    <div className="py-8 text-center text-slate-500 flex flex-col items-center gap-2">
+                                        <span>No matters found matching "{searchQuery}".</span>
+                                        <button
+                                            className="text-blue-600 hover:underline text-sm"
+                                            onClick={() => {
+                                                setNewMatterName(searchQuery); // Pre-fill name with search query
+                                                setStep('create_new_matter');
+                                            }}
+                                        >
+                                            Create "{searchQuery}" as new matter
+                                        </button>
                                     </div>
                                 )}
+                            </div>
+                        </div>
+                    )}
+
+                    {step === 'create_new_matter' && (
+                        <div className={styles.detailsStep}>
+                            <div className="bg-blue-50 p-3 rounded-lg mb-4 text-sm text-blue-800 border border-blue-100">
+                                Creating a new matter to record proceedings for.
+                            </div>
+
+                            <div className={styles.formSection}>
+                                <label className={styles.label}>Matter Name *</label>
+                                <input
+                                    type="text"
+                                    className={styles.input}
+                                    placeholder="e.g. State v. Johnson"
+                                    value={newMatterName}
+                                    onChange={(e) => setNewMatterName(e.target.value)}
+                                />
+                            </div>
+
+                            <div className={styles.formSection}>
+                                <label className={styles.label}>Case Number *</label>
+                                <input
+                                    type="text"
+                                    className={styles.input}
+                                    value={newCaseNumber}
+                                    onChange={(e) => setNewCaseNumber(e.target.value)}
+                                />
+                            </div>
+
+                            <div className={styles.formSection}>
+                                <label className={styles.label}>Client *</label>
+                                <select
+                                    className={styles.select}
+                                    value={newClientId}
+                                    onChange={(e) => setNewClientId(e.target.value)}
+                                >
+                                    <option value="">Select Client...</option>
+                                    {clients.map(c => (
+                                        <option key={c.id} value={c.id}>{c.name}</option>
+                                    ))}
+                                </select>
                             </div>
                         </div>
                     )}
@@ -341,9 +460,30 @@ const RecordProceedingModal = ({ isOpen, onClose, workspaceId, userId, onSuccess
                 </div>
 
                 <div className={styles.footer}>
-                    {step === 'select_matter' ? (
+                    {step === 'select_matter' && (
                         <button onClick={onClose} className={styles.cancelBtn}>Cancel</button>
-                    ) : (
+                    )}
+
+                    {step === ('create_new_matter' as any) && (
+                        <>
+                            <button
+                                onClick={() => setStep('select_matter')}
+                                className={styles.cancelBtn}
+                                disabled={isSubmitting}
+                            >
+                                Back
+                            </button>
+                            <button
+                                onClick={handleCreateMatter}
+                                className={styles.submitBtn}
+                                disabled={isSubmitting}
+                            >
+                                {isSubmitting ? <Loader size={16} className="animate-spin" /> : 'Create & Continue'}
+                            </button>
+                        </>
+                    )}
+
+                    {step === 'record_details' && (
                         <>
                             <button
                                 onClick={() => setStep('select_matter')}

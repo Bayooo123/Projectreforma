@@ -279,10 +279,12 @@ export async function adjournMatter(
     proceedings: string,
     adjournedFor: string,
     performedBy: string,
-    appearanceLawyerIds?: string[] // Optional array of lawyer IDs who appeared
+    appearanceLawyerIds?: string[], // Optional array of lawyer IDs who appeared
+    proceedingDate?: Date // Optional explicit date of the proceeding being recorded
 ) {
     try {
-        // RBAC Check
+        // ... (RBAC Check omitted for brevity in diff, but preserved in file)
+
         const matterCheck = await prisma.matter.findUnique({
             where: { id: matterId },
             include: { workspace: true }
@@ -302,15 +304,14 @@ export async function adjournMatter(
         });
 
         // 2. Identify the date of the proceeding being recorded
-        // If the matter had a 'nextCourtDate', that is likely the date that just happened/is happening.
-        // If not, we fall back to "today".
-        const proceedingDate = currentMatter?.nextCourtDate || new Date();
+        // Priority: Explicit -> Scheduled (inference) -> Today (fallback)
+        const dateOfEvent = proceedingDate || currentMatter?.nextCourtDate || new Date();
 
         // 3. Create a CourtDate record for the COMPLETED/ONGOING sitting
         const courtDateRecord = await prisma.courtDate.create({
             data: {
                 matterId,
-                date: proceedingDate,
+                date: dateOfEvent,
                 proceedings: proceedings,
                 adjournedFor: adjournedFor,
                 nextDate: newDate,
