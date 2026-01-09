@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { X, Gavel, Loader, Calendar, User, Search, AlertCircle } from 'lucide-react';
 import { createMatter, adjournMatter, updateCourtProceedings } from '@/app/actions/matters';
 import { getMatters } from '@/app/actions/matters';
-import { getLawyersForWorkspace } from '@/lib/briefs';
+import { getLawyersForWorkspace, getClientsForWorkspace } from '@/lib/briefs';
 import styles from './RecordProceedingModal.module.css';
 
 interface RecordProceedingModalProps {
@@ -33,7 +33,7 @@ interface Lawyer {
 
 const RecordProceedingModal = ({ isOpen, onClose, workspaceId, userId, onSuccess }: RecordProceedingModalProps) => {
     // Mode: 'select_matter' | 'record_details' | 'create_new_matter'
-    const [step, setStep] = useState<'select_matter' | 'record_details'>('select_matter');
+    const [step, setStep] = useState<'select_matter' | 'record_details' | 'create_new_matter'>('select_matter');
 
     // Data Loading
     const [matters, setMatters] = useState<MatterSummary[]>([]);
@@ -464,7 +464,7 @@ const RecordProceedingModal = ({ isOpen, onClose, workspaceId, userId, onSuccess
                         <button onClick={onClose} className={styles.cancelBtn}>Cancel</button>
                     )}
 
-                    {step === ('create_new_matter' as any) && (
+                    {step === 'create_new_matter' && (
                         <>
                             <button
                                 onClick={() => setStep('select_matter')}
