@@ -8,6 +8,7 @@ import { deleteBrief } from '@/app/actions/briefs'; // Only import actions neede
 import EditBriefModal from './EditBriefModal';
 import BriefActivityModal from './BriefActivityModal';
 import { useRouter } from 'next/navigation';
+import BriefUploadModal from './BriefUploadModal';
 
 interface BriefListClientProps {
     initialBriefs: any[];
@@ -15,13 +16,14 @@ interface BriefListClientProps {
     onUpload?: () => void;
 }
 
-export default function BriefListClient({ initialBriefs, workspaceId, onUpload }: BriefListClientProps) {
+export default function BriefListClient({ initialBriefs, workspaceId }: Omit<BriefListClientProps, 'onUpload'>) {
     const [briefs, setBriefs] = useState<any[]>(initialBriefs);
     const [activeActionId, setActiveActionId] = useState<string | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState<string>('all');
 
     // Modal states
+    const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
     const [editingBrief, setEditingBrief] = useState<any | null>(null);
     const [activityBrief, setActivityBrief] = useState<any | null>(null);
 
@@ -42,6 +44,15 @@ export default function BriefListClient({ initialBriefs, workspaceId, onUpload }
     const handleUpdateSuccess = (updatedBrief: any) => {
         setBriefs(briefs.map(b => b.id === updatedBrief.id ? { ...b, ...updatedBrief } : b));
         router.refresh();
+    };
+
+    const handleCreateSuccess = (newBrief: any) => {
+        setIsUploadModalOpen(false);
+        if (newBrief && newBrief.id) {
+            router.push(`/briefs/${newBrief.id}`);
+        } else {
+            router.refresh();
+        }
     };
 
     const toggleActions = (id: string) => {
@@ -72,12 +83,10 @@ export default function BriefListClient({ initialBriefs, workspaceId, onUpload }
                     <h1 className={styles.title}>Legal Briefs</h1>
                     <p className={styles.subtitle}>Manage and collaborate on legal documents</p>
                 </div>
-                {onUpload && (
-                    <button className={styles.uploadBtn} onClick={onUpload}>
-                        <Plus size={18} />
-                        <span>Create Brief</span>
-                    </button>
-                )}
+                <button className={styles.uploadBtn} onClick={() => setIsUploadModalOpen(true)}>
+                    <Plus size={18} />
+                    <span>Create Brief</span>
+                </button>
             </div>
 
             <div className={styles.toolbar}>
@@ -108,8 +117,8 @@ export default function BriefListClient({ initialBriefs, workspaceId, onUpload }
                             ? "Create your first brief to get started managing your legal documents."
                             : "No briefs match your search criteria."}
                     </p>
-                    {initialBriefs.length === 0 && onUpload && (
-                        <button className={styles.uploadBtn} onClick={onUpload} style={{ marginTop: '1.5rem' }}>
+                    {initialBriefs.length === 0 && (
+                        <button className={styles.uploadBtn} onClick={() => setIsUploadModalOpen(true)} style={{ marginTop: '1.5rem' }}>
                             <Plus size={18} />
                             <span>Create Brief</span>
                         </button>
@@ -202,6 +211,13 @@ export default function BriefListClient({ initialBriefs, workspaceId, onUpload }
                     </table>
                 </div>
             )}
+
+            <BriefUploadModal
+                isOpen={isUploadModalOpen}
+                onClose={() => setIsUploadModalOpen(false)}
+                onSuccess={handleCreateSuccess}
+                workspaceId={workspaceId}
+            />
 
             <EditBriefModal
                 isOpen={!!editingBrief}

@@ -1,10 +1,10 @@
 import { auth } from '@/auth';
 import { redirect } from 'next/navigation';
 import { getCurrentUserWithWorkspace } from '@/lib/workspace';
-import BriefsPageClient from './BriefsPageClient';
 import { Suspense } from 'react';
 import BriefsTable from '@/components/briefs/BriefsTable';
 import BriefTableSkeleton from '@/components/briefs/BriefTableSkeleton';
+import styles from './page.module.css';
 
 export default async function BriefsPage() {
     const session = await auth();
@@ -26,10 +26,10 @@ export default async function BriefsPage() {
     }
 
     return (
-        <BriefsPageClient workspaceId={data.workspace.id}>
+        <div className={styles.page}>
             <Suspense fallback={<BriefTableSkeleton />}>
                 <BriefsTable workspaceId={data.workspace.id} />
             </Suspense>
-        </BriefsPageClient>
+        </div>
     );
 }
