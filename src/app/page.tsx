@@ -8,5 +8,6 @@ export default async function RootPage() {
         redirect("/briefs");
     }
 
-    redirect("/login");
+    redirect("/landing");
 }
+
