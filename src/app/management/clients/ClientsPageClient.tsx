@@ -5,6 +5,7 @@ import { Plus, Download } from 'lucide-react';
 import ClientList from '@/components/management/ClientList';
 import ClientStats from '@/components/management/ClientStats';
 import AddClientModal from '@/components/management/AddClientModal';
+import ManagementTabs from '@/components/management/ManagementTabs';
 import styles from './page.module.css';
 
 interface ClientsPageClientProps {
@@ -45,6 +46,8 @@ export default function ClientsPageClient({ workspaceId, userId, letterheadUrl }
                     </button>
                 </div>
             </div>
+
+            <ManagementTabs />
 
             <ClientStats key={`stats-${refreshKey}`} workspaceId={workspaceId} />
 

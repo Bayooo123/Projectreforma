@@ -45,7 +45,7 @@ const Sidebar = ({ user }: SidebarProps) => {
     { name: 'Briefs Manager', href: '/briefs', icon: FileText },
     { name: 'Litigation', href: '/calendar', icon: Gavel },
     { name: 'Client Manager', href: '/management/clients', icon: Users },
-    { name: 'Officer Manager', href: '/management/office', icon: Briefcase },
+    { name: 'Office Manager', href: '/management/office', icon: Briefcase },
     { name: 'Analytics', href: '/analytics', icon: BarChart2 },
   ];
 

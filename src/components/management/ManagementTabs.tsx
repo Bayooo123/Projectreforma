@@ -19,9 +19,14 @@ const ManagementTabs = () => {
                 <Users size={18} />
                 <span>Client Management</span>
             </Link>
-
-        </div>
-    );
+            <Link
+                href="/management/office"
+                className={`${styles.tab} ${isActive('/management/office') ? styles.active : ''}`}
+            >
+                <Building2 size={18} />
+                <span>Office Management</span>
+            </Link>
+            );
 };
 
-export default ManagementTabs;
+            export default ManagementTabs;
