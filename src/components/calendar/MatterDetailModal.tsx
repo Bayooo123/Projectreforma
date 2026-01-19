@@ -73,11 +73,18 @@ const MatterDetailModal = ({ isOpen, onClose, matter, userId }: MatterDetailModa
     const [editedMatter, setEditedMatter] = useState(matter);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
+    // Sync editedMatter when matter prop updates from background fetch
+    useEffect(() => {
+        if (!isEditMode) {
+            setEditedMatter(matter);
+        }
+    }, [matter, isEditMode]);
+
     useEffect(() => {
         if (isOpen && matter.workspaceId) {
             fetchLawyers();
         }
-    }, [isOpen, matter.workspaceId]);
+    }, [isOpen, matter.workspaceId, matter.id]); // Added matter.id to re-fetch if matter changes (though workspaceId is usually static)
 
     const fetchLawyers = async () => {
         setIsLoadingLawyers(true);
@@ -292,7 +299,7 @@ const MatterDetailModal = ({ isOpen, onClose, matter, userId }: MatterDetailModa
                             <Building size={16} className={styles.icon} />
                             <div>
                                 <span className={styles.label}>Client</span>
-                                <p className={styles.value}>{matter.client.name}</p>
+                                <p className={styles.value}>{matter.client?.name || (matter as any).clientNameRaw || 'Unknown Client'}</p>
                             </div>
                         </div>
                         <div className={styles.metaItem}>
@@ -327,7 +334,9 @@ const MatterDetailModal = ({ isOpen, onClose, matter, userId }: MatterDetailModa
                                             ))}
                                         </div>
                                     ) : (
-                                        'No linked briefs'
+                                        <span className="text-slate-400 italic">
+                                            {!matter.id.startsWith('temp') ? 'Loading briefs...' : 'No linked briefs'}
+                                        </span>
                                     )}
                                 </div>
                             </div>
@@ -390,7 +399,14 @@ const MatterDetailModal = ({ isOpen, onClose, matter, userId }: MatterDetailModa
                             </div>
                         ) : (
                             <div className="text-center py-8 text-slate-400 text-sm bg-slate-50 rounded-lg border border-dashed border-slate-200">
-                                No court proceedings recorded yet.
+                                {!matter.id.startsWith('temp') && (!matter.courtDates || matter.courtDates.length === 0) ? (
+                                    <div className="flex flex-col items-center gap-2">
+                                        <Loader className="animate-spin text-slate-300" size={20} />
+                                        <span>Looking for case history...</span>
+                                    </div>
+                                ) : (
+                                    "No court proceedings recorded yet."
+                                )}
                             </div>
                         )}
                     </div>

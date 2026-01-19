@@ -20,7 +20,7 @@ interface CourtEvent {
         id: string;
         caseNumber: string;
         name: string;
-        client: { name: string };
+        client?: { name: string } | null;
         assignedLawyer: { id: string; name: string | null };
     };
     appearances: { id: string; name: string | null; image: string | null }[];
@@ -61,7 +61,7 @@ export default function CalendarClient({
             return (
                 event.matter.name.toLowerCase().includes(query) ||
                 event.matter.caseNumber.toLowerCase().includes(query) ||
-                event.matter.client?.name.toLowerCase().includes(query) ||
+                (event.matter.client?.name && event.matter.client.name.toLowerCase().includes(query)) ||
                 (event.title && event.title.toLowerCase().includes(query))
             );
         }
@@ -82,19 +82,29 @@ export default function CalendarClient({
 
     // ... (keep handleEventClick, handleDetailClose)
     const handleEventClick = async (event: CourtEvent) => {
-        setIsLoadingMonth(true);
+        // Instant feedback: Open modal with data we already have
+        setSelectedMatter({
+            ...event.matter,
+            workspaceId: workspaceId, // Ensure workspaceId is passed for lawyer fetching
+            briefs: [],
+            courtDates: [],
+            status: 'active', // Fallback status
+            nextCourtDate: event.date,
+            court: null,
+            judge: null,
+        });
+        setIsDetailModalOpen(true);
+
+        // Fetch full-fidelity details in background
         try {
             const { getMatterById } = await import('@/app/actions/matters');
-            const matter = await getMatterById(event.matterId);
-            if (matter) {
-                setSelectedMatter(matter as any);
-                setIsDetailModalOpen(true);
+            const fullMatter = await getMatterById(event.matterId);
+            if (fullMatter) {
+                setSelectedMatter(fullMatter as any);
             }
         } catch (e) {
-            console.error(e);
-            alert('Failed to load matter details');
-        } finally {
-            setIsLoadingMonth(false);
+            console.error('Background fetch failed:', e);
+            // We don't alert here to avoid interrupting the user's preview
         }
     };
 

@@ -1,71 +1,54 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
   previewFeatures = ["postgresqlExtensions"]
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
-  extensions = [vector]
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  directUrl  = env("DIRECT_URL")
+  extensions = [uuid_ossp(map: "uuid-ossp", schema: "extensions"), vector]
 }
 
-// ============================================
-// AUTHENTICATION & WORKSPACE MODELS
-// ============================================
-
 model Workspace {
-  id            String   @id @default(cuid())
-  name          String // "ASCO LP"
-  slug          String   @unique // "asco-lp"
-  ownerId       String
-  plan          String   @default("free") // 'free' | 'pro' | 'enterprise'
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-
-
-  // Security
-  revenuePin String? // 5-digit PIN to unlock revenue visibility
-
-  // Firm Login Fields
-  joinPassword String? // Hashed shared password for firm login
-  firmCode     String? @unique // Unique code for joining (e.g. "ASCO")
-  inviteLinkToken String? @unique // Magic Link Token (Slack-style join)
-  letterheadUrl String? // URL to uploaded letterhead image
-
-  owner       User                  @relation("WorkspaceOwner", fields: [ownerId], references: [id])
-  members     WorkspaceMember[]
-  invitations Invitation[]
-  matters     Matter[]
-  clients     Client[]
-  briefs      Brief[]
-  expenses    Expense[]
-  tasks       Task[]
-  emailConfig WorkspaceEmailConfig?
-  bankAccounts BankAccount[]
+  id                String                @id @default(cuid())
+  name              String
+  slug              String                @unique
+  ownerId           String
+  plan              String                @default("free")
+  createdAt         DateTime              @default(now())
+  updatedAt         DateTime              @updatedAt
+  firmCode          String?               @unique
+  joinPassword      String?
+  letterheadUrl     String?
+  revenuePin        String?
+  inviteLinkToken   String?               @unique
+  bankAccounts      BankAccount[]
+  briefs            Brief[]
+  clients           Client[]
   draftingTemplates DraftingTemplate[]
+  expenses          Expense[]
+  invitations       Invitation[]
+  matters           Matter[]
+  tasks             Task[]
+  owner             User                  @relation("WorkspaceOwner", fields: [ownerId], references: [id])
+  emailConfig       WorkspaceEmailConfig?
+  members           WorkspaceMember[]
 
   @@index([slug])
   @@index([firmCode])
 }
 
 model WorkspaceMember {
-  id          String @id @default(cuid())
+  id          String    @id @default(cuid())
   workspaceId String
   userId      String
-  role        String // 'owner' | 'partner' | 'lawyer' | 'staff'
-
-  // New Role/Status Fields
-  designation String? // e.g. "Senior Associate"
-  status      String  @default("active") // 'pending' | 'active' | 'rejected'
-
-  joinedAt DateTime @default(now())
-
-  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role        String
+  joinedAt    DateTime  @default(now())
+  designation String?
+  status      String    @default("active")
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   @@unique([workspaceId, userId])
   @@index([userId])
@@ -75,103 +58,94 @@ model Invitation {
   id          String    @id @default(cuid())
   workspaceId String
   email       String
-  role        String // 'partner' | 'lawyer' | 'staff'
+  role        String
   token       String    @unique
   invitedBy   String
-  status      String    @default("pending") // 'pending' | 'accepted' | 'expired'
+  status      String    @default("pending")
   expiresAt   DateTime
   createdAt   DateTime  @default(now())
   acceptedAt  DateTime?
-
-  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  inviter   User      @relation(fields: [invitedBy], references: [id])
+  inviter     User      @relation(fields: [invitedBy], references: [id])
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   @@index([token])
   @@index([email])
 }
 
 model User {
-  id            String    @id @default(cuid())
-  name          String?
-  email         String    @unique
-  emailVerified DateTime?
-  image         String?
-  password      String? // Hashed with bcrypt (Optional for OAuth users)
-  phone         String? // Phone number
-  jobTitle      String? // e.g. "Senior Associate"
-  accounts      Account[]
-  sessions      Session[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  workspaces WorkspaceMember[]
-  invitations Invitation[] // Invitations sent by this user
-  briefs      Brief[]
-
-  // App Relations
-  ownedWorkspaces      Workspace[]           @relation("WorkspaceOwner")
-  assignedMatters      Matter[]              @relation("AssignedMatters")
-  courtAppearances     CourtDate[]           @relation("CourtAppearances")
-  activityLogs         MatterActivityLog[]
-  clientCommunications ClientCommunication[]
-  assignedTasks        Task[]                @relation("AssignedTasks")
-  createdTasks         Task[]                @relation("CreatedTasks")
-  BriefActivityLog     BriefActivityLog[]
-  draftingTemplates    DraftingTemplate[]
-  draftingSessions     DraftingSession[]
+  id                   String                @id @default(cuid())
+  name                 String?
+  email                String                @unique
+  password             String?
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  emailVerified        DateTime?
+  phone                String?
+  image                String?
+  jobTitle             String?
+  accounts             Account[]
   apiKeys              ApiKey[]
+  briefs               Brief[]
+  BriefActivityLog     BriefActivityLog[]
+  clientCommunications ClientCommunication[]
+  draftingSessions     DraftingSession[]
+  draftingTemplates    DraftingTemplate[]
+  invitations          Invitation[]
+  assignedMatters      Matter[]              @relation("AssignedMatters")
+  activityLogs         MatterActivityLog[]
+  sessions             Session[]
+  createdTasks         Task[]                @relation("CreatedTasks")
+  assignedTasks        Task[]                @relation("AssignedTasks")
+  ownedWorkspaces      Workspace[]           @relation("WorkspaceOwner")
+  workspaces           WorkspaceMember[]
+  courtAppearances     CourtDate[]           @relation("CourtAppearances")
 
   @@index([email])
 }
 
 model BankAccount {
-  id            String   @id @default(cuid())
+  id            String    @id @default(cuid())
   workspaceId   String
-  bankName      String   // "GTBank"
-  accountNumber String   // "0123456789"
-  accountName   String   // "ASCO LP"
-  currency      String   @default("NGN") // "NGN", "USD", etc.
-  
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-
+  bankName      String
+  accountNumber String
+  accountName   String
+  currency      String    @default("NGN")
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
   workspace     Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 }
 
-// API Keys for external integrations (e.g., Bica)
 model ApiKey {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   userId      String
   workspaceId String
-  name        String   // e.g., "Bica Integration"
-  keyHash     String   @unique // SHA-256 hash of the key
-  keyPrefix   String   // First 8 chars for identification (rf_sk_xxxx)
+  name        String
+  keyHash     String    @unique
+  keyPrefix   String
   lastUsedAt  DateTime?
   expiresAt   DateTime?
   revokedAt   DateTime?
-  createdAt   DateTime @default(now())
-
+  createdAt   DateTime  @default(now())
   user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([keyHash])
   @@index([userId])
 }
+
 model Account {
   id                String  @id @default(cuid())
   userId            String
   type              String
   provider          String
   providerAccountId String
-  refresh_token     String? @db.Text
-  access_token      String? @db.Text
+  refresh_token     String?
+  access_token      String?
   expires_at        Int?
   token_type        String?
   scope             String?
-  id_token          String? @db.Text
+  id_token          String?
   session_state     String?
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerAccountId])
   @@index([userId])
@@ -195,36 +169,28 @@ model VerificationToken {
   @@unique([identifier, token])
 }
 
-// ============================================
-// NOTIFICATION ENGINE MODELS
-// ============================================
-
 model Notification {
-  id              String    @id @default(cuid())
-  type            String // 'alert' | 'info' | 'success' | 'warning' | 'critical'
-  title           String
-  message         String
-  recipientId     String
-  recipientType   String // 'lawyer' | 'client' | 'partner' | 'staff'
-  priority        String    @default("medium")
-  channels        String?
-  relatedMatterId String?
-  relatedBriefId  String?
+  id               String    @id @default(cuid())
+  type             String
+  title            String
+  message          String
+  recipientId      String
+  recipientType    String
+  relatedMatterId  String?
+  relatedBriefId   String?
+  priority         String    @default("medium")
+  status           String    @default("unread")
+  channels         String?
+  createdAt        DateTime  @default(now())
+  readAt           DateTime?
+  metadata         Json?
   relatedInvoiceId String?
   relatedPaymentId String?
-  
-  // Generic metadata for flexibility
-  metadata        Json?
-
-  status          String    @default("unread") // 'unread' | 'read'
-  readAt          DateTime?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-
-  matter   Matter?  @relation(fields: [relatedMatterId], references: [id])
-  brief    Brief?   @relation(fields: [relatedBriefId], references: [id])
-  invoice  Invoice? @relation(fields: [relatedInvoiceId], references: [id])
-  payment  Payment? @relation(fields: [relatedPaymentId], references: [id])
+  updatedAt        DateTime  @updatedAt
+  brief            Brief?    @relation(fields: [relatedBriefId], references: [id])
+  invoice          Invoice?  @relation(fields: [relatedInvoiceId], references: [id])
+  matter           Matter?   @relation(fields: [relatedMatterId], references: [id])
+  payment          Payment?  @relation(fields: [relatedPaymentId], references: [id])
 
   @@index([recipientId, status])
   @@index([createdAt])
@@ -234,9 +200,9 @@ model NotificationRule {
   id          String   @id @default(cuid())
   name        String
   description String?
-  triggerType String // 'time' | 'event' | 'inactivity'
-  conditions  String // JSON object
-  actions     String // JSON object
+  triggerType String
+  conditions  String
+  actions     String
   enabled     Boolean  @default(true)
   createdBy   String
   createdAt   DateTime @default(now())
@@ -246,31 +212,31 @@ model NotificationRule {
 }
 
 model Matter {
-  id                String    @id @default(cuid())
-  caseNumber        String    @unique
-  name              String
-  clientId          String
-  assignedLawyerId  String
-  workspaceId       String
-  court             String?
-  judge             String?
-  status            String    @default("active") // 'active' | 'inactive' | 'closed'
-  proceduralStatus  String?   // 'Mention', 'CMC', 'Trial', 'Judgment', 'Appeal'
-  nextCourtDate     DateTime?
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
-  lastActivityAt    DateTime  @default(now())
-  lastClientContact DateTime?
-
-  workspace            Workspace             @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  client               Client                @relation(fields: [clientId], references: [id])
-  assignedLawyer       User                  @relation("AssignedMatters", fields: [assignedLawyerId], references: [id])
-  courtDates           CourtDate[]
-  activityLogs         MatterActivityLog[]
-  clientCommunications ClientCommunication[]
-  notifications        Notification[]
+  id                   String                @id @default(cuid())
+  caseNumber           String                @unique
+  name                 String
+  clientId             String?
+  clientNameRaw        String?
+  assignedLawyerId     String
+  workspaceId          String
+  court                String?
+  judge                String?
+  status               String                @default("active")
+  nextCourtDate        DateTime?
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  lastActivityAt       DateTime              @default(now())
+  lastClientContact    DateTime?
+  proceduralStatus     String?
   briefs               Brief[]
+  clientCommunications ClientCommunication[]
+  courtDates           CourtDate[]
   invoices             Invoice[]
+  assignedLawyer       User                  @relation("AssignedMatters", fields: [assignedLawyerId], references: [id])
+  client               Client?               @relation(fields: [clientId], references: [id])
+  workspace            Workspace             @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  activityLogs         MatterActivityLog[]
+  notifications        Notification[]
   tasks                Task[]
 
   @@index([assignedLawyerId])
@@ -280,24 +246,18 @@ model Matter {
 }
 
 model CourtDate {
-  id            String   @id @default(cuid())
-  matterId      String
-  date          DateTime
-  
-  // Proceedings / Outcome
-  title         String?  // Optional title/heading e.g. "Mention", "Ruling"
-  proceedings   String?  @db.Text // "Court Proceedings / Outcome"
-  outcome       String?  // Structured outcome if needed
-  
-  // Adjournment details (if this date resulted in an adjournment)
-  adjournedFor  String?  // "Ruling", "Hearing" etc.
-  nextDate      DateTime? 
-
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-
-  matter        Matter   @relation(fields: [matterId], references: [id], onDelete: Cascade)
-  appearances   User[]   @relation("CourtAppearances")
+  id           String    @id @default(cuid())
+  matterId     String
+  date         DateTime
+  title        String?
+  proceedings  String?
+  outcome      String?
+  adjournedFor String?
+  nextDate     DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  matter       Matter    @relation(fields: [matterId], references: [id], onDelete: Cascade)
+  appearances  User[]    @relation("CourtAppearances")
 
   @@index([matterId])
   @@index([date])
@@ -306,13 +266,12 @@ model CourtDate {
 model MatterActivityLog {
   id           String   @id @default(cuid())
   matterId     String
-  activityType String // 'note_added' | 'document_uploaded' | 'status_changed' | 'client_contacted' | 'court_date_added'
+  activityType String
   description  String
   performedBy  String
   timestamp    DateTime @default(now())
-
-  matter Matter @relation(fields: [matterId], references: [id], onDelete: Cascade)
-  user   User   @relation(fields: [performedBy], references: [id])
+  matter       Matter   @relation(fields: [matterId], references: [id], onDelete: Cascade)
+  user         User     @relation(fields: [performedBy], references: [id])
 
   @@index([matterId, timestamp])
 }
@@ -321,15 +280,14 @@ model ClientCommunication {
   id                String   @id @default(cuid())
   matterId          String
   clientId          String
-  communicationType String // 'email' | 'phone' | 'meeting' | 'sms' | 'letter'
+  communicationType String
   subject           String
   summary           String
   sentBy            String
   sentAt            DateTime @default(now())
-
-  matter Matter @relation(fields: [matterId], references: [id], onDelete: Cascade)
-  client Client @relation(fields: [clientId], references: [id])
-  user   User   @relation(fields: [sentBy], references: [id])
+  client            Client   @relation(fields: [clientId], references: [id])
+  matter            Matter   @relation(fields: [matterId], references: [id], onDelete: Cascade)
+  user              User     @relation(fields: [sentBy], references: [id])
 
   @@index([matterId])
   @@index([clientId])
@@ -337,32 +295,28 @@ model ClientCommunication {
 }
 
 model Brief {
-  id          String    @id @default(cuid())
-  briefNumber String    @unique
-  name        String
-  clientId    String
-  matterId    String?
-  lawyerId    String
-  workspaceId String
-  category    String // 'Litigation' | 'ADR' | 'Tax advisory' | etc.
-  status      String    @default("active") // 'active' | 'inactive' | 'finalized'
-  dueDate     DateTime?
-  description String?
-
-  // Email Integration
-  inboundEmailId String @unique @default(uuid())
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  workspace     Workspace          @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  client        Client             @relation(fields: [clientId], references: [id])
-  matter        Matter?            @relation(fields: [matterId], references: [id])
-  lawyer        User               @relation(fields: [lawyerId], references: [id])
-  notifications Notification[]
-  documents     Document[]
-  tasks         Task[]
-  activityLogs  BriefActivityLog[]
+  id             String             @id @default(cuid())
+  briefNumber    String             @unique
+  name           String
+  clientId       String
+  matterId       String?
+  lawyerId       String
+  workspaceId    String
+  category       String
+  status         String             @default("active")
+  dueDate        DateTime?
+  description    String?
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+  inboundEmailId String             @unique @default(uuid())
+  client         Client             @relation(fields: [clientId], references: [id])
+  lawyer         User               @relation(fields: [lawyerId], references: [id])
+  matter         Matter?            @relation(fields: [matterId], references: [id])
+  workspace      Workspace          @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  activityLogs   BriefActivityLog[]
+  documents      Document[]
+  notifications  Notification[]
+  tasks          Task[]
 
   @@index([lawyerId])
   @@index([workspaceId])
@@ -371,53 +325,49 @@ model Brief {
 }
 
 model Document {
-  id         String   @id @default(cuid())
+  id         String          @id @default(cuid())
   name       String
   url        String
-  type       String // 'pdf', 'docx', etc.
+  type       String
   size       Int
   briefId    String
-  uploadedAt DateTime @default(now())
-  ocrStatus  String   @default("pending") // 'pending' | 'processing' | 'completed' | 'failed'
+  uploadedAt DateTime        @default(now())
+  ocrStatus  String          @default("pending")
   ocrText    String?
-
-  brief Brief @relation(fields: [briefId], references: [id], onDelete: Cascade)
+  brief      Brief           @relation(fields: [briefId], references: [id], onDelete: Cascade)
+  chunks     DocumentChunk[]
 
   @@index([briefId])
-
-  chunks     DocumentChunk[]
 }
 
 model DocumentChunk {
-  id         String   @id @default(cuid())
+  id         String                 @id @default(cuid())
   documentId String
-  content    String   @db.Text
-  embedding  Unsupported("vector(768)")? // Standard OpenAI/Gemini embedding size
+  content    String
+  embedding  Unsupported("vector")?
   chunkIndex Int
-  metadata   Json?    // Page number, bbox, etc.
-  
-  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  metadata   Json?
+  document   Document               @relation(fields: [documentId], references: [id], onDelete: Cascade)
 
   @@index([documentId])
 }
 
 model Client {
-  id          String   @id @default(cuid())
-  name        String
-  email       String   @unique
-  phone       String?
-  company     String?
-  industry    String?
-  status      String   @default("active") // 'active' | 'inactive'
-  workspaceId String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  workspace            Workspace             @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  matters              Matter[]
+  id                   String                @id @default(cuid())
+  name                 String
+  email                String                @unique
+  phone                String?
+  company              String?
+  industry             String?
+  status               String                @default("active")
+  workspaceId          String
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
   briefs               Brief[]
+  workspace            Workspace             @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   clientCommunications ClientCommunication[]
   invoices             Invoice[]
+  matters              Matter[]
   payments             Payment[]
 
   @@index([email])
@@ -425,43 +375,33 @@ model Client {
 }
 
 model Invoice {
-  id            String  @id @default(cuid())
-  invoiceNumber String  @unique
-  clientId      String
-  matterId      String?
-
-  // Invoice Details
-  date    DateTime  @default(now())
-  dueDate DateTime?
-  status  String    @default("pending") // 'paid' | 'pending' | 'overdue'
-
-  // Bill To Information
-  billToName    String
-  billToAddress String?
-  billToCity    String?
-  billToState   String?
-
-  // Additional Fields
-  attentionTo String? // e.g., "Sven Hanson"
-  notes       String? // Additional notes or payment instructions
-  followUpSent Boolean @default(false)
-
-  // Amounts (stored in kobo/cents)
-  subtotal             Int   @default(0)
-  vatRate              Float @default(7.5) // VAT percentage
-  vatAmount            Int   @default(0)
-  securityChargeRate   Float @default(1.0) // Security charge percentage
-  securityChargeAmount Int   @default(0)
-  totalAmount          Int   @default(0)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  client   Client        @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  matter   Matter?       @relation(fields: [matterId], references: [id])
-  payments Payment[]
-  items    InvoiceItem[] // Line items
-  notifications Notification[]
+  id                   String         @id @default(cuid())
+  invoiceNumber        String         @unique
+  clientId             String
+  matterId             String?
+  date                 DateTime       @default(now())
+  dueDate              DateTime?
+  status               String         @default("pending")
+  billToName           String
+  billToAddress        String?
+  billToCity           String?
+  billToState          String?
+  attentionTo          String?
+  notes                String?
+  subtotal             Int            @default(0)
+  vatRate              Float          @default(7.5)
+  vatAmount            Int            @default(0)
+  securityChargeRate   Float          @default(1.0)
+  securityChargeAmount Int            @default(0)
+  totalAmount          Int            @default(0)
+  createdAt            DateTime       @default(now())
+  updatedAt            DateTime       @updatedAt
+  followUpSent         Boolean        @default(false)
+  client               Client         @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  matter               Matter?        @relation(fields: [matterId], references: [id])
+  items                InvoiceItem[]
+  notifications        Notification[]
+  payments             Payment[]
 
   @@index([clientId])
   @@index([matterId])
@@ -470,59 +410,50 @@ model Invoice {
 }
 
 model InvoiceItem {
-  id        String @id @default(cuid())
-  invoiceId String
-
-  description String // e.g., "PROFESSIONAL FEE FOR: RECENT INTERFACE WITH EFCC..."
-  amount      Int // Amount in kobo/cents
-  quantity    Int    @default(1)
-  order       Int    @default(0) // For ordering items
-
-  createdAt DateTime @default(now())
-
-  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  id          String   @id @default(cuid())
+  invoiceId   String
+  description String
+  amount      Int
+  quantity    Int      @default(1)
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+  invoice     Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
 
   @@index([invoiceId])
 }
 
 model Payment {
-  id        String   @id @default(cuid())
-  clientId  String
-  invoiceId String?
-  amount    Int
-  date      DateTime @default(now())
-  method    String
-  reference String?
-  createdAt DateTime @default(now())
-
-  client  Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  invoice Invoice? @relation(fields: [invoiceId], references: [id])
+  id            String         @id @default(cuid())
+  clientId      String
+  invoiceId     String?
+  amount        Int
+  date          DateTime       @default(now())
+  method        String
+  reference     String?
+  createdAt     DateTime       @default(now())
   notifications Notification[]
+  client        Client         @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  invoice       Invoice?       @relation(fields: [invoiceId], references: [id])
 
   @@index([clientId])
   @@index([invoiceId])
 }
 
 model Expense {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   workspaceId String
-  category    String // 'Office Repairs' | 'Costs of Filing Processes' | 'Transportation to Court (Lawyers)' | 'Entertainment' | 'Local Fees' | 'Staff Salary' | 'Other'
-  amount      Int // Amount in kobo/cents
+  category    String
+  amount      Int
   description String
-  date        DateTime @default(now())
-  reference   String? // Optional reference number
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  date        DateTime  @default(now())
+  reference   String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   @@index([workspaceId])
   @@index([date])
 }
-
-// ============================================
-// TASK MANAGEMENT MODELS
-// ============================================
 
 model Task {
   id           String    @id @default(cuid())
@@ -533,31 +464,24 @@ model Task {
   workspaceId  String
   matterId     String?
   briefId      String?
-  priority     String    @default("medium") // 'low' | 'medium' | 'high' | 'urgent'
-  status       String    @default("pending") // 'pending' | 'in_progress' | 'completed' | 'cancelled'
+  priority     String    @default("medium")
+  status       String    @default("pending")
   dueDate      DateTime?
   completedAt  DateTime?
-
-  // Email parsing fields
-  source       String  @default("manual") // 'manual' | 'email' | 'integration'
-  sourceEmail  String? // Email address that sent the task
-  emailSubject String? // Original email subject
-  emailBody    String? @db.Text // Original email body
-  aiConfidence Int? // AI parsing confidence (0-100)
-
-  // Metadata
-  requirements Json? // Array of requirements
-  attachments  Json? // Array of attachment URLs
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // Relations
-  assignedTo User?     @relation("AssignedTasks", fields: [assignedToId], references: [id])
-  assignedBy User      @relation("CreatedTasks", fields: [assignedById], references: [id])
-  workspace  Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  matter     Matter?   @relation(fields: [matterId], references: [id])
-  brief      Brief?    @relation(fields: [briefId], references: [id])
+  source       String    @default("manual")
+  sourceEmail  String?
+  emailSubject String?
+  emailBody    String?
+  aiConfidence Int?
+  requirements Json?
+  attachments  Json?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  assignedBy   User      @relation("CreatedTasks", fields: [assignedById], references: [id])
+  assignedTo   User?     @relation("AssignedTasks", fields: [assignedToId], references: [id])
+  brief        Brief?    @relation(fields: [briefId], references: [id])
+  matter       Matter?   @relation(fields: [matterId], references: [id])
+  workspace    Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   @@index([assignedToId, status, dueDate])
   @@index([workspaceId, status])
@@ -566,144 +490,117 @@ model Task {
 }
 
 model WorkspaceEmailConfig {
-  id               String   @id @default(cuid())
-  workspaceId      String   @unique
-  emailAddress     String   @unique // tasks-[workspace-id]@reforma.app
-  isActive         Boolean  @default(true)
-  emailIntegration Json? // OAuth tokens for Gmail/Outlook (future)
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-
-  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  id               String    @id @default(cuid())
+  workspaceId      String    @unique
+  emailAddress     String    @unique
+  isActive         Boolean   @default(true)
+  emailIntegration Json?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  workspace        Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 }
 
 model BriefActivityLog {
   id           String   @id @default(cuid())
   briefId      String
-  activityType String // 'note_added' | 'email_received' | 'status_changed' | 'document_uploaded'
+  activityType String
   description  String
-  metadata     Json? // Store email subject, sender, etc.
-  performedBy  String? // Null if system/email
+  metadata     Json?
+  performedBy  String?
   timestamp    DateTime @default(now())
-
-  brief Brief @relation(fields: [briefId], references: [id], onDelete: Cascade)
-  user  User? @relation(fields: [performedBy], references: [id])
+  brief        Brief    @relation(fields: [briefId], references: [id], onDelete: Cascade)
+  user         User?    @relation(fields: [performedBy], references: [id])
 
   @@index([briefId, timestamp])
 }
 
-// ============================================
-// INTELLIGENT DRAFTING ENGINE MODELS
-// ============================================
-
 model DraftingTemplate {
-  id          String   @id @default(cuid())
+  id          String             @id @default(cuid())
   name        String
   description String?
-  category    String // 'contracts', 'litigation', 'letters'
-  workspaceId String? // If null, it's a System Global Template
+  category    String
+  workspaceId String?
   authorId    String
-  isPublished Boolean  @default(false)
-  version     Int      @default(1)
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
+  isPublished Boolean            @default(false)
+  version     Int                @default(1)
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
   nodes       DraftingNode[]
   sessions    DraftingSession[]
+  author      User               @relation(fields: [authorId], references: [id])
+  workspace   Workspace?         @relation(fields: [workspaceId], references: [id])
   variables   DraftingVariable[]
-
-  workspace   Workspace? @relation(fields: [workspaceId], references: [id])
-  author      User       @relation(fields: [authorId], references: [id])
 
   @@index([workspaceId])
 }
 
 model DraftingNode {
-  id          String   @id @default(cuid())
-  templateId  String
-  type        String // 'QUESTION', 'CLAUSE', 'INFO', 'LOGIC_GATE'
-  
-  // Content
-  content     String   @db.Text // The question text OR the clause text
-  helpText    String?  @db.Text // Socratic explanation: "Why are we asking this?"
-  
-  // Logic
-  order       Int      // Default sequence
-  variableName String? // If this is a question, answer is stored under this var key
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id           String             @id @default(cuid())
+  templateId   String
+  type         String
+  content      String
+  helpText     String?
+  order        Int
+  variableName String?
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+  template     DraftingTemplate   @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  responses    DraftingResponse[]
+  options      NodeOption[]
 
-  template    DraftingTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
-  options     NodeOption[]
-  responses   DraftingResponse[]
-  
   @@index([templateId, order])
 }
 
 model NodeOption {
-  id          String   @id @default(cuid())
-  nodeId      String
-  label       String   // "Fixed Term"
-  value       String   // "fixed_term"
-  
-  // Branching Logic
-  nextNodeId  String?  // Jump to this node if selected (overrides default order)
-  
-  node        DraftingNode @relation(fields: [nodeId], references: [id], onDelete: Cascade)
-  
+  id         String       @id @default(cuid())
+  nodeId     String
+  label      String
+  value      String
+  nextNodeId String?
+  node       DraftingNode @relation(fields: [nodeId], references: [id], onDelete: Cascade)
+
   @@index([nodeId])
 }
 
 model DraftingVariable {
-  id          String   @id @default(cuid())
-  templateId  String
-  name        String   // "rent_amount"
-  label       String   // "Annual Rent"
-  type        String   // 'text', 'number', 'date', 'currency'
-  required    Boolean  @default(true)
+  id           String           @id @default(cuid())
+  templateId   String
+  name         String
+  label        String
+  type         String
+  required     Boolean          @default(true)
   defaultValue String?
+  template     DraftingTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
 
-  template    DraftingTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
-  
   @@unique([templateId, name])
 }
 
 model DraftingSession {
-  id          String   @id @default(cuid())
-  templateId  String
-  userId      String
-  status      String   // 'in_progress', 'completed', 'abandoned'
-  currentStepId String? // ID of the node user is currently on
-  
-  // New Fields for "Fresh Drafting"
-  mode        String   @default("template") // 'template' | 'fresh' | 'review'
-  context     Json?    // The "Strategy/Instruction" derived from user prompt
-  
-  // Compiled Data
-  variables   Json?    // Flattened map of all answers { rent_amount: 50000 }
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id            String             @id @default(cuid())
+  templateId    String
+  userId        String
+  status        String
+  currentStepId String?
+  mode          String             @default("template")
+  context       Json?
+  variables     Json?
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+  responses     DraftingResponse[]
+  template      DraftingTemplate   @relation(fields: [templateId], references: [id])
+  user          User               @relation(fields: [userId], references: [id])
 
-  template    DraftingTemplate @relation(fields: [templateId], references: [id])
-  user        User             @relation(fields: [userId], references: [id])
-  responses   DraftingResponse[]
-  
   @@index([userId, status])
 }
 
 model DraftingResponse {
-  id          String   @id @default(cuid())
-  sessionId   String
-  nodeId      String
-  value       String   @db.Text // The user's answer
-  
-  timestamp   DateTime @default(now())
+  id        String          @id @default(cuid())
+  sessionId String
+  nodeId    String
+  value     String
+  timestamp DateTime        @default(now())
+  node      DraftingNode    @relation(fields: [nodeId], references: [id])
+  session   DraftingSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 
-  session     DraftingSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  node        DraftingNode    @relation(fields: [nodeId], references: [id])
-  
   @@unique([sessionId, nodeId])
 }

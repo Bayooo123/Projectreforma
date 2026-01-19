@@ -40,6 +40,11 @@ const AddMatterModal = ({ isOpen, onClose, workspaceId, userId, onSuccess }: Add
     const [courtSummary, setCourtSummary] = useState('');
     const [proceduralStatus, setProceduralStatus] = useState('');
 
+    // Hybrid Client Selection State
+    const [clientSearch, setClientSearch] = useState('');
+    const [isClientListVisible, setIsClientListVisible] = useState(false);
+    const [isNewClient, setIsNewClient] = useState(false);
+
     const [clients, setClients] = useState<Client[]>([]);
     const [lawyers, setLawyers] = useState<Lawyer[]>([]);
     const [isLoadingData, setIsLoadingData] = useState(false);
@@ -64,17 +69,39 @@ const AddMatterModal = ({ isOpen, onClose, workspaceId, userId, onSuccess }: Add
             setCaseNumber(''); // Default to empty for manual entry
         } catch (error) {
             console.error('Error loading data:', error);
-            alert('Failed to load clients and lawyers');
+            // Don't alert here to avoid annoying the user if it's transient
         } finally {
             setIsLoadingData(false);
         }
     };
 
+    const handleClientChange = (value: string) => {
+        setClientSearch(value);
+        setIsClientListVisible(true);
+
+        // Check if value matches an existing client exactly
+        const exactMatch = clients.find(c => c.name.toLowerCase() === value.toLowerCase());
+        if (exactMatch) {
+            setClientId(exactMatch.id);
+            setIsNewClient(false);
+        } else {
+            setClientId('');
+            setIsNewClient(value.trim().length > 0);
+        }
+    };
+
+    const selectClient = (client: Client) => {
+        setClientId(client.id);
+        setClientSearch(client.name);
+        setIsClientListVisible(false);
+        setIsNewClient(false);
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        if (!clientId) {
-            alert('Please select a client');
+        if (!clientId && !clientSearch) {
+            alert('Please enter or select a client');
             return;
         }
 
@@ -89,7 +116,8 @@ const AddMatterModal = ({ isOpen, onClose, workspaceId, userId, onSuccess }: Add
             const result = await createMatter({
                 caseNumber,
                 name: matterName,
-                clientId,
+                clientId: clientId || undefined,
+                clientNameRaw: !clientId ? clientSearch : undefined,
                 assignedLawyerId: lawyerId,
                 workspaceId,
                 court: court || undefined,
@@ -186,21 +214,50 @@ const AddMatterModal = ({ isOpen, onClose, workspaceId, userId, onSuccess }: Add
                                 </div>
                             </div>
 
-                            <div className={styles.formGroup}>
+                            <div className={styles.formGroup} style={{ position: 'relative' }}>
                                 <label className={styles.label}>Client *</label>
-                                <select
-                                    className={styles.select}
-                                    value={clientId}
-                                    onChange={(e) => setClientId(e.target.value)}
-                                    required
-                                >
-                                    <option value="">Select Client...</option>
-                                    {clients.map(client => (
-                                        <option key={client.id} value={client.id}>
-                                            {client.name} {client.company ? `(${client.company})` : ''}
-                                        </option>
-                                    ))}
-                                </select>
+                                <div className={styles.hybridInputWrapper}>
+                                    <input
+                                        type="text"
+                                        className={styles.input}
+                                        placeholder="Search existing or type new client name..."
+                                        value={clientSearch}
+                                        onChange={(e) => handleClientChange(e.target.value)}
+                                        onFocus={() => setIsClientListVisible(true)}
+                                        required
+                                    />
+                                    {isNewClient && !clientId && (
+                                        <div className={styles.newClientBadge}>New Client Entry</div>
+                                    )}
+                                </div>
+
+                                {isClientListVisible && clientSearch.trim().length > 0 && (
+                                    <div className={styles.dropdown}>
+                                        {clients
+                                            .filter(c => c.name.toLowerCase().includes(clientSearch.toLowerCase()))
+                                            .map(client => (
+                                                <div
+                                                    key={client.id}
+                                                    className={styles.dropdownItem}
+                                                    onClick={() => selectClient(client)}
+                                                >
+                                                    <span className={styles.clientName}>{client.name}</span>
+                                                    {client.company && <span className={styles.clientCompany}>{client.company}</span>}
+                                                </div>
+                                            ))}
+                                        {clients.filter(c => c.name.toLowerCase().includes(clientSearch.toLowerCase())).length === 0 && (
+                                            <div className={styles.noResults}>
+                                                No results found. This will be saved as a new record.
+                                            </div>
+                                        )}
+                                        <div
+                                            className={styles.closeDropdown}
+                                            onClick={() => setIsClientListVisible(false)}
+                                        >
+                                            Close
+                                        </div>
+                                    </div>
+                                )}
                             </div>
 
                             <div className={styles.formGroup}>

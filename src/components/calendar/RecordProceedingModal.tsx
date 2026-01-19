@@ -20,7 +20,8 @@ interface MatterSummary {
     caseNumber: string;
     name: string;
     nextCourtDate: Date | null;
-    client: { name: string };
+    client?: { name: string } | null;
+    clientNameRaw?: string | null;
     assignedLawyer: { name: string | null };
 }
 
@@ -197,7 +198,8 @@ const RecordProceedingModal = ({ isOpen, onClose, workspaceId, userId, onSuccess
     const filteredMatters = matters.filter(m =>
         m.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         m.caseNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        m.client.name.toLowerCase().includes(searchQuery.toLowerCase())
+        (m.client?.name && m.client.name.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        (m.clientNameRaw && m.clientNameRaw.toLowerCase().includes(searchQuery.toLowerCase()))
     );
 
     // New State for Creation
@@ -239,7 +241,8 @@ const RecordProceedingModal = ({ isOpen, onClose, workspaceId, userId, onSuccess
                     caseNumber: m.caseNumber,
                     name: m.name,
                     nextCourtDate: null,
-                    client: m.client, // Assuming result includes client
+                    client: m.client,
+                    clientNameRaw: (m as any).clientNameRaw,
                     assignedLawyer: m.assignedLawyer // Assuming result includes lawyer
                 };
 
@@ -311,7 +314,7 @@ const RecordProceedingModal = ({ isOpen, onClose, workspaceId, userId, onSuccess
                                             <div className="text-xs text-slate-500 flex gap-2">
                                                 <span>{matter.caseNumber}</span>
                                                 <span>•</span>
-                                                <span>{matter.client.name}</span>
+                                                <span>{matter.client?.name || matter.clientNameRaw || 'Unknown Client'}</span>
                                             </div>
                                         </div>
                                     ))

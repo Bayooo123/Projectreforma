@@ -15,7 +15,7 @@ interface CourtEvent {
         id: string;
         caseNumber: string;
         name: string;
-        client: { name: string };
+        client?: { name: string } | null;
         assignedLawyer: { id: string; name: string | null };
     };
     appearances: { id: string; name: string | null; image: string | null }[];

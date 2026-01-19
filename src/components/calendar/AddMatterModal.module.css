@@ -134,3 +134,82 @@
 .submitBtn:hover {
     background-color: #1a252f;
 }
+
+/* Hybrid Client Input Styles */
+.hybridInputWrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.newClientBadge {
+    position: absolute;
+    right: 0.75rem;
+    background-color: var(--surface-subtle);
+    color: var(--text-secondary);
+    font-size: 0.7rem;
+    padding: 2px 6px;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+    pointer-events: none;
+}
+
+.dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background-color: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-md);
+    z-index: 10;
+    max-height: 200px;
+    overflow-y: auto;
+    margin-top: 4px;
+}
+
+.dropdownItem {
+    padding: 0.75rem;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--border);
+}
+
+.dropdownItem:last-child {
+    border-bottom: none;
+}
+
+.dropdownItem:hover {
+    background-color: var(--surface-subtle);
+}
+
+.clientName {
+    font-weight: 500;
+    color: var(--text-primary);
+}
+
+.clientCompany {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+}
+
+.noResults {
+    padding: 1rem;
+    text-align: center;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    font-style: italic;
+}
+
+.closeDropdown {
+    padding: 0.5rem;
+    text-align: center;
+    font-size: 0.75rem;
+    color: var(--primary);
+    cursor: pointer;
+    background-color: var(--surface-subtle);
+    border-top: 1px solid var(--border);
+}

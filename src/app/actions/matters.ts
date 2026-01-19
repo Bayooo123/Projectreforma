@@ -117,7 +117,8 @@ export async function getMatterById(id: string) {
 export async function createMatter(data: {
     caseNumber: string;
     name: string;
-    clientId: string;
+    clientId?: string | null;
+    clientNameRaw?: string | null;
     assignedLawyerId: string;
     workspaceId: string;
     court?: string;
@@ -132,7 +133,8 @@ export async function createMatter(data: {
             data: {
                 caseNumber: data.caseNumber,
                 name: data.name,
-                clientId: data.clientId,
+                clientId: data.clientId || null,
+                clientNameRaw: data.clientNameRaw || null,
                 assignedLawyerId: data.assignedLawyerId,
                 workspaceId: data.workspaceId,
                 court: data.court,
