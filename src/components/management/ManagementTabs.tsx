@@ -26,7 +26,8 @@ const ManagementTabs = () => {
                 <Building2 size={18} />
                 <span>Office Management</span>
             </Link>
-            );
+        </div>
+    );
 };
 
-            export default ManagementTabs;
+export default ManagementTabs;
