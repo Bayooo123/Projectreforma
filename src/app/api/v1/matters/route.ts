@@ -26,14 +26,18 @@ export async function GET(request: NextRequest) {
 
         if (status) where.status = status;
         if (clientId) where.clientId = clientId;
-        if (lawyerId) where.assignedLawyerId = lawyerId;
+        if (lawyerId) where.lawyers = { some: { lawyerId } };
 
         const [matters, total] = await Promise.all([
             prisma.matter.findMany({
                 where,
                 include: {
                     client: { select: { id: true, name: true } },
-                    assignedLawyer: { select: { id: true, name: true } },
+                    lawyers: {
+                        include: {
+                            lawyer: { select: { id: true, name: true } }
+                        }
+                    },
                 },
                 orderBy: { nextCourtDate: 'asc' },
                 take: limit,
@@ -51,7 +55,7 @@ export async function GET(request: NextRequest) {
             judge: matter.judge,
             nextCourtDate: matter.nextCourtDate,
             client: matter.client,
-            assignedLawyer: matter.assignedLawyer,
+            lawyers: matter.lawyers,
             createdAt: matter.createdAt,
         }));
 
@@ -73,7 +77,7 @@ export async function POST(request: NextRequest) {
 
     try {
         const body = await request.json();
-        const { caseNumber, name, clientId, assignedLawyerId, court, judge, description, nextCourtDate } = body;
+        const { caseNumber, name, clientId, lawyerAssociations, court, judge, description, nextCourtDate } = body;
 
         if (!caseNumber) {
             return errorResponse('VALIDATION_ERROR', 'Case number is required', 400, 'caseNumber');
@@ -99,7 +103,11 @@ export async function POST(request: NextRequest) {
                 caseNumber,
                 name,
                 clientId,
-                assignedLawyerId: assignedLawyerId || auth!.userId,
+                lawyers: {
+                    create: lawyerAssociations || [
+                        { lawyerId: auth!.userId, role: 'Lead Counsel', isAppearing: true }
+                    ]
+                },
                 court,
                 judge,
                 nextCourtDate: nextCourtDate ? new Date(nextCourtDate) : null,
@@ -108,7 +116,11 @@ export async function POST(request: NextRequest) {
             },
             include: {
                 client: { select: { id: true, name: true } },
-                assignedLawyer: { select: { id: true, name: true } },
+                lawyers: {
+                    include: {
+                        lawyer: { select: { id: true, name: true } }
+                    }
+                },
             },
         });
 

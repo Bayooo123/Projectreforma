@@ -22,7 +22,10 @@ interface MatterSummary {
     nextCourtDate: Date | null;
     client?: { name: string } | null;
     clientNameRaw?: string | null;
-    assignedLawyer: { name: string | null };
+    lawyers: {
+        lawyer: { name: string | null };
+        role: string;
+    }[];
 }
 
 interface Lawyer {
@@ -228,7 +231,7 @@ const RecordProceedingModal = ({ isOpen, onClose, workspaceId, userId, onSuccess
                 name: newMatterName,
                 caseNumber: newCaseNumber,
                 clientId: newClientId,
-                assignedLawyerId: userId, // Auto-assign creator
+                lawyerAssociations: [{ lawyerId: userId, role: 'Lead Counsel', isAppearing: true }],
                 workspaceId,
                 status: 'active'
             });
@@ -243,7 +246,7 @@ const RecordProceedingModal = ({ isOpen, onClose, workspaceId, userId, onSuccess
                     nextCourtDate: null,
                     client: m.client,
                     clientNameRaw: (m as any).clientNameRaw,
-                    assignedLawyer: m.assignedLawyer // Assuming result includes lawyer
+                    lawyers: m.lawyers
                 };
 
                 // Refresh list silently

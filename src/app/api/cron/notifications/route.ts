@@ -16,7 +16,7 @@ export async function GET() {
                 caseNumber: 'ID/1234/2025',
                 name: 'State v. Johnson',
                 clientId: 'client-1',
-                assignedLawyerId: 'lawyer-1',
+                lawyers: [{ lawyerId: 'lawyer-1', role: 'Lead Counsel' }],
                 court: 'High Court Lagos',
                 status: 'active',
                 nextCourtDate: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000), // 5 days from now
@@ -29,7 +29,7 @@ export async function GET() {
                 caseNumber: 'ID/5678/2025',
                 name: 'TechCorp v. FirstBank',
                 clientId: 'client-2',
-                assignedLawyerId: 'lawyer-2',
+                lawyers: [{ lawyerId: 'lawyer-2', role: 'Lead Counsel' }],
                 status: 'active',
                 lastActivityAt: new Date(Date.now() - 35 * 24 * 60 * 60 * 1000), // 35 days ago - CRITICAL
                 createdAt: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000),

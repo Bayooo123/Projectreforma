@@ -374,10 +374,12 @@ GET /matters?status=active&clientId=xxx&lawyerId=xxx
         "id": "clxxxxxx",
         "name": "Dangote Industries"
       },
-      "assignedLawyer": {
-        "id": "clxxxxxx",
-        "name": "Adaeze Okonkwo"
-      },
+      "lawyers": [
+        {
+          "lawyer": { "id": "clxxxxxx", "name": "Adaeze Okonkwo" },
+          "role": "Lead Counsel"
+        }
+      ],
       "createdAt": "2024-01-15T10:00:00Z"
     }
   ]
@@ -406,7 +408,9 @@ POST /matters
   "caseNumber": "FHC/L/CS/2024/456",
   "name": "GTBank vs ABC Ltd",
   "clientId": "clxxxxxx",
-  "assignedLawyerId": "clxxxxxx",
+  "lawyerAssociations": [
+    { "lawyerId": "clxxxxxx", "role": "Lead Counsel", "isAppearing": true }
+  ],
   "court": "Federal High Court, Lagos",
   "judge": "Hon. Justice Adebayo",
   "description": "Loan recovery dispute",
@@ -648,10 +652,12 @@ GET /calendar?start=2025-01-01&end=2025-01-31&lawyerId=xxx
         "id": "clxxxxxx",
         "name": "Dangote Industries"
       },
-      "lawyer": {
-        "id": "clxxxxxx",
-        "name": "Adaeze Okonkwo"
-      }
+      "lawyers": [
+        {
+          "lawyer": { "id": "clxxxxxx", "name": "Adaeze Okonkwo" },
+          "role": "Lead Counsel"
+        }
+      ]
     }
   ]
 }

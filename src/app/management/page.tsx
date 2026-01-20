@@ -28,7 +28,7 @@ async function getDashboardData(userId: string, workspaceId: string) {
 
     const upcomingHearingsCount = await prisma.matter.count({
         where: {
-            assignedLawyerId: userId,
+            lawyers: { some: { lawyerId: userId } },
             nextCourtDate: {
                 gte: today,
                 lte: nextWeek
@@ -39,7 +39,7 @@ async function getDashboardData(userId: string, workspaceId: string) {
     // 2. Upcoming Hearings (List)
     const upcomingHearings = await prisma.matter.findMany({
         where: {
-            assignedLawyerId: userId,
+            lawyers: { some: { lawyerId: userId } },
             nextCourtDate: {
                 gte: today
             }

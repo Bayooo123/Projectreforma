@@ -30,14 +30,18 @@ export async function GET(request: NextRequest) {
             where.nextCourtDate = { ...where.nextCourtDate, lte: new Date(end) };
         }
         if (lawyerId) {
-            where.assignedLawyerId = lawyerId;
+            where.lawyers = { some: { lawyerId } };
         }
 
         const matters = await prisma.matter.findMany({
             where,
             include: {
                 client: { select: { id: true, name: true } },
-                assignedLawyer: { select: { id: true, name: true } },
+                lawyers: {
+                    include: {
+                        lawyer: { select: { id: true, name: true } }
+                    }
+                },
             },
             orderBy: { nextCourtDate: 'asc' },
         });
@@ -53,7 +57,7 @@ export async function GET(request: NextRequest) {
             court: matter.court,
             judge: matter.judge,
             client: matter.client,
-            lawyer: matter.assignedLawyer,
+            lawyers: matter.lawyers,
         }));
 
         return successResponse(data);

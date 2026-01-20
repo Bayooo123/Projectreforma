@@ -91,7 +91,6 @@ model User {
   draftingSessions     DraftingSession[]
   draftingTemplates    DraftingTemplate[]
   invitations          Invitation[]
-  assignedMatters      Matter[]              @relation("AssignedMatters")
   activityLogs         MatterActivityLog[]
   sessions             Session[]
   createdTasks         Task[]                @relation("CreatedTasks")
@@ -99,6 +98,7 @@ model User {
   ownedWorkspaces      Workspace[]           @relation("WorkspaceOwner")
   workspaces           WorkspaceMember[]
   courtAppearances     CourtDate[]           @relation("CourtAppearances")
+  matterLawyer         MatterLawyer[]
 
   @@index([email])
 }
@@ -217,7 +217,6 @@ model Matter {
   name                 String
   clientId             String?
   clientNameRaw        String?
-  assignedLawyerId     String
   workspaceId          String
   court                String?
   judge                String?
@@ -232,17 +231,30 @@ model Matter {
   clientCommunications ClientCommunication[]
   courtDates           CourtDate[]
   invoices             Invoice[]
-  assignedLawyer       User                  @relation("AssignedMatters", fields: [assignedLawyerId], references: [id])
+  lawyers              MatterLawyer[]
   client               Client?               @relation(fields: [clientId], references: [id])
   workspace            Workspace             @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   activityLogs         MatterActivityLog[]
   notifications        Notification[]
   tasks                Task[]
 
-  @@index([assignedLawyerId])
   @@index([workspaceId])
   @@index([lastActivityAt])
   @@index([nextCourtDate])
+}
+
+model MatterLawyer {
+  id          String  @id @default(cuid())
+  matterId    String
+  lawyerId    String
+  role        String // "lead counsel", "co-counsel", "appearing"
+  isAppearing Boolean @default(false)
+  matter      Matter  @relation(fields: [matterId], references: [id], onDelete: Cascade)
+  lawyer      User    @relation(fields: [lawyerId], references: [id], onDelete: Cascade)
+
+  @@unique([matterId, lawyerId])
+  @@index([lawyerId])
+  @@index([matterId])
 }
 
 model CourtDate {

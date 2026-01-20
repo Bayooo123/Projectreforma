@@ -57,7 +57,9 @@ export async function getCourtDates(days: number = 7) {
 
     const matters = await prisma.matter.findMany({
         where: {
-            assignedLawyerId: session.user.id,
+            lawyers: {
+                some: { lawyerId: session.user.id }
+            },
             nextCourtDate: {
                 gte: today,
                 lte: futureDate
@@ -157,7 +159,11 @@ export async function getTodaysActivity(workspaceId: string) {
             caseNumber: true,
             court: true,
             judge: true,
-            assignedLawyer: { select: { name: true } },
+            lawyers: {
+                include: {
+                    lawyer: { select: { name: true } }
+                }
+            },
             proceduralStatus: true
         }
     });
@@ -188,7 +194,7 @@ export async function getTodaysActivity(workspaceId: string) {
             title: `Appearing in ${m.court || 'Court'}`,
             subtitle: `${m.name} (${m.caseNumber})`,
             status: m.proceduralStatus || 'Scheduled',
-            assignee: m.assignedLawyer?.name || 'Unassigned',
+            assignee: m.lawyers[0]?.lawyer?.name || 'Unassigned',
             time: '09:00 AM'
         })),
         ...dueBriefs.map(b => ({

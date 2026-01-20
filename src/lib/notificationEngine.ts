@@ -27,7 +27,7 @@ export interface Matter {
     caseNumber: string;
     name: string;
     clientId: string;
-    assignedLawyerId: string;
+    lawyers: { lawyerId: string; role: string }[];
     court?: string;
     judge?: string;
     status: 'active' | 'inactive' | 'closed';
@@ -89,7 +89,7 @@ export function generateNotificationsForDormantMatters(
     dormantMatters: Matter[],
     thresholdDays: number
 ): Notification[] {
-    return dormantMatters.map(matter => {
+    return dormantMatters.flatMap(matter => {
         const daysSinceActivity = Math.floor(
             (new Date().getTime() - matter.lastActivityAt.getTime()) / (24 * 60 * 60 * 1000)
         );
@@ -98,19 +98,19 @@ export function generateNotificationsForDormantMatters(
             daysSinceActivity > 30 ? 'critical' :
                 daysSinceActivity > 21 ? 'high' : 'medium';
 
-        return {
-            id: `notif-${matter.id}-${Date.now()}`,
+        return matter.lawyers.map(l => ({
+            id: `notif-${matter.id}-${l.lawyerId}-${Date.now()}`,
             type: priority === 'critical' ? 'alert' : 'warning',
             title: `Matter Inactive for ${daysSinceActivity} Days`,
             message: `${matter.name} (${matter.caseNumber}) has had no activity for ${daysSinceActivity} days. Please review and update.`,
-            recipientId: matter.assignedLawyerId,
+            recipientId: l.lawyerId,
             recipientType: 'lawyer',
             relatedMatterId: matter.id,
             priority,
             status: 'unread',
             channels: priority === 'critical' ? ['in-app', 'email'] : ['in-app'],
             createdAt: new Date(),
-        };
+        }));
     });
 }
 
@@ -120,26 +120,26 @@ export function generateNotificationsForDormantMatters(
 export function generateNotificationsForClientUpdates(
     matters: Matter[]
 ): Notification[] {
-    return matters.map(matter => {
+    return matters.flatMap(matter => {
         const daysSinceContact = matter.lastClientContact
             ? Math.floor((new Date().getTime() - matter.lastClientContact.getTime()) / (24 * 60 * 60 * 1000))
             : 999;
 
-        return {
-            id: `notif-client-${matter.id}-${Date.now()}`,
+        return matter.lawyers.map(l => ({
+            id: `notif-client-${matter.id}-${l.lawyerId}-${Date.now()}`,
             type: 'warning',
             title: 'Client Update Required',
             message: matter.lastClientContact
                 ? `Client for ${matter.name} hasn't been contacted in ${daysSinceContact} days. Please send an update.`
                 : `Client for ${matter.name} has never been contacted. Please reach out immediately.`,
-            recipientId: matter.assignedLawyerId,
+            recipientId: l.lawyerId,
             recipientType: 'lawyer',
             relatedMatterId: matter.id,
             priority: daysSinceContact > 30 ? 'high' : 'medium',
             status: 'unread',
             channels: ['in-app', 'email'],
             createdAt: new Date(),
-        };
+        }));
     });
 }
 
@@ -149,7 +149,7 @@ export function generateNotificationsForClientUpdates(
 export function generateNotificationsForCourtDates(
     matters: Matter[]
 ): Notification[] {
-    return matters.map(matter => {
+    return matters.flatMap(matter => {
         const daysUntilCourt = Math.ceil(
             (new Date(matter.nextCourtDate!).getTime() - new Date().getTime()) / (24 * 60 * 60 * 1000)
         );
@@ -158,19 +158,19 @@ export function generateNotificationsForCourtDates(
             daysUntilCourt <= 1 ? 'critical' :
                 daysUntilCourt <= 3 ? 'high' : 'medium';
 
-        return {
-            id: `notif-court-${matter.id}-${Date.now()}`,
+        return matter.lawyers.map(l => ({
+            id: `notif-court-${matter.id}-${l.lawyerId}-${Date.now()}`,
             type: daysUntilCourt <= 1 ? 'critical' : 'warning',
             title: `Court Date in ${daysUntilCourt} Day${daysUntilCourt > 1 ? 's' : ''}`,
             message: `${matter.name} has a court appearance on ${new Date(matter.nextCourtDate!).toLocaleDateString()}. Ensure client is notified and prepared.`,
-            recipientId: matter.assignedLawyerId,
+            recipientId: l.lawyerId,
             recipientType: 'lawyer',
             relatedMatterId: matter.id,
             priority,
             status: 'unread',
             channels: daysUntilCourt <= 1 ? ['in-app', 'email', 'sms'] : ['in-app', 'email'],
             createdAt: new Date(),
-        };
+        }));
     });
 }
 

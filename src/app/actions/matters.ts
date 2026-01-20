@@ -20,11 +20,15 @@ export async function getMatters(workspaceId: string) {
                         company: true,
                     },
                 },
-                assignedLawyer: {
-                    select: {
-                        id: true,
-                        name: true,
-                        email: true,
+                lawyers: {
+                    include: {
+                        lawyer: {
+                            select: {
+                                id: true,
+                                name: true,
+                                email: true,
+                            },
+                        },
                     },
                 },
                 activityLogs: {
@@ -58,11 +62,15 @@ export async function getMatterById(id: string) {
             where: { id },
             include: {
                 client: true,
-                assignedLawyer: {
-                    select: {
-                        id: true,
-                        name: true,
-                        email: true,
+                lawyers: {
+                    include: {
+                        lawyer: {
+                            select: {
+                                id: true,
+                                name: true,
+                                email: true,
+                            },
+                        },
                     },
                 },
                 workspace: {
@@ -119,7 +127,7 @@ export async function createMatter(data: {
     name: string;
     clientId?: string | null;
     clientNameRaw?: string | null;
-    assignedLawyerId: string;
+    lawyerAssociations: { lawyerId: string; role: string; isAppearing?: boolean }[];
     workspaceId: string;
     court?: string;
     judge?: string;
@@ -135,33 +143,38 @@ export async function createMatter(data: {
                 name: data.name,
                 clientId: data.clientId || null,
                 clientNameRaw: data.clientNameRaw || null,
-                assignedLawyerId: data.assignedLawyerId,
                 workspaceId: data.workspaceId,
                 court: data.court,
                 judge: data.judge,
                 nextCourtDate: data.nextCourtDate,
                 status: data.status || 'active',
                 proceduralStatus: data.proceduralStatus,
+                lawyers: {
+                    create: data.lawyerAssociations.map(assoc => ({
+                        lawyerId: assoc.lawyerId,
+                        role: assoc.role,
+                        isAppearing: assoc.isAppearing || false
+                    }))
+                }
             },
             include: {
                 client: true,
-                assignedLawyer: {
-                    select: {
-                        id: true,
-                        name: true,
-                        email: true,
-                    },
+                lawyers: {
+                    include: {
+                        lawyer: true
+                    }
                 },
             },
         });
 
         // Log activity
+        const performedBy = data.lawyerAssociations[0]?.lawyerId || 'system';
         await prisma.matterActivityLog.create({
             data: {
                 matterId: matter.id,
                 activityType: 'matter_created',
                 description: `Matter "${matter.name}" created`,
-                performedBy: data.assignedLawyerId,
+                performedBy: performedBy,
             },
         });
 
@@ -203,7 +216,7 @@ export async function updateMatter(
     data: {
         name?: string;
         clientId?: string;
-        assignedLawyerId?: string;
+        lawyerAssociations?: { lawyerId: string; role: string; isAppearing?: boolean }[];
         court?: string;
         judge?: string;
         nextCourtDate?: Date | null;
@@ -213,21 +226,29 @@ export async function updateMatter(
     performedBy: string
 ) {
     try {
+        const { lawyerAssociations, ...rest } = data;
+
         const matter = await prisma.matter.update({
             where: { id },
             data: {
-                ...data,
+                ...rest,
                 lastActivityAt: new Date(),
+                lawyers: lawyerAssociations ? {
+                    deleteMany: {},
+                    create: lawyerAssociations.map(assoc => ({
+                        lawyerId: assoc.lawyerId,
+                        role: assoc.role,
+                        isAppearing: assoc.isAppearing || false
+                    }))
+                } : undefined
             },
             include: {
                 client: true,
-                assignedLawyer: {
-                    select: {
-                        id: true,
-                        name: true,
-                        email: true,
-                    },
-                },
+                lawyers: {
+                    include: {
+                        lawyer: true
+                    }
+                }
             },
         });
 
@@ -289,14 +310,15 @@ export async function adjournMatter(
 
         const matterCheck = await prisma.matter.findUnique({
             where: { id: matterId },
-            include: { workspace: true }
+            include: { workspace: true, lawyers: true }
         });
 
         if (!matterCheck) return { success: false, error: 'Matter not found' };
 
-        // Allow Assigned Lawyer OR Workspace Owner
-        if (matterCheck.assignedLawyerId !== performedBy && matterCheck.workspace.ownerId !== performedBy) {
-            return { success: false, error: 'Permission denied: Only the assigned lawyer or owner can adjourn a matter.' };
+        // Allow Associated Lawyer OR Workspace Owner
+        const isAssociated = matterCheck.lawyers.some(l => l.lawyerId === performedBy);
+        if (!isAssociated && matterCheck.workspace.ownerId !== performedBy) {
+            return { success: false, error: 'Permission denied: Only associated lawyers or the owner can adjourn a matter.' };
         }
 
         // 1. Get the current matter to see the PREVIOUS (or current) court date
@@ -353,29 +375,34 @@ export async function adjournMatter(
             },
         });
 
-        // NOTIFICATION LOGIC (Firm-wide / Assigned Lawyer)
-        // 1. Notify the assigned lawyer (if different from performer)
+        // NOTIFICATION LOGIC (Firm-wide / Associated Lawyers)
+        // 1. Notify associated lawyers (except the one who performed the action)
         const matterDetails = await prisma.matter.findUnique({
             where: { id: matterId },
-            include: { assignedLawyer: true }
+            include: { lawyers: { include: { lawyer: true } } }
         });
 
-        if (matterDetails && matterDetails.assignedLawyerId !== performedBy) {
-            await createNotification({
-                title: 'Case Adjourned',
-                message: `Matter ${matterDetails.caseNumber} adjourned to ${newDate.toLocaleDateString()}. Please update proceedings.`,
-                recipientId: matterDetails.assignedLawyerId,
-                recipientType: 'lawyer',
-                type: 'info',
-                priority: 'high',
-                relatedMatterId: matterId
-            });
+        if (matterDetails) {
+            for (const assoc of matterDetails.lawyers) {
+                if (assoc.lawyerId !== performedBy) {
+                    await createNotification({
+                        title: 'Case Adjourned',
+                        message: `Matter ${matterDetails.caseNumber} adjourned to ${newDate.toLocaleDateString()}. Please update proceedings.`,
+                        recipientId: assoc.lawyerId,
+                        recipientType: 'lawyer',
+                        type: 'info',
+                        priority: 'high',
+                        relatedMatterId: matterId
+                    });
+                }
+            }
         }
 
         // 2. Also notify the 'Appearing Lawyers' if they are different
         if (appearanceLawyerIds && appearanceLawyerIds.length > 0) {
             for (const lawyerId of appearanceLawyerIds) {
-                if (lawyerId !== performedBy && lawyerId !== matterDetails?.assignedLawyerId) {
+                const isMemberOfMatter = matterDetails?.lawyers.some(l => l.lawyerId === lawyerId);
+                if (lawyerId !== performedBy && !isMemberOfMatter) {
                     await createNotification({
                         title: 'Court Appearance Recorded',
                         message: `You were marked as appearing in ${matterDetails?.caseNumber || 'a matter'}. Adjourned to ${newDate.toLocaleDateString()}.`,
@@ -485,7 +512,7 @@ export async function updateCourtProceedings(
             where: { id: courtDateId },
             include: {
                 matter: {
-                    include: { workspace: true }
+                    include: { workspace: true, lawyers: true }
                 }
             }
         });
@@ -494,8 +521,9 @@ export async function updateCourtProceedings(
 
         // RBAC Check
         const { matter } = courtDate;
-        if (matter.assignedLawyerId !== performedBy && matter.workspace.ownerId !== performedBy) {
-            return { success: false, error: 'Permission denied: Only the assigned lawyer or owner can update proceedings.' };
+        const isAssociated = matter.lawyers.some(l => l.lawyerId === performedBy);
+        if (!isAssociated && matter.workspace.ownerId !== performedBy) {
+            return { success: false, error: 'Permission denied: Only associated lawyers or the owner can update proceedings.' };
         }
 
         // Update the record

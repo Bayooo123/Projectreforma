@@ -19,10 +19,14 @@ interface Matter {
         id: string;
         name: string;
     };
-    assignedLawyer: {
-        id: string;
-        name: string | null;
-    };
+    lawyers: {
+        lawyer: {
+            id: string;
+            name: string | null;
+            email: string | null;
+        };
+        role: string;
+    }[];
     briefs: {
         id: string;
         briefNumber: string;
@@ -91,10 +95,9 @@ const MatterDetailModal = ({ isOpen, onClose, matter, userId }: MatterDetailModa
         try {
             const data = await getLawyersForWorkspace(matter.workspaceId);
             setLawyers(data);
-            // Default to assigned lawyer if available
-            if (matter.assignedLawyer?.id) {
-                setSelectedLawyerIds([matter.assignedLawyer.id]);
-            }
+            // Default to matching lawyers from the matter
+            const initialSelected = matter.lawyers.map(l => l.lawyer.id);
+            setSelectedLawyerIds(initialSelected);
         } catch (error) {
             console.error('Error fetching lawyers:', error);
         } finally {
@@ -291,8 +294,21 @@ const MatterDetailModal = ({ isOpen, onClose, matter, userId }: MatterDetailModa
                         <div className={styles.metaItem}>
                             <User size={16} className={styles.icon} />
                             <div>
-                                <span className={styles.label}>Lead Counsel</span>
-                                <p className={styles.value}>{matter.assignedLawyer.name || 'Unassigned'}</p>
+                                <span className={styles.label}>Legal Team</span>
+                                <div className={styles.value}>
+                                    {matter.lawyers && matter.lawyers.length > 0 ? (
+                                        <div className="flex flex-col gap-1 mt-1">
+                                            {matter.lawyers.map((assoc, idx) => (
+                                                <div key={idx} className="text-xs bg-slate-50 border border-slate-200 px-2 py-1 rounded">
+                                                    <span className="font-semibold">{assoc.lawyer.name}</span>
+                                                    <span className="text-slate-500 ml-1">({assoc.role})</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <p>Unassigned</p>
+                                    )}
+                                </div>
                             </div>
                         </div>
                         <div className={styles.metaItem}>

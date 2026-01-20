@@ -5,6 +5,7 @@ import { X, Gavel, Loader } from 'lucide-react';
 import { createMatter } from '@/app/actions/matters';
 import { generateCaseNumber } from '@/lib/matters';
 import { getClientsForWorkspace, getLawyersForWorkspace } from '@/lib/briefs';
+import { ASCOLP_LAWYERS } from '@/lib/firm-directory';
 import styles from './AddMatterModal.module.css';
 
 interface AddMatterModalProps {
@@ -33,12 +34,12 @@ const AddMatterModal = ({ isOpen, onClose, workspaceId, userId, onSuccess }: Add
     const [caseNumber, setCaseNumber] = useState('');
     const [matterName, setMatterName] = useState('');
     const [clientId, setClientId] = useState('');
-    const [lawyerId, setLawyerId] = useState('');
     const [court, setCourt] = useState('');
     const [judge, setJudge] = useState('');
     const [nextCourtDate, setNextCourtDate] = useState('');
     const [courtSummary, setCourtSummary] = useState('');
     const [proceduralStatus, setProceduralStatus] = useState('');
+    const [selectedLawyers, setSelectedLawyers] = useState<{ lawyerId: string; role: string; isAppearing: boolean }[]>([]);
 
     // Hybrid Client Selection State
     const [clientSearch, setClientSearch] = useState('');
@@ -64,12 +65,21 @@ const AddMatterModal = ({ isOpen, onClose, workspaceId, userId, onSuccess }: Add
                 getLawyersForWorkspace(workspaceId),
             ]);
 
+            // Filter lawyers to only include those in ASCOLP_LAWYERS directory
+            const firmLawyerEmails = new Set(ASCOLP_LAWYERS.map(l => l.email.toLowerCase()));
+            const filteredLawyers = lawyersData.filter(l => firmLawyerEmails.has(l.email?.toLowerCase() || ''));
+
             setClients(clientsData);
-            setLawyers(lawyersData);
-            setCaseNumber(''); // Default to empty for manual entry
+            setLawyers(filteredLawyers);
+            setCaseNumber('');
+
+            // Default to current user as Lead Counsel if they are in the firm
+            const currentLawyer = filteredLawyers.find(l => l.id === userId);
+            if (currentLawyer) {
+                setSelectedLawyers([{ lawyerId: currentLawyer.id, role: 'Lead Counsel', isAppearing: true }]);
+            }
         } catch (error) {
             console.error('Error loading data:', error);
-            // Don't alert here to avoid annoying the user if it's transient
         } finally {
             setIsLoadingData(false);
         }
@@ -105,8 +115,8 @@ const AddMatterModal = ({ isOpen, onClose, workspaceId, userId, onSuccess }: Add
             return;
         }
 
-        if (!lawyerId) {
-            alert('Please select a lawyer');
+        if (selectedLawyers.length === 0) {
+            alert('Please assign at least one lawyer');
             return;
         }
 
@@ -118,24 +128,24 @@ const AddMatterModal = ({ isOpen, onClose, workspaceId, userId, onSuccess }: Add
                 name: matterName,
                 clientId: clientId || undefined,
                 clientNameRaw: !clientId ? clientSearch : undefined,
-                assignedLawyerId: lawyerId,
+                lawyerAssociations: selectedLawyers,
                 workspaceId,
                 court: court || undefined,
                 judge: judge || undefined,
                 nextCourtDate: nextCourtDate ? new Date(nextCourtDate) : undefined,
                 proceduralStatus: proceduralStatus || undefined,
-                proceedings: courtSummary || undefined, // Pass summary
+                proceedings: courtSummary || undefined,
             });
 
             if (result.success) {
                 // Reset form
                 setMatterName('');
                 setClientId('');
-                setLawyerId('');
+                setSelectedLawyers([]);
                 setCourt('');
                 setJudge('');
                 setNextCourtDate('');
-                setCourtSummary(''); // Reset summary
+                setCourtSummary('');
 
                 alert('Matter created successfully!');
                 onSuccess?.();
@@ -290,26 +300,57 @@ const AddMatterModal = ({ isOpen, onClose, workspaceId, userId, onSuccess }: Add
                                 />
                             </div>
 
-                            <div className={styles.formGroup}>
-                                <label className={styles.label}>Lead Counsel *</label>
-                                <select
-                                    className={styles.select}
-                                    value={lawyerId}
-                                    onChange={(e) => setLawyerId(e.target.value)}
-                                    required
-                                >
-                                    <option value="">Select Lawyer...</option>
-                                    {lawyers.map(lawyer => (
-                                        <option key={lawyer.id} value={lawyer.id}>
-                                            {lawyer.name || lawyer.email} ({lawyer.role})
-                                        </option>
+                            <div className={styles.formGroup} style={{ background: '#f8fafc', padding: '1rem', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                                <label className={styles.label}>Legal Team *</label>
+                                <div className="flex flex-col gap-3">
+                                    {selectedLawyers.map((assoc, index) => (
+                                        <div key={index} className="flex gap-2 items-center">
+                                            <select
+                                                className={styles.select}
+                                                style={{ flex: 2 }}
+                                                value={assoc.lawyerId}
+                                                onChange={(e) => {
+                                                    const newLawyers = [...selectedLawyers];
+                                                    newLawyers[index].lawyerId = e.target.value;
+                                                    setSelectedLawyers(newLawyers);
+                                                }}
+                                            >
+                                                <option value="">Select Lawyer...</option>
+                                                {lawyers.map(l => (
+                                                    <option key={l.id} value={l.id}>{l.name}</option>
+                                                ))}
+                                            </select>
+                                            <select
+                                                className={styles.select}
+                                                style={{ flex: 1 }}
+                                                value={assoc.role}
+                                                onChange={(e) => {
+                                                    const newLawyers = [...selectedLawyers];
+                                                    newLawyers[index].role = e.target.value;
+                                                    setSelectedLawyers(newLawyers);
+                                                }}
+                                            >
+                                                <option value="Lead Counsel">Lead Counsel</option>
+                                                <option value="Co-Counsel">Co-Counsel</option>
+                                                <option value="Appearing">Appearing</option>
+                                            </select>
+                                            <button
+                                                type="button"
+                                                onClick={() => setSelectedLawyers(prev => prev.filter((_, i) => i !== index))}
+                                                className="p-2 text-red-500 hover:bg-red-50 rounded"
+                                            >
+                                                <X size={16} />
+                                            </button>
+                                        </div>
                                     ))}
-                                </select>
-                                {lawyers.length === 0 && (
-                                    <p style={{ fontSize: '0.75rem', color: '#666', marginTop: '0.25rem' }}>
-                                        No lawyers found. Invite team members first.
-                                    </p>
-                                )}
+                                    <button
+                                        type="button"
+                                        className="text-sm text-blue-600 hover:underline font-medium text-left"
+                                        onClick={() => setSelectedLawyers(prev => [...prev, { lawyerId: '', role: 'Co-Counsel', isAppearing: false }])}
+                                    >
+                                        + Add Consultant/Lawyer
+                                    </button>
+                                </div>
                             </div>
 
                             <div className={styles.formGroup}>

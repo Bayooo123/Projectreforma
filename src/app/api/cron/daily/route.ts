@@ -27,9 +27,12 @@ export async function GET(request: Request) {
             },
             include: {
                 matter: {
-                    select: {
-                        assignedLawyerId: true,
-                        assignedLawyer: true
+                    include: {
+                        lawyers: {
+                            include: {
+                                lawyer: { select: { id: true, name: true } }
+                            }
+                        }
                     }
                 },
                 client: true
@@ -42,16 +45,18 @@ export async function GET(request: Request) {
             // Logic to avoid spamming: Check if we sent a notification recently
             // For MVP, we'll just send it. In production, we'd check `Notification` table history.
 
-            // If invoice is linked to a matter, notify the lawyer
-            if (invoice.matter?.assignedLawyerId) {
-                await createNotification({
-                    title: 'Payment Follow-up Required',
-                    message: `Invoice #${invoice.invoiceNumber} for ${invoice.client.name} is still pending. Please follow up or record payment.`,
-                    recipientId: invoice.matter.assignedLawyerId,
-                    recipientType: 'lawyer',
-                    type: 'warning',
-                    priority: 'high',
-                });
+            // If invoice is linked to a matter, notify all associated lawyers
+            if (invoice.matter?.lawyers) {
+                for (const assoc of invoice.matter.lawyers) {
+                    await createNotification({
+                        title: 'Payment Follow-up Required',
+                        message: `Invoice #${invoice.invoiceNumber} for ${invoice.client.name} is still pending. Please follow up or record payment.`,
+                        recipientId: assoc.lawyerId,
+                        recipientType: 'lawyer',
+                        type: 'warning',
+                        priority: 'high',
+                    });
+                }
             }
         }
 

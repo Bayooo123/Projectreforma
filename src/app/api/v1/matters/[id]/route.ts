@@ -24,7 +24,11 @@ export async function GET(
             },
             include: {
                 client: { select: { id: true, name: true, email: true } },
-                assignedLawyer: { select: { id: true, name: true, email: true } },
+                lawyers: {
+                    include: {
+                        lawyer: { select: { id: true, name: true, email: true } }
+                    }
+                },
                 briefs: {
                     select: {
                         id: true,
@@ -73,7 +77,7 @@ export async function PATCH(
         }
 
         const body = await request.json();
-        const { name, status, court, judge, description, nextCourtDate, assignedLawyerId } = body;
+        const { name, status, court, judge, description, nextCourtDate, lawyerAssociations } = body;
 
         const updateData: any = {};
         if (name !== undefined) updateData.name = name;
@@ -82,14 +86,27 @@ export async function PATCH(
         if (judge !== undefined) updateData.judge = judge;
         if (description !== undefined) updateData.description = description;
         if (nextCourtDate !== undefined) updateData.nextCourtDate = nextCourtDate ? new Date(nextCourtDate) : null;
-        if (assignedLawyerId !== undefined) updateData.assignedLawyerId = assignedLawyerId;
+        if (lawyerAssociations !== undefined) {
+            updateData.lawyers = {
+                deleteMany: {},
+                create: lawyerAssociations.map((assoc: any) => ({
+                    lawyerId: assoc.lawyerId,
+                    role: assoc.role,
+                    isAppearing: assoc.isAppearing || false
+                }))
+            };
+        }
 
         const matter = await prisma.matter.update({
             where: { id },
             data: updateData,
             include: {
                 client: { select: { id: true, name: true } },
-                assignedLawyer: { select: { id: true, name: true } },
+                lawyers: {
+                    include: {
+                        lawyer: { select: { id: true, name: true } }
+                    }
+                },
             },
         });
 

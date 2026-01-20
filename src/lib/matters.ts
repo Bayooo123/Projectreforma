@@ -26,7 +26,11 @@ export async function getMattersForMonth(
             },
             include: {
                 client: { select: { id: true, name: true } },
-                assignedLawyer: { select: { id: true, name: true } },
+                lawyers: {
+                    include: {
+                        lawyer: { select: { id: true, name: true } }
+                    }
+                },
                 briefs: {
                     select: { id: true, briefNumber: true, name: true }
                 }
@@ -48,7 +52,11 @@ export async function getMattersForMonth(
                 matter: {
                     include: {
                         client: { select: { id: true, name: true } },
-                        assignedLawyer: { select: { id: true, name: true } },
+                        lawyers: {
+                            include: {
+                                lawyer: { select: { id: true, name: true } }
+                            }
+                        },
                         briefs: {
                             select: { id: true, briefNumber: true, name: true }
                         }
@@ -107,10 +115,14 @@ export async function getUpcomingMatters(workspaceId: string, days: number = 7) 
                         name: true,
                     },
                 },
-                assignedLawyer: {
-                    select: {
-                        id: true,
-                        name: true,
+                lawyers: {
+                    include: {
+                        lawyer: {
+                            select: {
+                                id: true,
+                                name: true,
+                            },
+                        },
                     },
                 },
             },
@@ -203,10 +215,14 @@ export async function searchMatters(workspaceId: string, query: string) {
                         name: true,
                     },
                 },
-                assignedLawyer: {
-                    select: {
-                        id: true,
-                        name: true,
+                lawyers: {
+                    include: {
+                        lawyer: {
+                            select: {
+                                id: true,
+                                name: true,
+                            },
+                        },
                     },
                 },
             },
