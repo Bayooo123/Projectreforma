@@ -13,10 +13,16 @@ interface CourtEvent {
     matterId: string;
     matter: {
         id: string;
-        caseNumber: string;
+        caseNumber: string | null;
         name: string;
         client?: { name: string } | null;
-        assignedLawyer: { id: string; name: string | null };
+        lawyers: {
+            lawyer: {
+                id: string;
+                name: string | null;
+            };
+            role: string;
+        }[];
     };
     appearances: { id: string; name: string | null; image: string | null }[];
 }

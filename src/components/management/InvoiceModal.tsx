@@ -19,7 +19,7 @@ interface InvoiceItem {
 interface Matter {
     id: string;
     name: string;
-    caseNumber: string;
+    caseNumber: string | null;
 }
 
 interface Invoice {

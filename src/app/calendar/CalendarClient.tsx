@@ -18,10 +18,16 @@ interface CourtEvent {
     matterId: string;
     matter: {
         id: string;
-        caseNumber: string;
+        caseNumber: string | null;
         name: string;
         client?: { name: string } | null;
-        assignedLawyer: { id: string; name: string | null };
+        lawyers: {
+            lawyer: {
+                id: string;
+                name: string | null;
+            };
+            role: string;
+        }[];
     };
     appearances: { id: string; name: string | null; image: string | null }[];
 }
@@ -60,7 +66,7 @@ export default function CalendarClient({
             const query = searchQuery.toLowerCase();
             return (
                 event.matter.name.toLowerCase().includes(query) ||
-                event.matter.caseNumber.toLowerCase().includes(query) ||
+                (event.matter.caseNumber?.toLowerCase().includes(query)) ||
                 (event.matter.client?.name && event.matter.client.name.toLowerCase().includes(query)) ||
                 (event.title && event.title.toLowerCase().includes(query))
             );

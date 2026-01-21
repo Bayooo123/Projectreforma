@@ -46,7 +46,16 @@ export async function PATCH(
             },
             include: {
                 client: { select: { id: true, name: true } },
-                assignedLawyer: { select: { id: true, name: true } },
+                lawyers: {
+                    include: {
+                        lawyer: {
+                            select: {
+                                id: true,
+                                name: true,
+                            },
+                        },
+                    },
+                },
             },
         });
 

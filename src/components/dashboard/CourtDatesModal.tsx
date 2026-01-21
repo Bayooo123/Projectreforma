@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/Button';
 
 interface Hearing {
     id: string;
-    caseNumber: string;
+    caseNumber: string | null;
     name: string;
     court: string | null;
     judge: string | null;

@@ -24,7 +24,7 @@ export interface Notification {
 
 export interface Matter {
     id: string;
-    caseNumber: string;
+    caseNumber: string | null;
     name: string;
     clientId: string;
     lawyers: { lawyerId: string; role: string }[];

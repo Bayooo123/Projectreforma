@@ -186,10 +186,14 @@ export async function getInvoiceById(id: string) {
                 client: true,
                 matter: {
                     include: {
-                        assignedLawyer: {
-                            select: {
-                                name: true,
-                                email: true,
+                        lawyers: {
+                            include: {
+                                lawyer: {
+                                    select: {
+                                        name: true,
+                                        email: true,
+                                    },
+                                },
                             },
                         },
                     },

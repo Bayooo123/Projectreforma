@@ -17,7 +17,7 @@ interface RecordProceedingModalProps {
 
 interface MatterSummary {
     id: string;
-    caseNumber: string;
+    caseNumber: string | null;
     name: string;
     nextCourtDate: Date | null;
     client?: { name: string } | null;
@@ -202,7 +202,7 @@ const RecordProceedingModal = ({ isOpen, onClose, workspaceId, userId, onSuccess
 
     const filteredMatters = matters.filter(m =>
         m.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        m.caseNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (m.caseNumber?.toLowerCase().includes(searchQuery.toLowerCase())) ||
         (m.client?.name && m.client.name.toLowerCase().includes(searchQuery.toLowerCase())) ||
         (m.clientNameRaw && m.clientNameRaw.toLowerCase().includes(searchQuery.toLowerCase()))
     );
@@ -246,9 +246,9 @@ const RecordProceedingModal = ({ isOpen, onClose, workspaceId, userId, onSuccess
                     caseNumber: m.caseNumber,
                     name: m.name,
                     nextCourtDate: null,
-                    client: m.client,
+                    client: (m as any).client,
                     clientNameRaw: (m as any).clientNameRaw,
-                    lawyers: m.lawyers
+                    lawyers: (m as any).lawyers || []
                 };
 
                 // Refresh list silently

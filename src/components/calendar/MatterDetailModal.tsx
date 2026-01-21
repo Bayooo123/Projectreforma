@@ -9,7 +9,7 @@ import styles from './MatterDetailModal.module.css';
 interface Matter {
     id: string;
     workspaceId: string; // Added workspaceId
-    caseNumber: string;
+    caseNumber: string | null;
     name: string;
     court: string | null;
     judge: string | null;

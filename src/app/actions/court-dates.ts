@@ -24,9 +24,16 @@ export async function getCourtEvents(workspaceId: string) {
                         client: {
                             select: { name: true }
                         },
-                        assignedLawyer: {
-                            select: { name: true, id: true }
-                        }
+                        lawyers: {
+                            include: {
+                                lawyer: {
+                                    select: {
+                                        id: true,
+                                        name: true,
+                                    },
+                                },
+                            },
+                        },
                     }
                 },
                 appearances: {

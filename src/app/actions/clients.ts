@@ -126,10 +126,14 @@ export async function getClientById(id: string) {
             include: {
                 matters: {
                     include: {
-                        assignedLawyer: {
-                            select: {
-                                name: true,
-                                email: true,
+                        lawyers: {
+                            include: {
+                                lawyer: {
+                                    select: {
+                                        name: true,
+                                        email: true,
+                                    },
+                                },
                             },
                         },
                     },
