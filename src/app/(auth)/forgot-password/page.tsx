@@ -57,7 +57,7 @@ export default function ForgotPasswordPage() {
                                     type="email"
                                     autoComplete="email"
                                     required
-                                    className="appearance-none rounded-md relative block w-full px-3 py-3 border border-gray-300 dark:border-slate-600 placeholder-gray-500 dark:placeholder-slate-400 text-gray-900 dark:text-white dark:bg-slate-700 focus:outline-none focus:ring-primary focus:border-primary focus:z-10 sm:text-sm"
+                                    className="appearance-none rounded-md relative block w-full px-3 py-3 border border-gray-300 dark:border-slate-600 placeholder-gray-500 dark:placeholder-slate-400 text-black bg-white dark:bg-white focus:outline-none focus:ring-primary focus:border-primary focus:z-10 sm:text-sm"
                                     placeholder="Email address"
                                 />
                             </div>

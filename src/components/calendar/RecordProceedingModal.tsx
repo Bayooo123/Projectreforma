@@ -57,6 +57,7 @@ const RecordProceedingModal = ({ isOpen, onClose, workspaceId, userId, onSuccess
     const [isAdjourning, setIsAdjourning] = useState(true); // Default to yes, most proceedings end in adjournment
     const [nextDate, setNextDate] = useState('');
     const [adjournedFor, setAdjournedFor] = useState('');
+    const [otherCounsel, setOtherCounsel] = useState('');
 
     const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -166,7 +167,8 @@ const RecordProceedingModal = ({ isOpen, onClose, workspaceId, userId, onSuccess
                     adjournedFor,
                     userId,
                     selectedLawyerIds,
-                    new Date(courtDate) // Pass explicit proceedingDate
+                    new Date(courtDate), // Pass explicit proceedingDate
+                    otherCounsel
                 );
 
                 if (result.success) {
@@ -229,7 +231,7 @@ const RecordProceedingModal = ({ isOpen, onClose, workspaceId, userId, onSuccess
             // Create the matter
             const result = await createMatter({
                 name: newMatterName,
-                caseNumber: newCaseNumber,
+                caseNumber: newCaseNumber || undefined,
                 clientId: newClientId,
                 lawyerAssociations: [{ lawyerId: userId, role: 'Lead Counsel', isAppearing: true }],
                 workspaceId,
@@ -296,7 +298,7 @@ const RecordProceedingModal = ({ isOpen, onClose, workspaceId, userId, onSuccess
                                 <input
                                     type="text"
                                     className={styles.searchInput}
-                                    placeholder="Search by case name, number or client..."
+                                    placeholder="Search by case name, suit number or client..."
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
                                     autoFocus
@@ -357,12 +359,13 @@ const RecordProceedingModal = ({ isOpen, onClose, workspaceId, userId, onSuccess
                             </div>
 
                             <div className={styles.formSection}>
-                                <label className={styles.label}>Case Number *</label>
+                                <label className={styles.label}>Suit Number (Optional)</label>
                                 <input
                                     type="text"
                                     className={styles.input}
                                     value={newCaseNumber}
                                     onChange={(e) => setNewCaseNumber(e.target.value)}
+                                    placeholder="e.g. FHC/L/CS/..."
                                 />
                             </div>
 
@@ -409,6 +412,17 @@ const RecordProceedingModal = ({ isOpen, onClose, workspaceId, userId, onSuccess
                                     value={proceedings}
                                     onChange={(e) => setProceedings(e.target.value)}
                                     autoFocus
+                                />
+                            </div>
+
+                            <div className={styles.formSection}>
+                                <label className={styles.label}>Other Appearing Counsel</label>
+                                <input
+                                    type="text"
+                                    className={styles.input}
+                                    placeholder="External lawyers appearing with Lead Counsel"
+                                    value={otherCounsel}
+                                    onChange={(e) => setOtherCounsel(e.target.value)}
                                 />
                             </div>
 

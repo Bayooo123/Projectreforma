@@ -123,7 +123,7 @@ export async function getMatterById(id: string) {
  * Create a new matter
  */
 export async function createMatter(data: {
-    caseNumber: string;
+    caseNumber?: string | null;
     name: string;
     clientId?: string | null;
     clientNameRaw?: string | null;
@@ -135,14 +135,16 @@ export async function createMatter(data: {
     status?: string;
     proceduralStatus?: string;
     proceedings?: string;
+    otherCounsel?: string;
 }) {
     try {
         const matter = await prisma.matter.create({
             data: {
-                caseNumber: data.caseNumber,
+                caseNumber: data.caseNumber || null,
                 name: data.name,
                 clientId: data.clientId || null,
                 clientNameRaw: data.clientNameRaw || null,
+                otherCounsel: data.otherCounsel || null,
                 workspaceId: data.workspaceId,
                 court: data.court,
                 judge: data.judge,
@@ -303,7 +305,8 @@ export async function adjournMatter(
     adjournedFor: string,
     performedBy: string,
     appearanceLawyerIds?: string[], // Optional array of lawyer IDs who appeared
-    proceedingDate?: Date // Optional explicit date of the proceeding being recorded
+    proceedingDate?: Date, // Optional explicit date of the proceeding being recorded
+    otherCounsel?: string // Optional names of other counsel who appeared
 ) {
     try {
         // ... (RBAC Check omitted for brevity in diff, but preserved in file)
@@ -339,6 +342,7 @@ export async function adjournMatter(
                 proceedings: proceedings,
                 adjournedFor: adjournedFor,
                 nextDate: newDate,
+                otherCounsel: otherCounsel || null,
                 // Link Appearing Lawyers
                 appearances: appearanceLawyerIds && appearanceLawyerIds.length > 0 ? {
                     connect: appearanceLawyerIds.map(id => ({ id }))

@@ -213,10 +213,11 @@ model NotificationRule {
 
 model Matter {
   id                   String                @id @default(cuid())
-  caseNumber           String                @unique
+  caseNumber           String?               @unique
   name                 String
   clientId             String?
   clientNameRaw        String?
+  otherCounsel         String?
   workspaceId          String
   court                String?
   judge                String?
@@ -265,6 +266,7 @@ model CourtDate {
   proceedings  String?
   outcome      String?
   adjournedFor String?
+  otherCounsel String?
   nextDate     DateTime?
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt

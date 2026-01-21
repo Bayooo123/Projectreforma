@@ -92,7 +92,7 @@ export default function ResetPasswordPage() {
                                         type="password"
                                         required
                                         minLength={6}
-                                        className="block w-full pl-10 pr-3 py-3 border border-gray-300 dark:border-slate-600 rounded-md leading-5 bg-white dark:bg-slate-700 placeholder-gray-500 dark:placeholder-slate-400 text-gray-900 dark:text-white focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
+                                        className="block w-full pl-10 pr-3 py-3 border border-gray-300 dark:border-slate-600 rounded-md leading-5 bg-white dark:bg-white placeholder-gray-500 dark:placeholder-slate-400 text-black focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
                                         placeholder="••••••••"
                                     />
                                 </div>
@@ -112,7 +112,7 @@ export default function ResetPasswordPage() {
                                         type="password"
                                         required
                                         minLength={6}
-                                        className="block w-full pl-10 pr-3 py-3 border border-gray-300 dark:border-slate-600 rounded-md leading-5 bg-white dark:bg-slate-700 placeholder-gray-500 dark:placeholder-slate-400 text-gray-900 dark:text-white focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
+                                        className="block w-full pl-10 pr-3 py-3 border border-gray-300 dark:border-slate-600 rounded-md leading-5 bg-white dark:bg-white placeholder-gray-500 dark:placeholder-slate-400 text-black focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
                                         placeholder="••••••••"
                                     />
                                 </div>
