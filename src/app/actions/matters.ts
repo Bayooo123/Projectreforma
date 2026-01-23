@@ -309,10 +309,10 @@ export async function adjournMatter(
     try {
         // ... (RBAC Check omitted for brevity in diff, but preserved in file)
 
-        constXY matterCheck = await prisma.matter.findUnique({
-        where: { id: matterId },
-        include: { workspace: true, lawyers: true }
-    });
+        const matterCheck = await prisma.matter.findUnique({
+            where: { id: matterId },
+            include: { workspace: true, lawyers: true }
+        });
 
         // Manual RBAC re-check since we are inside the function scope here in the replacement
         // Note: The original code had the check at the top, we need to respect that context if we are replacing the whole block.

@@ -212,7 +212,6 @@ const RecordProceedingModal = ({ isOpen, onClose, workspaceId, userId, onSuccess
                                             key={matter.id}
                                             className={styles.matterItem}
                                             onClick={() => handleMatterSelect(matter)}
-                                            style={{ cursor: 'pointer', padding: '12px', borderBottom: '1px solid #f1f5f9', hover: { backgroundColor: '#f8fafc' } }}
                                         >
                                             <div className="font-medium text-slate-900">{matter.name}</div>
                                             <div className="text-xs text-slate-500 flex gap-2">
