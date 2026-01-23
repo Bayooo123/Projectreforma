@@ -299,59 +299,45 @@ export async function deleteMatter(id: string) {
  */
 export async function adjournMatter(
     matterId: string,
-    newDate: Date | undefined | null, // Made optional/nullable
+    newDate: Date | undefined | null,
     proceedings: string,
     adjournedFor: string,
     performedBy: string,
-    appearanceLawyerIds?: string[], // Optional array of lawyer IDs who appeared
-    proceedingDate?: Date // Optional explicit date of the proceeding being recorded
+    appearanceLawyerIds?: string[],
+    proceedingDate?: Date
 ) {
     try {
-        // ... (RBAC Check omitted for brevity in diff, but preserved in file)
-
         const matterCheck = await prisma.matter.findUnique({
             where: { id: matterId },
             include: { workspace: true, lawyers: true }
         });
 
-        // Manual RBAC re-check since we are inside the function scope here in the replacement
-        // Note: The original code had the check at the top, we need to respect that context if we are replacing the whole block.
-        // Assuming the "RBAC Check omitted" was my mental note, but I must implement it fully.
-
         if (!matterCheck) return { success: false, error: 'Matter not found' };
 
-        // Allow Associated Lawyer OR Workspace Owner
+        // RBAC: Associate Lawyer or Workspace Owner
         const isAssociated = matterCheck.lawyers.some(l => l.lawyerId === performedBy);
         if (!isAssociated && matterCheck.workspace.ownerId !== performedBy) {
-            return { success: false, error: 'Permission denied: Only associated lawyers or the owner can adjourn a matter.' };
+            return { success: false, error: 'Permission denied' };
         }
 
-        // 1. Get the current matter to see the PREVIOUS (or current) court date
-        const currentMatter = await prisma.matter.findUnique({
-            where: { id: matterId },
-            select: { nextCourtDate: true }
-        });
+        // 1. Identify date of the proceeding
+        const dateOfEvent = proceedingDate || matterCheck.nextCourtDate || new Date();
 
-        // 2. Identify the date of the proceeding being recorded
-        // Priority: Explicit -> Scheduled (inference) -> Today (fallback)
-        const dateOfEvent = proceedingDate || currentMatter?.nextCourtDate || new Date();
-
-        // 3. Create a CourtDate record for the COMPLETED/ONGOING sitting
-        const courtDateRecord = await prisma.courtDate.create({
+        // 2. Record the proceeding history
+        await prisma.courtDate.create({
             data: {
                 matterId,
                 date: dateOfEvent,
-                proceedings: proceedings,
-                adjournedFor: adjournedFor,
-                nextDate: newDate ? newDate : null, // Store next date if exists
-                // Link Appearing Lawyers
+                proceedings,
+                adjournedFor,
+                nextDate: newDate || null,
                 appearances: appearanceLawyerIds && appearanceLawyerIds.length > 0 ? {
                     connect: appearanceLawyerIds.map(id => ({ id }))
                 } : undefined
             }
         });
 
-        // 4. Update the Matter's next court date ONLY if a new date is provided
+        // 3. Handle future adjournment if a new date is provided
         if (newDate) {
             await prisma.matter.update({
                 where: { id: matterId },
@@ -361,16 +347,15 @@ export async function adjournMatter(
                 },
             });
 
-            // 5. Create a placeholder CourtDate record for the FUTURE date
             const futureCourtDate = await prisma.courtDate.create({
                 data: {
                     matterId,
                     date: newDate,
-                    title: adjournedFor // e.g. "Ruling", "Hearing" will be the title of the next event
+                    title: adjournedFor
                 }
             });
 
-            // 6. Schedule automated adjournment notifications (firm-wide)
+            // Schedule notifications
             const notificationResult = await scheduleAdjournmentNotifications(
                 matterId,
                 futureCourtDate.id,
@@ -380,90 +365,55 @@ export async function adjournMatter(
 
             if (!notificationResult.success) {
                 console.error('Failed to schedule adjournment notifications:', notificationResult.error);
-            } else {
-                console.log(`Scheduled ${notificationResult.scheduledCount} adjournment notifications`);
             }
 
-            // Log adjournment activity (with date)
+            // Log activity
             await prisma.matterActivityLog.create({
                 data: {
                     matterId,
                     activityType: 'court_date_changed',
-                    description: `Court date adjourned to ${newDate.toLocaleDateString()}. Reason: ${adjournedFor}`,
+                    description: `Adjourned to ${newDate.toLocaleDateString()}. For: ${adjournedFor}`,
                     performedBy,
                 },
             });
 
+            // Notify team
+            for (const assoc of matterCheck.lawyers) {
+                if (assoc.lawyerId !== performedBy) {
+                    await createNotification({
+                        title: 'Case Adjourned',
+                        message: `Matter ${matterCheck.caseNumber} adjourned to ${newDate.toLocaleDateString()}.`,
+                        recipientId: assoc.lawyerId,
+                        recipientType: 'lawyer',
+                        type: 'info',
+                        priority: 'high',
+                        relatedMatterId: matterId
+                    });
+                }
+            }
         } else {
-            // Log simple proceeding recording (no date change)
-            await prisma.matterActivityLog.create({
-                data: {
-                    matterId,
-                    activityType: 'proceedings_recorded',
-                    description: `Proceedings recorded: "${proceedings.substring(0, 50)}${proceedings.length > 50 ? '...' : ''}"`,
-                    performedBy,
-                },
-            });
-
-            // We should still update lastActivityAt
+            // No new date: Just update last activity and log proceeding
             await prisma.matter.update({
                 where: { id: matterId },
                 data: { lastActivityAt: new Date() }
             });
-        }
 
-        // NOTIFICATION LOGIC (Firm-wide / Associated Lawyers)
-        // Only trigger "Adjourned" notifications if there is a new date.
-        // If just recording proceedings, maybe we don't notify everyone? Or maybe we notify "Proceedings Updated"?
-        // Request didn't specify, but "Adjournment date... if provided should trigger notification". Implying if NOT provided, don't trigger.
-
-        if (newDate) {
-            const matterDetails = await prisma.matter.findUnique({
-                where: { id: matterId },
-                include: { lawyers: { include: { lawyer: true } } }
+            await prisma.matterActivityLog.create({
+                data: {
+                    matterId,
+                    activityType: 'proceedings_recorded',
+                    description: `Proceedings recorded: ${proceedings.substring(0, 50)}${proceedings.length > 50 ? '...' : ''}`,
+                    performedBy,
+                },
             });
-
-            if (matterDetails) {
-                // 1. Notify associated lawyers
-                for (const assoc of matterDetails.lawyers) {
-                    if (assoc.lawyerId !== performedBy) {
-                        await createNotification({
-                            title: 'Case Adjourned',
-                            message: `Matter ${matterDetails.caseNumber} adjourned to ${newDate.toLocaleDateString()}. Please update proceedings.`,
-                            recipientId: assoc.lawyerId,
-                            recipientType: 'lawyer',
-                            type: 'info',
-                            priority: 'high',
-                            relatedMatterId: matterId
-                        });
-                    }
-                }
-
-                // 2. Appearing lawyers
-                if (appearanceLawyerIds && appearanceLawyerIds.length > 0) {
-                    for (const lawyerId of appearanceLawyerIds) {
-                        const isMemberOfMatter = matterDetails?.lawyers.some(l => l.lawyerId === lawyerId);
-                        if (lawyerId !== performedBy && !isMemberOfMatter) {
-                            await createNotification({
-                                title: 'Court Appearance Recorded',
-                                message: `You were marked as appearing in ${matterDetails?.caseNumber || 'a matter'}. Adjourned to ${newDate.toLocaleDateString()}.`,
-                                recipientId: lawyerId,
-                                recipientType: 'lawyer',
-                                type: 'info',
-                                relatedMatterId: matterId
-                            });
-                        }
-                    }
-                }
-            }
         }
 
         revalidatePath('/calendar');
-        revalidatePath(`/calendar/${matterId}`); // Also revalidate detail page
-        return { success: true, matter: newDate ? undefined : matterCheck }; // Return type might vary but usually we assume void or success
+        revalidatePath(`/calendar/${matterId}`);
+        return { success: true };
     } catch (error) {
-        console.error('Error adjourning matter:', error);
-        return { success: false, error: 'Failed to adjourn matter' };
+        console.error('Error in adjournMatter:', error);
+        return { success: false, error: 'Failed to record adjournment' };
     }
 }
 
