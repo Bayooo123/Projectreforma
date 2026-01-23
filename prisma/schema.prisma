@@ -217,7 +217,6 @@ model Matter {
   name                 String
   clientId             String?
   clientNameRaw        String?
-  otherCounsel         String?
   workspaceId          String
   court                String?
   judge                String?
@@ -259,22 +258,41 @@ model MatterLawyer {
 }
 
 model CourtDate {
-  id           String    @id @default(cuid())
-  matterId     String
-  date         DateTime
-  title        String?
-  proceedings  String?
-  outcome      String?
-  adjournedFor String?
-  otherCounsel String?
-  nextDate     DateTime?
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-  matter       Matter    @relation(fields: [matterId], references: [id], onDelete: Cascade)
-  appearances  User[]    @relation("CourtAppearances")
+  id                     String                  @id @default(cuid())
+  matterId               String
+  date                   DateTime
+  title                  String?
+  proceedings            String?
+  outcome                String?
+  adjournedFor           String?
+  nextDate               DateTime?
+  createdAt              DateTime                @default(now())
+  updatedAt              DateTime                @updatedAt
+  matter                 Matter                  @relation(fields: [matterId], references: [id], onDelete: Cascade)
+  appearances            User[]                  @relation("CourtAppearances")
+  scheduledNotifications ScheduledNotification[]
 
   @@index([matterId])
   @@index([date])
+}
+
+model ScheduledNotification {
+  id               String    @id @default(cuid())
+  matterId         String
+  courtDateId      String
+  recipientId      String
+  notificationType String // 'three_day', 'two_day', 'day_of'
+  scheduledFor     DateTime
+  status           String    @default("pending") // 'pending', 'sent', 'cancelled'
+  sentAt           DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  courtDate        CourtDate @relation(fields: [courtDateId], references: [id], onDelete: Cascade)
+
+  @@index([status, scheduledFor])
+  @@index([matterId])
+  @@index([courtDateId])
+  @@index([recipientId])
 }
 
 model MatterActivityLog {

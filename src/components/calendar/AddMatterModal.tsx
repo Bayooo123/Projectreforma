@@ -39,7 +39,6 @@ const AddMatterModal = ({ isOpen, onClose, workspaceId, userId, onSuccess }: Add
     const [nextCourtDate, setNextCourtDate] = useState('');
     const [courtSummary, setCourtSummary] = useState('');
     const [proceduralStatus, setProceduralStatus] = useState('');
-    const [otherCounsel, setOtherCounsel] = useState('');
     const [selectedLawyers, setSelectedLawyers] = useState<{ lawyerId: string; role: string; isAppearing: boolean }[]>([]);
 
     // Hybrid Client Selection State
@@ -136,7 +135,6 @@ const AddMatterModal = ({ isOpen, onClose, workspaceId, userId, onSuccess }: Add
                 nextCourtDate: nextCourtDate ? new Date(nextCourtDate) : undefined,
                 proceduralStatus: proceduralStatus || undefined,
                 proceedings: courtSummary || undefined,
-                otherCounsel: otherCounsel || undefined,
             });
 
             if (result.success) {
@@ -302,16 +300,7 @@ const AddMatterModal = ({ isOpen, onClose, workspaceId, userId, onSuccess }: Add
                                 />
                             </div>
 
-                            <div className={styles.formGroup}>
-                                <label className={styles.label}>Other Counsel</label>
-                                <input
-                                    type="text"
-                                    className={styles.input}
-                                    placeholder="External lawyers appearing with Lead Counsel"
-                                    value={otherCounsel}
-                                    onChange={(e) => setOtherCounsel(e.target.value)}
-                                />
-                            </div>
+
 
                             <div className={styles.formGroup} style={{ background: '#f8fafc', padding: '1rem', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
                                 <label className={styles.label}>Legal Team *</label>

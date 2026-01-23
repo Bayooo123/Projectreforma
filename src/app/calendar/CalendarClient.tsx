@@ -138,24 +138,26 @@ export default function CalendarClient({
                         />
                     </div>
 
-                    {/* Secondary: Add New Matter */}
-                    <button
-                        className={styles.secondaryBtn} // Define this style or use a lighter variant
-                        onClick={() => setIsAddModalOpen(true)}
-                        style={{ background: 'white', color: '#475569', border: '1px solid #cbd5e1', padding: '0.5rem 1rem', borderRadius: '6px', marginRight: '0.5rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
-                    >
-                        <Plus size={18} />
-                        <span>New Matter</span>
-                    </button>
+                    {/* Primary Actions Split */}
+                    <div className="flex gap-3">
+                        {/* Action 1: Create New Matter (Comprehensive) */}
+                        <button
+                            className="bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 font-medium py-2 px-4 rounded-lg flex items-center gap-2 transition-colors"
+                            onClick={() => setIsAddModalOpen(true)}
+                        >
+                            <Plus size={18} className="text-slate-500" />
+                            <span>Create New Matter</span>
+                        </button>
 
-                    {/* Primary: Record Proceeding */}
-                    <button
-                        className={styles.addBtn}
-                        onClick={() => setIsRecordModalOpen(true)}
-                    >
-                        <Gavel size={18} />
-                        <span>Record Proceeding</span>
-                    </button>
+                        {/* Action 2: Record Court Proceeding (Fast/Minimal) */}
+                        <button
+                            className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg flex items-center gap-2 shadow-sm transition-colors"
+                            onClick={() => setIsRecordModalOpen(true)}
+                        >
+                            <Gavel size={18} />
+                            <span>Record Court Proceeding</span>
+                        </button>
+                    </div>
                 </div>
             </div>
 

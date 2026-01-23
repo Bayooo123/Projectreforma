@@ -1,6 +1,6 @@
 import { prisma } from '@/lib/prisma';
 
-export type NotificationType = 'alert' | 'info' | 'success' | 'warning' | 'critical';
+export type NotificationType = 'alert' | 'info' | 'success' | 'warning' | 'critical' | 'adjournment_reminder';
 export type RecipientType = 'lawyer' | 'client' | 'partner' | 'staff';
 export type Priority = 'low' | 'medium' | 'high' | 'critical';
 
