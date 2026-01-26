@@ -136,6 +136,7 @@ export async function createMatter(data: {
     status?: string;
     proceduralStatus?: string;
     proceedings?: string;
+    createdById?: string;
 }) {
     try {
         const matter = await prisma.matter.create({
@@ -169,7 +170,9 @@ export async function createMatter(data: {
         });
 
         // Log activity
-        const performedBy = data.lawyerAssociations[0]?.lawyerId || 'system';
+        const performedBy = data.createdById || data.lawyerAssociations[0]?.lawyerId || 'system';
+        // Note: 'system' might fail FK constraints if not in DB, so createdById is preferred.
+
         await prisma.matterActivityLog.create({
             data: {
                 matterId: matter.id,
