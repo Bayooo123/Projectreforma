@@ -304,7 +304,7 @@ export async function adjournMatter(
     matterId: string,
     newDate: Date | undefined | null,
     proceedings: string,
-    adjournedFor: string,
+    adjournedFor: string | undefined | null,
     performedBy: string,
     appearanceLawyerIds?: string[],
     proceedingDate?: Date
@@ -332,7 +332,7 @@ export async function adjournMatter(
                 matterId,
                 date: dateOfEvent,
                 proceedings,
-                adjournedFor,
+                adjournedFor: adjournedFor || null,
                 nextDate: newDate || null,
                 appearances: appearanceLawyerIds && appearanceLawyerIds.length > 0 ? {
                     connect: appearanceLawyerIds.map(id => ({ id }))
@@ -350,11 +350,14 @@ export async function adjournMatter(
                 },
             });
 
+            // If no specific reason given, generic title
+            const nextTitle = adjournedFor || 'Continued Hearing';
+
             const futureCourtDate = await prisma.courtDate.create({
                 data: {
                     matterId,
                     date: newDate,
-                    title: adjournedFor
+                    title: nextTitle
                 }
             });
 
@@ -375,7 +378,7 @@ export async function adjournMatter(
                 data: {
                     matterId,
                     activityType: 'court_date_changed',
-                    description: `Adjourned to ${newDate.toLocaleDateString()}. For: ${adjournedFor}`,
+                    description: `Adjourned to ${newDate.toLocaleDateString()}.`,
                     performedBy,
                 },
             });

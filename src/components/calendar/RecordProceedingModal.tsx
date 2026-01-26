@@ -54,11 +54,11 @@ const RecordProceedingModal = ({ isOpen, onClose, workspaceId, userId, onSuccess
 
     // Adjournment State
     const [nextDate, setNextDate] = useState('');
-    const [adjournedFor, setAdjournedFor] = useState('');
+    // Removed adjournedFor state and UI as per simplified requirements
 
     // UI State
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [showAdjournmentDetails, setShowAdjournmentDetails] = useState(true); // Default open as it's common
+    // Removed showAdjournmentDetails - make it flat or just optional field
 
     useEffect(() => {
         if (isOpen && workspaceId) {
@@ -70,7 +70,6 @@ const RecordProceedingModal = ({ isOpen, onClose, workspaceId, userId, onSuccess
             setCourtDate(new Date().toISOString().split('T')[0]);
             setProceedings('');
             setNextDate('');
-            setAdjournedFor('');
         }
     }, [isOpen, workspaceId]);
 
@@ -92,12 +91,8 @@ const RecordProceedingModal = ({ isOpen, onClose, workspaceId, userId, onSuccess
 
     const handleMatterSelect = (matter: MatterSummary) => {
         setSelectedMatter(matter);
-        // If the matter has a 'nextCourtDate' that is in the past or today, 
-        // we might auto-fill the 'courtDate' to match it.
-        if (matter.nextCourtDate) {
-            const dateStr = new Date(matter.nextCourtDate).toISOString().split('T')[0];
-            setCourtDate(dateStr);
-        }
+        // Default to today for the proceeding date
+        setCourtDate(new Date().toISOString().split('T')[0]);
         setStep('record_details');
     };
 
@@ -111,42 +106,19 @@ const RecordProceedingModal = ({ isOpen, onClose, workspaceId, userId, onSuccess
         setIsSubmitting(true);
         try {
             // Infer lawyers: Use the matter's assigned lawyers.
-            // If the current user is a lawyer and not in the list, add them? 
-            // For now, simplistically use the matter's lawyers + current user if applicable.
-
             let appearanceLawyerIds = selectedMatter.lawyers.map(l => l.lawyer.id);
             if (!appearanceLawyerIds.includes(userId)) {
                 appearanceLawyerIds.push(userId);
             }
-
-            // If no lawyers found at all (rare), at least attach the user.
             if (appearanceLawyerIds.length === 0) {
                 appearanceLawyerIds = [userId];
             }
 
-            // We use adjournMatter action. 
-            // If nextDate is provided, it's a true adjournment.
-            // If not, it's just recording a proceeding (we pass null/undefined to the action effectively).
-            // NOTE: The current backend action signature might require a date. 
-            // If the user leaves adjournment blank, we assume "Sine Die" or handled by backend logic (or we might need to block if backend demands it).
-            // The request says "Optional Enhancements... Adjournment date can remain optional".
-            // If blank, we just don't pass a valid date.
-
-            const nextCourtDateObj = nextDate ? new Date(nextDate) : new Date(0); // Epoch as fallback or create a dedicated "Record Only" action?
-            // To be safe with existing backend, if they don't provide a date, we might need to alert or modify backend. 
-            // For this iteration, if they leave it blank, we'll warn them if it's strictly required by backend, 
-            // OR we send a dummy date and handle it. 
-            // Looking at `adjournMatter` in previous turn verify: it takes `newDate`.
-
-            // Let's assume we proceed with the user's explicit enhancement request:
-            // "Adjournment date can remain optional and, if provided, should still trigger the notification workflow"
-
-            // We initiate the action.
             const result = await adjournMatter(
                 selectedMatter.id,
-                nextDate ? new Date(nextDate) : undefined, // Cast to any to bypass strict TS check if needed, backend should handle nullable
+                nextDate ? new Date(nextDate) : undefined,
                 proceedings,
-                adjournedFor || 'Report', // Default to generic if missing
+                undefined, // No specific adjournedFor reason passed from UI anymore
                 userId,
                 appearanceLawyerIds,
                 new Date(courtDate)
@@ -249,72 +221,51 @@ const RecordProceedingModal = ({ isOpen, onClose, workspaceId, userId, onSuccess
 
                             <div className="flex gap-4 mb-4">
                                 <div className="flex-1">
-                                    <label className="block text-xs font-medium text-slate-500 mb-1">Date</label>
+                                    <label className="block text-xs font-medium text-slate-500 mb-1">Date of Proceeding *</label>
                                     <input
                                         type="date"
                                         className={styles.input}
                                         value={courtDate}
                                         onChange={(e) => setCourtDate(e.target.value)}
+                                        required
                                     />
+                                    <p className="text-[10px] text-slate-400 mt-1">When did the court sit?</p>
                                 </div>
                                 <div className="flex-1"></div>
                             </div>
 
                             <div className={styles.formSection}>
-                                <label className={styles.label}>Summary of Proceedings *</label>
+                                <label className={styles.label}>Summary of What Happened *</label>
                                 <textarea
                                     className={styles.textarea}
                                     style={{ minHeight: '120px' }}
                                     rows={5}
-                                    placeholder="What happened in court today?"
+                                    placeholder="Describe the proceedings..."
                                     value={proceedings}
                                     onChange={(e) => setProceedings(e.target.value)}
                                     autoFocus
+                                    required
                                 />
                             </div>
 
-                            <div className="border border-slate-200 rounded-lg p-3 mt-4">
-                                <button
-                                    className="flex items-center justify-between w-full text-left"
-                                    onClick={() => setShowAdjournmentDetails(!showAdjournmentDetails)}
-                                >
-                                    <span className="text-sm font-medium text-slate-700 flex items-center gap-2">
-                                        <Calendar size={16} />
-                                        Adjournment & Next Steps
-                                    </span>
-                                    {showAdjournmentDetails ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                                </button>
+                            <div className="border-t border-slate-200 pt-4 mt-6">
+                                <div className="flex items-center gap-2 mb-3">
+                                    <Calendar size={16} className="text-slate-400" />
+                                    <span className="text-sm font-medium text-slate-700">Next Adjournment (Optional)</span>
+                                </div>
 
-                                {showAdjournmentDetails && (
-                                    <div className="mt-3 grid grid-cols-2 gap-3">
-                                        <div>
-                                            <label className={styles.label}>Next Date (Optional)</label>
-                                            <input
-                                                type="date"
-                                                className={styles.input}
-                                                value={nextDate}
-                                                onChange={(e) => setNextDate(e.target.value)}
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className={styles.label}>Adjourned For</label>
-                                            <select
-                                                className={styles.select}
-                                                value={adjournedFor}
-                                                onChange={(e) => setAdjournedFor(e.target.value)}
-                                            >
-                                                <option value="">Select...</option>
-                                                <option value="Ruling">Ruling</option>
-                                                <option value="Judgment">Judgment</option>
-                                                <option value="Hearing">Hearing</option>
-                                                <option value="Mention">Mention</option>
-                                                <option value="Report of Settlement">Report of Settlement</option>
-                                                <option value="Adoption of Address">Adoption of Address</option>
-                                                <option value="Further Mention">Further Mention</option>
-                                            </select>
-                                        </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className={styles.label}>Adjournment Date</label>
+                                        <input
+                                            type="date"
+                                            className={styles.input}
+                                            value={nextDate}
+                                            onChange={(e) => setNextDate(e.target.value)}
+                                        />
+                                        <p className="text-[10px] text-slate-400 mt-1">Notifications will be scheduled for this date.</p>
                                     </div>
-                                )}
+                                </div>
                             </div>
                         </div>
                     )}
