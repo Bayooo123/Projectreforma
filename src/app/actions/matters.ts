@@ -183,9 +183,13 @@ export async function createMatter(data: {
             },
         });
 
-        // If proceedings or nextCourtDate were set during creation, create a CourtDate entry
-        if (data.proceedings || data.nextCourtDate || data.proceedingDate) {
+        // 1. If proceedings or proceedingDate were providing, record what happened (the sitting)
+        if (data.proceedings || data.proceedingDate) {
             const entryDate = data.proceedingDate || new Date();
+
+            const appearingLawyerIds = data.lawyerAssociations
+                .filter(l => l.isAppearing)
+                .map(l => l.lawyerId);
 
             await prisma.courtDate.create({
                 data: {
@@ -193,9 +197,30 @@ export async function createMatter(data: {
                     date: entryDate,
                     title: 'Initial Appearance',
                     proceedings: data.proceedings,
-                    nextDate: data.nextCourtDate || null,
+                    appearances: appearingLawyerIds.length > 0 ? {
+                        connect: appearingLawyerIds.map(id => ({ id }))
+                    } : undefined
                 }
             });
+        }
+
+        // 2. If nextCourtDate is provided, create a FUTURE entry for the calendar and schedule reminders
+        if (data.nextCourtDate) {
+            const futureCourtDate = await prisma.courtDate.create({
+                data: {
+                    matterId: matter.id,
+                    date: data.nextCourtDate,
+                    title: 'Upcoming Hearing', // Default title for future entry
+                }
+            });
+
+            // Schedule firm-wide notifications
+            await scheduleAdjournmentNotifications(
+                matter.id,
+                futureCourtDate.id,
+                data.nextCourtDate,
+                data.workspaceId
+            );
         }
 
         revalidatePath('/calendar');

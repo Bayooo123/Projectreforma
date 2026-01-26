@@ -37,12 +37,24 @@ const AddMatterModal = ({ isOpen, onClose, workspaceId, userId, onSuccess }: Add
     const [nextCourtDate, setNextCourtDate] = useState('');
     const [proceedingDate, setProceedingDate] = useState(new Date().toISOString().split('T')[0]);
     const [courtSummary, setCourtSummary] = useState('');
-
-    // Removed: caseNumber, clientId, proceduralStatus, selectedLawyers, clientSearch, etc.
+    const [workspaceLawyers, setWorkspaceLawyers] = useState<Lawyer[]>([]);
+    const [selectedLawyerIds, setSelectedLawyerIds] = useState<string[]>([]);
 
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    // Initial load simplified since we don't need clients/lawyers lists anymore
+    useEffect(() => {
+        if (isOpen && workspaceId) {
+            getLawyersForWorkspace(workspaceId).then(setWorkspaceLawyers);
+        }
+    }, [isOpen, workspaceId]);
+
+    const toggleLawyer = (lawyerId: string) => {
+        setSelectedLawyerIds(prev =>
+            prev.includes(lawyerId)
+                ? prev.filter(id => id !== lawyerId)
+                : [...prev, lawyerId]
+        );
+    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -62,7 +74,11 @@ const AddMatterModal = ({ isOpen, onClose, workspaceId, userId, onSuccess }: Add
                 caseNumber: null,
                 clientId: null,
                 clientNameRaw: null,
-                lawyerAssociations: [], // No lawyers assigned initially
+                lawyerAssociations: selectedLawyerIds.map(id => ({
+                    lawyerId: id,
+                    role: 'appearing',
+                    isAppearing: true
+                })),
                 proceduralStatus: undefined,
                 createdById: userId // Critical for logging
             });
@@ -75,6 +91,7 @@ const AddMatterModal = ({ isOpen, onClose, workspaceId, userId, onSuccess }: Add
                 setNextCourtDate('');
                 setProceedingDate(new Date().toISOString().split('T')[0]);
                 setCourtSummary('');
+                setSelectedLawyerIds([]);
 
                 alert('Matter created successfully!');
                 onSuccess?.();
@@ -158,6 +175,30 @@ const AddMatterModal = ({ isOpen, onClose, workspaceId, userId, onSuccess }: Add
                                 value={proceedingDate}
                                 onChange={(e) => setProceedingDate(e.target.value)}
                             />
+                        </div>
+
+                        <div className={styles.formGroup}>
+                            <label className={styles.label}>Lawyers in Appearance</label>
+                            <div className="flex flex-wrap gap-2 mt-1">
+                                {workspaceLawyers.length > 0 ? (
+                                    workspaceLawyers.map(lawyer => (
+                                        <button
+                                            key={lawyer.id}
+                                            type="button"
+                                            onClick={() => toggleLawyer(lawyer.id)}
+                                            className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${selectedLawyerIds.includes(lawyer.id)
+                                                    ? 'bg-blue-600 text-white'
+                                                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                                                }`}
+                                        >
+                                            {lawyer.name}
+                                        </button>
+                                    ))
+                                ) : (
+                                    <p className="text-xs text-slate-400 italic">Loading firm directory...</p>
+                                )}
+                            </div>
+                            <p className="text-[10px] text-slate-400 mt-1">Select lawyers who appeared for this sitting.</p>
                         </div>
 
                         <div className={styles.formGroup}>

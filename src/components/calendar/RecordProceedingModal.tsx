@@ -54,11 +54,10 @@ const RecordProceedingModal = ({ isOpen, onClose, workspaceId, userId, onSuccess
 
     // Adjournment State
     const [nextDate, setNextDate] = useState('');
-    // Removed adjournedFor state and UI as per simplified requirements
+    const [selectedLawyerIds, setSelectedLawyerIds] = useState<string[]>([]);
 
     // UI State
     const [isSubmitting, setIsSubmitting] = useState(false);
-    // Removed showAdjournmentDetails - make it flat or just optional field
 
     useEffect(() => {
         if (isOpen && workspaceId) {
@@ -70,6 +69,7 @@ const RecordProceedingModal = ({ isOpen, onClose, workspaceId, userId, onSuccess
             setCourtDate(new Date().toISOString().split('T')[0]);
             setProceedings('');
             setNextDate('');
+            setSelectedLawyerIds([userId]);
         }
     }, [isOpen, workspaceId]);
 
@@ -93,6 +93,13 @@ const RecordProceedingModal = ({ isOpen, onClose, workspaceId, userId, onSuccess
         setSelectedMatter(matter);
         // Default to today for the proceeding date
         setCourtDate(new Date().toISOString().split('T')[0]);
+        // Default selected lawyers to those already assigned to the matter
+        const assignedIds = matter.lawyers.map(l => l.lawyer.id);
+        if (assignedIds.length > 0) {
+            setSelectedLawyerIds(assignedIds);
+        } else {
+            setSelectedLawyerIds([userId]);
+        }
         setStep('record_details');
     };
 
@@ -105,22 +112,13 @@ const RecordProceedingModal = ({ isOpen, onClose, workspaceId, userId, onSuccess
 
         setIsSubmitting(true);
         try {
-            // Infer lawyers: Use the matter's assigned lawyers.
-            let appearanceLawyerIds = selectedMatter.lawyers.map(l => l.lawyer.id);
-            if (!appearanceLawyerIds.includes(userId)) {
-                appearanceLawyerIds.push(userId);
-            }
-            if (appearanceLawyerIds.length === 0) {
-                appearanceLawyerIds = [userId];
-            }
-
             const result = await adjournMatter(
                 selectedMatter.id,
                 nextDate ? new Date(nextDate) : undefined,
                 proceedings,
                 undefined, // No specific adjournedFor reason passed from UI anymore
                 userId,
-                appearanceLawyerIds,
+                selectedLawyerIds.length > 0 ? selectedLawyerIds : [userId],
                 new Date(courtDate)
             );
 
@@ -137,6 +135,18 @@ const RecordProceedingModal = ({ isOpen, onClose, workspaceId, userId, onSuccess
         } finally {
             setIsSubmitting(false);
         }
+    };
+
+    const toggleLawyer = (lawyerId: string) => {
+        setSelectedLawyerIds(prev =>
+            prev.includes(lawyerId)
+                ? prev.filter(id => id !== lawyerId)
+                : [...prev, lawyerId]
+        );
+    };
+
+    const handleBack = () => {
+        setStep('select_matter');
     };
 
     const filteredMatters = matters.filter(m =>
@@ -231,7 +241,28 @@ const RecordProceedingModal = ({ isOpen, onClose, workspaceId, userId, onSuccess
                                     />
                                     <p className="text-[10px] text-slate-400 mt-1">When did the court sit?</p>
                                 </div>
-                                <div className="flex-1"></div>
+                                <div className="flex-1">
+                                    <label className="block text-xs font-medium text-slate-500 mb-1">Lawyers in Appearance</label>
+                                    <div className="flex flex-wrap gap-1 mt-1">
+                                        {lawyers.length > 0 ? (
+                                            lawyers.map(lawyer => (
+                                                <button
+                                                    key={lawyer.id}
+                                                    type="button"
+                                                    onClick={() => toggleLawyer(lawyer.id)}
+                                                    className={`px-2 py-1 rounded text-[10px] font-medium transition-colors ${selectedLawyerIds.includes(lawyer.id)
+                                                        ? 'bg-blue-600 text-white'
+                                                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                                                        }`}
+                                                >
+                                                    {lawyer.name}
+                                                </button>
+                                            ))
+                                        ) : (
+                                            <p className="text-[10px] text-slate-400 italic">Loading...</p>
+                                        )}
+                                    </div>
+                                </div>
                             </div>
 
                             <div className={styles.formSection}>
