@@ -136,6 +136,7 @@ export async function createMatter(data: {
     status?: string;
     proceduralStatus?: string;
     proceedings?: string;
+    proceedingDate?: Date;
     createdById?: string;
 }) {
     try {
@@ -182,17 +183,17 @@ export async function createMatter(data: {
             },
         });
 
-        // If nextCourtDate was set during creation, create an initial CourtDate entry
-        if (data.nextCourtDate) {
+        // If proceedings or nextCourtDate were set during creation, create a CourtDate entry
+        if (data.proceedings || data.nextCourtDate || data.proceedingDate) {
+            const entryDate = data.proceedingDate || new Date();
+
             await prisma.courtDate.create({
                 data: {
                     matterId: matter.id,
-                    date: data.nextCourtDate,
-                    title: 'Initial Hearing',
-                    proceedings: data.proceedings, // Save court summary here
-                    // By default, the assigned lawyer is the appearance? 
-                    // Probably better to leave appearances empty or explicitly set if the UI supported it.
-                    // For now, we'll just create the date record.
+                    date: entryDate,
+                    title: 'Initial Appearance',
+                    proceedings: data.proceedings,
+                    nextDate: data.nextCourtDate || null,
                 }
             });
         }

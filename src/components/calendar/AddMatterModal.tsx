@@ -35,6 +35,7 @@ const AddMatterModal = ({ isOpen, onClose, workspaceId, userId, onSuccess }: Add
     const [court, setCourt] = useState('');
     const [judge, setJudge] = useState('');
     const [nextCourtDate, setNextCourtDate] = useState('');
+    const [proceedingDate, setProceedingDate] = useState(new Date().toISOString().split('T')[0]);
     const [courtSummary, setCourtSummary] = useState('');
 
     // Removed: caseNumber, clientId, proceduralStatus, selectedLawyers, clientSearch, etc.
@@ -55,6 +56,7 @@ const AddMatterModal = ({ isOpen, onClose, workspaceId, userId, onSuccess }: Add
                 court: court || undefined,
                 judge: judge || undefined,
                 nextCourtDate: nextCourtDate ? new Date(nextCourtDate) : undefined,
+                proceedingDate: proceedingDate ? new Date(proceedingDate) : new Date(),
                 proceedings: courtSummary || undefined,
                 // Pass empty/null for removed fields
                 caseNumber: null,
@@ -71,6 +73,7 @@ const AddMatterModal = ({ isOpen, onClose, workspaceId, userId, onSuccess }: Add
                 setCourt('');
                 setJudge('');
                 setNextCourtDate('');
+                setProceedingDate(new Date().toISOString().split('T')[0]);
                 setCourtSummary('');
 
                 alert('Matter created successfully!');
@@ -146,6 +149,16 @@ const AddMatterModal = ({ isOpen, onClose, workspaceId, userId, onSuccess }: Add
                         </div>
 
                         {/* Removed Client and Legal Team */}
+
+                        <div className={styles.formGroup}>
+                            <label className={styles.label}>Date</label>
+                            <input
+                                type="date"
+                                className={styles.input}
+                                value={proceedingDate}
+                                onChange={(e) => setProceedingDate(e.target.value)}
+                            />
+                        </div>
 
                         <div className={styles.formGroup}>
                             <label className={styles.label}>Next Court Date (Optional)</label>
