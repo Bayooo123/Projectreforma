@@ -292,6 +292,35 @@ export async function updateMatter(
             },
         });
 
+        // AUTOMATIC CALENDAR SYNC: If nextCourtDate was updated, ensure a future CourtDate entry exists.
+        if (data.nextCourtDate) {
+            // Check if a future entry already exists for this exact date to avoid duplicates
+            const existingEntry = await prisma.courtDate.findFirst({
+                where: {
+                    matterId: id,
+                    date: data.nextCourtDate,
+                }
+            });
+
+            if (!existingEntry) {
+                const futureCourtDate = await prisma.courtDate.create({
+                    data: {
+                        matterId: id,
+                        date: data.nextCourtDate,
+                        title: 'Upcoming Hearing',
+                    }
+                });
+
+                // Schedule firm-wide notifications
+                await scheduleAdjournmentNotifications(
+                    id,
+                    futureCourtDate.id,
+                    data.nextCourtDate,
+                    matter.workspaceId
+                );
+            }
+        }
+
         revalidatePath('/calendar');
         revalidatePath(`/calendar/${id}`);
         revalidatePath('/management/clients');
