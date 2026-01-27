@@ -165,15 +165,14 @@ const AddMatterModal = ({ isOpen, onClose, workspaceId, userId, onSuccess }: Add
                             />
                         </div>
 
-                        {/* Removed Client and Legal Team */}
-
                         <div className={styles.formGroup}>
-                            <label className={styles.label}>Date</label>
+                            <label className={styles.label}>Present Date *</label>
                             <input
                                 type="date"
                                 className={styles.input}
                                 value={proceedingDate}
                                 onChange={(e) => setProceedingDate(e.target.value)}
+                                required
                             />
                         </div>
 
@@ -187,8 +186,8 @@ const AddMatterModal = ({ isOpen, onClose, workspaceId, userId, onSuccess }: Add
                                             type="button"
                                             onClick={() => toggleLawyer(lawyer.id)}
                                             className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${selectedLawyerIds.includes(lawyer.id)
-                                                    ? 'bg-blue-600 text-white'
-                                                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                                                ? 'bg-blue-600 text-white'
+                                                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                                                 }`}
                                         >
                                             {lawyer.name}
@@ -200,6 +199,7 @@ const AddMatterModal = ({ isOpen, onClose, workspaceId, userId, onSuccess }: Add
                             </div>
                             <p className="text-[10px] text-slate-400 mt-1">Select lawyers who appeared for this sitting.</p>
                         </div>
+
 
                         <div className={styles.formGroup}>
                             <label className={styles.label}>Next Court Date (Optional)</label>

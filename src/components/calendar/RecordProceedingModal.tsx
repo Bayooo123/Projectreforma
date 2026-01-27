@@ -231,7 +231,7 @@ const RecordProceedingModal = ({ isOpen, onClose, workspaceId, userId, onSuccess
 
                             <div className="flex gap-4 mb-4">
                                 <div className="flex-1">
-                                    <label className="block text-xs font-medium text-slate-500 mb-1">Date of Proceeding *</label>
+                                    <label className="block text-xs font-medium text-slate-500 mb-1">Present Date *</label>
                                     <input
                                         type="date"
                                         className={styles.input}
