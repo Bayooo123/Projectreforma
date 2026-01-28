@@ -49,7 +49,7 @@ export async function processScheduledNotifications(): Promise<{
         for (const scheduledNotif of dueNotifications) {
             try {
                 const { matter } = scheduledNotif.courtDate;
-                const adjournmentDate = scheduledNotif.courtDate.nextDate || scheduledNotif.courtDate.date;
+                const adjournmentDate = scheduledNotif.courtDate.date;
 
                 // Generate notification content based on type
                 let title = '';
