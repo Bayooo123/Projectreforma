@@ -201,7 +201,6 @@ body {
   overflow-x: hidden;
   font-size: 14px;
   /* Reverted to 14px per user feedback */
-  zoom: 0.9;
 }
 
 body {
