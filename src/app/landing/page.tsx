@@ -186,7 +186,7 @@ export default function LandingPage() {
                             <h3 className={styles.stepTitle}>Start Managing</h3>
                             <p className={styles.stepDescription}>
                                 Upload briefs, add clients, schedule cases, and let Reforma
-                                handle the rest. Focus on what you do best—practicing law.
+                                handle the rest. Focus on what you do best practicing law.
                             </p>
                         </div>
                     </div>

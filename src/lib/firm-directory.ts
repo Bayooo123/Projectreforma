@@ -5,19 +5,21 @@
 export interface FirmLawyer {
     name: string;
     email: string;
+    designation?: string;
 }
 
 export const ASCOLP_LAWYERS: FirmLawyer[] = [
-    { name: "Professor Abiola Sanni, SAN", email: "Asanni@abiolasanniandco.com" },
-    { name: "Professor Friday Ndubuisi", email: "fndubuisi@abiolasanniandco.com" },
-    { name: "Kola Abdulsalam", email: "kabdulsalam@abiolasanniandco.com" },
-    { name: "Iniobong Inieke Umoh", email: "iumoh@abiolasanniandco.com" },
-    { name: "Josephine Riwo Ogbinaka", email: "jogbinaka@abiolasanniandco.com" },
-    { name: "Omowumi Adeoye", email: "oadeoye@abiolasanniandco.com" },
-    { name: "Maureen Omaegbu", email: "momaegbu@abiolasanniandco.com" },
-    { name: "Adeola Adeoye", email: "aadeoye@abiolasanniandco.com" },
-    { name: "Benjamin Adeyanju", email: "badeyanju@abiolasanniandco.com" },
-    { name: "Adebayo Gbadebo", email: "agbadebo@abiolasanniandco.com" }
+    { name: "Professor Abiola Sanni, SAN", email: "Asanni@abiolasanniandco.com", designation: "Managing Partner" },
+    { name: "Professor Friday Ndubuisi", email: "fndubuisi@abiolasanniandco.com", designation: "Partner" },
+    { name: "Kola Abdulsalam", email: "kola@abiolasanniandco.com", designation: "Head of Chambers" },
+    { name: "Iniobong Inieke Umoh", email: "iniobong@abiolasanniandco.com", designation: "Deputy Head of Chambers" },
+    { name: "Josephine Riwo Ogbinaka", email: "Riwo@abiolasanniandco.com", designation: "Associate" },
+    { name: "Omowumi Adeoye", email: "omowumi@abiolasanniandco.com", designation: "Associate" },
+    { name: "Maureen Omaegbu", email: "maureen@abiolasanniandco.com", designation: "Associate" },
+    { name: "Adeola Adeoye", email: "ade@abiolasanniandco.com", designation: "Associate" },
+    { name: "Benjamin Adeyanju", email: "ben@abiolasanniandco.com", designation: "Associate" },
+    { name: "Adebayo Gbadebo", email: "bayo@abiolasanniandco.com", designation: "Associate" },
+    { name: "Deji Popoola", email: "deji@abiolasanniandco.com", designation: "Head of IT" }
 ];
 
 export function resolveLawyerByEmail(email: string): FirmLawyer | undefined {
