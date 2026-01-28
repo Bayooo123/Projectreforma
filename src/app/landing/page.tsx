@@ -51,17 +51,13 @@ export default function LandingPage() {
                     <div className={styles.gradientOrb2}></div>
                 </div>
                 <div className={styles.heroContent}>
-                    <div className={styles.badge}>
-                        <Sparkles size={16} />
-                        <span>The Future of Legal Practice Management</span>
-                    </div>
                     <h1 className={styles.heroTitle}>
                         Your Law Firm's
                         <span className={styles.gradient}> Digital Operating System</span>
                     </h1>
                     <p className={styles.heroDescription}>
                         Reforma transforms how law firms operate. Manage briefs, track cases,
-                        collaborate with your team, and gain insights—all in one intelligent platform
+                        collaborate with your team, and gain insights all in one intelligent platform
                         built specifically for modern legal practice.
                     </p>
                     <div className={styles.heroCTA}>
