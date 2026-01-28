@@ -6,6 +6,7 @@ import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
 import { nanoid } from 'nanoid';
 import { redirect } from 'next/navigation';
+import { generateUniqueLawyerToken } from '@/lib/lawyer-tokens';
 
 // Define AuthState type
 export type AuthState = {
@@ -126,6 +127,9 @@ export async function register(
             }
             console.log('✅ No existing user found');
 
+            // Generate Lawyer Token
+            const lawyerToken = await generateUniqueLawyerToken();
+
             // Create User
             console.log('👤 Creating user...');
             const user = await tx.user.create({
@@ -134,6 +138,7 @@ export async function register(
                     email,
                     password: hashedPassword,
                     phone,
+                    lawyerToken,
                 },
             });
             console.log('✅ User created successfully:', { id: user.id, email: user.email });
@@ -273,8 +278,11 @@ export async function registerMember(
                 throw new Error('User already exists. Please log in instead.');
             }
 
+            // Generate Lawyer Token
+            const lawyerToken = await generateUniqueLawyerToken();
+
             user = await tx.user.create({
-                data: { name, email, password: hashedPassword, phone }
+                data: { name, email, password: hashedPassword, phone, lawyerToken }
             });
 
             // 3. Add to Workspace

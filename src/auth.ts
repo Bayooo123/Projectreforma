@@ -50,6 +50,7 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
                             name: user.name,
                             role: (role as RoleType),
                             workspaceId: workspace.id,
+                            lawyerToken: user.lawyerToken || '',
                         };
                         return authUser;
                     }
@@ -99,6 +100,7 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
                             name: user.name,
                             role: (membership.role as RoleType),
                             workspaceId: workspaceId,
+                            lawyerToken: user.lawyerToken || '',
                         };
                         return authUser;
                     }
@@ -111,6 +113,7 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
                         name: user.name,
                         role: ((firstMembership?.role || 'member') as RoleType),
                         workspaceId: firstMembership?.workspaceId || '',
+                        lawyerToken: user.lawyerToken || '',
                     };
                     return authUser;
                 }
@@ -125,6 +128,7 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
             if (user) {
                 token.role = user.role;
                 token.workspaceId = user.workspaceId;
+                token.lawyerToken = user.lawyerToken;
             }
             return token;
         },
@@ -133,6 +137,7 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
                 session.user.id = token.sub;
                 session.user.role = token.role as RoleType;
                 session.user.workspaceId = token.workspaceId as string;
+                session.user.lawyerToken = token.lawyerToken as string;
             }
             return session;
         },

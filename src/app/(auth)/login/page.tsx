@@ -2,8 +2,9 @@
 
 import { useActionState, useEffect } from 'react';
 import { authenticate } from '@/app/lib/actions';
-import { Loader2, Scale, Shield, Users } from 'lucide-react';
+import { Loader2, Shield, Users } from 'lucide-react';
 import Link from 'next/link';
+import Image from 'next/image';
 import styles from '../auth.module.css';
 
 export default function LoginPage() {
@@ -24,7 +25,13 @@ export default function LoginPage() {
             {/* Branding Side */}
             <div className={styles.brandingSide}>
                 <div className={styles.logo}>
-                    <Scale className={styles.logoIcon} />
+                    <Image
+                        src="/logo.png"
+                        alt="Reforma Logo"
+                        width={40}
+                        height={40}
+                        className={styles.logoImage}
+                    />
                     <span className={styles.logoText}>Reforma</span>
                 </div>
 

@@ -133,12 +133,16 @@ export async function registerMember(
 
         // Transaction: Create User -> Create WorkspaceMember
         await prisma.$transaction(async (tx) => {
+            const { generateUniqueLawyerToken } = await import('@/lib/lawyer-tokens');
+            const lawyerToken = await generateUniqueLawyerToken();
+
             const newUser = await tx.user.create({
                 data: {
                     name,
                     email,
                     password: hashedPassword,
                     phone: phone || null,
+                    lawyerToken,
                 },
             });
 

@@ -52,6 +52,10 @@
     letter-spacing: -0.025em;
 }
 
+.logoImage {
+    object-fit: contain;
+}
+
 .navActions {
     display: flex;
     align-items: center;
@@ -92,12 +96,12 @@
     display: inline-flex;
     align-items: center;
     gap: 0.5rem;
-    box-shadow: 0 4px 12px rgba(142, 47, 57, 0.2);
+    box-shadow: 0 4px 12px rgba(13, 148, 136, 0.2);
 }
 
 .btnPrimary:hover {
     transform: translateY(-2px);
-    box-shadow: 0 8px 20px rgba(142, 47, 57, 0.3);
+    box-shadow: 0 8px 20px rgba(13, 148, 136, 0.3);
 }
 
 /* Hero Section */
@@ -134,7 +138,7 @@
     right: -10%;
     width: 600px;
     height: 600px;
-    background: radial-gradient(circle, rgba(142, 47, 57, 0.15) 0%, transparent 70%);
+    background: radial-gradient(circle, rgba(13, 148, 136, 0.15) 0%, transparent 70%);
     filter: blur(80px);
     animation: float 20s ease-in-out infinite;
 }
@@ -145,7 +149,7 @@
     left: -10%;
     width: 500px;
     height: 500px;
-    background: radial-gradient(circle, rgba(142, 47, 57, 0.1) 0%, transparent 70%);
+    background: radial-gradient(circle, rgba(13, 148, 136, 0.1) 0%, transparent 70%);
     filter: blur(80px);
     animation: float 15s ease-in-out infinite reverse;
 }
@@ -195,7 +199,7 @@
 }
 
 .gradient {
-    background: linear-gradient(135deg, var(--primary-color) 0%, #B84A56 100%);
+    background: linear-gradient(135deg, var(--primary-color) 0%, #0D9488 100%);
     background-clip: text;
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -232,12 +236,12 @@
     display: inline-flex;
     align-items: center;
     gap: 0.75rem;
-    box-shadow: 0 8px 24px rgba(142, 47, 57, 0.25);
+    box-shadow: 0 8px 24px rgba(13, 148, 136, 0.25);
 }
 
 .btnHero:hover {
     transform: translateY(-3px);
-    box-shadow: 0 12px 32px rgba(142, 47, 57, 0.35);
+    box-shadow: 0 12px 32px rgba(13, 148, 136, 0.35);
 }
 
 .btnHeroSecondary {
@@ -313,7 +317,7 @@
 .featureIcon {
     width: 3.5rem;
     height: 3.5rem;
-    background: linear-gradient(135deg, rgba(142, 47, 57, 0.1) 0%, rgba(142, 47, 57, 0.05) 100%);
+    background: linear-gradient(135deg, rgba(13, 148, 136, 0.1) 0%, rgba(13, 148, 136, 0.05) 100%);
     border-radius: 1rem;
     display: flex;
     align-items: center;
@@ -368,7 +372,7 @@
     font-size: 1.5rem;
     font-weight: 700;
     margin-bottom: 1.5rem;
-    box-shadow: 0 8px 24px rgba(142, 47, 57, 0.25);
+    box-shadow: 0 8px 24px rgba(13, 148, 136, 0.25);
 }
 
 .stepTitle {

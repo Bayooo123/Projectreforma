@@ -235,3 +235,46 @@
     font-size: 0.75rem;
     color: var(--text-secondary);
 }
+
+.error {
+    background: #FEF2F2;
+    color: #DC2626;
+    padding: 0.75rem;
+    border-radius: var(--radius-md);
+    margin-bottom: 1.5rem;
+    font-size: 0.875rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    border: 1px solid #FEE2E2;
+}
+
+.success {
+    background: #ECFDF5;
+    color: #059669;
+    padding: 0.75rem;
+    border-radius: var(--radius-md);
+    margin-bottom: 1.5rem;
+    font-size: 0.875rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    border: 1px solid #D1FAE5;
+}
+
+.tokenDisplay {
+    background: #f8fafc;
+    padding: 1rem;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+}
+
+.tokenValue {
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #0f172a;
+    letter-spacing: 0.2rem;
+    display: block;
+    margin-bottom: 0.5rem;
+}

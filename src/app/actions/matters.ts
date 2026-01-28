@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
 import { createNotification, RecipientType } from '@/lib/notifications';
 import { scheduleAdjournmentNotifications } from '@/lib/scheduleAdjournmentNotifications';
+import { auth } from '@/auth';
 
 /**
  * Get all matters for a workspace
@@ -139,6 +140,9 @@ export async function createMatter(data: {
     proceedingDate?: Date;
     createdById?: string;
 }) {
+    const session = await auth();
+    if (!session?.user) return { success: false, error: 'Unauthorized' };
+
     try {
         const matter = await prisma.matter.create({
             data: {
@@ -152,6 +156,9 @@ export async function createMatter(data: {
                 nextCourtDate: data.nextCourtDate,
                 status: data.status || 'active',
                 proceduralStatus: data.proceduralStatus,
+                submittingLawyerId: session.user.id,
+                submittingLawyerToken: session.user.lawyerToken,
+                submittingLawyerName: session.user.name,
                 lawyers: {
                     create: data.lawyerAssociations.map(assoc => ({
                         lawyerId: assoc.lawyerId,
@@ -197,6 +204,9 @@ export async function createMatter(data: {
                     date: entryDate,
                     title: 'Initial Appearance',
                     proceedings: data.proceedings,
+                    submittingLawyerId: session.user.id,
+                    submittingLawyerToken: session.user.lawyerToken,
+                    submittingLawyerName: session.user.name,
                     appearances: appearingLawyerIds.length > 0 ? {
                         connect: appearingLawyerIds.map(id => ({ id }))
                     } : undefined
@@ -255,7 +265,22 @@ export async function updateMatter(
     },
     performedBy: string
 ) {
+    const session = await auth();
+    if (!session?.user) return { success: false, error: 'Unauthorized' };
+
     try {
+        // Ownership check: Only the submitting lawyer or owner can edit matter details
+        const existingMatter = await prisma.matter.findUnique({
+            where: { id },
+            include: { workspace: true }
+        });
+
+        if (!existingMatter) return { success: false, error: 'Matter not found' };
+
+        if (existingMatter.submittingLawyerId && existingMatter.submittingLawyerId !== session.user.id && existingMatter.workspace.ownerId !== session.user.id) {
+            return { success: false, error: 'Permission denied: Only the original creator can edit this matter.' };
+        }
+
         const { lawyerAssociations, ...rest } = data;
 
         const matter = await prisma.matter.update({
@@ -364,6 +389,9 @@ export async function adjournMatter(
     appearanceLawyerIds?: string[],
     proceedingDate?: Date
 ) {
+    const session = await auth();
+    if (!session?.user) return { success: false, error: 'Unauthorized' };
+
     try {
         const matterCheck = await prisma.matter.findUnique({
             where: { id: matterId },
@@ -389,6 +417,9 @@ export async function adjournMatter(
                 proceedings,
                 adjournedFor: adjournedFor || null,
                 nextDate: newDate || null,
+                submittingLawyerId: session.user.id,
+                submittingLawyerToken: session.user.lawyerToken,
+                submittingLawyerName: session.user.name,
                 appearances: appearanceLawyerIds && appearanceLawyerIds.length > 0 ? {
                     connect: appearanceLawyerIds.map(id => ({ id }))
                 } : undefined
@@ -562,6 +593,9 @@ export async function updateCourtProceedings(
     proceedings: string,
     performedBy: string
 ) {
+    const session = await auth();
+    if (!session?.user) return { success: false, error: 'Unauthorized' };
+
     try {
         const courtDate = await prisma.courtDate.findUnique({
             where: { id: courtDateId },
@@ -574,11 +608,10 @@ export async function updateCourtProceedings(
 
         if (!courtDate) return { success: false, error: 'Court date record not found' };
 
-        // RBAC Check
+        // RBAC Check: Only the original submitting lawyer can update their proceedings record
         const { matter } = courtDate;
-        const isAssociated = matter.lawyers.some(l => l.lawyerId === performedBy);
-        if (!isAssociated && matter.workspace.ownerId !== performedBy) {
-            return { success: false, error: 'Permission denied: Only associated lawyers or the owner can update proceedings.' };
+        if (courtDate.submittingLawyerId && courtDate.submittingLawyerId !== session.user.id && matter.workspace.ownerId !== session.user.id) {
+            return { success: false, error: 'Permission denied: Only the lawyer who recorded this proceeding can edit it.' };
         }
 
         // Update the record

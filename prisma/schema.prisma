@@ -82,7 +82,7 @@ model User {
   emailVerified        DateTime?
   phone                String?
   image                String?
-  jobTitle             String?
+  lawyerToken          String?               @unique
   accounts             Account[]
   apiKeys              ApiKey[]
   briefs               Brief[]
@@ -101,6 +101,7 @@ model User {
   matterLawyer         MatterLawyer[]
 
   @@index([email])
+  @@index([lawyerToken])
 }
 
 model BankAccount {
@@ -226,7 +227,9 @@ model Matter {
   updatedAt            DateTime              @updatedAt
   lastActivityAt       DateTime              @default(now())
   lastClientContact    DateTime?
-  proceduralStatus     String?
+  submittingLawyerId    String?
+  submittingLawyerToken String?
+  submittingLawyerName  String?
   briefs               Brief[]
   clientCommunications ClientCommunication[]
   courtDates           CourtDate[]
@@ -241,6 +244,7 @@ model Matter {
   @@index([workspaceId])
   @@index([lastActivityAt])
   @@index([nextCourtDate])
+  @@index([submittingLawyerId])
 }
 
 model MatterLawyer {
@@ -265,7 +269,9 @@ model CourtDate {
   proceedings            String?
   outcome                String?
   adjournedFor           String?
-  nextDate               DateTime?
+  submittingLawyerId    String?
+  submittingLawyerToken String?
+  submittingLawyerName  String?
   createdAt              DateTime                @default(now())
   updatedAt              DateTime                @updatedAt
   matter                 Matter                  @relation(fields: [matterId], references: [id], onDelete: Cascade)
@@ -274,6 +280,7 @@ model CourtDate {
 
   @@index([matterId])
   @@index([date])
+  @@index([submittingLawyerId])
 }
 
 model ScheduledNotification {

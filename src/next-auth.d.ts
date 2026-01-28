@@ -4,11 +4,13 @@ import { JWT } from "next-auth/jwt"
 declare module "next-auth" {
     interface User {
         workspaceId?: string
+        lawyerToken?: string
     }
     interface Session {
         user: {
             id: string
             workspaceId: string
+            lawyerToken: string
         } & DefaultSession["user"]
     }
 }

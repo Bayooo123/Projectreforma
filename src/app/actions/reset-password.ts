@@ -1,7 +1,7 @@
 'use server';
 
 import { generatePasswordResetToken } from '@/lib/tokens';
-import { sendPasswordResetEmail } from '@/lib/mail';
+import { sendPasswordResetEmail } from '@/lib/email';
 import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
 
@@ -33,7 +33,13 @@ export async function resetPassword(state: ResetState, formData: FormData): Prom
         }
 
         const verificationToken = await generatePasswordResetToken(email);
-        await sendPasswordResetEmail(verificationToken.identifier, verificationToken.token);
+        const domain = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+        const resetLink = `${domain}/auth/reset-password?token=${verificationToken.token}`;
+
+        await sendPasswordResetEmail({
+            to: email,
+            resetLink
+        });
 
         return { success: true, message: 'Check your email for the reset link.' };
 

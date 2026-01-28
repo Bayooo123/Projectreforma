@@ -2,6 +2,7 @@
 
 import { Scale, FileText, Calendar, Users, BarChart3, Shield, ArrowRight, Sparkles } from 'lucide-react';
 import Link from 'next/link';
+import Image from 'next/image';
 import styles from './landing.module.css';
 import { useEffect, useState } from 'react';
 
@@ -22,8 +23,14 @@ export default function LandingPage() {
             <nav className={`${styles.nav} ${scrolled ? styles.navScrolled : ''}`}>
                 <div className={styles.navContainer}>
                     <div className={styles.logo}>
-                        <Scale className={styles.logoIcon} />
-                        <span className={styles.logoText}>Reforma</span>
+                        <Image
+                            src="/images/logo-reforma.png"
+                            alt="Reforma Logo"
+                            width={160}
+                            height={40}
+                            className={styles.logoImage}
+                            priority
+                        />
                     </div>
                     <div className={styles.navActions}>
                         <Link href="/login" className={styles.btnSecondary}>
@@ -214,8 +221,13 @@ export default function LandingPage() {
                 <div className={styles.footerContent}>
                     <div className={styles.footerBrand}>
                         <div className={styles.logo}>
-                            <Scale className={styles.logoIcon} />
-                            <span className={styles.logoText}>Reforma</span>
+                            <Image
+                                src="/images/logo-reforma.png"
+                                alt="Reforma Logo"
+                                width={120}
+                                height={30}
+                                className={styles.logoImage}
+                            />
                         </div>
                         <p className={styles.footerTagline}>
                             The intelligent operating system for modern law firms

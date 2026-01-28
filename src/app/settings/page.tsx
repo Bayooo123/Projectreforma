@@ -2,16 +2,17 @@
 
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
-import { User, Building2, Lock, Save, Image as ImageIcon, Loader, FileText, AlertCircle, Key, Copy, Trash2, Plus, Eye, EyeOff } from 'lucide-react';
+import { User, Building2, Lock, Save, Image as ImageIcon, Loader, FileText, AlertCircle, Key, Copy, Trash2, Plus, Eye, EyeOff, Check } from 'lucide-react';
 import { updateWorkspaceSettings, getWorkspaceSettings } from '@/app/actions/settings';
 import { getUserProfile, updateUserProfile } from '@/app/actions/members';
 import { getBankAccounts, createBankAccount, deleteBankAccount } from '@/app/actions/bank-accounts';
 import { generateApiKey, listApiKeys, revokeApiKey } from '@/app/actions/api-keys';
+import { changePassword } from '@/app/actions/auth';
 import styles from './page.module.css';
 
 export default function SettingsPage() {
     const { data: session } = useSession();
-    const [activeTab, setActiveTab] = useState<'profile' | 'firm' | 'apikeys'>('profile');
+    const [activeTab, setActiveTab] = useState<'profile' | 'firm' | 'apikeys' | 'security'>('profile');
 
     // Config State
     const [isLoading, setIsLoading] = useState(true);
@@ -28,6 +29,7 @@ export default function SettingsPage() {
     const [jobTitle, setJobTitle] = useState('');
     const [bankAccounts, setBankAccounts] = useState<any[]>([]);
     const [newAccount, setNewAccount] = useState({ bankName: '', accountNumber: '', accountName: '', currency: 'NGN' });
+    const [lawyerToken, setLawyerToken] = useState('');
 
     // API Keys State
     const [apiKeys, setApiKeys] = useState<any[]>([]);
@@ -35,11 +37,14 @@ export default function SettingsPage() {
     const [generatedKey, setGeneratedKey] = useState<string | null>(null);
     const [isGenerating, setIsGenerating] = useState(false);
     const [showKey, setShowKey] = useState(false);
+    const [isPasswordChanging, setIsPasswordChanging] = useState(false);
+    const [passwordFeedback, setPasswordFeedback] = useState<{ type: 'success' | 'error', message: string } | null>(null);
 
     const loadProfile = async () => {
         const res = await getUserProfile();
         if (res.success && res.user) {
             setJobTitle(res.user.jobTitle || '');
+            setLawyerToken(res.user.lawyerToken || '');
         }
     };
 
@@ -152,6 +157,23 @@ export default function SettingsPage() {
         setIsSaving(false);
     };
 
+    const handlePasswordChange = async (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        setIsPasswordChanging(true);
+        setPasswordFeedback(null);
+
+        const formData = new FormData(e.currentTarget);
+        const res = await changePassword(formData);
+
+        if (res.success) {
+            setPasswordFeedback({ type: 'success', message: res.message || 'Password updated!' });
+            (e.target as HTMLFormElement).reset();
+        } else {
+            setPasswordFeedback({ type: 'error', message: res.error || 'Failed to update password.' });
+        }
+        setIsPasswordChanging(false);
+    };
+
     const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
@@ -199,6 +221,9 @@ export default function SettingsPage() {
                             <Key size={18} /> API Keys
                         </button>
                     )}
+                    <button className={`${styles.tab} ${activeTab === 'security' ? styles.activeTab : ''}`} onClick={() => setActiveTab('security')}>
+                        <Lock size={18} /> Security
+                    </button>
                 </div>
             </div>
 
@@ -216,6 +241,13 @@ export default function SettingsPage() {
                         <div className={styles.infoRow}>
                             <label>Email Address</label>
                             <input type="email" disabled value={session?.user?.email || ''} className={styles.input} />
+                        </div>
+                        <div className={styles.infoRow}>
+                            <label>Lawyer Token</label>
+                            <div className={styles.tokenDisplay}>
+                                <span className={styles.tokenValue}>{lawyerToken || '----'}</span>
+                                <p className={styles.hint}>System-assigned unique 4-digit code for record authentication.</p>
+                            </div>
                         </div>
                         <div className={styles.infoRow}>
                             <label>Job Title / Designation</label>
@@ -443,6 +475,69 @@ export default function SettingsPage() {
                             )}
                         </div>
                     </>
+                )}
+                {activeTab === 'security' && (
+                    <div className={styles.card}>
+                        <div className={styles.cardHeader}>
+                            <Lock className={styles.icon} />
+                            <h2>Security Settings</h2>
+                        </div>
+
+                        <form onSubmit={handlePasswordChange} className={styles.passwordForm}>
+                            <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem' }}>
+                                To change your password, please verify your current password first.
+                            </p>
+
+                            {passwordFeedback && (
+                                <div className={passwordFeedback.type === 'error' ? styles.error : styles.success}>
+                                    {passwordFeedback.type === 'error' ? <AlertCircle size={18} /> : <Check size={18} />}
+                                    {passwordFeedback.message}
+                                </div>
+                            )}
+
+                            <div className={styles.formGroup}>
+                                <label>Current Password</label>
+                                <input
+                                    type="password"
+                                    name="currentPassword"
+                                    required
+                                    className={styles.input}
+                                    placeholder="••••••••"
+                                />
+                            </div>
+
+                            <div className={styles.gridRow}>
+                                <div className={styles.formGroup}>
+                                    <label>New Password</label>
+                                    <input
+                                        type="password"
+                                        name="newPassword"
+                                        required
+                                        minLength={6}
+                                        className={styles.input}
+                                        placeholder="••••••••"
+                                    />
+                                </div>
+                                <div className={styles.formGroup}>
+                                    <label>Confirm New Password</label>
+                                    <input
+                                        type="password"
+                                        name="confirmPassword"
+                                        required
+                                        minLength={6}
+                                        className={styles.input}
+                                        placeholder="••••••••"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className={styles.actions}>
+                                <button type="submit" className={styles.saveBtn} disabled={isPasswordChanging}>
+                                    {isPasswordChanging ? <Loader className="spin" size={18} /> : 'Update Password'}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
                 )}
             </div>
         </div>

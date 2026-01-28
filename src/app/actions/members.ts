@@ -62,7 +62,7 @@ export async function getUserProfile() {
     try {
         const user = await prisma.user.findUnique({
             where: { email: session.user.email },
-            select: { id: true, name: true, jobTitle: true, email: true }
+            select: { id: true, name: true, jobTitle: true, email: true, lawyerToken: true }
         });
         return { success: true, user };
     } catch (error) {

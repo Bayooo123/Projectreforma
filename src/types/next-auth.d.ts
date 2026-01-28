@@ -6,6 +6,7 @@ declare module "next-auth" {
         user: {
             id: string;
             workspaceId: string;
+            lawyerToken: string;
             role: "owner" | "partner" | "associate" | "admin" | "member";
         } & DefaultSession["user"];
     }
@@ -13,6 +14,7 @@ declare module "next-auth" {
     interface User {
         role: "owner" | "partner" | "associate" | "admin" | "member";
         workspaceId: string;
+        lawyerToken: string;
     }
 }
 

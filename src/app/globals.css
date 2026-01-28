@@ -2,8 +2,8 @@
 
 
 :root {
-  --accent: #FDF2F4;
-  --accent-hover: #FBE6E9;
+  --accent: #F0FDFA;
+  --accent-hover: #CCFBF1;
 
   /* Text Colors */
   --text-primary: #1F2937;
@@ -23,15 +23,15 @@
 
   /* Glassmorphism */
   --glass-bg: rgba(255, 255, 255, 0.9);
-  --glass-border: rgba(142, 47, 57, 0.1);
+  --glass-border: rgba(20, 184, 166, 0.1);
   --glass-shadow: 0 4px 30px rgba(0, 0, 0, 0.03);
 
   /* Functional Colors */
   --border: #E5E7EB;
   /* Gray 200 */
-  --primary: #8E2F39;
-  /* Burgundy - MAJOR */
-  --primary-hover: #72222B;
+  --primary: #14B8A6;
+  /* Teal-500 - MAJOR */
+  --primary-hover: #0D9488;
   --success: #059669;
   /* Emerald 600 - Muted */
   --success-bg: #ECFDF5;
@@ -54,15 +54,15 @@
   --shadow-lg: 0 10px 15px -3px rgba(31, 41, 55, 0.05),
     0 4px 6px -2px rgba(31, 41, 55, 0.025);
   --shadow-soft: 0 20px 40px -10px rgba(31, 41, 55, 0.08);
-  --shadow-glow: 0 0 20px rgba(142, 47, 57, 0.2);
+  --shadow-glow: 0 0 20px rgba(20, 184, 166, 0.2);
 
   /* Dashboard Specifics */
-  --bg-sidebar: #5C1C23;
-  /* Deep Burgundy - Priority for Sidebar */
-  --teal-bg: #FDF2F4;
-  --teal-text: #8E2F39;
-  --hover-bg: #72222B;
-  /* Deep Burgundy Hover */
+  --bg-sidebar: #0F766E;
+  /* Teal-700 - Priority for Sidebar */
+  --teal-bg: #F0FDFA;
+  --teal-text: #14B8A6;
+  --hover-bg: #0D9488;
+  /* Teal-600 Hover */
 
   /* Animation Timing */
   --ease-fluid: cubic-bezier(0.4, 0, 0.2, 1);
@@ -75,8 +75,8 @@
   --text-lp-primary: #1F2937;
   --text-lp-secondary: #6B7280;
   --text-lp-tertiary: #9CA3AF;
-  --primary-color: #8E2F39;
-  --primary-hover: #72222B;
+  --primary-color: #14B8A6;
+  --primary-hover: #0D9488;
 
   --card-bg: #FFFFFF;
   --card-hover-bg: #F3F4F6;
@@ -98,11 +98,11 @@
 /* Dark Mode Overrides */
 .dark {
   /* Brand Colors - Dark Mode */
-  --primary: #8E2F39;
-  --primary-dark: #72222B;
-  --primary-light: #B84A56;
-  --primary-soft: rgba(142, 47, 57, 0.2);
-  --primary-glow: 0 0 25px rgba(142, 47, 57, 0.4);
+  --primary: #14B8A6;
+  --primary-dark: #0D9488;
+  --primary-light: #2DD4BF;
+  --primary-soft: rgba(20, 184, 166, 0.2);
+  --primary-glow: 0 0 25px rgba(20, 184, 166, 0.4);
 
   --accent: #374151;
   /* Gray 700 */
@@ -128,11 +128,11 @@
   --glass-border: rgba(255, 255, 255, 0.08);
 
   /* Dashboard Specifics - Dark Mode */
-  --bg-sidebar: #2A0C10;
-  /* Very Dark Burgundy for Dark Mode */
-  --teal-bg: rgba(142, 47, 57, 0.15);
-  --teal-text: #E68A94;
-  --hover-bg: rgba(142, 47, 57, 0.1);
+  --bg-sidebar: #064E4B;
+  /* Darker Teal for Dark Mode Sidebar */
+  --teal-bg: rgba(20, 184, 166, 0.15);
+  --teal-text: #5EEAD4;
+  --hover-bg: rgba(20, 184, 166, 0.1);
 
   --border: #374151;
   /* Gray 700 */
@@ -140,7 +140,7 @@
 
   /* Table Improvements */
   --table-header-bg: #1F2937;
-  --table-row-hover: rgba(142, 47, 57, 0.05);
+  --table-row-hover: rgba(20, 184, 166, 0.05);
   --table-row-alternate: rgba(255, 255, 255, 0.02);
 
   /* Status Badge Colors */
@@ -155,7 +155,7 @@
   --status-finalized-border: rgba(59, 130, 246, 0.3);
 
   /* Input Focus Glow */
-  --input-focus-glow: 0 0 0 3px rgba(142, 47, 57, 0.3);
+  --input-focus-glow: 0 0 0 3px rgba(20, 184, 166, 0.3);
 
   --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.5);
   --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.5);
@@ -168,11 +168,11 @@
   --text-lp-primary: #F3F4F6;
   --text-lp-secondary: #D1D5DB;
   --text-lp-tertiary: #9CA3AF;
-  --primary-color: #8E2F39;
-  --primary-hover: #72222B;
+  --primary-color: #14B8A6;
+  --primary-hover: #0D9488;
 
   --card-bg: #1F2937;
-  --card-hover-bg: rgba(142, 47, 57, 0.1);
+  --card-hover-bg: rgba(20, 184, 166, 0.1);
 
   --section-hero-bg: #111827;
   --section-problem-bg: #1F2937;

@@ -1,7 +1,8 @@
 'use client';
 
-import { Scale, UserPlus, Shield } from 'lucide-react';
+import { UserPlus, Shield } from 'lucide-react';
 import Link from 'next/link';
+import Image from 'next/image';
 import styles from '../auth.module.css';
 import RegisterForm from '@/components/auth/RegisterForm';
 
@@ -11,7 +12,13 @@ export default function RegisterPage() {
             {/* Branding Side */}
             <div className={styles.brandingSide}>
                 <div className={styles.logo}>
-                    <Scale className={styles.logoIcon} />
+                    <Image
+                        src="/logo.png"
+                        alt="Reforma Logo"
+                        width={40}
+                        height={40}
+                        className={styles.logoImage}
+                    />
                     <span className={styles.logoText}>Reforma</span>
                 </div>
 
