@@ -79,7 +79,6 @@ const AddMatterModal = ({ isOpen, onClose, workspaceId, userId, onSuccess }: Add
                     role: 'appearing',
                     isAppearing: true
                 })),
-                proceduralStatus: undefined,
                 createdById: userId // Critical for logging
             });
 

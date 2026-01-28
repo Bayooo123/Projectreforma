@@ -135,7 +135,6 @@ export async function createMatter(data: {
     judge?: string;
     nextCourtDate?: Date;
     status?: string;
-    proceduralStatus?: string;
     proceedings?: string;
     proceedingDate?: Date;
     createdById?: string;
@@ -155,7 +154,6 @@ export async function createMatter(data: {
                 judge: data.judge,
                 nextCourtDate: data.nextCourtDate,
                 status: data.status || 'active',
-                proceduralStatus: data.proceduralStatus,
                 submittingLawyerId: session.user.id,
                 submittingLawyerToken: session.user.lawyerToken,
                 submittingLawyerName: session.user.name,
@@ -261,7 +259,6 @@ export async function updateMatter(
         judge?: string;
         nextCourtDate?: Date | null;
         status?: string;
-        proceduralStatus?: string;
     },
     performedBy: string
 ) {
@@ -416,7 +413,6 @@ export async function adjournMatter(
                 date: dateOfEvent,
                 proceedings,
                 adjournedFor: adjournedFor || null,
-                nextDate: newDate || null,
                 submittingLawyerId: session.user.id,
                 submittingLawyerToken: session.user.lawyerToken,
                 submittingLawyerName: session.user.name,

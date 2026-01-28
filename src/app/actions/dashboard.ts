@@ -164,7 +164,7 @@ export async function getTodaysActivity(workspaceId: string) {
                     lawyer: { select: { name: true } }
                 }
             },
-            proceduralStatus: true
+            status: true
         }
     });
 
@@ -193,7 +193,7 @@ export async function getTodaysActivity(workspaceId: string) {
             type: 'court_appearance',
             title: `Appearing in ${m.court || 'Court'}`,
             subtitle: `${m.name} (${m.caseNumber})`,
-            status: m.proceduralStatus || 'Scheduled',
+            status: m.status || 'Scheduled',
             assignee: m.lawyers[0]?.lawyer?.name || 'Unassigned',
             time: '09:00 AM'
         })),
