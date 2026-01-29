@@ -250,10 +250,7 @@ const RecordProceedingModal = ({ isOpen, onClose, workspaceId, userId, onSuccess
                                                     key={lawyer.id}
                                                     type="button"
                                                     onClick={() => toggleLawyer(lawyer.id)}
-                                                    className={`px-2 py-1 rounded text-[10px] font-medium transition-colors ${selectedLawyerIds.includes(lawyer.id)
-                                                        ? 'bg-blue-600 text-white'
-                                                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                                                        }`}
+                                                    className={`${styles.lawyerButton} ${selectedLawyerIds.includes(lawyer.id) ? styles.lawyerButtonSelected : ''}`}
                                                 >
                                                     {lawyer.name}
                                                 </button>
