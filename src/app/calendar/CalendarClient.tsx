@@ -139,19 +139,19 @@ export default function CalendarClient({
                     </div>
 
                     {/* Primary Actions Split */}
-                    <div className="flex gap-3">
+                    <div className={styles.actionButtons}>
                         {/* Action 1: Create New Matter (Comprehensive) */}
                         <button
-                            className="bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 font-medium py-2 px-4 rounded-lg flex items-center gap-2 transition-colors"
+                            className={styles.btnSecondary}
                             onClick={() => setIsAddModalOpen(true)}
                         >
-                            <Plus size={18} className="text-slate-500" />
+                            <Plus size={18} />
                             <span>Create New Matter</span>
                         </button>
 
                         {/* Action 2: Record Court Proceeding (Fast/Minimal) */}
                         <button
-                            className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg flex items-center gap-2 shadow-sm transition-colors"
+                            className={styles.btnPrimary}
                             onClick={() => setIsRecordModalOpen(true)}
                         >
                             <Gavel size={18} />

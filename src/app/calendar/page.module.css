@@ -86,3 +86,54 @@
 .addBtn:hover {
     background-color: var(--primary-dark);
 }
+
+/* Action Buttons */
+.actionButtons {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.btnSecondary {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background-color: var(--surface);
+    color: var(--text-primary);
+    border: 1px solid var(--border);
+    padding: 0.625rem 1.125rem;
+    border-radius: var(--radius-md);
+    font-weight: 600;
+    font-size: var(--text-sm);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btnSecondary:hover {
+    background-color: var(--surface-subtle);
+    border-color: var(--primary);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.btnPrimary {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background-color: var(--primary);
+    color: white;
+    border: none;
+    padding: 0.625rem 1.125rem;
+    border-radius: var(--radius-md);
+    font-weight: 600;
+    font-size: var(--text-sm);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 6px rgba(20, 184, 166, 0.2);
+}
+
+.btnPrimary:hover {
+    background-color: var(--primary-hover);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(20, 184, 166, 0.3);
+}
