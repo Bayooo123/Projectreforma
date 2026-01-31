@@ -1,0 +1,63 @@
+[
+  {
+    "workspace": "ASCOLP",
+    "slug": "ascolp-uNfwr9",
+    "members": [
+      {
+        "name": "Adebayo Gbadebo",
+        "email": "Bayo@abiolasanniandco.com",
+        "role": "Associate"
+      },
+      {
+        "name": "Professor Abiola Sanni SAN",
+        "email": "Asanni@abiolasanniandco.com",
+        "role": "owner"
+      },
+      {
+        "name": "Tosin Omisade",
+        "email": "Tosin@abiolasanniandco.com",
+        "role": "lawyer"
+      },
+      {
+        "name": "Kolawole Abdulsalam",
+        "email": "Kola@abiolasanniandco.com",
+        "role": "lawyer"
+      },
+      {
+        "name": "Iniobong Inieke Umoh",
+        "email": "Iniobong@abiolasanniandco.com",
+        "role": "lawyer"
+      },
+      {
+        "name": null,
+        "email": "riwo@abiolasanniandco.com",
+        "role": "lawyer"
+      },
+      {
+        "name": "Omowumi Adeoye",
+        "email": "omowumi@abiolasanniandco.com",
+        "role": "lawyer"
+      },
+      {
+        "name": "Maureen Omaegbu",
+        "email": "maureen@abiolasanniandco.com",
+        "role": "lawyer"
+      },
+      {
+        "name": "Adeola Adeoye",
+        "email": "ade@abiolasanniandco.com",
+        "role": "lawyer"
+      },
+      {
+        "name": "Benjamin Adeyanju",
+        "email": "ben@abiolasanniandco.com",
+        "role": "lawyer"
+      },
+      {
+        "name": "Adebayo Gbadebo",
+        "email": "bayo@abiolasanniandco.com",
+        "role": "admin"
+      }
+    ]
+  }
+]
