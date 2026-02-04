@@ -72,9 +72,6 @@ export default function LandingPage() {
                         <Link href="/login" className={styles.btnSecondary}>
                             Login
                         </Link>
-                        <button onClick={scrollToWaitlist} className={styles.btnPrimary}>
-                            Join Waitlist
-                        </button>
                     </div>
                 </div>
             </nav>

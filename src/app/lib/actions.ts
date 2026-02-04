@@ -63,182 +63,153 @@ export async function register(
 ) {
     const name = formData.get('name') as string;
     const email = formData.get('email') as string;
-    const password = formData.get('password') as string;
-    const phone = formData.get('phone') as string;
     const firmName = formData.get('firmName') as string;
-    const role = formData.get('role') as string;
 
-    // Auto-generate firm code and join password for simplified onboarding
-    const firmCode = firmName.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 4) + '-' + nanoid(6);
-    const firmPassword = nanoid(12);
-
-    console.log('🔵 Registration attempt started for:', { email, name, firmName, role });
-
-    // Validate required fields (simplified - no firmCode/firmPassword from user)
-    if (!name || !email || !password || !phone || !firmName || !role) {
-        console.log('❌ Validation failed: Missing required fields');
-        return 'Please fill in all fields.';
-    }
-
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-        console.log('❌ Validation failed: Invalid email format');
-        return 'Please enter a valid email address.';
-    }
-
-    // Validate password strength
-    if (password.length < 8) {
-        console.log('❌ Validation failed: Password too short');
-        return 'Password must be at least 8 characters long.';
-    }
-
-    // Validate admin roles
-    const ADMIN_ROLES = [
-        'Practice Manager',
-        'Head of Chambers',
-        'Deputy Head of Chambers',
-        'Managing Partner',
-        'Senior Associate',
-        'Associate',
-        'Managing Associate',
-    ];
-
-    if (!ADMIN_ROLES.includes(role)) {
-        console.log('❌ Validation failed: Invalid role');
-        return 'Invalid role selected.';
-    }
-
+    // BLOCK NEW SIGNUPS (LOCKED FOR APRIL LAUNCH)
+    console.log('🔒 Public registration is currently disabled. Adding to waitlist instead.');
     try {
-        console.log('🔐 Hashing password...');
-        // 1. Hash password
-        const hashedPassword = await bcrypt.hash(password, 10);
-        console.log('✅ Password hashed successfully');
-
-        // 2. Create User, Workspace, and Membership in a transaction
-        console.log('🔄 Starting database transaction...');
-        const result = await prisma.$transaction(async (tx) => {
-            // Check if user exists
-            console.log('🔍 Checking for existing user...');
-            const existingUser = await tx.user.findUnique({ where: { email } });
-            if (existingUser) {
-                console.log('❌ User already exists:', existingUser.id);
-                throw new Error('User already exists.');
-            }
-            console.log('✅ No existing user found');
-
-            // Generate Lawyer Token
-            const lawyerToken = await generateUniqueLawyerToken();
-
-            // Create User
-            console.log('👤 Creating user...');
-            const user = await tx.user.create({
-                data: {
-                    name,
-                    email,
-                    password: hashedPassword,
-                    phone,
-                    lawyerToken,
-                },
-            });
-            console.log('✅ User created successfully:', { id: user.id, email: user.email });
-
-            // Check if firm code exists
-            const existingFirm = await tx.workspace.findUnique({ where: { firmCode } });
-            if (existingFirm) {
-                throw new Error('Firm code is already taken.');
-            }
-
-            // Hash Firm Password
-            const hashedFirmPassword = await bcrypt.hash(firmPassword, 10);
-
-            // Create Workspace (Firm)
-            console.log('🏢 Creating workspace...');
-            const slug = firmName.toLowerCase().replace(/[^a-z0-9]/g, '-') + '-' + nanoid(6);
-            const workspace = await tx.workspace.create({
-                data: {
-                    name: firmName,
-                    slug,
-                    ownerId: user.id,
-                    firmCode,
-                    joinPassword: hashedFirmPassword
-                },
-            });
-            console.log('✅ Workspace created successfully:', { id: workspace.id, slug: workspace.slug });
-
-            // Create Membership with specified role
-            console.log('👥 Creating workspace membership...');
-            const membership = await tx.workspaceMember.create({
-                data: {
-                    userId: user.id,
-                    workspaceId: workspace.id,
-                    role: role,
-                },
-            });
-            console.log('✅ Membership created successfully:', { id: membership.id, role: membership.role });
-
-            return { user, workspace, membership };
-        });
-
-        console.log('✅ Transaction completed successfully');
-        console.log('📊 Registration summary:', {
-            userId: result.user.id,
-            workspaceId: result.workspace.id,
-            membershipId: result.membership.id,
-        });
-
-        // Verify the user was actually created
-        console.log('🔍 Verifying user in database...');
-        const verifyUser = await prisma.user.findUnique({
+        await prisma.waitlist.upsert({
             where: { email },
-            include: {
-                ownedWorkspaces: true,
-                workspaces: true,
+            update: { name, firmName },
+            create: { email, name, firmName }
+        });
+        return 'Registration is currently limited. You have been added to our waitlist and we will notify you once your workspace is ready.';
+    } catch (e) {
+        console.error('Waitlist error during registration attempt:', e);
+        return 'Registration is currently closed. Please join the waitlist on the home page.';
+    }
+}
+
+try {
+    console.log('🔐 Hashing password...');
+    // 1. Hash password
+    const hashedPassword = await bcrypt.hash(password, 10);
+    console.log('✅ Password hashed successfully');
+
+    // 2. Create User, Workspace, and Membership in a transaction
+    console.log('🔄 Starting database transaction...');
+    const result = await prisma.$transaction(async (tx) => {
+        // Check if user exists
+        console.log('🔍 Checking for existing user...');
+        const existingUser = await tx.user.findUnique({ where: { email } });
+        if (existingUser) {
+            console.log('❌ User already exists:', existingUser.id);
+            throw new Error('User already exists.');
+        }
+        console.log('✅ No existing user found');
+
+        // Generate Lawyer Token
+        const lawyerToken = await generateUniqueLawyerToken();
+
+        // Create User
+        console.log('👤 Creating user...');
+        const user = await tx.user.create({
+            data: {
+                name,
+                email,
+                password: hashedPassword,
+                phone,
+                lawyerToken,
             },
         });
+        console.log('✅ User created successfully:', { id: user.id, email: user.email });
 
-        if (verifyUser) {
-            console.log('✅ User verification successful:', {
-                id: verifyUser.id,
-                email: verifyUser.email,
-                ownedWorkspaces: verifyUser.ownedWorkspaces.length,
-                workspaceMemberships: verifyUser.workspaces.length,
-            });
-        } else {
-            console.error('❌ CRITICAL: User not found after creation!');
+        // Check if firm code exists
+        const existingFirm = await tx.workspace.findUnique({ where: { firmCode } });
+        if (existingFirm) {
+            throw new Error('Firm code is already taken.');
         }
 
-        // 3. Sign in the user and redirect to onboarding
-        console.log('🔑 Attempting to sign in user...');
-        await signIn('credentials', {
-            ...Object.fromEntries(formData),
-            redirectTo: '/onboarding',
+        // Hash Firm Password
+        const hashedFirmPassword = await bcrypt.hash(firmPassword, 10);
+
+        // Create Workspace (Firm)
+        console.log('🏢 Creating workspace...');
+        const slug = firmName.toLowerCase().replace(/[^a-z0-9]/g, '-') + '-' + nanoid(6);
+        const workspace = await tx.workspace.create({
+            data: {
+                name: firmName,
+                slug,
+                ownerId: user.id,
+                firmCode,
+                joinPassword: hashedFirmPassword
+            },
+        });
+        console.log('✅ Workspace created successfully:', { id: workspace.id, slug: workspace.slug });
+
+        // Create Membership with specified role
+        console.log('👥 Creating workspace membership...');
+        const membership = await tx.workspaceMember.create({
+            data: {
+                userId: user.id,
+                workspaceId: workspace.id,
+                role: role,
+            },
+        });
+        console.log('✅ Membership created successfully:', { id: membership.id, role: membership.role });
+
+        return { user, workspace, membership };
+    });
+
+    console.log('✅ Transaction completed successfully');
+    console.log('📊 Registration summary:', {
+        userId: result.user.id,
+        workspaceId: result.workspace.id,
+        membershipId: result.membership.id,
+    });
+
+    // Verify the user was actually created
+    console.log('🔍 Verifying user in database...');
+    const verifyUser = await prisma.user.findUnique({
+        where: { email },
+        include: {
+            ownedWorkspaces: true,
+            workspaces: true,
+        },
+    });
+
+    if (verifyUser) {
+        console.log('✅ User verification successful:', {
+            id: verifyUser.id,
+            email: verifyUser.email,
+            ownedWorkspaces: verifyUser.ownedWorkspaces.length,
+            workspaceMemberships: verifyUser.workspaces.length,
+        });
+    } else {
+        console.error('❌ CRITICAL: User not found after creation!');
+    }
+
+    // 3. Sign in the user and redirect to onboarding
+    console.log('🔑 Attempting to sign in user...');
+    await signIn('credentials', {
+        ...Object.fromEntries(formData),
+        redirectTo: '/onboarding',
+    });
+
+} catch (error) {
+    console.error('❌ Registration error:', error);
+
+    if (error instanceof Error) {
+        console.error('Error details:', {
+            message: error.message,
+            name: error.name,
+            stack: error.stack,
         });
 
-    } catch (error) {
-        console.error('❌ Registration error:', error);
-
-        if (error instanceof Error) {
-            console.error('Error details:', {
-                message: error.message,
-                name: error.name,
-                stack: error.stack,
-            });
-
-            // Handle specific error types
-            if (error.message.includes('User already exists')) {
-                return 'An account with this email already exists.';
-            }
-            if (error.message.includes('NEXT_REDIRECT')) {
-                // This is expected - NextAuth throws this for redirects
-                console.log('✅ Redirect initiated successfully');
-                throw error;
-            }
-            return error.message;
+        // Handle specific error types
+        if (error.message.includes('User already exists')) {
+            return 'An account with this email already exists.';
         }
-
-        return 'Failed to create account. Please try again.';
+        if (error.message.includes('NEXT_REDIRECT')) {
+            // This is expected - NextAuth throws this for redirects
+            console.log('✅ Redirect initiated successfully');
+            throw error;
+        }
+        return error.message;
     }
+
+    return 'Failed to create account. Please try again.';
+}
 }
 
 export async function registerMember(
@@ -257,6 +228,9 @@ export async function registerMember(
     if (!name || !email || !password || !phone || !inviteToken) {
         return 'Please fill in all fields.';
     }
+
+    // BLOCK MEMBER JOINS FOR NOW
+    return 'Joins are currently restricted. Please contact your firm administrator.';
 
     try {
         const hashedPassword = await bcrypt.hash(password, 10);

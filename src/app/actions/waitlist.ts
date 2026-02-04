@@ -28,17 +28,34 @@ export async function joinWaitlist(formData: FormData) {
         };
     }
 
-    // Mocking persistence for now as per implementation plan
-    console.log('Waitlist submission:', validatedFields.data);
+    try {
+        const { prisma } = await import('@/lib/prisma');
+        await prisma.waitlist.upsert({
+            where: { email: validatedFields.data.email },
+            update: {
+                name: validatedFields.data.name,
+                firmName: validatedFields.data.firmName,
+                market: validatedFields.data.market,
+            },
+            create: {
+                email: validatedFields.data.email,
+                name: validatedFields.data.name,
+                firmName: validatedFields.data.firmName,
+                market: validatedFields.data.market,
+            },
+        });
 
-    // In a real scenario, we would save this to the database
-    // await prisma.waitlist.create({ data: validatedFields.data });
+        // Simulate a bit of delay for premium feel
+        await new Promise((resolve) => setTimeout(resolve, 800));
 
-    // Simulate a bit of delay for premium feel
-    await new Promise((resolve) => setTimeout(resolve, 800));
-
-    return {
-        success: true,
-        message: "You've been added to the waitlist. We'll be in touch soon.",
-    };
+        return {
+            success: true,
+            message: "You've been added to the waitlist. We'll be in touch soon.",
+        };
+    } catch (error) {
+        console.error('Waitlist submission error:', error);
+        return {
+            error: { email: ['Failed to join waitlist. Please try again.'] },
+        };
+    }
 }

@@ -51,7 +51,7 @@ export async function GET(request: NextRequest) {
             name: brief.name,
             category: brief.category,
             status: brief.status,
-            client: brief.client,
+            client: brief.client || null,
             lawyer: brief.lawyer,
             documentsCount: brief._count.documents,
             createdAt: brief.createdAt,

@@ -174,7 +174,7 @@ export default function BriefDetailClient({ brief }: BriefDetailClientProps) {
                     <div className={styles.compactInfoItem}>
                         <Building size={14} className={styles.compactIcon} />
                         <span className={styles.compactLabel}>Client:</span>
-                        <span className={styles.compactValue}>{brief.client.name}</span>
+                        <span className={styles.compactValue}>{brief.client?.name || 'Unassigned'}</span>
                     </div>
                     <div className={styles.compactInfoItem}>
                         <User size={14} className={styles.compactIcon} />

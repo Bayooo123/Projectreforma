@@ -76,9 +76,7 @@ export default function LoginPage() {
                     <div className={styles.formHeader}>
                         <h2 className={styles.formTitle}>Welcome back</h2>
                         <p className={styles.formSubtitle}>
-                            Joining a firm? <Link href="/join">Sign in here</Link>
-                            <span className={styles.divider}> · </span>
-                            New firm? <Link href="/register">Create account</Link>
+                            Sign in to your legal workspace
                         </p>
                     </div>
 

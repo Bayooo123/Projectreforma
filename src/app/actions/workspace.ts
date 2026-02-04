@@ -116,6 +116,9 @@ export async function registerWithFirmCode(data: {
     email: string;
     password: string;
 }): Promise<{ success: boolean; error?: string }> {
+    // BLOCK NEW SIGNUPS (LOCKED FOR APRIL LAUNCH)
+    return { success: false, error: 'Registration is currently limited to existing users only. Please join the waitlist.' };
+
     try {
         const { firmCode, firmPassword, name, email, password } = data;
 

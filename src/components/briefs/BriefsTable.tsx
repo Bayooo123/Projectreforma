@@ -16,7 +16,7 @@ export default async function BriefsTable({ workspaceId, searchQuery, statusFilt
             const matchesSearch =
                 brief.name.toLowerCase().includes(query) ||
                 brief.briefNumber.toLowerCase().includes(query) ||
-                brief.client?.name.toLowerCase().includes(query) ||
+                (brief.client?.name || '').toLowerCase().includes(query) ||
                 brief.category.toLowerCase().includes(query);
             if (!matchesSearch) return false;
         }

@@ -338,7 +338,7 @@ model Brief {
   id             String             @id @default(cuid())
   briefNumber    String             @unique
   name           String
-  clientId       String
+  clientId       String?
   matterId       String?
   lawyerId       String
   workspaceId    String
@@ -349,7 +349,7 @@ model Brief {
   createdAt      DateTime           @default(now())
   updatedAt      DateTime           @updatedAt
   inboundEmailId String             @unique @default(uuid())
-  client         Client             @relation(fields: [clientId], references: [id])
+  client         Client?            @relation(fields: [clientId], references: [id])
   lawyer         User               @relation(fields: [lawyerId], references: [id])
   matter         Matter?            @relation(fields: [matterId], references: [id])
   workspace      Workspace          @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
@@ -643,4 +643,16 @@ model DraftingResponse {
   session   DraftingSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 
   @@unique([sessionId, nodeId])
+}
+
+model Waitlist {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  firmName  String?
+  market    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([email])
 }

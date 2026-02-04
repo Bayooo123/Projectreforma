@@ -80,10 +80,11 @@ const EditBriefModal = ({ isOpen, onClose, onSuccess, brief, workspaceId }: Edit
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        if (!selectedClientId) {
-            alert('Please select a client');
-            return;
-        }
+        // Client is now optional
+        // if (!selectedClientId) {
+        //     alert('Please select a client');
+        //     return;
+        // }
 
         if (!selectedLawyerId) {
             alert('Please select a lawyer');
@@ -162,12 +163,11 @@ const EditBriefModal = ({ isOpen, onClose, onSuccess, brief, workspaceId }: Edit
                             </div>
 
                             <div className={styles.formGroup}>
-                                <label className={styles.label}>Client *</label>
+                                <label className={styles.label}>Client (Optional)</label>
                                 <select
                                     className={styles.select}
                                     value={selectedClientId}
                                     onChange={e => setSelectedClientId(e.target.value)}
-                                    required
                                 >
                                     <option value="">Select Client...</option>
                                     {clients.map(client => (

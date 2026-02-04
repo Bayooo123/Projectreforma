@@ -185,7 +185,7 @@ const BriefList = forwardRef<BriefListRef, BriefListProps>(({ onUpload, workspac
                                                 <span className={styles.briefRef}>{brief.ref}</span>
                                             </div>
                                         </td>
-                                        <td className={styles.clientName}>{brief.client?.name || 'Unknown Client'}</td>
+                                        <td className={styles.clientName}>{brief.client?.name || 'Unassigned'}</td>
                                         <td className={styles.lawyerName}>{brief.lawyer?.name || 'Unassigned'}</td>
                                         <td>{brief.category}</td>
                                         <td className={styles.dateCell}>{brief.dueDate ? new Date(brief.dueDate).toLocaleDateString() : '-'}</td>

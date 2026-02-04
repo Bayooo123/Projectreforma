@@ -70,7 +70,7 @@ export function MyBriefsWidget({ briefs }: MyBriefsWidgetProps) {
                                 </div>
                                 <div className="flex justify-between items-center mt-2">
                                     <span className="text-xs text-slate-500 font-medium truncate max-w-[120px]">
-                                        {brief.client.name}
+                                        {brief.client?.name || 'Unassigned'}
                                     </span>
                                     <div className="flex items-center text-[10px] text-slate-400 font-medium">
                                         <Clock className="w-3 h-3 mr-1" />
