@@ -25,7 +25,7 @@ interface Brief {
         name: string;
         email: string | null;
         company: string | null;
-    };
+    } | null;
     lawyer: {
         id: string;
         name: string | null;

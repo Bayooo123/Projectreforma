@@ -73,7 +73,7 @@ export async function POST(request: NextRequest) {
                 id: b.id,
                 name: b.name,
                 briefNumber: b.briefNumber,
-                clientName: b.client.name
+                clientName: b.client?.name || 'No Client'
             }));
 
             const identification = await identifyBriefFromContent(subject, body, candidateList);

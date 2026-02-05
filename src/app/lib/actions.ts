@@ -153,7 +153,7 @@ export async function registerMember(
             redirectTo: '/briefs' // Go to brief manager
         });
 
-    } catch (error) {
+    } catch (error: any) {
         console.error('Join error:', error);
         if (error instanceof Error) return error.message;
         return 'Failed to join workspace.';
