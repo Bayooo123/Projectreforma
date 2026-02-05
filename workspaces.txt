@@ -1,0 +1,8 @@
+Found 7 workspaces:
+- Name: "Greenbridge Advisory", Slug: "greenbridge-advisory-lHed7Q", ID: cmiqg2ysb0003ikf4t3woidaa
+- Name: "Otedola and co", Slug: "otedola-and-co-Yg20a6", ID: cmiqggz4q0004qzln0bs2b0c2
+- Name: "Stren and Blan", Slug: "stren-and-blan-fTnU4K", ID: cmir686z10004yzk80xm9k1rh
+- Name: "Virtual Chambers", Slug: "virtual-chambers-H2-iLw", ID: cmj6tqy3700031x402tboze6x
+- Name: "Virtual Chamberz", Slug: "virtual-chamberz-vKOZMA", ID: cmj77i3xk000a1x40iscypgmz
+- Name: "Okoro Partners", Slug: "okoro-partners-jlWGbZ", ID: cmjym27ug00037ux8ockdnsj2
+- Name: "ASCOLP", Slug: "ascolp-uNfwr9", ID: cmjmowtqq0003hr4hg9xotwn4

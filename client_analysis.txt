@@ -1,0 +1,22 @@
+Found 3 clients in ASCOLP.
+
+Client: Chief Daramola (cmjn6t43300013c2ikoy36gd0)
+- Invoices: 3
+- Payments: 1
+- Briefs: 0
+- Matters: 0
+
+Client: Arik air (cmjvjsjx40001tkd1by7qztt3)
+- Invoices: 0
+- Payments: 0
+- Briefs: 0
+- Matters: 2
+  * Matter: A v. K
+  * Matter: State v. Arik Air
+
+Client: Chevron Nigeria Limited (cmjvkfhpt0001zx4rr9c7zcfh)
+- Invoices: 0
+- Payments: 0
+- Briefs: 1
+  * Brief: Chevron Nigeria Limited v. Bayelsa State Inland Revenue Board
+- Matters: 0
