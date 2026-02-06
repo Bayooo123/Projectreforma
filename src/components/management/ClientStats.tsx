@@ -247,20 +247,20 @@ const ClientStats = ({ workspaceId }: ClientStatsProps) => {
             </div>
 
             {/* Action Buttons */}
-            <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1rem' }}>
+            <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem' }}>
                 <button
                     onClick={() => setShowInvoicesModal(true)}
                     style={{
-                        flex: 1,
-                        padding: '0.625rem 1rem',
+                        padding: '0.375rem 0.625rem',
                         background: 'var(--primary)',
                         color: 'white',
                         border: 'none',
                         borderRadius: 'var(--radius-md)',
-                        fontSize: '0.875rem',
+                        fontSize: '0.75rem',
                         fontWeight: 600,
                         cursor: 'pointer',
-                        transition: 'all 0.2s'
+                        transition: 'all 0.2s',
+                        whiteSpace: 'nowrap'
                     }}
                 >
                     View All Invoices
@@ -268,16 +268,16 @@ const ClientStats = ({ workspaceId }: ClientStatsProps) => {
                 <button
                     onClick={() => setShowPaymentsModal(true)}
                     style={{
-                        flex: 1,
-                        padding: '0.625rem 1rem',
+                        padding: '0.375rem 0.625rem',
                         background: 'transparent',
                         color: 'var(--primary)',
                         border: '1px solid var(--primary)',
                         borderRadius: 'var(--radius-md)',
-                        fontSize: '0.875rem',
+                        fontSize: '0.75rem',
                         fontWeight: 600,
                         cursor: 'pointer',
-                        transition: 'all 0.2s'
+                        transition: 'all 0.2s',
+                        whiteSpace: 'nowrap'
                     }}
                 >
                     View All Payments
