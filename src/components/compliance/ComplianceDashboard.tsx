@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from 'react';
-import { getComplianceTasks } from '@/app/actions/compliance';
+import { getComplianceTasks, ComplianceTask } from '@/app/actions/compliance';
 import ComplianceTaskCard from './ComplianceTaskCard';
 import { Loader2, ShieldCheck, AlertCircle, Clock, CheckCircle2 } from 'lucide-react';
 
@@ -10,7 +10,7 @@ interface ComplianceDashboardProps {
 }
 
 export default function ComplianceDashboard({ workspaceId }: ComplianceDashboardProps) {
-    const [tasks, setTasks] = useState<any[]>([]);
+    const [tasks, setTasks] = useState<ComplianceTask[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
@@ -59,7 +59,7 @@ export default function ComplianceDashboard({ workspaceId }: ComplianceDashboard
     const groupedTasks = tiers.reduce((acc, tier) => {
         acc[tier] = tasks.filter(t => t.obligation.tier === tier);
         return acc;
-    }, {} as Record<string, any[]>);
+    }, {} as Record<string, ComplianceTask[]>);
 
     const stats = {
         total: tasks.length,

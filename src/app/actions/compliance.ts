@@ -4,7 +4,44 @@ import { prisma } from '@/lib/prisma';
 import { requireAuth } from '@/lib/auth-utils';
 import { revalidatePath } from 'next/cache';
 
-export async function getComplianceTasks(workspaceId: string) {
+export interface ComplianceObligation {
+    id: string;
+    tier: string;
+    regulatoryBody: string;
+    nature: string;
+    actionRequired: string;
+    procedure: string;
+    frequency: string;
+    dueDateDescription: string | null;
+    jurisdiction: string;
+    createdAt: Date;
+    updatedAt: Date;
+}
+
+export interface ComplianceTask {
+    id: string;
+    obligationId: string;
+    workspaceId: string;
+    status: string;
+    dueDate: Date | null;
+    period: string | null;
+    evidenceUrl: string | null;
+    acknowledgedAt: Date | null;
+    acknowledgedBy: string | null;
+    createdAt: Date;
+    updatedAt: Date;
+    obligation: ComplianceObligation;
+    user?: {
+        name: string | null;
+        email: string;
+    } | null;
+}
+
+export type ActionResult<T> =
+    | { success: true; data: T }
+    | { success: false; error: string };
+
+export async function getComplianceTasks(workspaceId: string): Promise<ActionResult<ComplianceTask[]>> {
     try {
         const user = await requireAuth();
         if (!user) {
@@ -25,14 +62,15 @@ export async function getComplianceTasks(workspaceId: string) {
             ]
         });
 
-        return { success: true, data: tasks };
+        // Map Prisma results to our interface (handling Date conversions if needed, though Prisma does this)
+        return { success: true, data: tasks as unknown as ComplianceTask[] };
     } catch (error: any) {
         console.error('Failed to fetch compliance tasks:', error);
         return { success: false, error: error.message || 'Failed to fetch' };
     }
 }
 
-export async function acknowledgeComplianceTask(taskId: string) {
+export async function acknowledgeComplianceTask(taskId: string): Promise<ActionResult<ComplianceTask>> {
     try {
         const user = await requireAuth();
         if (!user.id) return { success: false, error: 'User ID missing' };
@@ -49,18 +87,24 @@ export async function acknowledgeComplianceTask(taskId: string) {
                         performedBy: user.id
                     }
                 }
+            },
+            include: {
+                obligation: true,
+                user: {
+                    select: { name: true, email: true }
+                }
             }
         });
 
         revalidatePath(`/management/compliance`);
-        return { success: true, data: task };
+        return { success: true, data: task as unknown as ComplianceTask };
     } catch (error: any) {
         console.error('Failed to acknowledge compliance task:', error);
         return { success: false, error: error.message || 'Failed to acknowledge' };
     }
 }
 
-export async function markAsComplied(taskId: string, evidenceUrl?: string) {
+export async function markAsComplied(taskId: string, evidenceUrl?: string): Promise<ActionResult<ComplianceTask>> {
     try {
         const user = await requireAuth();
         if (!user.id) return { success: false, error: 'User ID missing' };
@@ -77,18 +121,24 @@ export async function markAsComplied(taskId: string, evidenceUrl?: string) {
                         performedBy: user.id
                     }
                 }
+            },
+            include: {
+                obligation: true,
+                user: {
+                    select: { name: true, email: true }
+                }
             }
         });
 
         revalidatePath(`/management/compliance`);
-        return { success: true, data: task };
+        return { success: true, data: task as unknown as ComplianceTask };
     } catch (error: any) {
         console.error('Failed to mark compliance task as complied:', error);
         return { success: false, error: error.message || 'Failed to update' };
     }
 }
 
-export async function uploadComplianceEvidence(taskId: string, evidenceUrl: string) {
+export async function uploadComplianceEvidence(taskId: string, evidenceUrl: string): Promise<ActionResult<ComplianceTask>> {
     try {
         const user = await requireAuth();
         if (!user.id) return { success: false, error: 'User ID missing' };
@@ -104,11 +154,17 @@ export async function uploadComplianceEvidence(taskId: string, evidenceUrl: stri
                         performedBy: user.id
                     }
                 }
+            },
+            include: {
+                obligation: true,
+                user: {
+                    select: { name: true, email: true }
+                }
             }
         });
 
         revalidatePath(`/management/compliance`);
-        return { success: true, data: task };
+        return { success: true, data: task as unknown as ComplianceTask };
     } catch (error: any) {
         console.error('Failed to upload compliance evidence:', error);
         return { success: false, error: error.message || 'Failed to upload' };

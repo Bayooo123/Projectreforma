@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from 'react';
-import { acknowledgeComplianceTask, markAsComplied, uploadComplianceEvidence } from '@/app/actions/compliance';
+import { acknowledgeComplianceTask, markAsComplied, uploadComplianceEvidence, ComplianceTask } from '@/app/actions/compliance';
 import {
     AlertCircle,
     CheckCircle2,
@@ -10,11 +10,12 @@ import {
     ExternalLink,
     Info,
     Check,
-    Loader2
+    Loader2,
+    ShieldCheck
 } from 'lucide-react';
 
 interface ComplianceTaskCardProps {
-    task: any;
+    task: ComplianceTask;
     onUpdate: () => void;
 }
 
