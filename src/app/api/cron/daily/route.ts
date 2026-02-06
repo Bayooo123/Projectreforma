@@ -115,7 +115,7 @@ export async function GET(request: Request) {
                         roles: ['owner', 'partner'],
                         designations: ['Practice Manager', 'Head of Chambers']
                     });
-                } else if (daysUntilDue < 0) {
+                } else if (daysUntilDue < 0 && task.dueDate) {
                     // Escalation for overdue
                     await notifyWorkspaceMembers({
                         workspaceId: task.workspaceId,
