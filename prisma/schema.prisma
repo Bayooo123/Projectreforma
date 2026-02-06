@@ -34,6 +34,7 @@ model Workspace {
   owner             User                  @relation("WorkspaceOwner", fields: [ownerId], references: [id])
   emailConfig       WorkspaceEmailConfig?
   members           WorkspaceMember[]
+  complianceTasks   ComplianceTask[]
 
   @@index([slug])
   @@index([firmCode])
@@ -100,6 +101,8 @@ model User {
   workspaces           WorkspaceMember[]
   courtAppearances     CourtDate[]           @relation("CourtAppearances")
   matterLawyer         MatterLawyer[]
+  acknowledgedCompliance ComplianceTask[] @relation("AcknowledgedBy")
+  complianceHistory      ComplianceHistory[]
 
   @@index([email])
   @@index([lawyerToken])
@@ -667,4 +670,53 @@ model Waitlist {
   updatedAt DateTime @updatedAt
 
   @@index([email])
+}
+
+model ComplianceObligation {
+  id                 String           @id @default(cuid())
+  tier               String           // "local", "state", "federal"
+  regulatoryBody     String
+  nature             String           // "payment", "filing", "return", "registration"
+  actionRequired     String
+  procedure          String           // Details on how to comply
+  frequency          String           // "monthly", "quarterly", "annually", "one-time"
+  dueDateDescription String?          // Text description of due date logic
+  jurisdiction       String           @default("Federal") // "Federal", "Lagos", etc.
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+  tasks              ComplianceTask[]
+}
+
+model ComplianceTask {
+  id                String              @id @default(cuid())
+  obligationId      String
+  workspaceId       String
+  status            String              @default("pending") // "pending", "due_soon", "overdue", "complied"
+  dueDate           DateTime?
+  period            String?             // e.g., "Jan 2024", "Q1 2024"
+  evidenceUrl       String?
+  acknowledgedAt    DateTime?
+  acknowledgedBy    String?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  obligation        ComplianceObligation @relation(fields: [obligationId], references: [id])
+  workspace         Workspace           @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user              User?               @relation("AcknowledgedBy", fields: [acknowledgedBy], references: [id])
+  history           ComplianceHistory[]
+
+  @@index([workspaceId, status])
+  @@index([dueDate])
+}
+
+model ComplianceHistory {
+  id               String         @id @default(cuid())
+  taskId           String
+  action           String         // "status_change", "evidence_upload", "acknowledgement"
+  description      String
+  performedBy      String
+  timestamp        DateTime       @default(now())
+  task             ComplianceTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user             User           @relation(fields: [performedBy], references: [id])
+
+  @@index([taskId])
 }

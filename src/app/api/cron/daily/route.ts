@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { createNotification } from '@/lib/notifications';
+import { createNotification, notifyWorkspaceMembers } from '@/lib/notifications';
 
 // This route should be called by a Cron Job (e.g., Vercel Cron) once a day
 export async function GET(request: Request) {
@@ -87,7 +87,61 @@ export async function GET(request: Request) {
             }
         }
 
-        return NextResponse.json({ success: true, processed: pendingInvoices.length });
+        // 3. Compliance Monitoring
+        console.log('🛡️ Checking Compliance Obligations...');
+        const complianceTasks = await prisma.complianceTask.findMany({
+            where: {
+                status: { not: 'complied' }
+            },
+            include: {
+                obligation: true,
+            }
+        });
+
+        for (const task of complianceTasks) {
+            const daysUntilDue = task.dueDate
+                ? Math.ceil((task.dueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+                : null;
+
+            // Reminder Logic
+            if (daysUntilDue !== null) {
+                if (daysUntilDue === 7 || daysUntilDue === 3 || daysUntilDue === 0) {
+                    await notifyWorkspaceMembers({
+                        workspaceId: task.workspaceId,
+                        title: `Compliance Reminder: ${task.obligation.actionRequired}`,
+                        message: `The ${task.obligation.tier} obligation "${task.obligation.actionRequired}" is due in ${daysUntilDue} days.`,
+                        type: 'warning',
+                        priority: daysUntilDue === 0 ? 'critical' : 'high',
+                        roles: ['owner', 'partner'],
+                        designations: ['Practice Manager', 'Head of Chambers']
+                    });
+                } else if (daysUntilDue < 0) {
+                    // Escalation for overdue
+                    await notifyWorkspaceMembers({
+                        workspaceId: task.workspaceId,
+                        title: `CRITICAL: Compliance Overdue`,
+                        message: `OVERDUE: ${task.obligation.actionRequired} was due on ${task.dueDate.toLocaleDateString()}. Immediate action required.`,
+                        type: 'critical',
+                        priority: 'critical',
+                        roles: ['owner', 'partner'],
+                        designations: ['Principal Partner', 'Head of Chambers']
+                    });
+                }
+            } else if (!task.acknowledgedAt) {
+                // Generic nudge for unacknowledged tasks (Phase 1 logic)
+                await notifyWorkspaceMembers({
+                    workspaceId: task.workspaceId,
+                    title: `Compliance Action Required`,
+                    message: `New compliance obligation identified: ${task.obligation.actionRequired}. Please acknowledge and assign monitoring.`,
+                    type: 'info',
+                    priority: 'medium',
+                    roles: ['owner', 'partner'],
+                    designations: ['Practice Manager', 'Head of Chambers']
+                });
+            }
+        }
+
+        return NextResponse.json({ success: true, processed: pendingInvoices.length + complianceTasks.length });
     } catch (error) {
         console.error('Cron job failed:', error);
         return NextResponse.json({ success: false, error: 'Cron job failed' }, { status: 500 });
