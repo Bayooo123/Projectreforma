@@ -215,6 +215,8 @@ export async function createMatter(data: {
             await prisma.courtDate.create({
                 data: {
                     matterId: matter.id,
+                    briefId: matter.briefs[0].id,
+                    clientId: matter.clientId as string,
                     date: entryDate,
                     title: 'Initial Appearance',
                     proceedings: data.proceedings,
@@ -233,6 +235,8 @@ export async function createMatter(data: {
             const futureCourtDate = await prisma.courtDate.create({
                 data: {
                     matterId: matter.id,
+                    briefId: matter.briefs[0].id,
+                    clientId: matter.clientId as string,
                     date: data.nextCourtDate,
                     title: 'Upcoming Hearing', // Default title for future entry
                 }
@@ -285,7 +289,13 @@ export async function updateMatter(
         // Ownership check: Only the submitting lawyer or owner can edit matter details
         const existingMatter = await prisma.matter.findUnique({
             where: { id },
-            include: { workspace: true }
+            include: {
+                workspace: true,
+                briefs: {
+                    take: 1,
+                    orderBy: { createdAt: 'desc' }
+                }
+            }
         });
 
         if (!existingMatter) return { success: false, error: 'Matter not found' };
@@ -344,6 +354,8 @@ export async function updateMatter(
                 const futureCourtDate = await prisma.courtDate.create({
                     data: {
                         matterId: id,
+                        briefId: existingMatter.briefs[0].id,
+                        clientId: existingMatter.clientId as string,
                         date: data.nextCourtDate,
                         title: 'Upcoming Hearing',
                     }
