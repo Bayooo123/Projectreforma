@@ -275,11 +275,21 @@ model CourtDate {
   submittingLawyerName  String?
   createdAt              DateTime                @default(now())
   updatedAt              DateTime                @updatedAt
+  
+  // Strict Hierarchy Fields (Mandatory)
+  briefId                String
+  clientId               String
+
   matter                 Matter                  @relation(fields: [matterId], references: [id], onDelete: Cascade)
+  brief                  Brief                   @relation(fields: [briefId], references: [id])
+  client                 Client                  @relation(fields: [clientId], references: [id])
+  
   appearances            User[]                  @relation("CourtAppearances")
   scheduledNotifications ScheduledNotification[]
 
   @@index([matterId])
+  @@index([briefId])
+  @@index([clientId])
   @@index([date])
   @@index([submittingLawyerId])
 }
@@ -357,6 +367,7 @@ model Brief {
   documents      Document[]
   notifications  Notification[]
   tasks          Task[]
+  courtDates     CourtDate[] // Hierarchy back-relation
 
   @@index([lawyerId])
   @@index([workspaceId])
@@ -409,6 +420,7 @@ model Client {
   invoices             Invoice[]
   matters              Matter[]
   payments             Payment[]
+  courtDates           CourtDate[] // Hierarchy back-relation
 
   @@index([email])
   @@index([workspaceId])

@@ -3,8 +3,7 @@
 import { useState, useEffect } from 'react';
 import { X, Loader, Search, Calendar, ChevronDown, ChevronUp } from 'lucide-react';
 import { adjournMatter } from '@/app/actions/matters';
-import { getMatters } from '@/app/actions/matters';
-import { getLawyersForWorkspace } from '@/lib/briefs';
+import { getBriefs, getLawyersForWorkspace } from '@/lib/briefs';
 import styles from './RecordProceedingModal.module.css';
 
 interface RecordProceedingModalProps {
@@ -15,17 +14,19 @@ interface RecordProceedingModalProps {
     onSuccess?: () => void;
 }
 
-interface MatterSummary {
+interface BriefSummary {
     id: string;
-    caseNumber: string | null;
     name: string;
-    nextCourtDate: Date | null;
-    client?: { name: string } | null;
-    clientNameRaw?: string | null;
-    lawyers: {
-        lawyer: { name: string | null; id: string };
-        role: string;
-    }[];
+    briefNumber: string;
+    clientId: string | null;
+    client: { name: string } | null;
+    matterId: string | null;
+    matter: {
+        id: string;
+        name: string;
+        caseNumber: string | null;
+        lawyers?: { lawyer: { id: string; name: string | null } }[]
+    } | null;
 }
 
 interface Lawyer {
@@ -36,20 +37,20 @@ interface Lawyer {
 }
 
 const RecordProceedingModal = ({ isOpen, onClose, workspaceId, userId, onSuccess }: RecordProceedingModalProps) => {
-    // Mode: 'select_matter' | 'record_details'
-    const [step, setStep] = useState<'select_matter' | 'record_details'>('select_matter');
+    // Mode: 'select_brief' | 'record_details'
+    const [step, setStep] = useState<'select_brief' | 'record_details'>('select_brief');
 
     // Data Loading
-    const [matters, setMatters] = useState<MatterSummary[]>([]);
-    const [lawyers, setLawyers] = useState<Lawyer[]>([]); // Kept for advanced override if ever needed, but mostly inferred
+    const [briefs, setBriefs] = useState<BriefSummary[]>([]);
+    const [lawyers, setLawyers] = useState<Lawyer[]>([]);
     const [isLoadingData, setIsLoadingData] = useState(false);
 
     // Selection State
-    const [selectedMatter, setSelectedMatter] = useState<MatterSummary | null>(null);
+    const [selectedBrief, setSelectedBrief] = useState<BriefSummary | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
 
     // Form State
-    const [courtDate, setCourtDate] = useState(new Date().toISOString().split('T')[0]); // Default today
+    const [courtDate, setCourtDate] = useState(new Date().toISOString().split('T')[0]);
     const [proceedings, setProceedings] = useState('');
 
     // Adjournment State
@@ -62,9 +63,8 @@ const RecordProceedingModal = ({ isOpen, onClose, workspaceId, userId, onSuccess
     useEffect(() => {
         if (isOpen && workspaceId) {
             loadInitialData();
-            // Reset state
-            setStep('select_matter');
-            setSelectedMatter(null);
+            setStep('select_brief');
+            setSelectedBrief(null);
             setSearchQuery('');
             setCourtDate(new Date().toISOString().split('T')[0]);
             setProceedings('');
@@ -76,12 +76,12 @@ const RecordProceedingModal = ({ isOpen, onClose, workspaceId, userId, onSuccess
     const loadInitialData = async () => {
         setIsLoadingData(true);
         try {
-            const [mattersData, lawyersData] = await Promise.all([
-                getMatters(workspaceId),
+            const [briefsData, lawyersData] = await Promise.all([
+                getBriefs(workspaceId),
                 getLawyersForWorkspace(workspaceId)
             ]);
-            setMatters(mattersData as any);
-            setLawyers(lawyersData); // Background load
+            setBriefs(briefsData as any);
+            setLawyers(lawyersData);
         } catch (error) {
             console.error('Error loading data:', error);
         } finally {
@@ -89,12 +89,11 @@ const RecordProceedingModal = ({ isOpen, onClose, workspaceId, userId, onSuccess
         }
     };
 
-    const handleMatterSelect = (matter: MatterSummary) => {
-        setSelectedMatter(matter);
-        // Default to today for the proceeding date
+    const handleBriefSelect = (brief: BriefSummary) => {
+        setSelectedBrief(brief);
         setCourtDate(new Date().toISOString().split('T')[0]);
-        // Default selected lawyers to those already assigned to the matter
-        const assignedIds = matter.lawyers.map(l => l.lawyer.id);
+        // Use lawyers from matter if available
+        const assignedIds = brief.matter?.lawyers?.map(l => l.lawyer.id) || [];
         if (assignedIds.length > 0) {
             setSelectedLawyerIds(assignedIds);
         } else {
@@ -104,7 +103,7 @@ const RecordProceedingModal = ({ isOpen, onClose, workspaceId, userId, onSuccess
     };
 
     const handleSubmit = async () => {
-        if (!selectedMatter) return;
+        if (!selectedBrief || !selectedBrief.matterId) return;
         if (!proceedings.trim()) {
             alert('Please describe what happened in court.');
             return;
@@ -113,10 +112,10 @@ const RecordProceedingModal = ({ isOpen, onClose, workspaceId, userId, onSuccess
         setIsSubmitting(true);
         try {
             const result = await adjournMatter(
-                selectedMatter.id,
+                selectedBrief.matterId,
                 nextDate ? new Date(nextDate) : undefined,
                 proceedings,
-                undefined, // No specific adjournedFor reason passed from UI anymore
+                undefined,
                 userId,
                 selectedLawyerIds.length > 0 ? selectedLawyerIds : [userId],
                 new Date(courtDate)
@@ -146,14 +145,15 @@ const RecordProceedingModal = ({ isOpen, onClose, workspaceId, userId, onSuccess
     };
 
     const handleBack = () => {
-        setStep('select_matter');
+        setStep('select_brief');
     };
 
-    const filteredMatters = matters.filter(m =>
-        m.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (m.caseNumber?.toLowerCase().includes(searchQuery.toLowerCase())) ||
-        (m.client?.name && m.client.name.toLowerCase().includes(searchQuery.toLowerCase())) ||
-        (m.clientNameRaw && m.clientNameRaw.toLowerCase().includes(searchQuery.toLowerCase()))
+    const filteredBriefs = briefs.filter(b =>
+        b.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        b.briefNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (b.matter?.name && b.matter.name.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        (b.matter?.caseNumber && b.matter.caseNumber.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        (b.client?.name && b.client.name.toLowerCase().includes(searchQuery.toLowerCase()))
     );
 
     if (!isOpen) return null;
@@ -163,7 +163,7 @@ const RecordProceedingModal = ({ isOpen, onClose, workspaceId, userId, onSuccess
             <div className={styles.modal} style={{ maxWidth: '550px' }}>
                 <div className={styles.header}>
                     <h2 className={styles.title}>
-                        {step === 'select_matter' ? 'Select Court Matter' : 'Record Proceeding'}
+                        {step === 'select_brief' ? 'Select Litigation File' : 'Record Proceeding'}
                     </h2>
                     <button onClick={onClose} className={styles.closeBtn}>
                         <X size={20} />
@@ -171,14 +171,14 @@ const RecordProceedingModal = ({ isOpen, onClose, workspaceId, userId, onSuccess
                 </div>
 
                 <div className={styles.content}>
-                    {step === 'select_matter' && (
+                    {step === 'select_brief' && (
                         <div className={styles.selectionStep}>
                             <div className={styles.searchWrapper}>
                                 <Search size={18} className={styles.searchIcon} />
                                 <input
                                     type="text"
                                     className={styles.searchInput}
-                                    placeholder="Search by case name, suit number or client..."
+                                    placeholder="Search by brief, matter, or client..."
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
                                     autoFocus
@@ -188,20 +188,26 @@ const RecordProceedingModal = ({ isOpen, onClose, workspaceId, userId, onSuccess
                             <div className={styles.matterList} style={{ maxHeight: '400px', overflowY: 'auto' }}>
                                 {isLoadingData ? (
                                     <div className="py-8 flex justify-center"><Loader className="animate-spin" /></div>
-                                ) : filteredMatters.length > 0 ? (
-                                    filteredMatters.map(matter => (
+                                ) : filteredBriefs.length > 0 ? (
+                                    filteredBriefs.map(brief => (
                                         <div
-                                            key={matter.id}
+                                            key={brief.id}
                                             className={styles.matterItem}
-                                            onClick={() => handleMatterSelect(matter)}
+                                            onClick={() => handleBriefSelect(brief)}
                                         >
-                                            <div className="font-medium text-slate-900">{matter.name}</div>
+                                            <div className="font-medium text-slate-900">{brief.name}</div>
                                             <div className="text-xs text-slate-500 flex gap-2">
-                                                <span>{matter.caseNumber}</span>
-                                                {matter.client?.name && (
+                                                <span>{brief.briefNumber}</span>
+                                                {brief.matter?.caseNumber && (
                                                     <>
                                                         <span>•</span>
-                                                        <span>{matter.client.name}</span>
+                                                        <span>{brief.matter.caseNumber}</span>
+                                                    </>
+                                                )}
+                                                {brief.client?.name && (
+                                                    <>
+                                                        <span>•</span>
+                                                        <span>{brief.client.name}</span>
                                                     </>
                                                 )}
                                             </div>
@@ -209,22 +215,23 @@ const RecordProceedingModal = ({ isOpen, onClose, workspaceId, userId, onSuccess
                                     ))
                                 ) : (
                                     <div className="py-8 text-center text-slate-500">
-                                        No matters found matching "{searchQuery}".
+                                        No files found matching "{searchQuery}".
                                     </div>
                                 )}
                             </div>
                         </div>
                     )}
 
-                    {step === 'record_details' && selectedMatter && (
+                    {step === 'record_details' && selectedBrief && (
                         <div className={styles.detailsStep}>
                             {/* Context Header */}
                             <div className="bg-slate-50 p-3 rounded-lg mb-4 text-sm border border-slate-200 flex justify-between items-start">
                                 <div>
-                                    <div className="font-semibold text-slate-800">{selectedMatter.name}</div>
-                                    <div className="text-slate-500">{selectedMatter.caseNumber}</div>
+                                    <div className="font-semibold text-slate-800">{selectedBrief.name}</div>
+                                    <div className="text-slate-500">{selectedBrief.matter?.name || 'Litigation File'}</div>
+                                    <div className="text-[10px] text-slate-400">{selectedBrief.matter?.caseNumber}</div>
                                 </div>
-                                <button onClick={() => setStep('select_matter')} className="text-xs text-blue-600 hover:underline">
+                                <button onClick={() => setStep('select_brief')} className="text-xs text-blue-600 hover:underline">
                                     Change
                                 </button>
                             </div>
@@ -300,7 +307,7 @@ const RecordProceedingModal = ({ isOpen, onClose, workspaceId, userId, onSuccess
                 </div>
 
                 <div className={styles.footer}>
-                    {step === 'select_matter' && (
+                    {step === 'select_brief' && (
                         <button onClick={onClose} className={styles.cancelBtn}>Cancel</button>
                     )}
 

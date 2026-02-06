@@ -38,13 +38,20 @@ const AddMatterModal = ({ isOpen, onClose, workspaceId, userId, onSuccess }: Add
     const [proceedingDate, setProceedingDate] = useState(new Date().toISOString().split('T')[0]);
     const [courtSummary, setCourtSummary] = useState('');
     const [workspaceLawyers, setWorkspaceLawyers] = useState<Lawyer[]>([]);
+    const [clients, setClients] = useState<Client[]>([]);
+    const [clientId, setClientId] = useState('');
     const [selectedLawyerIds, setSelectedLawyerIds] = useState<string[]>([]);
+    const [isLoadingClients, setIsLoadingClients] = useState(false);
 
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     useEffect(() => {
         if (isOpen && workspaceId) {
             getLawyersForWorkspace(workspaceId).then(setWorkspaceLawyers);
+            setIsLoadingClients(true);
+            getClientsForWorkspace(workspaceId)
+                .then(setClients)
+                .finally(() => setIsLoadingClients(false));
         }
     }, [isOpen, workspaceId]);
 
@@ -59,6 +66,11 @@ const AddMatterModal = ({ isOpen, onClose, workspaceId, userId, onSuccess }: Add
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
+        if (!clientId) {
+            alert('Please select a client');
+            return;
+        }
+
         setIsSubmitting(true);
 
         try {
@@ -72,8 +84,8 @@ const AddMatterModal = ({ isOpen, onClose, workspaceId, userId, onSuccess }: Add
                 proceedings: courtSummary || undefined,
                 // Pass empty/null for removed fields
                 caseNumber: null,
-                clientId: null,
-                clientNameRaw: null,
+                clientId: clientId, // Strict linkage
+                clientNameRaw: null, // Deprecated
                 lawyerAssociations: selectedLawyerIds.map(id => ({
                     lawyerId: id,
                     role: 'appearing',
@@ -85,6 +97,7 @@ const AddMatterModal = ({ isOpen, onClose, workspaceId, userId, onSuccess }: Add
             if (result.success) {
                 // Reset form
                 setMatterName('');
+                setClientId('');
                 setCourt('');
                 setJudge('');
                 setNextCourtDate('');
@@ -130,6 +143,28 @@ const AddMatterModal = ({ isOpen, onClose, workspaceId, userId, onSuccess }: Add
                                 onChange={(e) => setMatterName(e.target.value)}
                                 required
                             />
+                            <p className="text-[10px] text-slate-400 mt-1 italic">A litigation brief (file) will be automatically created for this matter.</p>
+                        </div>
+
+                        <div className={styles.formGroup}>
+                            <label className={styles.label}>Client *</label>
+                            {isLoadingClients ? (
+                                <div className="text-xs text-slate-400">Loading clients...</div>
+                            ) : (
+                                <select
+                                    className={styles.select}
+                                    value={clientId}
+                                    onChange={(e) => setClientId(e.target.value)}
+                                    required
+                                >
+                                    <option value="">Select Client...</option>
+                                    {clients.map(client => (
+                                        <option key={client.id} value={client.id}>
+                                            {client.name} {client.company ? `(${client.company})` : ''}
+                                        </option>
+                                    ))}
+                                </select>
+                            )}
                         </div>
 
                         {/* Removed Suit Number, Procedural Status */}

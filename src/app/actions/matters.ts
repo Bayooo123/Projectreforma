@@ -147,8 +147,10 @@ export async function createMatter(data: {
             data: {
                 caseNumber: data.caseNumber || null,
                 name: data.name,
+                // Strict Client Linkage
                 clientId: data.clientId || null,
-                clientNameRaw: data.clientNameRaw || null,
+                // Only use raw name if NO ID provided (legacy support), otherwise null to prevent fragmentation
+                clientNameRaw: data.clientId ? null : (data.clientNameRaw || null),
                 workspaceId: data.workspaceId,
                 court: data.court,
                 judge: data.judge,
@@ -163,10 +165,24 @@ export async function createMatter(data: {
                         role: assoc.role,
                         isAppearing: assoc.isAppearing || false
                     }))
+                },
+                // Auto-create a linked Brief to maintain hierarchy
+                briefs: {
+                    create: {
+                        name: `Litigation File: ${data.name}`,
+                        briefNumber: `LIT-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+                        clientId: data.clientId || undefined,
+                        workspaceId: data.workspaceId,
+                        lawyerId: session.user.id,
+                        category: 'Litigation',
+                        status: 'active',
+                        description: 'Automatically created for litigation matter.'
+                    }
                 }
             },
             include: {
                 client: true,
+                briefs: true,
                 lawyers: {
                     include: {
                         lawyer: true
@@ -392,10 +408,24 @@ export async function adjournMatter(
     try {
         const matterCheck = await prisma.matter.findUnique({
             where: { id: matterId },
-            include: { workspace: true, lawyers: true }
+            include: {
+                workspace: true,
+                lawyers: true,
+                briefs: {
+                    take: 1,
+                    orderBy: { createdAt: 'desc' }
+                }
+            }
         });
 
         if (!matterCheck) return { success: false, error: 'Matter not found' };
+
+        const briefId = matterCheck.briefs[0]?.id;
+        const clientId = matterCheck.clientId;
+
+        if (!briefId || !clientId) {
+            return { success: false, error: 'Integrity Error: Matter has no linked Brief or Client' };
+        }
 
         // RBAC: Associate Lawyer or Workspace Owner
         const isAssociated = matterCheck.lawyers.some(l => l.lawyerId === performedBy);
@@ -410,6 +440,8 @@ export async function adjournMatter(
         await prisma.courtDate.create({
             data: {
                 matterId,
+                briefId,
+                clientId,
                 date: dateOfEvent,
                 proceedings,
                 adjournedFor: adjournedFor || null,
@@ -438,6 +470,8 @@ export async function adjournMatter(
             const futureCourtDate = await prisma.courtDate.create({
                 data: {
                     matterId,
+                    briefId,
+                    clientId,
                     date: newDate,
                     title: nextTitle
                 }

@@ -27,6 +27,31 @@ export async function getClientsForWorkspace(workspaceId: string) {
 }
 
 /**
+ * Get all briefs for a workspace (including Matter and Client info)
+ */
+export async function getBriefs(workspaceId: string) {
+    try {
+        const briefs = await prisma.brief.findMany({
+            where: { workspaceId },
+            include: {
+                client: {
+                    select: { id: true, name: true }
+                },
+                matter: {
+                    select: { id: true, name: true, caseNumber: true }
+                }
+            },
+            orderBy: { createdAt: 'desc' }
+        });
+        return briefs;
+    } catch (error) {
+        console.error('Error fetching briefs:', error);
+        return [];
+    }
+}
+
+
+/**
  * Get all lawyers/users for a workspace
  */
 export async function getLawyersForWorkspace(workspaceId: string) {
