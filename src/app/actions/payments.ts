@@ -115,6 +115,39 @@ export async function getPaymentsByClient(clientId: string) {
     }
 }
 
+export async function getAllPayments(workspaceId: string) {
+    try {
+        const payments = await prisma.payment.findMany({
+            where: {
+                client: {
+                    workspaceId
+                }
+            },
+            include: {
+                client: {
+                    select: {
+                        name: true
+                    }
+                },
+                invoice: {
+                    select: {
+                        invoiceNumber: true,
+                        totalAmount: true
+                    }
+                }
+            },
+            orderBy: {
+                date: 'desc'
+            }
+        });
+
+        return { success: true, data: payments };
+    } catch (error) {
+        console.error('Error fetching all payments:', error);
+        return { success: false, error: 'Failed to fetch payments' };
+    }
+}
+
 // Re-export getClientInvoices for convenience if PaymentModal uses it from here
 // But better to update PaymentModal imports. 
 // I will check PaymentModal imports again. It imports `getClientInvoices` from `@/app/actions/payments`.

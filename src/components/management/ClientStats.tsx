@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Users, Briefcase, DollarSign, Loader } from 'lucide-react';
 import { getClientStats } from '@/app/actions/clients';
+import ViewAllInvoicesModal from './ViewAllInvoicesModal';
+import ViewAllPaymentsModal from './ViewAllPaymentsModal';
 import styles from './ClientStats.module.css';
 
 interface ClientStatsProps {
@@ -24,6 +26,8 @@ const ClientStats = ({ workspaceId }: ClientStatsProps) => {
     const [pinError, setPinError] = useState('');
     const [verifying, setVerifying] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
+    const [showInvoicesModal, setShowInvoicesModal] = useState(false);
+    const [showPaymentsModal, setShowPaymentsModal] = useState(false);
 
     // Dynamic imports to avoid server/client mixups if needed, but actions are safe
     // We import validateRevenuePin from actions
@@ -145,7 +149,7 @@ const ClientStats = ({ workspaceId }: ClientStatsProps) => {
                     <Briefcase size={20} />
                 </div>
                 <div className={styles.content}>
-                    <p className={styles.label}>Active Matters</p>
+                    <p className={styles.label}>Active Litigation</p>
                     <p className={styles.value}>{stats.activeMatters}</p>
                 </div>
             </div>
@@ -241,6 +245,56 @@ const ClientStats = ({ workspaceId }: ClientStatsProps) => {
                     <p className={styles.value}>{formatCurrency(stats.outstandingAmount)}</p>
                 </div>
             </div>
+
+            {/* Action Buttons */}
+            <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1rem' }}>
+                <button
+                    onClick={() => setShowInvoicesModal(true)}
+                    style={{
+                        flex: 1,
+                        padding: '0.625rem 1rem',
+                        background: 'var(--primary)',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: 'var(--radius-md)',
+                        fontSize: '0.875rem',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        transition: 'all 0.2s'
+                    }}
+                >
+                    View All Invoices
+                </button>
+                <button
+                    onClick={() => setShowPaymentsModal(true)}
+                    style={{
+                        flex: 1,
+                        padding: '0.625rem 1rem',
+                        background: 'transparent',
+                        color: 'var(--primary)',
+                        border: '1px solid var(--primary)',
+                        borderRadius: 'var(--radius-md)',
+                        fontSize: '0.875rem',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        transition: 'all 0.2s'
+                    }}
+                >
+                    View All Payments
+                </button>
+            </div>
+
+            {/* Modals */}
+            <ViewAllInvoicesModal
+                isOpen={showInvoicesModal}
+                onClose={() => setShowInvoicesModal(false)}
+                workspaceId={workspaceId}
+            />
+            <ViewAllPaymentsModal
+                isOpen={showPaymentsModal}
+                onClose={() => setShowPaymentsModal(false)}
+                workspaceId={workspaceId}
+            />
         </div>
     );
 };
