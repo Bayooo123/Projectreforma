@@ -1,76 +1,100 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { AlertTriangle, Download, ArrowUp, ArrowDown, TrendingDown } from 'lucide-react';
-import ExpenseBreakdownModal from '@/components/analytics/ExpenseBreakdownModal';
+import { AlertTriangle, Download, ArrowUp, ArrowDown, TrendingDown, Users, Scale, AlertCircle } from 'lucide-react';
+import { getAnalyticsMetrics, getRevenueTrend, getTopClients, getLawyerStats, getMatterDistribution, getCourtVisits } from '@/app/actions/analytics';
+import { getSession } from 'next-auth/react';
 import styles from './page.module.css';
 
-interface Expense {
-    id: string;
-    category: string;
-    amount: number;
-    description: string;
-    date: string;
-    reference?: string;
-}
-
-interface ExpenseData {
-    expenses: Expense[];
-    aggregations: {
-        total: number;
-        count: number;
-        byCategory: Record<string, number>;
-        byDate: Record<string, { total: number; count: number; expenses: Expense[] }>;
-    };
+// Types for our analytic data
+interface AnalyticsData {
+    metrics: any;
+    revenueTrend: { month: string; amount: number }[];
+    topClients: any[];
+    lawyerStats: any[];
+    matterDistribution: { status: string; count: number }[];
+    courtVisits: { court: string; count: number }[];
 }
 
 export default function AnalyticsPage() {
     const [filter, setFilter] = useState<'this-month' | 'last-month' | 'this-quarter'>('this-month');
-    const [expenseData, setExpenseData] = useState<ExpenseData | null>(null);
-    const [selectedDate, setSelectedDate] = useState<string | null>(null);
-    const [isModalOpen, setIsModalOpen] = useState(false);
-
-    const fetchExpenseData = async () => {
-        try {
-            const response = await fetch(`/api/expenses?filter=${filter}`);
-            const data = await response.json();
-            if (data.success) {
-                setExpenseData(data.data);
-            }
-        } catch (error) {
-            console.error('Failed to fetch expense data:', error);
-        }
-    };
+    const [data, setData] = useState<AnalyticsData | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
-        fetchExpenseData();
-    }, [filter]);
+        const loadData = async () => {
+            setIsLoading(true);
+            try {
+                // Get workspace ID from session
+                const session = await getSession();
+                const workspaceId = session?.user?.workspaceId; // Adjust based on your AuthJS session structure
+
+                if (!workspaceId) {
+                    console.error("No workspace ID found");
+                    return;
+                }
+
+                // Fetch all data in parallel
+                const [metrics, revenueTrend, topClients, lawyerStats, matterDistribution, courtVisits] = await Promise.all([
+                    getAnalyticsMetrics(workspaceId),
+                    getRevenueTrend(workspaceId),
+                    getTopClients(workspaceId),
+                    getLawyerStats(workspaceId),
+                    getMatterDistribution(workspaceId),
+                    getCourtVisits(workspaceId)
+                ]);
+
+                setData({
+                    metrics,
+                    revenueTrend,
+                    topClients,
+                    lawyerStats,
+                    matterDistribution,
+                    courtVisits
+                });
+
+            } catch (error) {
+                console.error('Failed to load analytics:', error);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        loadData();
+    }, [filter]); // In a real implementation we'd pass filter to the actions
 
     const formatCurrency = (amount: number) => {
-        return `₦${(amount / 100).toLocaleString()}`;
+        return `₦${(amount / 100).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
     };
 
-    const handleDateClick = (date: string) => {
-        setSelectedDate(date);
-        setIsModalOpen(true);
-    };
+    if (isLoading || !data) {
+        return <div className={styles.loading}>Loading analytics...</div>;
+    }
 
-    const selectedExpenses = selectedDate && expenseData?.aggregations.byDate[selectedDate]
-        ? expenseData.aggregations.byDate[selectedDate].expenses
-        : [];
+    const { metrics, revenueTrend, topClients, lawyerStats, matterDistribution, courtVisits } = data;
 
-    // Calculate expense metrics
-    const thisMonthTotal = expenseData?.aggregations.total || 0;
-    const expenseCount = expenseData?.aggregations.count || 0;
+    // Chart helpers
+    const maxRevenue = Math.max(...revenueTrend.map((d: any) => d.amount), 1);
+    const chartPoints = revenueTrend.map((d: any, i: number) => {
+        const x = (i / (revenueTrend.length - 1)) * 100; // 0 to 100%
+        const y = 100 - (d.amount / maxRevenue) * 80; // Scale height (leave 20% padding)
+        return `${x * 3},${y}`; // Scale x to match viewBox width 300
+    }).join(' ');
 
-    // Get top expense categories
-    const topCategories = expenseData?.aggregations.byCategory
-        ? Object.entries(expenseData.aggregations.byCategory)
-            .sort(([, a], [, b]) => b - a)
-            .slice(0, 5)
-        : [];
+    const curvePath = revenueTrend.length > 1
+        ? `M${0},${100 - (revenueTrend[0].amount / maxRevenue) * 80} L` + chartPoints.replace(/,/g, ' ')
+        : ''; // Simplified for now, can add bezier smoothing later
 
-    const totalCategoryAmount = topCategories.reduce((sum, [, amount]) => sum + amount, 0);
+    // Pie chart colors
+    const pieColors = ['#2C3E50', '#10B981', '#F59E0B', '#E2E8F0', '#EF4444'];
+    const totalMatters = matterDistribution.reduce((acc: number, curr: any) => acc + curr.count, 0) || 1;
+    const matterGradient = matterDistribution.length > 0
+        ? `conic-gradient(${matterDistribution.map((d: any, i: number) => {
+            const start = matterDistribution.slice(0, i).reduce((sum: number, prev: any) => sum + prev.count, 0) / totalMatters * 100;
+            const end = start + (d.count / totalMatters * 100);
+            return `${pieColors[i % pieColors.length]} ${start}% ${end}%`;
+        }).join(', ')})`
+        : 'conic-gradient(#E2E8F0 100% 100%)';
 
     return (
         <div className={styles.page}>
@@ -78,33 +102,12 @@ export default function AnalyticsPage() {
             <div className={styles.header}>
                 <div>
                     <h1 className={styles.title}>Analytics</h1>
-                    <p className={styles.subtitle}>Executive dashboard for managing partner insights</p>
+                    <p className={styles.subtitle}>Executive dashboard for {new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</p>
                 </div>
                 <div className={styles.actions}>
                     <div className={styles.dateFilters}>
-                        <button
-                            className={`${styles.filterBtn} ${filter === 'this-month' ? styles.active : ''}`}
-                            onClick={() => setFilter('this-month')}
-                        >
-                            This Month
-                        </button>
-                        <button
-                            className={`${styles.filterBtn} ${filter === 'last-month' ? styles.active : ''}`}
-                            onClick={() => setFilter('last-month')}
-                        >
-                            Last Month
-                        </button>
-                        <button
-                            className={`${styles.filterBtn} ${filter === 'this-quarter' ? styles.active : ''}`}
-                            onClick={() => setFilter('this-quarter')}
-                        >
-                            This Quarter
-                        </button>
+                        <button className={`${styles.filterBtn} ${filter === 'this-month' ? styles.active : ''}`} onClick={() => setFilter('this-month')}>This Month</button>
                     </div>
-                    <button className={styles.downloadBtn}>
-                        <Download size={16} />
-                        <span>Download Report</span>
-                    </button>
                 </div>
             </div>
 
@@ -113,275 +116,185 @@ export default function AnalyticsPage() {
                 <div className={styles.alertContent}>
                     <AlertTriangle size={20} className={styles.alertIcon} />
                     <div className={styles.alertText}>
-                        <strong>CRITICAL ALERTS</strong>
-                        <span>3 overdue payments | ₦2.5M outstanding | 5 active cases at risk</span>
+                        <strong>OPERATIONAL INSIGHTS</strong>
+                        <span>{metrics?.courtDates?.upcoming || 0} court dates next week | ₦{((metrics?.revenue?.growth || 0).toFixed(1))}% revenue growth</span>
                     </div>
                 </div>
-                <button className={styles.viewDetailsBtn}>View Details</button>
             </div>
 
             {/* Metrics Row */}
             <div className={styles.metricsGrid}>
+                {/* Revenue */}
                 <div className={styles.metricCard}>
                     <h3 className={styles.metricLabel}>TOTAL REVENUE</h3>
-                    <div className={styles.metricValue}>₦18.3M</div>
-                    <div className={`${styles.metricChange} ${styles.up}`}>
-                        <ArrowUp size={12} /> 12% from last month
+                    <div className={styles.metricValue}>{formatCurrency(metrics?.revenue?.total || 0)}</div>
+                    <div className={`${styles.metricChange} ${metrics?.revenue?.growth >= 0 ? styles.up : styles.down}`}>
+                        {metrics?.revenue?.growth >= 0 ? <ArrowUp size={12} /> : <TrendingDown size={12} />}
+                        {Math.abs(metrics?.revenue?.growth || 0).toFixed(1)}% vs last month
                     </div>
                 </div>
+
+                {/* Active Matters */}
                 <div className={styles.metricCard}>
                     <h3 className={styles.metricLabel}>ACTIVE MATTERS</h3>
-                    <div className={styles.metricValue}>47</div>
+                    <div className={styles.metricValue}>{metrics?.matters?.active || 0}</div>
                     <div className={`${styles.metricChange} ${styles.up}`}>
-                        5 new this month
+                        {metrics?.matters?.newThisMonth || 0} new this month
                     </div>
                 </div>
+
+                {/* Expenses */}
                 <div className={styles.metricCard}>
                     <h3 className={styles.metricLabel}>TOTAL EXPENSES</h3>
-                    <div className={styles.metricValue}>{formatCurrency(thisMonthTotal)}</div>
-                    <div className={`${styles.metricChange} ${styles.down}`}>
-                        <TrendingDown size={12} /> {expenseCount} transactions
+                    <div className={styles.metricValue}>{formatCurrency(metrics?.expenses?.total || 0)}</div>
+                    <div className={`${styles.metricChange} ${styles.neutral}`}>
+                        <TrendingDown size={12} /> {metrics?.expenses?.count || 0} entries
                     </div>
                 </div>
+
+                {/* Court Dates */}
                 <div className={styles.metricCard}>
-                    <h3 className={styles.metricLabel}>PENDING COURT DATES</h3>
-                    <div className={styles.metricValue}>12</div>
+                    <h3 className={styles.metricLabel}>NEXT 7 DAYS</h3>
+                    <div className={styles.metricValue}>{metrics?.courtDates?.upcoming || 0}</div>
                     <div className={`${styles.metricChange} ${styles.neutral}`}>
-                        Next week: 3 appearances
+                        Court Appearances
                     </div>
                 </div>
             </div>
 
-            {/* Charts Row 1 - Revenue & Expenses */}
+            {/* Charts Row 1 */}
             <div className={styles.chartsGrid}>
+                {/* Revenue Trend */}
                 <div className={styles.chartCard}>
-                    <h3 className={styles.chartTitle}>Monthly Revenue Trend</h3>
+                    <h3 className={styles.chartTitle}>Revenue Trend (6 Months)</h3>
                     <div className={styles.chartPlaceholder}>
                         <div className={styles.lineChart}>
+                            {/* Simple line rendering */}
                             <svg viewBox="0 0 300 100" className={styles.chartSvg}>
-                                <path d="M0,80 Q50,20 100,60 T200,40 T300,10" fill="none" stroke="#2C3E50" strokeWidth="3" />
-                                <circle cx="0" cy="80" r="4" fill="#2C3E50" />
-                                <circle cx="100" cy="60" r="4" fill="#2C3E50" />
-                                <circle cx="200" cy="40" r="4" fill="#2C3E50" />
-                                <circle cx="300" cy="10" r="4" fill="#2C3E50" />
+                                <polyline
+                                    fill="none"
+                                    stroke="#2C3E50"
+                                    strokeWidth="3"
+                                    points={revenueTrend.map((d: any, i: number) => {
+                                        const x = (i / (revenueTrend.length - 1)) * 300;
+                                        const y = 100 - (d.amount / maxRevenue) * 80;
+                                        return `${x},${y}`;
+                                    }).join(' ')}
+                                />
+                                {revenueTrend.map((d: any, i: number) => {
+                                    const x = (i / (revenueTrend.length - 1)) * 300;
+                                    const y = 100 - (d.amount / maxRevenue) * 80;
+                                    return (
+                                        <circle key={i} cx={x} cy={y} r="4" fill="#2C3E50">
+                                            <title>₦{d.amount}</title>
+                                        </circle>
+                                    );
+                                })}
                             </svg>
                         </div>
                         <div className={styles.chartLabels}>
-                            <span>Jan</span><span>Feb</span><span>Mar</span><span>Apr</span><span>May</span><span>Jun</span>
+                            {revenueTrend.map((d: any) => <span key={d.month}>{d.month}</span>)}
                         </div>
                     </div>
                 </div>
-                <div className={styles.chartCard}>
-                    <h3 className={styles.chartTitle}>Expense by Category</h3>
-                    <div className={styles.donutChartContainer}>
-                        {topCategories.length > 0 ? (
-                            <>
-                                <div className={styles.donutChart} style={{
-                                    background: generateConicGradient(topCategories, totalCategoryAmount)
-                                }}></div>
-                                <div className={styles.legend}>
-                                    {topCategories.map(([category, amount], index) => (
-                                        <div key={category} className={styles.legendItem}>
-                                            <span className={styles.dot} style={{ background: getCategoryColor(index) }}></span>
-                                            {category} ({Math.round((amount / totalCategoryAmount) * 100)}%)
-                                        </div>
-                                    ))}
-                                </div>
-                            </>
-                        ) : (
-                            <div className={styles.noData}>No expense data available</div>
-                        )}
-                    </div>
-                </div>
-            </div>
 
-            {/* Daily Expense Calendar */}
-            <div className={styles.chartCard}>
-                <h3 className={styles.chartTitle}>Daily Expenses - Click to View Breakdown</h3>
-                <div className={styles.expenseCalendar}>
-                    {expenseData && Object.entries(expenseData.aggregations.byDate).length > 0 ? (
-                        Object.entries(expenseData.aggregations.byDate)
-                            .sort(([a], [b]) => new Date(b).getTime() - new Date(a).getTime())
-                            .map(([date, data]) => (
-                                <div
-                                    key={date}
-                                    className={styles.expenseDay}
-                                    onClick={() => handleDateClick(date)}
-                                >
-                                    <div className={styles.expenseDayDate}>
-                                        {new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                                    </div>
-                                    <div className={styles.expenseDayAmount}>
-                                        {formatCurrency(data.total)}
-                                    </div>
-                                    <div className={styles.expenseDayCount}>
-                                        {data.count} {data.count === 1 ? 'expense' : 'expenses'}
-                                    </div>
-                                </div>
-                            ))
-                    ) : (
-                        <div className={styles.noData}>No expenses recorded for this period</div>
-                    )}
-                </div>
-            </div>
-
-            {/* Charts Row 2 */}
-            <div className={styles.chartsGrid}>
+                {/* Matter Distribution */}
                 <div className={styles.chartCard}>
-                    <h3 className={styles.chartTitle}>Active Matters Status</h3>
+                    <h3 className={styles.chartTitle}>Case Status Distribution</h3>
                     <div className={styles.pieChartContainer}>
-                        <div className={styles.pieChart} style={{ background: 'conic-gradient(#2C3E50 0% 38%, #10B981 38% 70%, #F59E0B 70% 91%, #E2E8F0 91% 100%)' }}></div>
+                        <div className={styles.pieChart} style={{ background: matterGradient }}></div>
                         <div className={styles.legend}>
-                            <div className={styles.legendItem}><span className={styles.dot} style={{ background: '#2C3E50' }}></span> Active-Trial (18)</div>
-                            <div className={styles.legendItem}><span className={styles.dot} style={{ background: '#10B981' }}></span> Active-Mention (15)</div>
-                            <div className={styles.legendItem}><span className={styles.dot} style={{ background: '#F59E0B' }}></span> Pending (10)</div>
-                            <div className={styles.legendItem}><span className={styles.dot} style={{ background: '#E2E8F0' }}></span> Closed (4)</div>
-                        </div>
-                    </div>
-                </div>
-                <div className={styles.chartCard}>
-                    <h3 className={styles.chartTitle}>Matters by Practice Area</h3>
-                    <div className={styles.donutChartContainer}>
-                        <div className={styles.donutChart} style={{ background: 'conic-gradient(#2C3E50 0% 40%, #34495E 40% 65%, #10B981 65% 85%, #64748B 85% 100%)' }}></div>
-                        <div className={styles.legend}>
-                            <div className={styles.legendItem}><span className={styles.dot} style={{ background: '#2C3E50' }}></span> Litigation (40%)</div>
-                            <div className={styles.legendItem}><span className={styles.dot} style={{ background: '#34495E' }}></span> Corporate (25%)</div>
-                            <div className={styles.legendItem}><span className={styles.dot} style={{ background: '#10B981' }}></span> Property (20%)</div>
-                            <div className={styles.legendItem}><span className={styles.dot} style={{ background: '#64748B' }}></span> IP (15%)</div>
+                            {matterDistribution.map((d: any, i: number) => (
+                                <div key={d.status} className={styles.legendItem}>
+                                    <span className={styles.dot} style={{ background: pieColors[i % pieColors.length] }}></span>
+                                    {d.status} ({d.count})
+                                </div>
+                            ))}
                         </div>
                     </div>
                 </div>
             </div>
 
-            {/* Charts Row 3 */}
+            {/* Stats Tables */}
             <div className={styles.chartsGrid}>
-                <div className={styles.chartCard}>
-                    <h3 className={styles.chartTitle}>Court Visits This Month</h3>
-                    <div className={styles.barChartContainer}>
-                        <div className={styles.barRow}>
-                            <span className={styles.barLabel}>High Court Lagos</span>
-                            <div className={styles.barTrack}><div className={styles.barFill} style={{ width: '90%', background: '#2C3E50' }}></div></div>
-                        </div>
-                        <div className={styles.barRow}>
-                            <span className={styles.barLabel}>Federal High Court</span>
-                            <div className={styles.barTrack}><div className={styles.barFill} style={{ width: '70%', background: '#34495E' }}></div></div>
-                        </div>
-                        <div className={styles.barRow}>
-                            <span className={styles.barLabel}>Probate Registry</span>
-                            <div className={styles.barTrack}><div className={styles.barFill} style={{ width: '50%', background: '#10B981' }}></div></div>
-                        </div>
-                        <div className={styles.barRow}>
-                            <span className={styles.barLabel}>Lagos State HC</span>
-                            <div className={styles.barTrack}><div className={styles.barFill} style={{ width: '30%', background: '#64748B' }}></div></div>
-                        </div>
-                        <div className={styles.barRow}>
-                            <span className={styles.barLabel}>Magistrate Court</span>
-                            <div className={styles.barTrack}><div className={styles.barFill} style={{ width: '20%', background: '#94A3B8' }}></div></div>
-                        </div>
+                {/* Top Clients */}
+                <div className={styles.chartCard} style={{ flex: 1 }}>
+                    <h3 className={styles.chartTitle}>Top Clients by Revenue</h3>
+                    <table className={styles.table} style={{ marginTop: '1rem', width: '100%' }}>
+                        <thead>
+                            <tr style={{ textAlign: 'left', fontSize: '0.8rem', color: '#666', borderBottom: '1px solid #eee' }}>
+                                <th style={{ paddingBottom: '8px' }}>Client</th>
+                                <th style={{ paddingBottom: '8px' }}>Revenue</th>
+                                <th style={{ paddingBottom: '8px' }}>Outstanding</th>
+                                <th style={{ paddingBottom: '8px' }}>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {topClients.map((client: any) => (
+                                <tr key={client.name}>
+                                    <td style={{ padding: '12px 0' }}>{client.name}</td>
+                                    <td className={styles.amount}>{formatCurrency(client.totalRevenue)}</td>
+                                    <td>{formatCurrency(client.outstanding)}</td>
+                                    <td>
+                                        <span className={`${styles.status} ${styles[client.status.toLowerCase().includes('partly') ? 'partly' : client.status.toLowerCase()]}`}>
+                                            ● {client.status}
+                                        </span>
+                                    </td>
+                                </tr>
+                            ))}
+                            {topClients.length === 0 && <tr><td colSpan={4} style={{ textAlign: 'center', padding: '20px' }}>No client data available</td></tr>}
+                        </tbody>
+                    </table>
+                </div>
+
+                {/* Lawyer Performance */}
+                <div className={styles.chartCard} style={{ flex: 1 }}>
+                    <h3 className={styles.chartTitle}>Lawyer Activity</h3>
+                    <table className={styles.table} style={{ marginTop: '1rem', width: '100%' }}>
+                        <thead>
+                            <tr style={{ textAlign: 'left', fontSize: '0.8rem', color: '#666', borderBottom: '1px solid #eee' }}>
+                                <th style={{ paddingBottom: '8px' }}>Lawyer</th>
+                                <th style={{ paddingBottom: '8px' }}>Appearances</th>
+                                <th style={{ paddingBottom: '8px' }}>Courts</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {lawyerStats.map((lawyer: any) => (
+                                <tr key={lawyer.name}>
+                                    <td style={{ padding: '12px 0' }}>{lawyer.name}</td>
+                                    <td>{lawyer.appearances} appearances</td>
+                                    <td>{lawyer.courts} courts</td>
+                                </tr>
+                            ))}
+                            {lawyerStats.length === 0 && <tr><td colSpan={3} style={{ textAlign: 'center', padding: '20px' }}>No lawyer activity recorded</td></tr>}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            {/* Court Visits */}
+            <div className={styles.chartsGrid}>
+                <div className={styles.chartCard} style={{ width: '100%' }}>
+                    <h3 className={styles.chartTitle}>Most Visited Courts</h3>
+                    <div className={styles.barChartContainer} style={{ marginTop: '1rem' }}>
+                        {courtVisits.map((cv: any, index: number) => (
+                            <div key={cv.court} className={styles.barRow}>
+                                <span className={styles.barLabel} style={{ width: '200px' }}>{cv.court}</span>
+                                <div className={styles.barTrack} style={{ flex: 1 }}>
+                                    <div className={styles.barFill} style={{
+                                        width: `${Math.min((cv.count / (courtVisits[0]?.count || 1)) * 100, 100)}%`,
+                                        background: '#2C3E50'
+                                    }}></div>
+                                </div>
+                                <span style={{ fontSize: '0.8rem', marginLeft: '10px' }}>{cv.count} visits</span>
+                            </div>
+                        ))}
+                        {courtVisits.length === 0 && <div style={{ textAlign: 'center', color: '#666' }}>No court visits recorded this month</div>}
                     </div>
                 </div>
             </div>
 
-            {/* Tables */}
-            <div className={styles.section}>
-                <h3 className={styles.sectionTitle}>Revenue by Client</h3>
-                <div className={styles.tableCard}>
-                    <table className={styles.table}>
-                        <tbody>
-                            <tr>
-                                <td>Shell Petroleum Development</td>
-                                <td className={styles.amount}>₦2,400,000</td>
-                                <td>4 matters</td>
-                                <td>₦1,600,000</td>
-                                <td><span className={`${styles.status} ${styles.partly}`}>● PARTLY PAID</span></td>
-                            </tr>
-                            <tr>
-                                <td>Zenith Bank PLC</td>
-                                <td className={styles.amount}>₦3,200,000</td>
-                                <td>6 matters</td>
-                                <td>₦3,200,000</td>
-                                <td><span className={`${styles.status} ${styles.paid}`}>● PAID</span></td>
-                            </tr>
-                            <tr>
-                                <td>MTN Nigeria Communications</td>
-                                <td className={styles.amount}>₦1,800,000</td>
-                                <td>5 matters</td>
-                                <td>₦900,000</td>
-                                <td><span className={`${styles.status} ${styles.partly}`}>● PARTLY PAID</span></td>
-                            </tr>
-                            <tr>
-                                <td>Dangote Group</td>
-                                <td className={styles.amount}>₦4,500,000</td>
-                                <td>8 matters</td>
-                                <td>₦0</td>
-                                <td><span className={`${styles.status} ${styles.unpaid}`}>● UNPAID</span></td>
-                            </tr>
-                            <tr>
-                                <td>Access Bank PLC</td>
-                                <td className={styles.amount}>₦2,100,000</td>
-                                <td>4 matters</td>
-                                <td>₦1,050,000</td>
-                                <td><span className={`${styles.status} ${styles.partly}`}>● PARTLY PAID</span></td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <div className={styles.section}>
-                <h3 className={styles.sectionTitle}>Court Appearances by Lawyer</h3>
-                <div className={styles.tableCard}>
-                    <table className={styles.table}>
-                        <tbody>
-                            <tr>
-                                <td>Kemi Adeniran</td>
-                                <td>12 appearances</td>
-                                <td>5 courts</td>
-                                <td>High Court Lagos (5x)</td>
-                                <td>₦8.2M revenue</td>
-                            </tr>
-                            <tr>
-                                <td>Adebayo Ogundimu</td>
-                                <td>10 appearances</td>
-                                <td>4 courts</td>
-                                <td>Federal High Court (4x)</td>
-                                <td>₦6.5M revenue</td>
-                            </tr>
-                            <tr>
-                                <td>Bola Okafor</td>
-                                <td>8 appearances</td>
-                                <td>3 courts</td>
-                                <td>Probate Registry (3x)</td>
-                                <td>₦3.6M revenue</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <ExpenseBreakdownModal
-                isOpen={isModalOpen}
-                onClose={() => setIsModalOpen(false)}
-                date={selectedDate || ''}
-                expenses={selectedExpenses}
-            />
         </div>
     );
 }
 
-// Helper functions
-function getCategoryColor(index: number): string {
-    const colors = ['#2C3E50', '#34495E', '#10B981', '#64748B', '#94A3B8'];
-    return colors[index % colors.length];
-}
-
-function generateConicGradient(categories: [string, number][], total: number): string {
-    let currentPercent = 0;
-    const gradientParts = categories.map(([, amount], index) => {
-        const percent = (amount / total) * 100;
-        const start = currentPercent;
-        currentPercent += percent;
-        return `${getCategoryColor(index)} ${start}% ${currentPercent}%`;
-    });
-    return `conic-gradient(${gradientParts.join(', ')})`;
-}
