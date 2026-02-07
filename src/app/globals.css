@@ -57,12 +57,12 @@
   --shadow-glow: 0 0 20px rgba(220, 38, 38, 0.2);
 
   /* Dashboard Specifics */
-  --bg-sidebar: #374151;
-  /* Gray-700 - Priority for Sidebar (matches ASCOLP logo) */
+  --bg-sidebar: #DC2626;
+  /* Red-600 - Primary Brand Color for Sidebar */
   --red-bg: #FEF2F2;
   --red-text: #DC2626;
-  --hover-bg: #4B5563;
-  /* Gray-600 Hover */
+  --hover-bg: #B91C1C;
+  /* Red-700 Hover */
 
   /* Animation Timing */
   --ease-fluid: cubic-bezier(0.4, 0, 0.2, 1);
@@ -128,11 +128,12 @@
   --glass-border: rgba(255, 255, 255, 0.08);
 
   /* Dashboard Specifics - Dark Mode */
-  --bg-sidebar: #1F2937;
-  /* Darker Gray for Dark Mode Sidebar */
+  --bg-sidebar: #991B1B;
+  /* Red-800 - Darker Red for Dark Mode Sidebar */
   --red-bg: rgba(220, 38, 38, 0.15);
   --red-text: #F87171;
-  --hover-bg: rgba(220, 38, 38, 0.1);
+  --hover-bg: #7F1D1D;
+  /* Red-900 Hover */
 
   --border: #374151;
   /* Gray 700 */
