@@ -9,7 +9,7 @@ export interface FirmLawyer {
 }
 
 export const ASCOLP_LAWYERS: FirmLawyer[] = [
-    { name: "Professor Abiola Sanni, SAN", email: "Asanni@abiolasanniandco.com", designation: "Managing Partner" },
+    { name: "Professor Abiola Sanni, SAN", email: "asanni@abiolasanniandco.com", designation: "Managing Partner" },
     { name: "Professor Friday Ndubuisi", email: "fndubuisi@abiolasanniandco.com", designation: "Partner" },
     { name: "Kola Abdulsalam", email: "kola@abiolasanniandco.com", designation: "Head of Chambers" },
     { name: "Iniobong Inieke Umoh", email: "iniobong@abiolasanniandco.com", designation: "Deputy Head of Chambers" },
