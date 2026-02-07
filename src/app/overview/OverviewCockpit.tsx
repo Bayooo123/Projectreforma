@@ -54,23 +54,23 @@ export default function OverviewCockpit({ workspaceId, userId, userName, clients
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                 <button
                     onClick={() => setActiveModal('brief')}
-                    className="bg-gradient-to-br from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white p-6 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-200 flex flex-col items-center gap-3 group backdrop-blur-sm"
+                    className="bg-gradient-to-br from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white p-6 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-200 flex flex-col items-center gap-3 group backdrop-blur-sm"
                 >
                     <Briefcase className="w-8 h-8 group-hover:scale-110 transition-transform duration-200" />
                     <div>
                         <div className="font-semibold text-lg">New Brief</div>
-                        <div className="text-blue-100 text-sm">Research & Writing</div>
+                        <div className="text-red-100 text-sm">Research & Writing</div>
                     </div>
                 </button>
 
                 <button
                     onClick={() => setActiveModal('matter')}
-                    className="bg-gradient-to-br from-violet-600 to-violet-700 hover:from-violet-700 hover:to-violet-800 text-white p-6 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-200 flex flex-col items-center gap-3 group backdrop-blur-sm"
+                    className="bg-gradient-to-br from-red-800 to-red-900 hover:from-red-900 hover:to-red-950 text-white p-6 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-200 flex flex-col items-center gap-3 group backdrop-blur-sm"
                 >
                     <Gavel className="w-8 h-8 group-hover:scale-110 transition-transform duration-200" />
                     <div>
                         <div className="font-semibold text-lg">Add Matter</div>
-                        <div className="text-violet-100 text-sm">Litigation Tracker</div>
+                        <div className="text-red-200 text-sm">Litigation Tracker</div>
                     </div>
                 </button>
             </div>
@@ -116,11 +116,11 @@ export default function OverviewCockpit({ workspaceId, userId, userName, clients
                         </div>
                         <div className="p-5">
                             <div className="relative mb-4 group">
-                                <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
+                                <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400 group-focus-within:text-red-500 transition-colors" />
                                 <input
                                     type="text"
                                     placeholder="Search clients..."
-                                    className="w-full pl-10 pr-4 py-2.5 bg-gray-50 dark:bg-gray-800 border-transparent focus:bg-white dark:focus:bg-slate-900 border focus:border-blue-500/50 rounded-xl text-sm focus:ring-4 focus:ring-blue-500/10 outline-none transition-all"
+                                    className="w-full pl-10 pr-4 py-2.5 bg-gray-50 dark:bg-gray-800 border-transparent focus:bg-white dark:focus:bg-slate-900 border focus:border-red-500/50 rounded-xl text-sm focus:ring-4 focus:ring-red-500/10 outline-none transition-all"
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
                                     autoFocus
@@ -136,15 +136,15 @@ export default function OverviewCockpit({ workspaceId, userId, userName, clients
                                         <button
                                             key={client.id}
                                             onClick={() => handleClientSelect(client)}
-                                            className="w-full text-left p-3.5 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl transition-all duration-200 flex items-center justify-between group border border-transparent hover:border-blue-100 dark:hover:border-blue-800"
+                                            className="w-full text-left p-3.5 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-all duration-200 flex items-center justify-between group border border-transparent hover:border-red-100 dark:hover:border-red-800"
                                         >
                                             <div>
-                                                <p className="font-semibold text-slate-700 dark:text-slate-200 group-hover:text-blue-700 dark:group-hover:text-blue-300 transition-colors">{client.name}</p>
+                                                <p className="font-semibold text-slate-700 dark:text-slate-200 group-hover:text-red-700 dark:group-hover:text-red-300 transition-colors">{client.name}</p>
                                                 {client.company && (
-                                                    <p className="text-xs text-slate-500 group-hover:text-blue-600/70 dark:group-hover:text-blue-400/70 transition-colors">{client.company}</p>
+                                                    <p className="text-xs text-slate-500 group-hover:text-red-600/70 dark:group-hover:text-red-400/70 transition-colors">{client.company}</p>
                                                 )}
                                             </div>
-                                            <div className="h-6 w-6 rounded-full bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-400 flex items-center justify-center opacity-0 group-hover:opacity-100 transform translate-x-2 group-hover:translate-x-0 transition-all">
+                                            <div className="h-6 w-6 rounded-full bg-red-100 dark:bg-red-900 text-red-600 dark:text-red-400 flex items-center justify-center opacity-0 group-hover:opacity-100 transform translate-x-2 group-hover:translate-x-0 transition-all">
                                                 <ChevronRight size={14} />
                                             </div>
                                         </button>

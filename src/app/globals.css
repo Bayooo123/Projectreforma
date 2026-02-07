@@ -29,9 +29,10 @@
   /* Functional Colors */
   --border: #E5E7EB;
   /* Gray 200 */
-  --primary: #DC2626;
-  /* Red-600 - MAJOR (matches ASCOLP logo) */
-  --primary-hover: #B91C1C;
+  /* Dashboard Specifics */
+  --primary: #8E2F39;
+  /* Brand Burgundy - Exact Shade from User */
+  --primary-hover: #72222B;
   --success: #059669;
   /* Emerald 600 - Muted */
   --success-bg: #ECFDF5;
@@ -54,15 +55,13 @@
   --shadow-lg: 0 10px 15px -3px rgba(31, 41, 55, 0.05),
     0 4px 6px -2px rgba(31, 41, 55, 0.025);
   --shadow-soft: 0 20px 40px -10px rgba(31, 41, 55, 0.08);
-  --shadow-glow: 0 0 20px rgba(220, 38, 38, 0.2);
-
   /* Dashboard Specifics */
-  --bg-sidebar: #DC2626;
-  /* Red-600 - Primary Brand Color for Sidebar */
-  --red-bg: #FEF2F2;
-  --red-text: #DC2626;
-  --hover-bg: #B91C1C;
-  /* Red-700 Hover */
+  --bg-sidebar: #8E2F39;
+  /* Brand Burgundy - Exact Shade */
+  --red-bg: #FDF2F4;
+  --red-text: #8E2F39;
+  --hover-bg: #72222B;
+  /* Burgundy-700 Hover */
 
   /* Animation Timing */
   --ease-fluid: cubic-bezier(0.4, 0, 0.2, 1);
@@ -128,12 +127,12 @@
   --glass-border: rgba(255, 255, 255, 0.08);
 
   /* Dashboard Specifics - Dark Mode */
-  --bg-sidebar: #991B1B;
-  /* Red-800 - Darker Red for Dark Mode Sidebar */
-  --red-bg: rgba(220, 38, 38, 0.15);
-  --red-text: #F87171;
-  --hover-bg: #7F1D1D;
-  /* Red-900 Hover */
+  --bg-sidebar: #421419;
+  /* Burgundy-900 - Deep Dark Burgundy for Sidebar */
+  --red-bg: rgba(142, 47, 57, 0.15);
+  --red-text: #F5C2C9;
+  --hover-bg: #2A0C10;
+  /* Burgundy-950 Hover */
 
   --border: #374151;
   /* Gray 700 */

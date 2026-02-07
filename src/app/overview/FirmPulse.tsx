@@ -103,7 +103,7 @@ export default async function FirmPulse() {
                                         {activity.title}
                                     </p>
                                     <p className="text-slate-600 dark:text-slate-300 text-sm mt-0.5">
-                                        <span className="font-medium text-teal-600 dark:text-teal-400">{activity.person}</span>
+                                        <span className="font-medium text-red-600 dark:text-red-400">{activity.person}</span>
                                         {' '}{activity.action}
                                     </p>
                                     <p className="text-slate-400 dark:text-slate-500 text-xs mt-1">
