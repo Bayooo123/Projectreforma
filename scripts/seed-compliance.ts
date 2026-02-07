@@ -1,142 +1,179 @@
+
 import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
+const OBLIGATIONS = [
+    // FEDERAL OBLIGATIONS
+    {
+        tier: 'Federal',
+        jurisdiction: 'Federal',
+        regulatoryBody: 'FIRS',
+        nature: 'Tax',
+        actionRequired: 'Company Income Tax (CIT) Filing',
+        procedure: 'File audited accounts and tax computations with FIRS.',
+        frequency: 'Annual',
+        dueDateDescription: '6 months after financial year end'
+    },
+    {
+        tier: 'Federal',
+        jurisdiction: 'Federal',
+        regulatoryBody: 'FIRS',
+        nature: 'Tax',
+        actionRequired: 'Value Added Tax (VAT) Filing',
+        procedure: 'File VAT returns for previous month transactions.',
+        frequency: 'Monthly',
+        dueDateDescription: '21st of every month'
+    },
+    {
+        tier: 'Federal',
+        jurisdiction: 'Federal',
+        regulatoryBody: 'FIRS',
+        nature: 'Tax',
+        actionRequired: 'Education Tax Filing',
+        procedure: 'File alongside CIT returns.',
+        frequency: 'Annual',
+        dueDateDescription: '6 months after financial year end'
+    },
+    {
+        tier: 'Federal',
+        jurisdiction: 'Federal',
+        regulatoryBody: 'ITF',
+        nature: 'Levy',
+        actionRequired: 'Industrial Training Fund (ITF) Contribution',
+        procedure: 'Pay 1% of annual payroll if staff > 5 or turnover > 50m.',
+        frequency: 'Annual',
+        dueDateDescription: '31st March of following year'
+    },
+    {
+        tier: 'Federal',
+        jurisdiction: 'Federal',
+        regulatoryBody: 'NSITF',
+        nature: 'Levy',
+        actionRequired: 'Employee Compensation Scheme (NSITF)',
+        procedure: 'Pay 1% of monthly payroll.',
+        frequency: 'Monthly',
+        dueDateDescription: 'Last day of the month'
+    },
+    {
+        tier: 'Federal',
+        jurisdiction: 'Federal',
+        regulatoryBody: 'PENCOM',
+        nature: 'Pension',
+        actionRequired: 'Pension Remittance',
+        procedure: 'Remit employee (8%) and employer (10%) contributions to PFAs.',
+        frequency: 'Monthly',
+        dueDateDescription: '7 days after salary payment'
+    },
+    {
+        tier: 'Federal',
+        jurisdiction: 'Federal',
+        regulatoryBody: 'CAC',
+        nature: 'Corporate',
+        actionRequired: 'Annual Returns',
+        procedure: 'File annual returns with CAC to maintain active status.',
+        frequency: 'Annual',
+        dueDateDescription: 'Within 42 days of AGM'
+    },
+
+    // STATE OBLIGATIONS (LAGOS)
+    {
+        tier: 'State',
+        jurisdiction: 'Lagos',
+        regulatoryBody: 'LIRS',
+        nature: 'Tax',
+        actionRequired: 'PAYE Filing & Remittance',
+        procedure: 'Remit PAYE deductions from employee salaries.',
+        frequency: 'Monthly',
+        dueDateDescription: '10th of every month'
+    },
+    {
+        tier: 'State',
+        jurisdiction: 'Lagos',
+        regulatoryBody: 'LIRS',
+        nature: 'Tax',
+        actionRequired: 'Withholding Tax (WHT) Remittance',
+        procedure: 'Remit WHT deducted from vendors/suppliers.',
+        frequency: 'Monthly',
+        dueDateDescription: '21st of every month'
+    },
+    {
+        tier: 'State',
+        jurisdiction: 'Lagos',
+        regulatoryBody: 'LIRS',
+        nature: 'Tax',
+        actionRequired: 'Business Premises Levy',
+        procedure: 'Pay annual levy for business premises operating in Lagos.',
+        frequency: 'Annual',
+        dueDateDescription: 'First quarter of the year'
+    },
+    {
+        tier: 'State',
+        jurisdiction: 'Lagos',
+        regulatoryBody: 'LIRS',
+        nature: 'Tax',
+        actionRequired: 'Development Levy',
+        procedure: 'Pay N100 per annum for every taxable person in employment.',
+        frequency: 'Annual',
+        dueDateDescription: 'Usually with tax clearance application'
+    },
+    {
+        tier: 'State',
+        jurisdiction: 'Lagos',
+        regulatoryBody: 'LIRS',
+        nature: 'Tax',
+        actionRequired: 'Direct Assessment',
+        procedure: 'For self-employed individuals/directors (if applicable).',
+        frequency: 'Annual',
+        dueDateDescription: '31st March'
+    }
+];
+
 async function main() {
-    const obligations = [
-        // Federal Obligations
-        {
-            tier: 'federal',
-            regulatoryBody: 'FIRS',
-            nature: 'filing / payment',
-            actionRequired: 'VAT filing and remittance',
-            procedure: 'File via FIRS Taxpro Max portal',
-            frequency: 'monthly',
-            dueDateDescription: '21st day of the following month',
-            jurisdiction: 'Federal',
-        },
-        {
-            tier: 'federal',
-            regulatoryBody: 'PenCom',
-            nature: 'payment',
-            actionRequired: 'Pension contributions',
-            procedure: 'Remit via bank / PFA portal',
-            frequency: 'monthly',
-            dueDateDescription: '7 working days after salary payment',
-            jurisdiction: 'Federal',
-        },
-        {
-            tier: 'federal',
-            regulatoryBody: 'NHIS',
-            nature: 'payment',
-            actionRequired: 'Health insurance contributions',
-            procedure: 'Remit via NHIS portal',
-            frequency: 'monthly',
-            dueDateDescription: 'Monthly',
-            jurisdiction: 'Federal',
-        },
-        {
-            tier: 'federal',
-            regulatoryBody: 'CAC',
-            nature: 'filing',
-            actionRequired: 'Filing of statutory annual returns',
-            procedure: 'File via CAC Post-incorporation portal',
-            frequency: 'annually',
-            dueDateDescription: 'Annually (varies by registration date)',
-            jurisdiction: 'Federal',
-        },
-        // State Obligations (Lagos)
-        {
-            tier: 'state',
-            regulatoryBody: 'LIRS',
-            nature: 'payment',
-            actionRequired: 'PAYE (Personal Income Tax)',
-            procedure: 'Remit via LIRS e-Tax portal',
-            frequency: 'monthly',
-            dueDateDescription: '10th day of the following month',
-            jurisdiction: 'Lagos',
-        },
-        {
-            tier: 'state',
-            regulatoryBody: 'LIRS',
-            nature: 'filing',
-            actionRequired: 'Direct Assessment / Annual Returns',
-            procedure: 'File H3 returns via LIRS portal',
-            frequency: 'annually',
-            dueDateDescription: 'March 31st each year',
-            jurisdiction: 'Lagos',
-        },
-        // Local Obligations
-        {
-            tier: 'local',
-            regulatoryBody: 'Local Government Council',
-            nature: 'payment',
-            actionRequired: 'Refuse / Waste Management Dues',
-            procedure: 'Pay to designated LAWMA/LGC account',
-            frequency: 'monthly',
-            dueDateDescription: 'Monthly',
-            jurisdiction: 'Lagos',
-        },
-        {
-            tier: 'local',
-            regulatoryBody: 'Local Government Council',
-            nature: 'payment',
-            actionRequired: 'Property-related Levies',
-            procedure: 'Pay via Local Government Revenue office',
-            frequency: 'annually',
-            dueDateDescription: 'Annually',
-            jurisdiction: 'Lagos',
-        },
-    ];
+    console.log('🌱 Starting Compliance Seeding...');
 
-    console.log('Seeding compliance obligations...');
+    // 1. Wipe existing compliance data (optional, but requested for "Reset")
+    console.log('🗑️  Clearing existing compliance data...');
+    // Note: We are deleting tasks first to avoid FK constraints, but we might want to keep history?
+    // For a hard reset as requested:
+    await prisma.complianceHistory.deleteMany({});
+    await prisma.complianceTask.deleteMany({});
+    await prisma.complianceObligation.deleteMany({});
 
-    for (const ob of obligations) {
-        const existing = await prisma.complianceObligation.findFirst({
-            where: {
-                actionRequired: ob.actionRequired,
-                regulatoryBody: ob.regulatoryBody,
-                jurisdiction: ob.jurisdiction,
-            }
+    console.log('✅ Cleared existing data.');
+
+    // 2. Seed Obligations
+    console.log('📝 Seeding Obligations...');
+    for (const obligation of OBLIGATIONS) {
+        await prisma.complianceObligation.create({
+            data: obligation
         });
-
-        if (!existing) {
-            await prisma.complianceObligation.create({ data: ob });
-            console.log(`Created: ${ob.actionRequired}`);
-        } else {
-            console.log(`Skipped (exists): ${ob.actionRequired}`);
-        }
     }
+    console.log(`✅ Seeded ${OBLIGATIONS.length} obligations.`);
 
-    // Initialize tasks for all workspaces
-    console.log('Initializing compliance tasks for all workspaces...');
+    // 3. Auto-assign to existing workspaces
     const workspaces = await prisma.workspace.findMany();
-    const allObligations = await prisma.complianceObligation.findMany();
+    const obligations = await prisma.complianceObligation.findMany();
 
-    for (const ws of workspaces) {
-        for (const ob of allObligations) {
-            const existingTask = await prisma.complianceTask.findFirst({
-                where: {
-                    workspaceId: ws.id,
-                    obligationId: ob.id,
-                    status: 'pending' // Only create if no pending task exists
-                }
-            });
+    console.log(`🔗 Assigning obligations to ${workspaces.length} workspaces...`);
 
-            if (!existingTask) {
-                await prisma.complianceTask.create({
-                    data: {
-                        workspaceId: ws.id,
-                        obligationId: ob.id,
-                        status: 'pending',
-                    }
-                });
-            }
-        }
-        console.log(`Initialized tasks for workspace: ${ws.name}`);
+    for (const workspace of workspaces) {
+        // Create a task for each obligation for the workspace
+        // This is a simplified "initial state" - normally we'd check if it exists
+        const tasksData = obligations.map(obl => ({
+            workspaceId: workspace.id,
+            obligationId: obl.id,
+            status: 'pending',
+            dueDate: new Date(), // Placeholder - in real app, calculate based on rule
+            period: 'Current Cycle'
+        }));
+
+        await prisma.complianceTask.createMany({
+            data: tasksData
+        });
     }
 
-    console.log('Compliance seeding completed.');
+    console.log('✅ Compliance Reset Complete.');
 }
 
 main()
