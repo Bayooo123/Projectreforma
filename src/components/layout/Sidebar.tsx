@@ -9,6 +9,7 @@ import {
   Users,
   Briefcase,
   BarChart2,
+  ShieldCheck,
   HelpCircle,
   LogOut
 } from 'lucide-react';
@@ -46,6 +47,7 @@ const Sidebar = ({ user }: SidebarProps) => {
     { name: 'Litigation', href: '/calendar', icon: Gavel },
     { name: 'Client Management', href: '/management/clients', icon: Users },
     { name: 'Office Manager', href: '/management/office', icon: Briefcase },
+    { name: 'Compliance', href: '/management/compliance', icon: ShieldCheck },
     { name: 'Analytics', href: '/analytics', icon: BarChart2 },
   ];
 
