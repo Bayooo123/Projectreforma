@@ -26,6 +26,7 @@ model Workspace {
   bankAccounts      BankAccount[]
   briefs            Brief[]
   clients           Client[]
+  complianceTasks   ComplianceTask[]
   draftingTemplates DraftingTemplate[]
   expenses          Expense[]
   invitations       Invitation[]
@@ -34,7 +35,6 @@ model Workspace {
   owner             User                  @relation("WorkspaceOwner", fields: [ownerId], references: [id])
   emailConfig       WorkspaceEmailConfig?
   members           WorkspaceMember[]
-  complianceTasks   ComplianceTask[]
 
   @@index([slug])
   @@index([firmCode])
@@ -74,35 +74,35 @@ model Invitation {
 }
 
 model User {
-  id                   String                @id @default(cuid())
-  name                 String?
-  email                String                @unique
-  password             String?
-  createdAt            DateTime              @default(now())
-  updatedAt            DateTime              @updatedAt
-  emailVerified        DateTime?
-  phone                String?
-  image                String?
-  jobTitle             String?
-  lawyerToken          String?               @unique
-  accounts             Account[]
-  apiKeys              ApiKey[]
-  briefs               Brief[]
-  BriefActivityLog     BriefActivityLog[]
-  clientCommunications ClientCommunication[]
-  draftingSessions     DraftingSession[]
-  draftingTemplates    DraftingTemplate[]
-  invitations          Invitation[]
-  activityLogs         MatterActivityLog[]
-  sessions             Session[]
-  createdTasks         Task[]                @relation("CreatedTasks")
-  assignedTasks        Task[]                @relation("AssignedTasks")
-  ownedWorkspaces      Workspace[]           @relation("WorkspaceOwner")
-  workspaces           WorkspaceMember[]
-  courtAppearances     CourtDate[]           @relation("CourtAppearances")
-  matterLawyer         MatterLawyer[]
-  acknowledgedCompliance ComplianceTask[] @relation("AcknowledgedBy")
+  id                     String                @id @default(cuid())
+  name                   String?
+  email                  String                @unique
+  password               String?
+  createdAt              DateTime              @default(now())
+  updatedAt              DateTime              @updatedAt
+  emailVerified          DateTime?
+  phone                  String?
+  image                  String?
+  jobTitle               String?
+  lawyerToken            String?               @unique
+  accounts               Account[]
+  apiKeys                ApiKey[]
+  briefs                 Brief[]
+  BriefActivityLog       BriefActivityLog[]
+  clientCommunications   ClientCommunication[]
   complianceHistory      ComplianceHistory[]
+  acknowledgedCompliance ComplianceTask[]      @relation("AcknowledgedBy")
+  draftingSessions       DraftingSession[]
+  draftingTemplates      DraftingTemplate[]
+  invitations            Invitation[]
+  activityLogs           MatterActivityLog[]
+  matterLawyer           MatterLawyer[]
+  sessions               Session[]
+  createdTasks           Task[]                @relation("CreatedTasks")
+  assignedTasks          Task[]                @relation("AssignedTasks")
+  ownedWorkspaces        Workspace[]           @relation("WorkspaceOwner")
+  workspaces             WorkspaceMember[]
+  courtAppearances       CourtDate[]           @relation("CourtAppearances")
 
   @@index([email])
   @@index([lawyerToken])
@@ -217,33 +217,33 @@ model NotificationRule {
 }
 
 model Matter {
-  id                   String                @id @default(cuid())
-  caseNumber           String?               @unique
-  name                 String
-  clientId             String?
-  clientNameRaw        String?
-  workspaceId          String
-  court                String?
-  judge                String?
-  status               String                @default("active")
-  nextCourtDate        DateTime?
-  createdAt            DateTime              @default(now())
-  updatedAt            DateTime              @updatedAt
-  lastActivityAt       DateTime              @default(now())
-  lastClientContact    DateTime?
+  id                    String                @id @default(cuid())
+  caseNumber            String?               @unique
+  name                  String
+  clientId              String?
+  clientNameRaw         String?
+  workspaceId           String
+  court                 String?
+  judge                 String?
+  status                String                @default("active")
+  nextCourtDate         DateTime?
+  createdAt             DateTime              @default(now())
+  updatedAt             DateTime              @updatedAt
+  lastActivityAt        DateTime              @default(now())
+  lastClientContact     DateTime?
   submittingLawyerId    String?
   submittingLawyerToken String?
   submittingLawyerName  String?
-  briefs               Brief[]
-  clientCommunications ClientCommunication[]
-  courtDates           CourtDate[]
-  invoices             Invoice[]
-  lawyers              MatterLawyer[]
-  client               Client?               @relation(fields: [clientId], references: [id])
-  workspace            Workspace             @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  activityLogs         MatterActivityLog[]
-  notifications        Notification[]
-  tasks                Task[]
+  briefs                Brief[]
+  clientCommunications  ClientCommunication[]
+  courtDates            CourtDate[]
+  invoices              Invoice[]
+  client                Client?               @relation(fields: [clientId], references: [id])
+  workspace             Workspace             @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  activityLogs          MatterActivityLog[]
+  lawyers               MatterLawyer[]
+  notifications         Notification[]
+  tasks                 Task[]
 
   @@index([workspaceId])
   @@index([lastActivityAt])
@@ -255,10 +255,10 @@ model MatterLawyer {
   id          String  @id @default(cuid())
   matterId    String
   lawyerId    String
-  role        String // "lead counsel", "co-counsel", "appearing"
+  role        String
   isAppearing Boolean @default(false)
-  matter      Matter  @relation(fields: [matterId], references: [id], onDelete: Cascade)
   lawyer      User    @relation(fields: [lawyerId], references: [id], onDelete: Cascade)
+  matter      Matter  @relation(fields: [matterId], references: [id], onDelete: Cascade)
 
   @@unique([matterId, lawyerId])
   @@index([lawyerId])
@@ -273,22 +273,18 @@ model CourtDate {
   proceedings            String?
   outcome                String?
   adjournedFor           String?
-  submittingLawyerId    String?
-  submittingLawyerToken String?
-  submittingLawyerName  String?
+  submittingLawyerId     String?
+  submittingLawyerToken  String?
+  submittingLawyerName   String?
   createdAt              DateTime                @default(now())
   updatedAt              DateTime                @updatedAt
-  
-  // Strict Hierarchy Fields (Mandatory)
   briefId                String
   clientId               String
-
-  matter                 Matter                  @relation(fields: [matterId], references: [id], onDelete: Cascade)
   brief                  Brief                   @relation(fields: [briefId], references: [id])
   client                 Client                  @relation(fields: [clientId], references: [id])
-  
-  appearances            User[]                  @relation("CourtAppearances")
+  matter                 Matter                  @relation(fields: [matterId], references: [id], onDelete: Cascade)
   scheduledNotifications ScheduledNotification[]
+  appearances            User[]                  @relation("CourtAppearances")
 
   @@index([matterId])
   @@index([briefId])
@@ -302,9 +298,9 @@ model ScheduledNotification {
   matterId         String
   courtDateId      String
   recipientId      String
-  notificationType String // 'three_day', 'two_day', 'day_of'
+  notificationType String
   scheduledFor     DateTime
-  status           String    @default("pending") // 'pending', 'sent', 'cancelled'
+  status           String    @default("pending")
   sentAt           DateTime?
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
@@ -367,10 +363,10 @@ model Brief {
   matter         Matter?            @relation(fields: [matterId], references: [id])
   workspace      Workspace          @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   activityLogs   BriefActivityLog[]
+  courtDates     CourtDate[]
   documents      Document[]
   notifications  Notification[]
   tasks          Task[]
-  courtDates     CourtDate[] // Hierarchy back-relation
 
   @@index([lawyerId])
   @@index([workspaceId])
@@ -420,10 +416,10 @@ model Client {
   briefs               Brief[]
   workspace            Workspace             @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   clientCommunications ClientCommunication[]
+  courtDates           CourtDate[]
   invoices             Invoice[]
   matters              Matter[]
   payments             Payment[]
-  courtDates           CourtDate[] // Hierarchy back-relation
 
   @@index([email])
   @@index([workspaceId])
@@ -674,49 +670,49 @@ model Waitlist {
 
 model ComplianceObligation {
   id                 String           @id @default(cuid())
-  tier               String           // "local", "state", "federal"
+  tier               String
   regulatoryBody     String
-  nature             String           // "payment", "filing", "return", "registration"
+  nature             String
   actionRequired     String
-  procedure          String           // Details on how to comply
-  frequency          String           // "monthly", "quarterly", "annually", "one-time"
-  dueDateDescription String?          // Text description of due date logic
-  jurisdiction       String           @default("Federal") // "Federal", "Lagos", etc.
+  procedure          String
+  frequency          String
+  dueDateDescription String?
+  jurisdiction       String           @default("Federal")
   createdAt          DateTime         @default(now())
   updatedAt          DateTime         @updatedAt
   tasks              ComplianceTask[]
 }
 
 model ComplianceTask {
-  id                String              @id @default(cuid())
-  obligationId      String
-  workspaceId       String
-  status            String              @default("pending") // "pending", "due_soon", "overdue", "complied"
-  dueDate           DateTime?
-  period            String?             // e.g., "Jan 2024", "Q1 2024"
-  evidenceUrl       String?
-  acknowledgedAt    DateTime?
-  acknowledgedBy    String?
-  createdAt         DateTime            @default(now())
-  updatedAt         DateTime            @updatedAt
-  obligation        ComplianceObligation @relation(fields: [obligationId], references: [id])
-  workspace         Workspace           @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  user              User?               @relation("AcknowledgedBy", fields: [acknowledgedBy], references: [id])
-  history           ComplianceHistory[]
+  id             String               @id @default(cuid())
+  obligationId   String
+  workspaceId    String
+  status         String               @default("pending")
+  dueDate        DateTime?
+  period         String?
+  evidenceUrl    String?
+  acknowledgedAt DateTime?
+  acknowledgedBy String?
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+  history        ComplianceHistory[]
+  user           User?                @relation("AcknowledgedBy", fields: [acknowledgedBy], references: [id])
+  obligation     ComplianceObligation @relation(fields: [obligationId], references: [id])
+  workspace      Workspace            @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   @@index([workspaceId, status])
   @@index([dueDate])
 }
 
 model ComplianceHistory {
-  id               String         @id @default(cuid())
-  taskId           String
-  action           String         // "status_change", "evidence_upload", "acknowledgement"
-  description      String
-  performedBy      String
-  timestamp        DateTime       @default(now())
-  task             ComplianceTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
-  user             User           @relation(fields: [performedBy], references: [id])
+  id          String         @id @default(cuid())
+  taskId      String
+  action      String
+  description String
+  performedBy String
+  timestamp   DateTime       @default(now())
+  user        User           @relation(fields: [performedBy], references: [id])
+  task        ComplianceTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
 
   @@index([taskId])
 }
