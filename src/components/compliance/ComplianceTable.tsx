@@ -1,7 +1,7 @@
 'use client';
 
 import { ComplianceTask } from "@/app/actions/compliance";
-import { Badge } from "@/components/ui/badge"; // Assuming we have or will use standard badges, or I'll style them manually if needed
+
 import { FileUp, Eye, CheckCircle, AlertCircle, Clock } from "lucide-react";
 import { useState } from "react";
 import { uploadEvidence } from "@/app/actions/compliance";
@@ -136,8 +136,8 @@ export default function ComplianceTable({ tasks, onUpdate }: ComplianceTableProp
                                         <label
                                             htmlFor={`upload-${task.id}`}
                                             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold cursor-pointer border transition-all ${uploadingId === task.id
-                                                    ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
-                                                    : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50 hover:border-slate-300 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300'
+                                                ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                                                : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50 hover:border-slate-300 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300'
                                                 }`}
                                         >
                                             {uploadingId === task.id ? (
