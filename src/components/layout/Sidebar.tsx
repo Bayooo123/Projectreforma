@@ -42,7 +42,6 @@ const Sidebar = ({ user }: SidebarProps) => {
   }, []);
 
   const navItems = [
-    { name: 'Overview', href: '/overview', icon: LayoutDashboard },
     { name: 'Briefs Manager', href: '/briefs', icon: FileText },
     { name: 'Litigation', href: '/calendar', icon: Gavel },
     { name: 'Client Management', href: '/management/clients', icon: Users },

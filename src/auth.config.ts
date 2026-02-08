@@ -12,8 +12,7 @@ export const authConfig = {
                 nextUrl.pathname.startsWith('/briefs') ||
                 nextUrl.pathname.startsWith('/analytics') ||
                 nextUrl.pathname.startsWith('/calendar') ||
-                nextUrl.pathname.startsWith('/onboarding') ||
-                nextUrl.pathname.startsWith('/overview');
+                nextUrl.pathname.startsWith('/onboarding');
 
             if (isOnProtectedRoute) {
                 if (isLoggedIn) return true;
