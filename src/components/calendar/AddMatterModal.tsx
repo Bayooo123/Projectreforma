@@ -113,7 +113,7 @@ const AddMatterModal = ({ isOpen, onClose, workspaceId, userId, onSuccess }: Add
                 createdById: userId
             });
 
-            if (result.success) {
+            if (result.success && result.matter) {
                 const isNewClient = (result as any).isNewClient;
                 const newClientId = result.matter.clientId;
 
