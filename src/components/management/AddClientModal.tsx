@@ -2,14 +2,23 @@
 
 import { useState } from 'react';
 import { X, Loader } from 'lucide-react';
-import { createClient } from '@/app/actions/clients';
+import { createClient, updateClient } from '@/app/actions/clients';
 import styles from './AddClientModal.module.css';
+import { useEffect } from 'react';
 
 interface AddClientModalProps {
     isOpen: boolean;
     onClose: () => void;
     workspaceId: string;
     onSuccess: () => void;
+    client?: {
+        id: string;
+        name: string;
+        email: string;
+        phone: string | null;
+        company: string | null;
+        industry: string | null;
+    } | null;
 }
 
 const INDUSTRIES = [
@@ -32,6 +41,7 @@ export default function AddClientModal({
     onClose,
     workspaceId,
     onSuccess,
+    client
 }: AddClientModalProps) {
     const [formData, setFormData] = useState({
         name: '',
@@ -43,13 +53,32 @@ export default function AddClientModal({
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState('');
 
+    useEffect(() => {
+        if (client) {
+            setFormData({
+                name: client.name || '',
+                email: client.email || '',
+                phone: client.phone || '',
+                company: client.company || '',
+                industry: client.industry || '',
+            });
+        } else {
+            setFormData({
+                name: '',
+                email: '',
+                phone: '',
+                company: '',
+                industry: '',
+            });
+        }
+    }, [client, isOpen]);
+
     if (!isOpen) return null;
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
 
-        // Validation
         if (!formData.name.trim()) {
             setError('Client name is required');
             return;
@@ -60,7 +89,6 @@ export default function AddClientModal({
             return;
         }
 
-        // Email validation
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailRegex.test(formData.email)) {
             setError('Please enter a valid email address');
@@ -70,13 +98,17 @@ export default function AddClientModal({
         setIsSubmitting(true);
 
         try {
-            const result = await createClient({
-                ...formData,
-                workspaceId,
-            });
+            let result;
+            if (client) {
+                result = await updateClient(client.id, formData);
+            } else {
+                result = await createClient({
+                    ...formData,
+                    workspaceId,
+                });
+            }
 
             if (result.success) {
-                // Reset form
                 setFormData({
                     name: '',
                     email: '',
@@ -87,7 +119,7 @@ export default function AddClientModal({
                 onSuccess();
                 onClose();
             } else {
-                setError(result.error || 'Failed to create client');
+                setError(result.error || `Failed to ${client ? 'update' : 'create'} client`);
             }
         } catch (err) {
             setError('An unexpected error occurred');
@@ -115,8 +147,8 @@ export default function AddClientModal({
             <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
                 <div className={styles.header}>
                     <div>
-                        <h2 className={styles.title}>Add New Client</h2>
-                        <p className={styles.subtitle}>Create a new client record</p>
+                        <h2 className={styles.title}>{client ? 'Edit Client' : 'Add New Client'}</h2>
+                        <p className={styles.subtitle}>{client ? 'Update client information' : 'Create a new client record'}</p>
                     </div>
                     <button
                         className={styles.closeBtn}
@@ -222,10 +254,10 @@ export default function AddClientModal({
                             {isSubmitting ? (
                                 <>
                                     <Loader size={16} className="spin" />
-                                    Creating...
+                                    {client ? 'Updating...' : 'Creating...'}
                                 </>
                             ) : (
-                                'Create Client'
+                                client ? 'Update Client' : 'Create Client'
                             )}
                         </button>
                     </div>
@@ -234,3 +266,4 @@ export default function AddClientModal({
         </div>
     );
 }
+

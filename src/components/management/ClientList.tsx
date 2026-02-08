@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { Search, Filter, MoreVertical, FileText, DollarSign, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, Filter, MoreVertical, FileText, DollarSign, ChevronLeft, ChevronRight, Edit2 } from 'lucide-react';
 import { getClients } from '@/app/actions/clients';
 import InvoiceModal from './InvoiceModal';
 import PaymentModal from './PaymentModal';
@@ -50,9 +50,10 @@ interface Invoice {
 interface ClientListProps {
     workspaceId: string;
     letterheadUrl?: string | null;
+    onEditClient?: (client: Client) => void;
 }
 
-const ClientList = ({ workspaceId, letterheadUrl }: ClientListProps) => {
+const ClientList = ({ workspaceId, letterheadUrl, onEditClient }: ClientListProps) => {
     const searchParams = useSearchParams();
     const filterParam = searchParams.get('filter') || undefined;
 
@@ -240,6 +241,13 @@ const ClientList = ({ workspaceId, letterheadUrl }: ClientListProps) => {
                                                     onClick={() => handleRecordPayment(client.name, client.id)}
                                                 >
                                                     <DollarSign size={18} />
+                                                </button>
+                                                <button
+                                                    className={styles.iconBtn}
+                                                    title="Edit Client"
+                                                    onClick={() => onEditClient?.(client)}
+                                                >
+                                                    <Edit2 size={18} />
                                                 </button>
                                                 <button className={styles.iconBtn} title="More Options">
                                                     <MoreVertical size={18} />

@@ -175,27 +175,29 @@ model VerificationToken {
 }
 
 model Notification {
-  id               String    @id @default(cuid())
-  type             String
-  title            String
-  message          String
-  recipientId      String
-  recipientType    String
-  relatedMatterId  String?
-  relatedBriefId   String?
-  priority         String    @default("medium")
-  status           String    @default("unread")
-  channels         String?
-  createdAt        DateTime  @default(now())
-  readAt           DateTime?
-  metadata         Json?
-  relatedInvoiceId String?
-  relatedPaymentId String?
-  updatedAt        DateTime  @updatedAt
-  brief            Brief?    @relation(fields: [relatedBriefId], references: [id])
-  invoice          Invoice?  @relation(fields: [relatedInvoiceId], references: [id])
-  matter           Matter?   @relation(fields: [relatedMatterId], references: [id])
-  payment          Payment?  @relation(fields: [relatedPaymentId], references: [id])
+  id                         String          @id @default(cuid())
+  type                       String
+  title                      String
+  message                    String
+  recipientId                String
+  recipientType              String
+  relatedMatterId            String?
+  relatedBriefId             String?
+  relatedComplianceTaskId    String?
+  priority                   String          @default("medium")
+  status                     String          @default("unread")
+  channels                   String?
+  createdAt                  DateTime        @default(now())
+  readAt                     DateTime?
+  metadata                   Json?
+  relatedInvoiceId           String?
+  relatedPaymentId           String?
+  updatedAt                  DateTime        @updatedAt
+  brief                      Brief?          @relation(fields: [relatedBriefId], references: [id])
+  complianceTask             ComplianceTask? @relation(fields: [relatedComplianceTaskId], references: [id])
+  invoice                    Invoice?        @relation(fields: [relatedInvoiceId], references: [id])
+  matter                     Matter?         @relation(fields: [relatedMatterId], references: [id])
+  payment                    Payment?        @relation(fields: [relatedPaymentId], references: [id])
 
   @@index([recipientId, status])
   @@index([createdAt])
@@ -294,21 +296,24 @@ model CourtDate {
 }
 
 model ScheduledNotification {
-  id               String    @id @default(cuid())
-  matterId         String
-  courtDateId      String
+  id               String          @id @default(cuid())
+  matterId         String?
+  courtDateId      String?
+  complianceTaskId String?
   recipientId      String
   notificationType String
   scheduledFor     DateTime
-  status           String    @default("pending")
+  status           String          @default("pending")
   sentAt           DateTime?
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
-  courtDate        CourtDate @relation(fields: [courtDateId], references: [id], onDelete: Cascade)
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+  complianceTask   ComplianceTask? @relation(fields: [complianceTaskId], references: [id], onDelete: Cascade)
+  courtDate        CourtDate?      @relation(fields: [courtDateId], references: [id], onDelete: Cascade)
 
   @@index([status, scheduledFor])
   @@index([matterId])
   @@index([courtDateId])
+  @@index([complianceTaskId])
   @@index([recipientId])
 }
 
@@ -684,21 +689,23 @@ model ComplianceObligation {
 }
 
 model ComplianceTask {
-  id             String               @id @default(cuid())
-  obligationId   String
-  workspaceId    String
-  status         String               @default("pending")
-  dueDate        DateTime?
-  period         String?
-  evidenceUrl    String?
-  acknowledgedAt DateTime?
-  acknowledgedBy String?
-  createdAt      DateTime             @default(now())
-  updatedAt      DateTime             @updatedAt
-  history        ComplianceHistory[]
-  user           User?                @relation("AcknowledgedBy", fields: [acknowledgedBy], references: [id])
-  obligation     ComplianceObligation @relation(fields: [obligationId], references: [id])
-  workspace      Workspace            @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  id                     String                  @id @default(cuid())
+  obligationId           String
+  workspaceId            String
+  status                 String                  @default("pending")
+  dueDate                DateTime?
+  period                 String?
+  evidenceUrl            String?
+  acknowledgedAt         DateTime?
+  acknowledgedBy         String?
+  createdAt              DateTime                @default(now())
+  updatedAt              DateTime                @updatedAt
+  history                ComplianceHistory[]
+  notifications          Notification[]
+  scheduledNotifications ScheduledNotification[]
+  user                   User?                   @relation("AcknowledgedBy", fields: [acknowledgedBy], references: [id])
+  obligation             ComplianceObligation    @relation(fields: [obligationId], references: [id])
+  workspace              Workspace               @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   @@index([workspaceId, status])
   @@index([dueDate])

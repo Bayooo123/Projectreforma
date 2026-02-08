@@ -6,6 +6,7 @@ import { createMatter } from '@/app/actions/matters';
 import { generateCaseNumber } from '@/lib/matters';
 import { getClientsForWorkspace, getLawyersForWorkspace } from '@/lib/briefs';
 import { ASCOLP_LAWYERS } from '@/lib/firm-directory';
+import { useRouter } from 'next/navigation';
 import styles from './AddMatterModal.module.css';
 
 interface AddMatterModalProps {
@@ -39,11 +40,13 @@ const AddMatterModal = ({ isOpen, onClose, workspaceId, userId, onSuccess }: Add
     const [courtSummary, setCourtSummary] = useState('');
     const [workspaceLawyers, setWorkspaceLawyers] = useState<Lawyer[]>([]);
     const [clients, setClients] = useState<Client[]>([]);
-    const [clientId, setClientId] = useState('');
+    const [clientSearch, setClientSearch] = useState('');
+    const [selectedClient, setSelectedClient] = useState<Client | null>(null);
+    const [isClientDropdownOpen, setIsClientDropdownOpen] = useState(false);
     const [selectedLawyerIds, setSelectedLawyerIds] = useState<string[]>([]);
     const [isLoadingClients, setIsLoadingClients] = useState(false);
-
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const router = useRouter();
 
     useEffect(() => {
         if (isOpen && workspaceId) {
@@ -54,6 +57,23 @@ const AddMatterModal = ({ isOpen, onClose, workspaceId, userId, onSuccess }: Add
                 .finally(() => setIsLoadingClients(false));
         }
     }, [isOpen, workspaceId]);
+
+    const filteredClients = clients.filter(c =>
+        c.name.toLowerCase().includes(clientSearch.toLowerCase()) ||
+        (c.company && c.company.toLowerCase().includes(clientSearch.toLowerCase()))
+    );
+
+    const handleSelectClient = (client: Client) => {
+        setSelectedClient(client);
+        setClientSearch(client.name);
+        setIsClientDropdownOpen(false);
+    };
+
+    const handleClientInputChange = (val: string) => {
+        setClientSearch(val);
+        setSelectedClient(null); // Reset selection if typing
+        setIsClientDropdownOpen(true);
+    };
 
     const toggleLawyer = (lawyerId: string) => {
         setSelectedLawyerIds(prev =>
@@ -66,8 +86,8 @@ const AddMatterModal = ({ isOpen, onClose, workspaceId, userId, onSuccess }: Add
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        if (!clientId) {
-            alert('Please select a client');
+        if (!clientSearch.trim()) {
+            alert('Please identify the client (representation is mandatory).');
             return;
         }
 
@@ -82,22 +102,32 @@ const AddMatterModal = ({ isOpen, onClose, workspaceId, userId, onSuccess }: Add
                 nextCourtDate: nextCourtDate ? new Date(nextCourtDate) : undefined,
                 proceedingDate: proceedingDate ? new Date(proceedingDate) : new Date(),
                 proceedings: courtSummary || undefined,
-                // Pass empty/null for removed fields
                 caseNumber: null,
-                clientId: clientId, // Strict linkage
-                clientNameRaw: null, // Deprecated
+                clientId: selectedClient?.id || null,
+                clientName: selectedClient ? null : clientSearch,
                 lawyerAssociations: selectedLawyerIds.map(id => ({
                     lawyerId: id,
                     role: 'appearing',
                     isAppearing: true
                 })),
-                createdById: userId // Critical for logging
+                createdById: userId
             });
 
             if (result.success) {
-                // Reset form
+                const isNewClient = (result as any).isNewClient;
+                const newClientId = result.matter.clientId;
+
+                if (isNewClient) {
+                    if (confirm(`Matter created successfully! A new client record for "${clientSearch}" has also been created. Would you like to complete their profile now?`)) {
+                        router.push(`/management/clients?edit=${newClientId}`);
+                    }
+                } else {
+                    alert('Matter created successfully!');
+                }
+
                 setMatterName('');
-                setClientId('');
+                setSelectedClient(null);
+                setClientSearch('');
                 setCourt('');
                 setJudge('');
                 setNextCourtDate('');
@@ -105,7 +135,6 @@ const AddMatterModal = ({ isOpen, onClose, workspaceId, userId, onSuccess }: Add
                 setCourtSummary('');
                 setSelectedLawyerIds([]);
 
-                alert('Matter created successfully!');
                 onSuccess?.();
                 onClose();
             } else {
@@ -143,31 +172,58 @@ const AddMatterModal = ({ isOpen, onClose, workspaceId, userId, onSuccess }: Add
                                 onChange={(e) => setMatterName(e.target.value)}
                                 required
                             />
-                            <p className="text-[10px] text-slate-400 mt-1 italic">A litigation brief (file) will be automatically created for this matter.</p>
+                            <p className="text-[10px] text-slate-400 mt-1 italic">Every entry must resolve to a Client and a Brief. A Brief will be auto-created.</p>
                         </div>
 
                         <div className={styles.formGroup}>
-                            <label className={styles.label}>Client *</label>
-                            {isLoadingClients ? (
-                                <div className="text-xs text-slate-400">Loading clients...</div>
-                            ) : (
-                                <select
-                                    className={styles.select}
-                                    value={clientId}
-                                    onChange={(e) => setClientId(e.target.value)}
+                            <label className={styles.label}>Client Name *</label>
+                            <div className={styles.hybridInputWrapper}>
+                                <input
+                                    type="text"
+                                    className={styles.input}
+                                    placeholder="Search or type new client name..."
+                                    value={clientSearch}
+                                    onChange={(e) => handleClientInputChange(e.target.value)}
+                                    onFocus={() => setIsClientDropdownOpen(true)}
                                     required
-                                >
-                                    <option value="">Select Client...</option>
-                                    {clients.map(client => (
-                                        <option key={client.id} value={client.id}>
-                                            {client.name} {client.company ? `(${client.company})` : ''}
-                                        </option>
-                                    ))}
-                                </select>
-                            )}
-                        </div>
+                                    autoComplete="off"
+                                />
+                                {!selectedClient && clientSearch.trim() && (
+                                    <span className={styles.newClientBadge}>New Client</span>
+                                )}
 
-                        {/* Removed Suit Number, Procedural Status */}
+                                {isClientDropdownOpen && (clientSearch || clients.length > 0) && (
+                                    <div className={styles.dropdown}>
+                                        {filteredClients.map(client => (
+                                            <div
+                                                key={client.id}
+                                                className={styles.dropdownItem}
+                                                onClick={() => handleSelectClient(client)}
+                                            >
+                                                <div className="flex flex-col">
+                                                    <span className={styles.clientName}>{client.name}</span>
+                                                    {client.company && <span className={styles.clientCompany}>{client.company}</span>}
+                                                </div>
+                                            </div>
+                                        ))}
+                                        {filteredClients.length === 0 && clientSearch && (
+                                            <div className={styles.noResults}>
+                                                No matches. "{clientSearch}" will be created as a new client.
+                                            </div>
+                                        )}
+                                        <div
+                                            className={styles.closeDropdown}
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                setIsClientDropdownOpen(false);
+                                            }}
+                                        >
+                                            Close
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
 
                         <div className={styles.formGroup}>
                             <label className={styles.label}>Court</label>
@@ -231,9 +287,7 @@ const AddMatterModal = ({ isOpen, onClose, workspaceId, userId, onSuccess }: Add
                                     <p className="text-xs text-slate-400 italic">Loading firm directory...</p>
                                 )}
                             </div>
-                            <p className="text-[10px] text-slate-400 mt-1">Select lawyers who appeared for this sitting.</p>
                         </div>
-
 
                         <div className={styles.formGroup}>
                             <label className={styles.label}>Next Court Date (Optional)</label>

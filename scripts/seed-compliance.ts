@@ -5,6 +5,17 @@ const prisma = new PrismaClient();
 
 const OBLIGATIONS = [
     // FEDERAL OBLIGATIONS
+    // FEDERAL OBLIGATIONS
+    {
+        tier: 'Federal',
+        jurisdiction: 'Federal',
+        regulatoryBody: 'Supreme Court of Nigeria',
+        nature: 'Bar Fees',
+        actionRequired: 'Payment of Bar Practicing Fees',
+        procedure: 'Pay the prescribed bar practicing fees yearly.',
+        frequency: 'Annual',
+        dueDateDescription: '31st March'
+    },
     {
         tier: 'Federal',
         jurisdiction: 'Federal',
@@ -13,7 +24,7 @@ const OBLIGATIONS = [
         actionRequired: 'Company Income Tax (CIT) Filing',
         procedure: 'File audited accounts and tax computations with FIRS.',
         frequency: 'Annual',
-        dueDateDescription: '6 months after financial year end'
+        dueDateDescription: '30th June' // Normalized for auto-calc
     },
     {
         tier: 'Federal',
@@ -33,7 +44,7 @@ const OBLIGATIONS = [
         actionRequired: 'Education Tax Filing',
         procedure: 'File alongside CIT returns.',
         frequency: 'Annual',
-        dueDateDescription: '6 months after financial year end'
+        dueDateDescription: '30th June'
     },
     {
         tier: 'Federal',
@@ -53,7 +64,7 @@ const OBLIGATIONS = [
         actionRequired: 'Employee Compensation Scheme (NSITF)',
         procedure: 'Pay 1% of monthly payroll.',
         frequency: 'Monthly',
-        dueDateDescription: 'Last day of the month'
+        dueDateDescription: 'Last day of month'
     },
     {
         tier: 'Federal',
@@ -129,13 +140,13 @@ const OBLIGATIONS = [
     }
 ];
 
+import { calculateComplianceDueDate } from '../src/lib/compliance-utils';
+
 async function main() {
     console.log('🌱 Starting Compliance Seeding...');
 
-    // 1. Wipe existing compliance data (optional, but requested for "Reset")
+    // 1. Wipe existing compliance data
     console.log('🗑️  Clearing existing compliance data...');
-    // Note: We are deleting tasks first to avoid FK constraints, but we might want to keep history?
-    // For a hard reset as requested:
     await prisma.complianceHistory.deleteMany({});
     await prisma.complianceTask.deleteMany({});
     await prisma.complianceObligation.deleteMany({});
@@ -158,19 +169,44 @@ async function main() {
     console.log(`🔗 Assigning obligations to ${workspaces.length} workspaces...`);
 
     for (const workspace of workspaces) {
-        // Create a task for each obligation for the workspace
-        // This is a simplified "initial state" - normally we'd check if it exists
-        const tasksData = obligations.map(obl => ({
-            workspaceId: workspace.id,
-            obligationId: obl.id,
-            status: 'pending',
-            dueDate: new Date(), // Placeholder - in real app, calculate based on rule
-            period: 'Current Cycle'
-        }));
-
-        await prisma.complianceTask.createMany({
-            data: tasksData
+        const members = await prisma.workspaceMember.findMany({
+            where: { workspaceId: workspace.id }
         });
+
+        for (const obl of obligations) {
+            const dueDate = calculateComplianceDueDate(obl.dueDateDescription || '');
+
+            const task = await prisma.complianceTask.create({
+                data: {
+                    workspaceId: workspace.id,
+                    obligationId: obl.id,
+                    status: 'pending',
+                    dueDate: dueDate,
+                    period: '2025/2026 Cycle'
+                }
+            });
+
+            // Schedule notification 7 days before
+            if (dueDate) {
+                const scheduledFor = new Date(dueDate);
+                scheduledFor.setDate(scheduledFor.getDate() - 7);
+                scheduledFor.setHours(9, 0, 0, 0);
+
+                if (scheduledFor > new Date()) {
+                    for (const member of members) {
+                        await prisma.scheduledNotification.create({
+                            data: {
+                                complianceTaskId: task.id,
+                                recipientId: member.userId,
+                                notificationType: 'compliance_reminder',
+                                scheduledFor: scheduledFor,
+                                status: 'pending'
+                            }
+                        });
+                    }
+                }
+            }
+        }
     }
 
     console.log('✅ Compliance Reset Complete.');

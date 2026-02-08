@@ -128,7 +128,7 @@ export async function createMatter(data: {
     caseNumber?: string | null;
     name: string;
     clientId?: string | null;
-    clientNameRaw?: string | null;
+    clientName?: string | null; // New field for auto-creation
     lawyerAssociations: { lawyerId: string; role: string; isAppearing?: boolean }[];
     workspaceId: string;
     court?: string;
@@ -143,14 +143,47 @@ export async function createMatter(data: {
     if (!session?.user) return { success: false, error: 'Unauthorized' };
 
     try {
+        let finalClientId = data.clientId;
+        let isNewClient = false;
+
+        // 1. DATA UNIFICATION: Find or Create Client
+        if (!finalClientId && data.clientName) {
+            // Check if client exists (case insensitive)
+            const existingClient = await prisma.client.findFirst({
+                where: {
+                    workspaceId: data.workspaceId,
+                    name: { equals: data.clientName, mode: 'insensitive' }
+                }
+            });
+
+            if (existingClient) {
+                finalClientId = existingClient.id;
+            } else {
+                // Create a placeholder client
+                const newClient = await prisma.client.create({
+                    data: {
+                        name: data.clientName,
+                        email: `${data.clientName.toLowerCase().replace(/\s+/g, '.')}@placeholder.reforma.legal`,
+                        workspaceId: data.workspaceId,
+                        status: 'active'
+                    }
+                });
+                finalClientId = newClient.id;
+                isNewClient = true;
+            }
+        }
+
+        if (!finalClientId) {
+            return { success: false, error: 'Client identification is mandatory.' };
+        }
+
+        // 2. Create Matter and Brief
         const matter = await prisma.matter.create({
             data: {
                 caseNumber: data.caseNumber || null,
                 name: data.name,
-                // Strict Client Linkage
-                clientId: data.clientId || null,
-                // Only use raw name if NO ID provided (legacy support), otherwise null to prevent fragmentation
-                clientNameRaw: data.clientId ? null : (data.clientNameRaw || null),
+                clientId: finalClientId,
+                clientNameRaw: null, // Fully deprecated in favor of strict linkage
                 workspaceId: data.workspaceId,
                 court: data.court,
                 judge: data.judge,
@@ -166,17 +199,17 @@ export async function createMatter(data: {
                         isAppearing: assoc.isAppearing || false
                     }))
                 },
-                // Auto-create a linked Brief to maintain hierarchy
+                // Auto-create a linked Brief with deterministic naming
                 briefs: {
                     create: {
-                        name: `Litigation File: ${data.name}`,
+                        name: `${data.clientName || 'Client'} v Opposing Party - ${data.court || 'Court'}`,
                         briefNumber: `LIT-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
-                        clientId: data.clientId || undefined,
+                        clientId: finalClientId,
                         workspaceId: data.workspaceId,
                         lawyerId: session.user.id,
                         category: 'Litigation',
                         status: 'active',
-                        description: 'Automatically created for litigation matter.'
+                        description: `Automatically created for matter: ${data.name}`
                     }
                 }
             },
@@ -192,22 +225,20 @@ export async function createMatter(data: {
         });
 
         // Log activity
-        const performedBy = data.createdById || data.lawyerAssociations[0]?.lawyerId || 'system';
-        // Note: 'system' might fail FK constraints if not in DB, so createdById is preferred.
+        const performedBy = data.createdById || session.user.id;
 
         await prisma.matterActivityLog.create({
             data: {
                 matterId: matter.id,
                 activityType: 'matter_created',
-                description: `Matter "${matter.name}" created`,
+                description: `Matter "${matter.name}" created. Auto-linked to client and brief.`,
                 performedBy: performedBy,
             },
         });
 
-        // 1. If proceedings or proceedingDate were providing, record what happened (the sitting)
+        // 3. Proceedings / CourtDates (Rest of logic remains same but uses finalClientId)
         if (data.proceedings || data.proceedingDate) {
             const entryDate = data.proceedingDate || new Date();
-
             const appearingLawyerIds = data.lawyerAssociations
                 .filter(l => l.isAppearing)
                 .map(l => l.lawyerId);
@@ -216,7 +247,7 @@ export async function createMatter(data: {
                 data: {
                     matterId: matter.id,
                     briefId: matter.briefs[0].id,
-                    clientId: matter.clientId as string,
+                    clientId: finalClientId,
                     date: entryDate,
                     title: 'Initial Appearance',
                     proceedings: data.proceedings,
@@ -230,19 +261,17 @@ export async function createMatter(data: {
             });
         }
 
-        // 2. If nextCourtDate is provided, create a FUTURE entry for the calendar and schedule reminders
         if (data.nextCourtDate) {
             const futureCourtDate = await prisma.courtDate.create({
                 data: {
                     matterId: matter.id,
                     briefId: matter.briefs[0].id,
-                    clientId: matter.clientId as string,
+                    clientId: finalClientId,
                     date: data.nextCourtDate,
-                    title: 'Upcoming Hearing', // Default title for future entry
+                    title: 'Upcoming Hearing',
                 }
             });
 
-            // Schedule firm-wide notifications
             await scheduleAdjournmentNotifications(
                 matter.id,
                 futureCourtDate.id,
@@ -253,16 +282,10 @@ export async function createMatter(data: {
 
         revalidatePath('/calendar');
         revalidatePath('/management/clients');
-        return { success: true, matter };
+        return { success: true, matter, isNewClient };
     } catch (error: any) {
         console.error('Error creating matter:', error);
-        // Return detailed error for debugging (in production, sanitize this)
-        const errorMessage = error?.message || 'Failed to create matter';
-        // Check for unique constraint violation (P2002)
-        if (error?.code === 'P2002' && error?.meta?.target?.includes('caseNumber')) {
-            return { success: false, error: 'Case Number already exists. Please use a unique Number.' };
-        }
-        return { success: false, error: errorMessage };
+        return { success: false, error: error?.message || 'Failed to create matter' };
     }
 }
 

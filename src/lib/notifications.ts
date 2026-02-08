@@ -1,6 +1,6 @@
 import { prisma } from '@/lib/prisma';
 
-export type NotificationType = 'alert' | 'info' | 'success' | 'warning' | 'critical' | 'adjournment_reminder';
+export type NotificationType = 'alert' | 'info' | 'success' | 'warning' | 'critical' | 'adjournment_reminder' | 'compliance_reminder';
 export type RecipientType = 'lawyer' | 'client' | 'partner' | 'staff';
 export type Priority = 'low' | 'medium' | 'high' | 'critical';
 
@@ -13,6 +13,7 @@ interface CreateNotificationParams {
     priority?: Priority;
     relatedMatterId?: string;
     relatedBriefId?: string;
+    relatedComplianceTaskId?: string;
     channels?: string[]; // ['in-app', 'email']
 }
 
@@ -28,6 +29,7 @@ export async function createNotification(params: CreateNotificationParams) {
                 priority: params.priority || 'medium',
                 relatedMatterId: params.relatedMatterId,
                 relatedBriefId: params.relatedBriefId,
+                relatedComplianceTaskId: params.relatedComplianceTaskId,
                 channels: JSON.stringify(params.channels || ['in-app']),
                 status: 'unread',
             },
@@ -37,6 +39,56 @@ export async function createNotification(params: CreateNotificationParams) {
         console.error('Error creating notification:', error);
         return { success: false, error };
     }
+}
+
+// ... existing functions ...
+
+export async function notifyWorkspaceMembers(params: {
+    workspaceId: string,
+    title: string,
+    message: string,
+    type?: NotificationType,
+    priority?: Priority,
+    roles?: string[],
+    designations?: string[],
+    relatedMatterId?: string,
+    relatedBriefId?: string,
+    relatedComplianceTaskId?: string
+}) {
+    const members = await prisma.workspaceMember.findMany({
+        where: {
+            workspaceId: params.workspaceId,
+            status: 'active',
+            OR: [
+                params.roles ? { role: { in: params.roles } } : undefined,
+                params.designations ? { designation: { in: params.designations } } : undefined
+            ].filter((cond): cond is any => cond !== undefined)
+        }
+    });
+
+    // Fallback to workspace owner if no specific targets found
+    if (members.length === 0) {
+        const workspace = await prisma.workspace.findUnique({
+            where: { id: params.workspaceId },
+            select: { ownerId: true }
+        });
+        if (workspace) {
+            await createNotification({
+                ...params,
+                recipientId: workspace.ownerId,
+                recipientType: 'staff' // Default
+            });
+        }
+        return;
+    }
+
+    const notifications = members.map(member => createNotification({
+        ...params,
+        recipientId: member.userId,
+        recipientType: member.role as RecipientType,
+    }));
+
+    await Promise.all(notifications);
 }
 
 export async function notifyBriefAssigned(brief: any) {
@@ -100,49 +152,4 @@ export async function notifyExpenseRecorded(expense: any, workspaceId: string) {
     await Promise.all(notifications);
 }
 
-export async function notifyWorkspaceMembers(params: {
-    workspaceId: string,
-    title: string,
-    message: string,
-    type?: NotificationType,
-    priority?: Priority,
-    roles?: string[],
-    designations?: string[],
-    relatedMatterId?: string,
-    relatedBriefId?: string
-}) {
-    const members = await prisma.workspaceMember.findMany({
-        where: {
-            workspaceId: params.workspaceId,
-            status: 'active',
-            OR: [
-                params.roles ? { role: { in: params.roles } } : undefined,
-                params.designations ? { designation: { in: params.designations } } : undefined
-            ].filter((cond): cond is any => cond !== undefined)
-        }
-    });
-
-    // Fallback to workspace owner if no specific targets found
-    if (members.length === 0) {
-        const workspace = await prisma.workspace.findUnique({
-            where: { id: params.workspaceId },
-            select: { ownerId: true }
-        });
-        if (workspace) {
-            await createNotification({
-                ...params,
-                recipientId: workspace.ownerId,
-                recipientType: 'staff' // Default
-            });
-        }
-        return;
-    }
-
-    const notifications = members.map(member => createNotification({
-        ...params,
-        recipientId: member.userId,
-        recipientType: member.role as RecipientType,
-    }));
-
-    await Promise.all(notifications);
-}
+// notifyWorkspaceMembers is already defined above with compliance support
