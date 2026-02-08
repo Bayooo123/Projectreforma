@@ -1,0 +1,237 @@
+.dashboardContainer {
+    animation: fadeIn 0.4s ease-out;
+}
+
+.tierNav {
+    display: flex;
+    gap: 12px;
+    padding: 8px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    width: fit-content;
+    margin-bottom: 32px;
+    box-shadow: var(--shadow-sm);
+}
+
+.tierButton {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 18px;
+    border-radius: var(--radius-md);
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    transition: all 0.2s var(--ease-fluid);
+    border: none;
+    background: transparent;
+    cursor: pointer;
+}
+
+.tierButton:hover {
+    color: var(--text-primary);
+    background: var(--accent);
+}
+
+.tierButton.active {
+    color: var(--text-inverse);
+    background: var(--primary);
+    box-shadow: 0 4px 12px rgba(142, 47, 57, 0.25);
+}
+
+.tableWrapper {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-xl);
+    overflow: hidden;
+    box-shadow: var(--shadow-md);
+    transition: box-shadow 0.3s ease;
+}
+
+.tableWrapper:hover {
+    box-shadow: var(--shadow-lg);
+}
+
+.complianceTable {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+.tableHeader {
+    background: var(--surface-subtle);
+    border-bottom: 1px solid var(--border);
+}
+
+.tableHeader th {
+    padding: 20px 24px;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.tableRow {
+    transition: all 0.2s var(--ease-fluid);
+}
+
+.tableRow:hover {
+    background: var(--surface-subtle);
+}
+
+.tableCell {
+    padding: 24px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: middle;
+}
+
+.obligationCell {
+    max-width: 320px;
+}
+
+.obligationTitle {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 4px;
+}
+
+.obligationDesc {
+    font-size: 13px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+}
+
+.regulatorBadge {
+    display: inline-flex;
+    padding: 4px 10px;
+    background: var(--accent);
+    color: var(--text-primary);
+    border-radius: var(--radius-sm);
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.dueDateText {
+    font-family: var(--font-dm-sans);
+    font-weight: 500;
+    color: var(--text-primary);
+    font-size: 14px;
+}
+
+/* Status Badges */
+.statusBadge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 100px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.status-pending {
+    background: #F3F4F6;
+    color: #4B5563;
+}
+
+.status-due_soon {
+    background: #FFFBEB;
+    color: #D97706;
+}
+
+.status-overdue {
+    background: #FEF2F2;
+    color: #DC2626;
+}
+
+.status-concluded {
+    background: #ECFDF5;
+    color: #059669;
+}
+
+/* Action Buttons */
+.uploadBtn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: all 0.2s var(--ease-fluid);
+}
+
+.uploadBtn:hover:not(:disabled) {
+    background: var(--accent);
+    border-color: var(--text-tertiary);
+    transform: translateY(-1px);
+}
+
+.uploadBtn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.viewBtn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background: var(--red-bg);
+    color: var(--red-text);
+    border-radius: var(--radius-md);
+    font-size: 13px;
+    font-weight: 600;
+    transition: all 0.2s var(--ease-fluid);
+}
+
+.viewBtn:hover {
+    background: var(--primary);
+    color: var(--text-inverse);
+    transform: translateY(-1px);
+}
+
+.emptyState {
+    padding: 64px 24px;
+    text-align: center;
+}
+
+.emptyText {
+    color: var(--text-tertiary);
+    font-size: 16px;
+    font-weight: 500;
+}
+
+/* Dark Mode Overrides */
+:global(.dark) .tierNav {
+    background: var(--surface);
+    border-color: var(--border);
+}
+
+:global(.dark) .tierButton.active {
+    background: var(--primary);
+    color: white;
+}
+
+:global(.dark) .tableWrapper {
+    background: var(--surface);
+    border-color: var(--border);
+}
+
+:global(.dark) .status-pending {
+    background: rgba(255, 255, 255, 0.05);
+    color: #9CA3AF;
+}
+
+:global(.dark) .uploadBtn {
+    background: var(--surface);
+    border-color: var(--border);
+    color: var(--text-primary);
+}

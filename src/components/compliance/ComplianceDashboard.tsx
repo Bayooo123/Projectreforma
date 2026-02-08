@@ -3,7 +3,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { getComplianceTasks, ComplianceTask } from "@/app/actions/compliance";
 import ComplianceTable from "./ComplianceTable";
-import { Loader2 } from "lucide-react";
+import { Loader2, MapPin, Map, Building2, Globe } from "lucide-react";
+import styles from "./Compliance.module.css";
 
 interface ComplianceDashboardProps {
     workspaceId: string;
@@ -31,35 +32,34 @@ export default function ComplianceDashboard({ workspaceId }: ComplianceDashboard
         fetchTasks();
     }, [fetchTasks]);
 
-    const tabs: Tier[] = ['Local', 'State', 'Federal', 'International'];
+    const tabs: { label: Tier; icon: any }[] = [
+        { label: 'Local', icon: MapPin },
+        { label: 'State', icon: Map },
+        { label: 'Federal', icon: Building2 },
+        { label: 'International', icon: Globe },
+    ];
 
     return (
-        <div className="space-y-6">
+        <div className={styles.dashboardContainer}>
             {/* Tier Navigation */}
-            <div className="border-b border-slate-200 dark:border-slate-800">
-                <div className="flex gap-8">
-                    {tabs.map((tier) => (
-                        <button
-                            key={tier}
-                            onClick={() => setActiveTier(tier)}
-                            className={`pb-4 text-sm font-semibold transition-all relative ${activeTier === tier
-                                    ? 'text-red-600 dark:text-red-400'
-                                    : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300'
-                                }`}
-                        >
-                            {tier}
-                            {activeTier === tier && (
-                                <span className="absolute bottom-0 left-0 w-full h-0.5 bg-red-600 dark:bg-red-400" />
-                            )}
-                        </button>
-                    ))}
-                </div>
+            <div className={styles.tierNav}>
+                {tabs.map((tab) => (
+                    <button
+                        key={tab.label}
+                        onClick={() => setActiveTier(tab.label)}
+                        className={`${styles.tierButton} ${activeTier === tab.label ? styles.active : ''}`}
+                    >
+                        <tab.icon size={18} />
+                        <span>{tab.label}</span>
+                    </button>
+                ))}
             </div>
 
             {/* Content Area */}
             {loading ? (
-                <div className="py-12 flex justify-center text-slate-400">
-                    <Loader2 className="animate-spin" size={24} />
+                <div className="py-24 flex flex-col items-center justify-center text-slate-400 gap-4">
+                    <Loader2 className="animate-spin text-primary" size={32} />
+                    <p className="text-sm font-medium animate-pulse">Synchronizing obligations...</p>
                 </div>
             ) : (
                 <ComplianceTable
