@@ -57,7 +57,15 @@ export async function getBriefs(workspaceId: string) {
 export async function getLawyersForWorkspace(workspaceId: string) {
     try {
         const members = await prisma.workspaceMember.findMany({
-            where: { workspaceId },
+            where: {
+                workspaceId,
+                // Exclude characters known to be non-legal support
+                NOT: [
+                    { designation: { contains: 'Practice Manager', mode: 'insensitive' } },
+                    { designation: { contains: 'Head of IT', mode: 'insensitive' } },
+                    { user: { email: { in: ['henrietta@abiolasanniandco.com', 'deji@abiolasanniandco.com'] } } }
+                ]
+            },
             include: {
                 user: {
                     select: {
@@ -74,6 +82,7 @@ export async function getLawyersForWorkspace(workspaceId: string) {
             name: m.user.name || m.user.email,
             email: m.user.email,
             role: m.role,
+            designation: m.designation
         }));
     } catch (error) {
         console.error('Error fetching lawyers:', error);

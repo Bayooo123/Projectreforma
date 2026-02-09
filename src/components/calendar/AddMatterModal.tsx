@@ -44,6 +44,8 @@ const AddMatterModal = ({ isOpen, onClose, workspaceId, userId, onSuccess }: Add
     const [selectedClient, setSelectedClient] = useState<Client | null>(null);
     const [isClientDropdownOpen, setIsClientDropdownOpen] = useState(false);
     const [selectedLawyerIds, setSelectedLawyerIds] = useState<string[]>([]);
+    const [isExternalCounsel, setIsExternalCounsel] = useState(false);
+    const [externalCounselName, setExternalCounselName] = useState('');
     const [isLoadingClients, setIsLoadingClients] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const router = useRouter();
@@ -110,7 +112,8 @@ const AddMatterModal = ({ isOpen, onClose, workspaceId, userId, onSuccess }: Add
                     role: 'appearing',
                     isAppearing: true
                 })),
-                createdById: userId
+                createdById: userId,
+                externalCounselName: isExternalCounsel ? externalCounselName : undefined
             });
 
             if (result.success && result.matter) {
@@ -134,6 +137,8 @@ const AddMatterModal = ({ isOpen, onClose, workspaceId, userId, onSuccess }: Add
                 setProceedingDate(new Date().toISOString().split('T')[0]);
                 setCourtSummary('');
                 setSelectedLawyerIds([]);
+                setIsExternalCounsel(false);
+                setExternalCounselName('');
 
                 onSuccess?.();
                 onClose();
@@ -286,7 +291,30 @@ const AddMatterModal = ({ isOpen, onClose, workspaceId, userId, onSuccess }: Add
                                 ) : (
                                     <p className="text-xs text-slate-400 italic">Loading firm directory...</p>
                                 )}
+                                <button
+                                    type="button"
+                                    onClick={() => setIsExternalCounsel(!isExternalCounsel)}
+                                    className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${isExternalCounsel
+                                        ? 'bg-indigo-600 text-white'
+                                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                                        }`}
+                                >
+                                    + External Counsel
+                                </button>
                             </div>
+                            {isExternalCounsel && (
+                                <div className="mt-2">
+                                    <input
+                                        type="text"
+                                        placeholder="Enter External Counsel Name"
+                                        className={styles.input}
+                                        style={{ fontSize: '0.75rem', padding: '0.4rem 0.75rem' }}
+                                        value={externalCounselName}
+                                        onChange={(e) => setExternalCounselName(e.target.value)}
+                                        autoFocus
+                                    />
+                                </div>
+                            )}
                         </div>
 
                         <div className={styles.formGroup}>

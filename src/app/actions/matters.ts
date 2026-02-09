@@ -138,6 +138,7 @@ export async function createMatter(data: {
     proceedings?: string;
     proceedingDate?: Date;
     createdById?: string;
+    externalCounselName?: string;
 }) {
     const session = await auth();
     if (!session?.user) return { success: false, error: 'Unauthorized' };
@@ -254,6 +255,7 @@ export async function createMatter(data: {
                     submittingLawyerId: session.user.id,
                     submittingLawyerToken: session.user.lawyerToken,
                     submittingLawyerName: session.user.name,
+                    externalCounsel: data.externalCounselName || null,
                     appearances: appearingLawyerIds.length > 0 ? {
                         connect: appearingLawyerIds.map(id => ({ id }))
                     } : undefined
@@ -436,7 +438,8 @@ export async function adjournMatter(
     performedBy: string,
     appearanceLawyerIds?: string[],
     proceedingDate?: Date,
-    pin?: string
+    pin?: string,
+    externalCounselName?: string
 ) {
     const session = await auth();
     if (!session?.user) return { success: false, error: 'Unauthorized' };
@@ -491,6 +494,7 @@ export async function adjournMatter(
                 date: dateOfEvent,
                 proceedings,
                 adjournedFor: adjournedFor || null,
+                externalCounsel: externalCounselName || null,
                 submittingLawyerId: session.user.id,
                 submittingLawyerToken: session.user.lawyerToken,
                 submittingLawyerName: session.user.name,

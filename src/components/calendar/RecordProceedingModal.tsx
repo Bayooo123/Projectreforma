@@ -34,6 +34,7 @@ interface Lawyer {
     name: string | null;
     email: string | null;
     role: string;
+    designation?: string | null;
 }
 
 const RecordProceedingModal = ({ isOpen, onClose, workspaceId, userId, onSuccess }: RecordProceedingModalProps) => {
@@ -57,6 +58,8 @@ const RecordProceedingModal = ({ isOpen, onClose, workspaceId, userId, onSuccess
     const [nextDate, setNextDate] = useState('');
     const [selectedLawyerIds, setSelectedLawyerIds] = useState<string[]>([]);
     const [pin, setPin] = useState('');
+    const [isExternalCounsel, setIsExternalCounsel] = useState(false);
+    const [externalCounselName, setExternalCounselName] = useState('');
 
     // UI State
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -72,6 +75,8 @@ const RecordProceedingModal = ({ isOpen, onClose, workspaceId, userId, onSuccess
             setProceedings('');
             setNextDate('');
             setPin('');
+            setIsExternalCounsel(false);
+            setExternalCounselName('');
             setSelectedLawyerIds([userId]);
         }
     }, [isOpen, workspaceId]);
@@ -122,7 +127,8 @@ const RecordProceedingModal = ({ isOpen, onClose, workspaceId, userId, onSuccess
                 userId,
                 selectedLawyerIds.length > 0 ? selectedLawyerIds : [userId],
                 new Date(courtDate),
-                pin
+                pin,
+                isExternalCounsel ? externalCounselName : undefined
             );
 
             if (result.success) {
@@ -269,7 +275,28 @@ const RecordProceedingModal = ({ isOpen, onClose, workspaceId, userId, onSuccess
                                         ) : (
                                             <p className="text-[10px] text-slate-400 italic">Loading...</p>
                                         )}
+                                        <button
+                                            type="button"
+                                            onClick={() => setIsExternalCounsel(!isExternalCounsel)}
+                                            className={`${styles.lawyerButton} ${isExternalCounsel ? styles.lawyerButtonSelected : ''}`}
+                                            style={{ backgroundColor: isExternalCounsel ? '#6366f1' : undefined, color: isExternalCounsel ? 'white' : undefined }}
+                                        >
+                                            + External Counsel
+                                        </button>
                                     </div>
+                                    {isExternalCounsel && (
+                                        <div className="mt-2">
+                                            <input
+                                                type="text"
+                                                placeholder="Enter External Counsel Name"
+                                                className={styles.input}
+                                                style={{ fontSize: '0.75rem', padding: '0.4rem 0.75rem' }}
+                                                value={externalCounselName}
+                                                onChange={(e) => setExternalCounselName(e.target.value)}
+                                                autoFocus
+                                            />
+                                        </div>
+                                    )}
                                 </div>
                             </div>
 

@@ -276,6 +276,7 @@ model CourtDate {
   proceedings            String?
   outcome                String?
   adjournedFor           String?
+  externalCounsel        String?
   submittingLawyerId     String?
   submittingLawyerToken  String?
   submittingLawyerName   String?
