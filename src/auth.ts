@@ -29,7 +29,8 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
                         throw new Error('Invalid Invite Link');
                     }
 
-                    const { email, password } = credentials as any;
+                    const password = (credentials as any).password;
+                    const email = ((credentials as any).email as string).toLowerCase();
 
                     const user = await prisma.user.findUnique({
                         where: { email },
@@ -68,7 +69,9 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
                     .safeParse(credentials);
 
                 if (parsedCredentials.success) {
-                    const { email, password, firmCode, firmPassword } = parsedCredentials.data;
+                    const { password, firmPassword } = parsedCredentials.data;
+                    const email = parsedCredentials.data.email.toLowerCase();
+                    const firmCode = parsedCredentials.data.firmCode?.toLowerCase();
 
                     // If firmCode provided, Validate Firm
                     let workspaceId: string | null = null;

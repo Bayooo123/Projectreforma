@@ -62,7 +62,7 @@ export async function register(
     formData: FormData,
 ) {
     const name = formData.get('name') as string;
-    const email = formData.get('email') as string;
+    const email = (formData.get('email') as string).toLowerCase();
     const firmName = formData.get('firmName') as string;
 
     // BLOCK NEW SIGNUPS (LOCKED FOR APRIL LAUNCH)
@@ -85,7 +85,7 @@ export async function registerMember(
     formData: FormData,
 ) {
     const name = formData.get('name') as string;
-    const email = formData.get('email') as string;
+    const email = (formData.get('email') as string).toLowerCase();
     const password = formData.get('password') as string;
     const phone = formData.get('phone') as string;
     const inviteToken = formData.get('inviteToken') as string;
