@@ -56,6 +56,7 @@ const RecordProceedingModal = ({ isOpen, onClose, workspaceId, userId, onSuccess
     // Adjournment State
     const [nextDate, setNextDate] = useState('');
     const [selectedLawyerIds, setSelectedLawyerIds] = useState<string[]>([]);
+    const [pin, setPin] = useState('');
 
     // UI State
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -68,7 +69,9 @@ const RecordProceedingModal = ({ isOpen, onClose, workspaceId, userId, onSuccess
             setSearchQuery('');
             setCourtDate(new Date().toISOString().split('T')[0]);
             setProceedings('');
+            setProceedings('');
             setNextDate('');
+            setPin('');
             setSelectedLawyerIds([userId]);
         }
     }, [isOpen, workspaceId]);
@@ -118,7 +121,8 @@ const RecordProceedingModal = ({ isOpen, onClose, workspaceId, userId, onSuccess
                 undefined,
                 userId,
                 selectedLawyerIds.length > 0 ? selectedLawyerIds : [userId],
-                new Date(courtDate)
+                new Date(courtDate),
+                pin
             );
 
             if (result.success) {
@@ -281,6 +285,20 @@ const RecordProceedingModal = ({ isOpen, onClose, workspaceId, userId, onSuccess
                                     autoFocus
                                     required
                                 />
+                            </div>
+
+                            <div className={styles.formSection}>
+                                <label className={styles.label}>Litigation Security PIN</label>
+                                <input
+                                    type="password"
+                                    maxLength={5}
+                                    placeholder="Enter 5-digit PIN"
+                                    className={styles.input}
+                                    value={pin}
+                                    onChange={(e) => setPin(e.target.value)}
+                                    style={{ width: '150px', letterSpacing: '0.2rem', textAlign: 'center' }}
+                                />
+                                <p className="text-[10px] text-slate-400 mt-1">Required if your firm has enabled Litigation Security.</p>
                             </div>
 
                             <div className="border-t border-slate-200 pt-4 mt-6">

@@ -435,7 +435,8 @@ export async function adjournMatter(
     adjournedFor: string | undefined | null,
     performedBy: string,
     appearanceLawyerIds?: string[],
-    proceedingDate?: Date
+    proceedingDate?: Date,
+    pin?: string
 ) {
     const session = await auth();
     if (!session?.user) return { success: false, error: 'Unauthorized' };
@@ -454,6 +455,16 @@ export async function adjournMatter(
         });
 
         if (!matterCheck) return { success: false, error: 'Matter not found' };
+
+        // Litigation PIN Check
+        if (matterCheck.workspace.litigationPin) {
+            if (!pin) {
+                return { success: false, error: 'Litigation PIN is required to record proceedings.' };
+            }
+            if (pin !== matterCheck.workspace.litigationPin) {
+                return { success: false, error: 'Invalid Litigation PIN.' };
+            }
+        }
 
         const briefId = matterCheck.briefs[0]?.id;
         const clientId = matterCheck.clientId;

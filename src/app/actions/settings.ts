@@ -5,7 +5,7 @@ import { revalidatePath } from 'next/cache';
 
 export async function updateWorkspaceSettings(
     workspaceId: string,
-    data: { letterheadUrl?: string | null; firmCode?: string | null; joinPassword?: string | null; revenuePin?: string | null }
+    data: { letterheadUrl?: string | null; firmCode?: string | null; joinPassword?: string | null; revenuePin?: string | null; litigationPin?: string | null }
 ) {
     try {
         const workspace = await prisma.workspace.update({
@@ -27,7 +27,7 @@ export async function getWorkspaceSettings(workspaceId: string) {
     try {
         const workspace = await prisma.workspace.findUnique({
             where: { id: workspaceId },
-            select: { id: true, name: true, firmCode: true, letterheadUrl: true, revenuePin: true }
+            select: { id: true, name: true, firmCode: true, letterheadUrl: true, revenuePin: true, litigationPin: true }
         });
         return { success: true, workspace };
     } catch (error) {

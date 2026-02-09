@@ -432,6 +432,62 @@ const WorkspaceSettingsModal = ({ isOpen, onClose, workspaceId, currentLetterhea
                                 </div>
                             </div>
 
+                            {/* Litigation PIN Section */}
+                            <div style={{ marginBottom: '1.5rem', paddingTop: '1.5rem', borderTop: '1px solid var(--border)' }}>
+                                <h4 style={{ fontSize: '0.9rem', fontWeight: 600, marginBottom: '0.5rem', color: 'var(--text-primary)' }}>Litigation Security</h4>
+                                <p className={styles.subtitle} style={{ marginBottom: '1rem' }}>
+                                    Set a 5-digit PIN required to record court proceedings. Leave blank to disable.
+                                </p>
+                                <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-end' }}>
+                                    <div style={{ flex: 1 }}>
+                                        <label className={styles.formLabel}>Litigation PIN</label>
+                                        <input
+                                            name="litigationPin"
+                                            type="password"
+                                            maxLength={5}
+                                            placeholder="-----"
+                                            className={styles.input}
+                                            style={{ width: '100%', padding: '0.75rem', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', textAlign: 'center', letterSpacing: '0.25rem' }}
+                                        />
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={async (e) => {
+                                            const input = (e.currentTarget.previousElementSibling?.querySelector('input') as HTMLInputElement);
+                                            const pin = input?.value;
+
+                                            // Allow setting blank to disable (if empty string)
+                                            if (pin && pin.length !== 5) {
+                                                alert('Please enter exactly 5 digits to set a PIN, or leave blank to disable.');
+                                                return;
+                                            }
+
+                                            // Call action
+                                            const { updateWorkspaceSettings } = await import('@/app/actions/settings');
+                                            const res = await updateWorkspaceSettings(workspaceId, { litigationPin: pin || null });
+
+                                            if (res.success) {
+                                                alert(pin ? 'Litigation PIN set successfully' : 'Litigation PIN disabled');
+                                            } else {
+                                                alert('Failed to set PIN: ' + res.error);
+                                            }
+                                        }}
+                                        style={{
+                                            padding: '0.75rem 1rem',
+                                            background: 'var(--surface)',
+                                            border: '1px solid var(--border)',
+                                            borderRadius: 'var(--radius-md)',
+                                            cursor: 'pointer',
+                                            color: 'var(--text-primary)',
+                                            fontWeight: 500
+                                        }}
+                                    >
+                                        {/* Dynamic label? For now just Set PIN */}
+                                        Set PIN
+                                    </button>
+                                </div>
+                            </div>
+
                             {accessState.errors?._form && (
                                 <div style={{ color: '#dc2626', background: '#fee2e2', padding: '0.75rem', borderRadius: '4px', marginBottom: '1rem' }}>
                                     {accessState.errors._form[0]}

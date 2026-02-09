@@ -22,6 +22,7 @@ model Workspace {
   joinPassword      String?
   letterheadUrl     String?
   revenuePin        String?
+  litigationPin     String?
   inviteLinkToken   String?               @unique
   bankAccounts      BankAccount[]
   briefs            Brief[]
