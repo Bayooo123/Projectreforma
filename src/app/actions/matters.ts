@@ -439,7 +439,8 @@ export async function adjournMatter(
     appearanceLawyerIds?: string[],
     proceedingDate?: Date,
     pin?: string,
-    externalCounselName?: string
+    externalCounselName?: string,
+    judge?: string
 ) {
     const session = await auth();
     if (!session?.user) return { success: false, error: 'Unauthorized' };
@@ -495,6 +496,7 @@ export async function adjournMatter(
                 proceedings,
                 adjournedFor: adjournedFor || null,
                 externalCounsel: externalCounselName || null,
+                judge: judge || null,
                 submittingLawyerId: session.user.id,
                 submittingLawyerToken: session.user.lawyerToken,
                 submittingLawyerName: session.user.name,
@@ -665,12 +667,18 @@ export async function updateMatterStatus(
 }
 
 /**
- * Update specifically the "What Happened in Court" (proceedings) for a given Court Date
- * Note: This allows updating the narrative without adjourning.
+ * Update specifically the court date record fields (proceedings, judge, etc.)
  */
-export async function updateCourtProceedings(
+export async function updateCourtDate(
     courtDateId: string,
-    proceedings: string,
+    data: {
+        proceedings?: string;
+        judge?: string;
+        title?: string;
+        adjournedFor?: string;
+        externalCounsel?: string;
+        appearanceLawyerIds?: string[];
+    },
     performedBy: string
 ) {
     const session = await auth();
@@ -688,16 +696,24 @@ export async function updateCourtProceedings(
 
         if (!courtDate) return { success: false, error: 'Court date record not found' };
 
-        // RBAC Check: Only the original submitting lawyer can update their proceedings record
+        // RBAC Check: Only the original submitting lawyer or owner can update
         const { matter } = courtDate;
         if (courtDate.submittingLawyerId && courtDate.submittingLawyerId !== session.user.id && matter.workspace.ownerId !== session.user.id) {
             return { success: false, error: 'Permission denied: Only the lawyer who recorded this proceeding can edit it.' };
         }
 
+        const { appearanceLawyerIds, ...rest } = data;
+
         // Update the record
         const updatedRecord = await prisma.courtDate.update({
             where: { id: courtDateId },
-            data: { proceedings }
+            data: {
+                ...rest,
+                appearances: appearanceLawyerIds ? {
+                    set: [], // Clear first
+                    connect: appearanceLawyerIds.map(id => ({ id }))
+                } : undefined
+            }
         });
 
         revalidatePath('/calendar');
@@ -706,7 +722,7 @@ export async function updateCourtProceedings(
         return { success: true, courtDate: updatedRecord };
 
     } catch (error) {
-        console.error('Error updating proceedings:', error);
-        return { success: false, error: 'Failed to update proceedings' };
+        console.error('Error updating court date:', error);
+        return { success: false, error: 'Failed to update court date' };
     }
 }

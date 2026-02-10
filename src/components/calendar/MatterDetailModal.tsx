@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { X, Calendar, User, MapPin, FileText, AlertCircle, Loader, Building, Edit, Trash2 } from 'lucide-react';
-import { adjournMatter, addMatterNote, updateMatter, deleteMatter } from '@/app/actions/matters';
+import { adjournMatter, addMatterNote, updateMatter, deleteMatter, updateCourtDate } from '@/app/actions/matters';
 import { getLawyersForWorkspace } from '@/lib/briefs';
 import styles from './MatterDetailModal.module.css';
 
@@ -38,6 +38,8 @@ interface Matter {
         title: string | null;
         proceedings: string | null;
         adjournedFor: string | null;
+        judge: string | null;
+        externalCounsel: string | null;
         appearances: { id: string; name: string | null }[];
     }[];
 }
@@ -76,6 +78,8 @@ const MatterDetailModal = ({ isOpen, onClose, matter, userId }: MatterDetailModa
     const [isEditMode, setIsEditMode] = useState(false);
     const [editedMatter, setEditedMatter] = useState(matter);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [editingJudgeId, setEditingJudgeId] = useState<string | null>(null);
+    const [editingJudgeValue, setEditingJudgeValue] = useState('');
 
     // Sync editedMatter when matter prop updates from background fetch
     useEffect(() => {
@@ -202,6 +206,28 @@ const MatterDetailModal = ({ isOpen, onClose, matter, userId }: MatterDetailModa
         }
     };
 
+    const handleUpdateJudge = async (courtDateId: string) => {
+        setIsSubmitting(true);
+        try {
+            const result = await updateCourtDate(
+                courtDateId,
+                { judge: editingJudgeValue },
+                userId
+            );
+
+            if (result.success) {
+                setEditingJudgeId(null);
+            } else {
+                alert('Failed to update judge: ' + result.error);
+            }
+        } catch (error) {
+            console.error('Error updating judge:', error);
+            alert('An error occurred while updating judge');
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
     const handleDelete = async () => {
         if (!confirm(`Are you sure you want to delete "${matter.name}"? This action cannot be undone.`)) {
             return;
@@ -288,13 +314,13 @@ const MatterDetailModal = ({ isOpen, onClose, matter, userId }: MatterDetailModa
                             <User size={16} className={styles.icon} />
                             <div>
                                 <span className={styles.label}>Judge</span>
-                                <p className={styles.value}>{matter.judge || 'Not assigned'}</p>
+                                <p className={styles.value}>{matter.judge || '—'}</p>
                             </div>
                         </div>
                         <div className={styles.metaItem}>
                             <User size={16} className={styles.icon} />
                             <div>
-                                <span className={styles.label}>Legal Team</span>
+                                <span className={styles.label}>Appearing Counsel</span>
                                 <div className={styles.value}>
                                     {matter.lawyers && matter.lawyers.length > 0 ? (
                                         <div className="flex flex-col gap-1 mt-1">
@@ -306,7 +332,7 @@ const MatterDetailModal = ({ isOpen, onClose, matter, userId }: MatterDetailModa
                                             ))}
                                         </div>
                                     ) : (
-                                        <p>Unassigned</p>
+                                        <p>—</p>
                                     )}
                                 </div>
                             </div>
@@ -393,15 +419,64 @@ const MatterDetailModal = ({ isOpen, onClose, matter, userId }: MatterDetailModa
                                             )}
 
                                             {/* Appearances */}
-                                            {date.appearances && date.appearances.length > 0 && (
-                                                <div className="flex gap-1 mt-1">
+                                            {(date.appearances && date.appearances.length > 0 || date.externalCounsel) && (
+                                                <div className="flex flex-wrap gap-1 mt-1">
                                                     {date.appearances.map(lawyer => (
                                                         <span key={lawyer.id} className="text-xs text-slate-500 bg-white border border-slate-200 px-2 py-0.5 rounded-sm">
                                                             {lawyer.name}
                                                         </span>
                                                     ))}
+                                                    {date.externalCounsel && (
+                                                        <span className="text-xs text-blue-600 bg-blue-50 border border-blue-100 px-2 py-0.5 rounded-sm italic">
+                                                            {date.externalCounsel} (External)
+                                                        </span>
+                                                    )}
                                                 </div>
                                             )}
+
+                                            {/* Judge / Presiding Officer */}
+                                            <div className="flex items-center gap-2 mt-2">
+                                                <User size={12} className="text-slate-400" />
+                                                {editingJudgeId === date.id ? (
+                                                    <div className="flex gap-1 items-center">
+                                                        <input
+                                                            type="text"
+                                                            className="text-xs border rounded px-1 py-0.5"
+                                                            value={editingJudgeValue}
+                                                            onChange={(e) => setEditingJudgeValue(e.target.value)}
+                                                            autoFocus
+                                                        />
+                                                        <button
+                                                            onClick={() => handleUpdateJudge(date.id)}
+                                                            className="text-[10px] bg-blue-600 text-white px-2 py-0.5 rounded"
+                                                            disabled={isSubmitting}
+                                                        >
+                                                            Save
+                                                        </button>
+                                                        <button
+                                                            onClick={() => setEditingJudgeId(null)}
+                                                            className="text-[10px] bg-slate-200 text-slate-600 px-2 py-0.5 rounded"
+                                                        >
+                                                            Cancel
+                                                        </button>
+                                                    </div>
+                                                ) : (
+                                                    <div className="group flex items-center gap-1">
+                                                        <span className="text-xs text-slate-500 font-medium">
+                                                            Judge: {date.judge || '—'}
+                                                        </span>
+                                                        <button
+                                                            onClick={() => {
+                                                                setEditingJudgeId(date.id);
+                                                                setEditingJudgeValue(date.judge || '');
+                                                            }}
+                                                            className="text-blue-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                        >
+                                                            <Edit size={10} />
+                                                        </button>
+                                                    </div>
+                                                )}
+                                            </div>
 
                                             {/* Footer or outcome info */}
                                             {date.adjournedFor && (
