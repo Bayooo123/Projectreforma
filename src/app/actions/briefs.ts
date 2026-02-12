@@ -306,7 +306,7 @@ export async function updateBrief(
 
         const membership = await prisma.workspaceMember.findFirst({
             where: {
-                userId: session.user.id,
+                userId: session.id,
                 workspaceId: existingBrief.workspaceId
             }
         });
@@ -361,7 +361,7 @@ export async function updateBrief(
                     briefId: id,
                     previousLawyerId: existingBrief.lawyerInChargeId,
                     newLawyerId: data.lawyerInChargeId,
-                    changedBy: session.user.id,
+                    changedBy: session.id,
                     reason: 'Manual reassignment',
                 },
             });
@@ -374,7 +374,7 @@ export async function updateBrief(
                     briefId: id,
                     activityType: 'brief_number_changed',
                     description: `Brief number changed from ${existingBrief.briefNumber} to ${data.customBriefNumber}`,
-                    performedBy: session.user.id,
+                    performedBy: session.id,
                 },
             });
         }
