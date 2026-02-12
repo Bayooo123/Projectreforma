@@ -154,7 +154,7 @@ export default function BriefListClient({ initialBriefs, workspaceId }: Omit<Bri
                                         </div>
                                     </td>
                                     <td className={styles.clientName}>{brief.client?.name || 'Unassigned'}</td>
-                                    <td className={styles.lawyerName}>{brief.lawyer?.name || 'Unassigned'}</td>
+                                    <td className={styles.lawyerName}>{brief.lawyerInCharge?.name || brief.lawyer?.name || 'Unassigned'}</td>
                                     <td>{brief.category}</td>
                                     <td className={styles.dateCell}>{brief.dueDate ? new Date(brief.dueDate).toLocaleDateString() : '-'}</td>
                                     <td>
