@@ -75,8 +75,8 @@ const AddMatterModal = ({ isOpen, onClose, workspaceId, userId, onSuccess }: Add
     useEffect(() => {
         if (!isNameOverridden) {
             const clientPart = clientSearch.trim() || 'Client';
-            const opponentPart = opponentName.trim() || 'Opposing Party';
-            setMatterName(`${clientPart} v ${opponentPart}`);
+            const opponentPart = opponentName.trim();
+            setMatterName(opponentPart ? `${clientPart} v ${opponentPart}` : clientPart);
         }
     }, [clientSearch, opponentName, isNameOverridden]);
 

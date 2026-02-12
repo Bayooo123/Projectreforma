@@ -9,6 +9,7 @@ import EditBriefModal from './EditBriefModal';
 import BriefActivityModal from './BriefActivityModal';
 import { useRouter } from 'next/navigation';
 import BriefUploadModal from './BriefUploadModal';
+import { getBriefDisplayTitle } from '@/lib/brief-display';
 
 interface BriefListClientProps {
     initialBriefs: any[];
@@ -148,7 +149,7 @@ export default function BriefListClient({ initialBriefs, workspaceId }: Omit<Bri
                                     <td>
                                         <div className={styles.briefInfo}>
                                             <Link href={`/briefs/${brief.id}`} className={styles.briefName}>
-                                                {brief.name}
+                                                {getBriefDisplayTitle(brief)}
                                             </Link>
                                             <span className={styles.briefRef}>{brief.ref}</span>
                                         </div>

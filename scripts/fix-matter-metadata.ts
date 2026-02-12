@@ -32,22 +32,20 @@ async function fixMetadata() {
             const updates: any = {};
             let shouldUpdate = false;
 
-            // --- A. Identify Opponent and Fix Title ---
             // Pattern: "Client v Opposing Party" or "X v Opposing Party"
-            if (matter.name.includes('Opposing Party')) {
+            if (matter.name.includes('Opposing Party') || matter.name.includes(' - ')) {
                 const clientName = matter.client?.name || 'Client';
+                let newName = matter.name;
 
-                // If the name is literally "Client v Opposing Party", we can't do much without user input
-                // but we can at least ensure structured fields are set if we find clues in proceedings.
-                // For now, we'll mark it for manual update by keeping the name but offering a better structure.
-
-                // Heuristic: Try to find opponent name in court proceedings
+                // 1. Try to find actual opponent name in court proceedings
                 let foundOpponent = null;
                 for (const cd of matter.courtDates) {
                     if (cd.proceedings?.includes('v.')) {
                         const parts = cd.proceedings.split('v.');
                         if (parts.length > 1) {
                             foundOpponent = parts[1].split('.')[0].trim();
+                            // Sanity check: don't use 'Opposing Party' as the found opponent
+                            if (foundOpponent.toLowerCase().includes('opposing party')) foundOpponent = null;
                             break;
                         }
                     }
@@ -55,10 +53,23 @@ async function fixMetadata() {
 
                 if (foundOpponent) {
                     updates.opponentName = foundOpponent;
-                    updates.name = `${clientName} v ${foundOpponent}`;
+                    newName = `${clientName} v ${foundOpponent}`;
+                } else if (matter.name.includes('v Opposing Party')) {
+                    // Strip the placeholder if no real opponent found
+                    newName = clientName;
+                }
+
+                // 2. Strip court suffixes like " - State High Court" 
+                // but only if they were likely auto-generated (contain a dash)
+                if (newName.includes(' - ')) {
+                    newName = newName.split(' - ')[0].trim();
+                }
+
+                if (newName !== matter.name) {
+                    updates.name = newName;
                     shouldUpdate = true;
                     titlesUpdated++;
-                    console.log(`✨ Updated title: "${matter.name}" -> "${updates.name}"`);
+                    console.log(`✨ Updated title: "${matter.name}" -> "${newName}"`);
                 }
             }
 
