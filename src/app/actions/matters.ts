@@ -178,7 +178,14 @@ export async function createMatter(data: {
             return { success: false, error: 'Client identification is mandatory.' };
         }
 
+
         // 2. Create Matter and Brief
+        // Determine the default lawyer in charge (first appearing counsel, or current user as fallback)
+        const appearingLawyerIds = data.lawyerAssociations
+            .filter(l => l.isAppearing)
+            .map(l => l.lawyerId);
+        const defaultLawyerInCharge = appearingLawyerIds[0] || session.user.id;
+
         const matter = await prisma.matter.create({
             data: {
                 caseNumber: data.caseNumber || null,
@@ -203,14 +210,19 @@ export async function createMatter(data: {
                 // Auto-create a linked Brief with deterministic naming
                 briefs: {
                     create: {
-                        name: `${data.clientName || 'Client'} v Opposing Party - ${data.court || 'Court'}`,
+                        // CRITICAL: Use matter name as brief title (source of truth)
+                        name: data.name,
                         briefNumber: `LIT-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
                         clientId: finalClientId,
                         workspaceId: data.workspaceId,
-                        lawyerId: session.user.id,
+                        lawyerId: session.user.id, // Creator
+                        lawyerInChargeId: defaultLawyerInCharge, // Appearing counsel
                         category: 'Litigation',
                         status: 'active',
-                        description: `Automatically created for matter: ${data.name}`
+                        description: `Automatically created for litigation matter: ${data.name}`,
+                        // NEW: Mark as litigation-derived
+                        isLitigationDerived: true,
+                        customTitle: null, // No override initially
                     }
                 }
             },
@@ -225,6 +237,8 @@ export async function createMatter(data: {
             },
         });
 
+
+
         // Log activity
         const performedBy = data.createdById || session.user.id;
 
@@ -236,6 +250,20 @@ export async function createMatter(data: {
                 performedBy: performedBy,
             },
         });
+
+        // Create audit entry for initial lawyer in charge assignment
+        if (matter.briefs[0]) {
+            await prisma.briefLawyerHistory.create({
+                data: {
+                    briefId: matter.briefs[0].id,
+                    previousLawyerId: null,
+                    newLawyerId: defaultLawyerInCharge,
+                    changedBy: session.user.id,
+                    reason: 'Initial assignment from court appearance',
+                },
+            });
+        }
+
 
         // 3. Proceedings / CourtDates (Rest of logic remains same but uses finalClientId)
         if (data.proceedings || data.proceedingDate) {

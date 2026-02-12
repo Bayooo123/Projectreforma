@@ -88,8 +88,10 @@ model User {
   lawyerToken            String?               @unique
   accounts               Account[]
   apiKeys                ApiKey[]
-  briefs                 Brief[]
+  createdBriefs          Brief[]               @relation("BriefCreator")
+  briefsInCharge         Brief[]               @relation("LawyerInCharge")
   BriefActivityLog       BriefActivityLog[]
+  briefLawyerChanges     BriefLawyerHistory[]  @relation("BriefLawyerChanges")
   clientCommunications   ClientCommunication[]
   complianceHistory      ComplianceHistory[]
   acknowledgedCompliance ComplianceTask[]      @relation("AcknowledgedBy")
@@ -176,29 +178,29 @@ model VerificationToken {
 }
 
 model Notification {
-  id                         String          @id @default(cuid())
-  type                       String
-  title                      String
-  message                    String
-  recipientId                String
-  recipientType              String
-  relatedMatterId            String?
-  relatedBriefId             String?
-  relatedComplianceTaskId    String?
-  priority                   String          @default("medium")
-  status                     String          @default("unread")
-  channels                   String?
-  createdAt                  DateTime        @default(now())
-  readAt                     DateTime?
-  metadata                   Json?
-  relatedInvoiceId           String?
-  relatedPaymentId           String?
-  updatedAt                  DateTime        @updatedAt
-  brief                      Brief?          @relation(fields: [relatedBriefId], references: [id])
-  complianceTask             ComplianceTask? @relation(fields: [relatedComplianceTaskId], references: [id])
-  invoice                    Invoice?        @relation(fields: [relatedInvoiceId], references: [id])
-  matter                     Matter?         @relation(fields: [relatedMatterId], references: [id])
-  payment                    Payment?        @relation(fields: [relatedPaymentId], references: [id])
+  id                      String          @id @default(cuid())
+  type                    String
+  title                   String
+  message                 String
+  recipientId             String
+  recipientType           String
+  relatedMatterId         String?
+  relatedBriefId          String?
+  relatedComplianceTaskId String?
+  priority                String          @default("medium")
+  status                  String          @default("unread")
+  channels                String?
+  createdAt               DateTime        @default(now())
+  readAt                  DateTime?
+  metadata                Json?
+  relatedInvoiceId        String?
+  relatedPaymentId        String?
+  updatedAt               DateTime        @updatedAt
+  brief                   Brief?          @relation(fields: [relatedBriefId], references: [id])
+  complianceTask          ComplianceTask? @relation(fields: [relatedComplianceTaskId], references: [id])
+  invoice                 Invoice?        @relation(fields: [relatedInvoiceId], references: [id])
+  matter                  Matter?         @relation(fields: [relatedMatterId], references: [id])
+  payment                 Payment?        @relation(fields: [relatedPaymentId], references: [id])
 
   @@index([recipientId, status])
   @@index([createdAt])
@@ -352,34 +354,52 @@ model ClientCommunication {
 }
 
 model Brief {
-  id             String             @id @default(cuid())
-  briefNumber    String             @unique
+  id             String    @id @default(cuid())
+  briefNumber    String    @unique
   name           String
   clientId       String?
   matterId       String?
   lawyerId       String
   workspaceId    String
   category       String
-  status         String             @default("active")
+  status         String    @default("active")
   dueDate        DateTime?
   description    String?
-  createdAt      DateTime           @default(now())
-  updatedAt      DateTime           @updatedAt
-  inboundEmailId String             @unique @default(uuid())
-  client         Client?            @relation(fields: [clientId], references: [id])
-  lawyer         User               @relation(fields: [lawyerId], references: [id])
-  matter         Matter?            @relation(fields: [matterId], references: [id])
-  workspace      Workspace          @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  inboundEmailId String    @unique @default(uuid())
+
+  // NEW: Source tracking
+  isLitigationDerived Boolean @default(false)
+
+  // NEW: Title management (manual override)
+  customTitle String?
+
+  // NEW: Lawyer in Charge (separate from creator)
+  lawyerInChargeId String?
+
+  // NEW: Editable brief number (firm's internal numbering)
+  customBriefNumber String? @unique
+
+  // Relationships
+  client         Client?              @relation(fields: [clientId], references: [id])
+  lawyer         User                 @relation("BriefCreator", fields: [lawyerId], references: [id])
+  lawyerInCharge User?                @relation("LawyerInCharge", fields: [lawyerInChargeId], references: [id])
+  matter         Matter?              @relation(fields: [matterId], references: [id])
+  workspace      Workspace            @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   activityLogs   BriefActivityLog[]
   courtDates     CourtDate[]
   documents      Document[]
   notifications  Notification[]
   tasks          Task[]
+  lawyerChanges  BriefLawyerHistory[]
 
   @@index([lawyerId])
+  @@index([lawyerInChargeId])
   @@index([workspaceId])
   @@index([dueDate])
   @@index([status])
+  @@index([isLitigationDerived])
 }
 
 model Document {
@@ -725,4 +745,22 @@ model ComplianceHistory {
   task        ComplianceTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
 
   @@index([taskId])
+}
+
+model BriefLawyerHistory {
+  id      String @id @default(cuid())
+  briefId String
+  brief   Brief  @relation(fields: [briefId], references: [id], onDelete: Cascade)
+
+  previousLawyerId String?
+  newLawyerId      String?
+
+  changedBy     String
+  changedByUser User   @relation("BriefLawyerChanges", fields: [changedBy], references: [id])
+
+  reason    String?
+  timestamp DateTime @default(now())
+
+  @@index([briefId])
+  @@index([timestamp])
 }

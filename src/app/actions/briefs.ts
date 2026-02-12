@@ -124,6 +124,7 @@ export async function createBrief(data: {
     name: string;
     clientId: string;
     lawyerId: string;
+    lawyerInChargeId?: string; // NEW: Optional lawyer in charge
     workspaceId: string;
     category: string;
     status: string;
@@ -163,11 +164,15 @@ export async function createBrief(data: {
                     name: data.name,
                     clientId: data.clientId,
                     lawyerId: data.lawyerId,
+                    lawyerInChargeId: data.lawyerInChargeId || data.lawyerId, // Default to creator if not specified
                     workspaceId: data.workspaceId,
                     category: data.category,
                     status: data.status,
                     dueDate: data.dueDate,
                     description: data.description,
+                    // Standalone briefs are not litigation-derived
+                    isLitigationDerived: false,
+                    customTitle: null,
                 },
                 include: {
                     client: true,
@@ -251,22 +256,121 @@ export async function updateBrief(
     id: string,
     data: {
         name?: string;
+        customTitle?: string | null;
+        customBriefNumber?: string | null;
         clientId?: string;
         lawyerId?: string;
+        lawyerInChargeId?: string;
         category?: string;
         status?: string;
         dueDate?: Date | null;
         description?: string;
     }
 ) {
-    await requireAuth();
+    const session = await requireAuth();
     try {
+        // Get existing brief and user's workspace role
+        const existingBrief = await prisma.brief.findUnique({
+            where: { id },
+            select: {
+                workspaceId: true,
+                briefNumber: true,
+                lawyerInChargeId: true,
+            }
+        });
+
+        if (!existingBrief) {
+            return { success: false, error: 'Brief not found' };
+        }
+
+        const membership = await prisma.workspaceMember.findFirst({
+            where: {
+                userId: session.user.id,
+                workspaceId: existingBrief.workspaceId
+            }
+        });
+
+        if (!membership) {
+            return { success: false, error: 'Not a member of this workspace' };
+        }
+
+        // RBAC Check for Lawyer in Charge
+        const { canEditLawyerInCharge, BriefPermissions } = await import('@/lib/rbac');
+
+        if (data.lawyerInChargeId && !canEditLawyerInCharge(membership.role)) {
+            return {
+                success: false,
+                error: 'Only Principal Partners, Partners, and Head of Chambers can change Lawyer in Charge'
+            };
+        }
+
+        // RBAC Check for Brief Number
+        if (data.customBriefNumber && !BriefPermissions.canEditBriefNumber(membership.role)) {
+            return {
+                success: false,
+                error: 'Only senior roles can edit brief numbers'
+            };
+        }
+
+        // Validate custom brief number uniqueness
+        if (data.customBriefNumber) {
+            const existing = await prisma.brief.findFirst({
+                where: {
+                    workspaceId: existingBrief.workspaceId,
+                    OR: [
+                        { briefNumber: data.customBriefNumber },
+                        { customBriefNumber: data.customBriefNumber }
+                    ],
+                    id: { not: id }
+                }
+            });
+
+            if (existing) {
+                return {
+                    success: false,
+                    error: 'Brief number already exists in this workspace'
+                };
+            }
+        }
+
+        // Audit logging for lawyer in charge change
+        if (data.lawyerInChargeId && data.lawyerInChargeId !== existingBrief.lawyerInChargeId) {
+            await prisma.briefLawyerHistory.create({
+                data: {
+                    briefId: id,
+                    previousLawyerId: existingBrief.lawyerInChargeId,
+                    newLawyerId: data.lawyerInChargeId,
+                    changedBy: session.user.id,
+                    reason: 'Manual reassignment',
+                },
+            });
+        }
+
+        // Audit logging for brief number change
+        if (data.customBriefNumber && data.customBriefNumber !== existingBrief.briefNumber) {
+            await prisma.briefActivityLog.create({
+                data: {
+                    briefId: id,
+                    activityType: 'brief_number_changed',
+                    description: `Brief number changed from ${existingBrief.briefNumber} to ${data.customBriefNumber}`,
+                    performedBy: session.user.id,
+                },
+            });
+        }
+
         const brief = await prisma.brief.update({
             where: { id },
             data,
             include: {
                 client: true,
                 lawyer: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true,
+                    },
+                },
+                lawyerInCharge: {
                     select: {
                         id: true,
                         name: true,
