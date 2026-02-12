@@ -24,6 +24,11 @@ interface Brief {
     isLitigationDerived: boolean;
     customTitle: string | null;
     customBriefNumber: string | null;
+    workspaceId: string;
+    clientId: string | null;
+    matterId: string | null;
+    lawyerId: string;
+    lawyerInChargeId: string | null;
     client: {
         id: string;
         name: string;
