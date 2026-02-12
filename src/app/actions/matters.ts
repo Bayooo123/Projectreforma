@@ -127,6 +127,9 @@ export async function getMatterById(id: string) {
 export async function createMatter(data: {
     caseNumber?: string | null;
     name: string;
+    opponentName?: string;
+    opponentCounsel?: string;
+    lawyerInChargeId?: string;
     clientId?: string | null;
     clientName?: string | null; // New field for auto-creation
     lawyerAssociations: { lawyerId: string; role: string; isAppearing?: boolean }[];
@@ -184,7 +187,9 @@ export async function createMatter(data: {
         const appearingLawyerIds = data.lawyerAssociations
             .filter(l => l.isAppearing)
             .map(l => l.lawyerId);
-        const defaultLawyerInCharge = appearingLawyerIds[0] || session.user.id;
+
+        // Use explicit lawyer in charge if provided, otherwise fallback to first appearing or creator
+        const finalLawyerInChargeId = data.lawyerInChargeId || appearingLawyerIds[0] || session.user.id;
 
         const matter = await prisma.matter.create({
             data: {
@@ -196,6 +201,9 @@ export async function createMatter(data: {
                 court: data.court,
                 judge: data.judge,
                 nextCourtDate: data.nextCourtDate,
+                opponentName: data.opponentName || null,
+                opponentCounsel: data.opponentCounsel || null,
+                lawyerInChargeId: finalLawyerInChargeId,
                 status: data.status || 'active',
                 submittingLawyerId: session.user.id,
                 submittingLawyerToken: session.user.lawyerToken,
@@ -216,7 +224,7 @@ export async function createMatter(data: {
                         clientId: finalClientId,
                         workspaceId: data.workspaceId,
                         lawyerId: session.user.id, // Creator
-                        lawyerInChargeId: defaultLawyerInCharge, // Appearing counsel
+                        lawyerInChargeId: finalLawyerInChargeId, // Responsible lawyer
                         category: 'Litigation',
                         status: 'active',
                         description: `Automatically created for litigation matter: ${data.name}`,
@@ -257,7 +265,7 @@ export async function createMatter(data: {
                 data: {
                     briefId: matter.briefs[0].id,
                     previousLawyerId: null,
-                    newLawyerId: defaultLawyerInCharge,
+                    newLawyerId: finalLawyerInChargeId,
                     changedBy: session.user.id,
                     reason: 'Initial assignment from court appearance',
                 },

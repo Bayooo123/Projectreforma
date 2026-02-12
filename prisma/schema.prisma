@@ -100,6 +100,7 @@ model User {
   invitations            Invitation[]
   activityLogs           MatterActivityLog[]
   matterLawyer           MatterLawyer[]
+  mattersInCharge        Matter[]              @relation("MatterLawyerInCharge")
   sessions               Session[]
   createdTasks           Task[]                @relation("CreatedTasks")
   assignedTasks          Task[]                @relation("AssignedTasks")
@@ -239,6 +240,12 @@ model Matter {
   submittingLawyerId    String?
   submittingLawyerToken String?
   submittingLawyerName  String?
+  // NEW: Structured party data
+  opponentName          String?
+  opponentCounsel       String?
+  // NEW: Explicit responsibility tracking
+  lawyerInChargeId      String?
+  lawyerInCharge        User?                 @relation("MatterLawyerInCharge", fields: [lawyerInChargeId], references: [id])
   briefs                Brief[]
   clientCommunications  ClientCommunication[]
   courtDates            CourtDate[]

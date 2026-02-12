@@ -33,12 +33,16 @@ interface Lawyer {
 
 const AddMatterModal = ({ isOpen, onClose, workspaceId, userId, onSuccess }: AddMatterModalProps) => {
     const [matterName, setMatterName] = useState('');
+    const [isNameOverridden, setIsNameOverridden] = useState(false);
+    const [opponentName, setOpponentName] = useState('');
+    const [opponentCounsel, setOpponentCounsel] = useState('');
     const [court, setCourt] = useState('');
     const [judge, setJudge] = useState('');
     const [nextCourtDate, setNextCourtDate] = useState('');
     const [proceedingDate, setProceedingDate] = useState(new Date().toISOString().split('T')[0]);
     const [courtSummary, setCourtSummary] = useState('');
     const [workspaceLawyers, setWorkspaceLawyers] = useState<Lawyer[]>([]);
+    const [lawyerInChargeId, setLawyerInChargeId] = useState('');
     const [clients, setClients] = useState<Client[]>([]);
     const [clientSearch, setClientSearch] = useState('');
     const [selectedClient, setSelectedClient] = useState<Client | null>(null);
@@ -57,8 +61,24 @@ const AddMatterModal = ({ isOpen, onClose, workspaceId, userId, onSuccess }: Add
             getClientsForWorkspace(workspaceId)
                 .then(setClients)
                 .finally(() => setIsLoadingClients(false));
+
+            // Reset states
+            setMatterName('');
+            setIsNameOverridden(false);
+            setOpponentName('');
+            setOpponentCounsel('');
+            setLawyerInChargeId('');
         }
     }, [isOpen, workspaceId]);
+
+    // Auto-generate matter name
+    useEffect(() => {
+        if (!isNameOverridden) {
+            const clientPart = clientSearch.trim() || 'Client';
+            const opponentPart = opponentName.trim() || 'Opposing Party';
+            setMatterName(`${clientPart} v ${opponentPart}`);
+        }
+    }, [clientSearch, opponentName, isNameOverridden]);
 
     const filteredClients = clients.filter(c =>
         c.name.toLowerCase().includes(clientSearch.toLowerCase()) ||
@@ -98,6 +118,9 @@ const AddMatterModal = ({ isOpen, onClose, workspaceId, userId, onSuccess }: Add
         try {
             const result = await createMatter({
                 name: matterName,
+                opponentName: opponentName || undefined,
+                opponentCounsel: opponentCounsel || undefined,
+                lawyerInChargeId: lawyerInChargeId || undefined,
                 workspaceId,
                 court: court || undefined,
                 judge: judge || undefined,
@@ -129,6 +152,10 @@ const AddMatterModal = ({ isOpen, onClose, workspaceId, userId, onSuccess }: Add
                 }
 
                 setMatterName('');
+                setIsNameOverridden(false);
+                setOpponentName('');
+                setOpponentCounsel('');
+                setLawyerInChargeId('');
                 setSelectedClient(null);
                 setClientSearch('');
                 setCourt('');
@@ -168,16 +195,19 @@ const AddMatterModal = ({ isOpen, onClose, workspaceId, userId, onSuccess }: Add
                 <div className={styles.content}>
                     <form className={styles.form} onSubmit={handleSubmit}>
                         <div className={styles.formGroup}>
-                            <label className={styles.label}>Name of Matter *</label>
+                            <label className={styles.label}>Name of Matter (Auto-generated) *</label>
                             <input
                                 type="text"
                                 className={styles.input}
                                 placeholder="e.g. State v. Johnson"
                                 value={matterName}
-                                onChange={(e) => setMatterName(e.target.value)}
+                                onChange={(e) => {
+                                    setMatterName(e.target.value);
+                                    setIsNameOverridden(true);
+                                }}
                                 required
                             />
-                            <p className="text-[10px] text-slate-400 mt-1 italic">Every entry must resolve to a Client and a Brief. A Brief will be auto-created.</p>
+                            <p className="text-[10px] text-slate-400 mt-1 italic">Will auto-update as you type client and opponent names unless manually edited.</p>
                         </div>
 
                         <div className={styles.formGroup}>
@@ -228,6 +258,46 @@ const AddMatterModal = ({ isOpen, onClose, workspaceId, userId, onSuccess }: Add
                                     </div>
                                 )}
                             </div>
+                        </div>
+
+                        <div className={styles.formGroup}>
+                            <label className={styles.label}>Opposing Party Name</label>
+                            <input
+                                type="text"
+                                className={styles.input}
+                                placeholder="Enter the name of the opponent..."
+                                value={opponentName}
+                                onChange={(e) => setOpponentName(e.target.value)}
+                            />
+                        </div>
+
+                        <div className={styles.formGroup}>
+                            <label className={styles.label}>Opposing Counsel (Optional)</label>
+                            <input
+                                type="text"
+                                className={styles.input}
+                                placeholder="Enter opposing counsel name or firm..."
+                                value={opponentCounsel}
+                                onChange={(e) => setOpponentCounsel(e.target.value)}
+                            />
+                        </div>
+
+                        <div className={styles.formGroup}>
+                            <label className={styles.label}>Lawyer in Charge *</label>
+                            <select
+                                className={styles.select}
+                                value={lawyerInChargeId}
+                                onChange={(e) => setLawyerInChargeId(e.target.value)}
+                                required
+                            >
+                                <option value="">Select responsible lawyer...</option>
+                                {workspaceLawyers.map(lawyer => (
+                                    <option key={lawyer.id} value={lawyer.id}>
+                                        {lawyer.name}
+                                    </option>
+                                ))}
+                            </select>
+                            <p className="text-[10px] text-slate-400 mt-1 italic">Primary lawyer responsible for this brief's development.</p>
                         </div>
 
                         <div className={styles.formGroup}>
