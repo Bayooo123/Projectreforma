@@ -44,7 +44,7 @@ export default async function RootLayout({
           height={3}
           showSpinner={false}
           easing="ease"
-          speed={200}
+          speed={100}
         />
         <ThemeProvider
           attribute="class"

@@ -70,6 +70,7 @@ const Sidebar = ({ user }: SidebarProps) => {
             <li key={item.name}>
               <Link
                 href={item.href}
+                prefetch={true}
                 className={`${styles.navLink} ${isActive(item.href) ? styles.active : ''}`}
               >
                 <item.icon size={20} className={styles.navIcon} />
