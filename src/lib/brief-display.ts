@@ -4,11 +4,17 @@
  * Helper functions for displaying brief metadata with proper fallbacks and overrides
  */
 
-import { Brief, Matter } from '@prisma/client';
-
-type BriefWithMatter = Brief & {
-    matter?: Matter | null;
-};
+export interface DisplayableBrief {
+    name: string;
+    briefNumber: string;
+    isLitigationDerived: boolean;
+    customTitle?: string | null;
+    customBriefNumber?: string | null;
+    matter?: {
+        name: string;
+        caseNumber?: string | null;
+    } | null;
+}
 
 /**
  * Get the display title for a brief
@@ -21,7 +27,7 @@ type BriefWithMatter = Brief & {
  * @param brief - The brief object
  * @returns The title to display
  */
-export function getBriefDisplayTitle(brief: BriefWithMatter): string {
+export function getBriefDisplayTitle(brief: DisplayableBrief): string {
     // Manual override takes highest priority
     if (brief.customTitle) {
         return brief.customTitle;
@@ -46,7 +52,7 @@ export function getBriefDisplayTitle(brief: BriefWithMatter): string {
  * @param brief - The brief object
  * @returns The brief number to display
  */
-export function getBriefDisplayNumber(brief: Brief): string {
+export function getBriefDisplayNumber(brief: Pick<DisplayableBrief, 'briefNumber' | 'customBriefNumber'>): string {
     return brief.customBriefNumber || brief.briefNumber;
 }
 
@@ -59,7 +65,7 @@ export function getBriefDisplayNumber(brief: Brief): string {
  * @param brief - The brief object
  * @returns true if the title can be directly edited
  */
-export function canEditBriefTitle(brief: Brief): boolean {
+export function canEditBriefTitle(brief: DisplayableBrief): boolean {
     // Can always set a custom override
     return true;
 }
@@ -70,7 +76,7 @@ export function canEditBriefTitle(brief: Brief): boolean {
  * @param brief - The brief object
  * @returns Human-readable source description
  */
-export function getBriefSourceDescription(brief: BriefWithMatter): string {
+export function getBriefSourceDescription(brief: DisplayableBrief): string {
     if (brief.isLitigationDerived && brief.matter) {
         return `Derived from litigation matter: ${brief.matter.caseNumber || 'N/A'}`;
     }
@@ -84,7 +90,7 @@ export function getBriefSourceDescription(brief: BriefWithMatter): string {
  * @param brief - The brief object
  * @returns Formatted metadata object
  */
-export function formatBriefMetadata(brief: BriefWithMatter) {
+export function formatBriefMetadata(brief: DisplayableBrief) {
     return {
         title: getBriefDisplayTitle(brief),
         number: getBriefDisplayNumber(brief),
