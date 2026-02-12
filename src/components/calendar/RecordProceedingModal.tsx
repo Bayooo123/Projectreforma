@@ -275,44 +275,43 @@ const RecordProceedingModal = ({ isOpen, onClose, workspaceId, userId, onSuccess
 
                             <div className="mb-4">
                                 <label className="block text-xs font-medium text-slate-500 mb-1">Appearing Counsel</label>
-                                    <div className="flex flex-wrap gap-1 mt-1">
-                                        {lawyers.length > 0 ? (
-                                            lawyers.map(lawyer => (
-                                                <button
-                                                    key={lawyer.id}
-                                                    type="button"
-                                                    onClick={() => toggleLawyer(lawyer.id)}
-                                                    className={`${styles.lawyerButton} ${selectedLawyerIds.includes(lawyer.id) ? styles.lawyerButtonSelected : ''}`}
-                                                >
-                                                    {lawyer.name}
-                                                </button>
-                                            ))
-                                        ) : (
-                                            <p className="text-[10px] text-slate-400 italic">Loading...</p>
-                                        )}
-                                        <button
-                                            type="button"
-                                            onClick={() => setIsExternalCounsel(!isExternalCounsel)}
-                                            className={`${styles.lawyerButton} ${isExternalCounsel ? styles.lawyerButtonSelected : ''}`}
-                                            style={{ backgroundColor: isExternalCounsel ? '#6366f1' : undefined, color: isExternalCounsel ? 'white' : undefined }}
-                                        >
-                                            + External Counsel
-                                        </button>
-                                    </div>
-                                    {isExternalCounsel && (
-                                        <div className="mt-2">
-                                            <input
-                                                type="text"
-                                                placeholder="Enter External Counsel Name"
-                                                className={styles.input}
-                                                style={{ fontSize: '0.75rem', padding: '0.4rem 0.75rem' }}
-                                                value={externalCounselName}
-                                                onChange={(e) => setExternalCounselName(e.target.value)}
-                                                autoFocus
-                                            />
-                                        </div>
+                                <div className="flex flex-wrap gap-1 mt-1">
+                                    {lawyers.length > 0 ? (
+                                        lawyers.map(lawyer => (
+                                            <button
+                                                key={lawyer.id}
+                                                type="button"
+                                                onClick={() => toggleLawyer(lawyer.id)}
+                                                className={`${styles.lawyerButton} ${selectedLawyerIds.includes(lawyer.id) ? styles.lawyerButtonSelected : ''}`}
+                                            >
+                                                {lawyer.name}
+                                            </button>
+                                        ))
+                                    ) : (
+                                        <p className="text-[10px] text-slate-400 italic">Loading...</p>
                                     )}
+                                    <button
+                                        type="button"
+                                        onClick={() => setIsExternalCounsel(!isExternalCounsel)}
+                                        className={`${styles.lawyerButton} ${isExternalCounsel ? styles.lawyerButtonSelected : ''}`}
+                                        style={{ backgroundColor: isExternalCounsel ? '#6366f1' : undefined, color: isExternalCounsel ? 'white' : undefined }}
+                                    >
+                                        + External Counsel
+                                    </button>
                                 </div>
+                                {isExternalCounsel && (
+                                    <div className="mt-2">
+                                        <input
+                                            type="text"
+                                            placeholder="Enter External Counsel Name"
+                                            className={styles.input}
+                                            style={{ fontSize: '0.75rem', padding: '0.4rem 0.75rem' }}
+                                            value={externalCounselName}
+                                            onChange={(e) => setExternalCounselName(e.target.value)}
+                                            autoFocus
+                                        />
+                                    </div>
+                                )}
                             </div>
 
                             <div className={styles.formSection}>
@@ -364,33 +363,33 @@ const RecordProceedingModal = ({ isOpen, onClose, workspaceId, userId, onSuccess
                             </div>
                         </div>
                     )}
-            </div>
+                </div>
 
-            <div className={styles.footer}>
-                {step === 'select_brief' && (
-                    <button onClick={onClose} className={styles.cancelBtn}>Cancel</button>
-                )}
+                <div className={styles.footer}>
+                    {step === 'select_brief' && (
+                        <button onClick={onClose} className={styles.cancelBtn}>Cancel</button>
+                    )}
 
-                {step === 'record_details' && (
-                    <>
-                        <button
-                            onClick={onClose}
-                            className={styles.cancelBtn}
-                            disabled={isSubmitting}
-                        >
-                            Cancel
-                        </button>
-                        <button
-                            onClick={handleSubmit}
-                            className={styles.submitBtn}
-                            disabled={isSubmitting}
-                        >
-                            {isSubmitting ? <Loader size={16} className="animate-spin" /> : 'Record Proceeding'}
-                        </button>
-                    </>
-                )}
+                    {step === 'record_details' && (
+                        <>
+                            <button
+                                onClick={onClose}
+                                className={styles.cancelBtn}
+                                disabled={isSubmitting}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleSubmit}
+                                className={styles.submitBtn}
+                                disabled={isSubmitting}
+                            >
+                                {isSubmitting ? <Loader size={16} className="animate-spin" /> : 'Record Proceeding'}
+                            </button>
+                        </>
+                    )}
+                </div>
             </div>
-        </div>
         </div >
     );
 };
