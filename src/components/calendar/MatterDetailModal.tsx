@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { X, Calendar, User, MapPin, FileText, AlertCircle, Loader, Building, Edit, Trash2 } from 'lucide-react';
+import { X, Calendar, User, MapPin, FileText, AlertCircle, Loader, Building, Edit, Trash2, Scale } from 'lucide-react';
 import { adjournMatter, addMatterNote, updateMatter, deleteMatter, updateCourtDate } from '@/app/actions/matters';
 import { getLawyersForWorkspace } from '@/lib/briefs';
 import styles from './MatterDetailModal.module.css';
@@ -418,18 +418,26 @@ const MatterDetailModal = ({ isOpen, onClose, matter, userId }: MatterDetailModa
                                                 <span className="text-sm text-slate-400 italic">No proceedings recorded.</span>
                                             )}
 
-                                            {/* Appearances */}
+                                            {/* Appearances - Showing all lawyers clearly */}
                                             {(date.appearances && date.appearances.length > 0 || date.externalCounsel) && (
-                                                <div className="flex flex-wrap gap-1 mt-1">
-                                                    {date.appearances.map(lawyer => (
-                                                        <span key={lawyer.id} className="text-xs text-slate-500 bg-white border border-slate-200 px-2 py-0.5 rounded-sm">
-                                                            {lawyer.name}
-                                                        </span>
-                                                    ))}
+                                                <div className="flex flex-col gap-1.5 mt-2">
+                                                    <div className="flex flex-wrap gap-2">
+                                                        {date.appearances.map(lawyer => (
+                                                            <div key={lawyer.id} className="flex items-center gap-1.5 bg-white border border-slate-200 px-2.5 py-1 rounded-md shadow-sm">
+                                                                <User size={12} className="text-maroon-600" />
+                                                                <span className="text-xs font-semibold text-slate-700">
+                                                                    {lawyer.name}
+                                                                </span>
+                                                            </div>
+                                                        ))}
+                                                    </div>
                                                     {date.externalCounsel && (
-                                                        <span className="text-xs text-blue-600 bg-blue-50 border border-blue-100 px-2 py-0.5 rounded-sm italic">
-                                                            {date.externalCounsel} (External)
-                                                        </span>
+                                                        <div className="flex items-center gap-1.5 bg-blue-50 border border-blue-100 px-2.5 py-1 rounded-md text-blue-700 italic">
+                                                            <Scale size={12} />
+                                                            <span className="text-xs font-medium">
+                                                                {date.externalCounsel} (Opposing/External)
+                                                            </span>
+                                                        </div>
                                                     )}
                                                 </div>
                                             )}

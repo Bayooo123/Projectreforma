@@ -5,6 +5,7 @@ import { AlertTriangle, Download, ArrowUp, ArrowDown, TrendingDown, Users, Scale
 import { getAnalyticsMetrics, getRevenueTrend, getTopClients, getLawyerStats, getMatterDistribution, getCourtVisits } from '@/app/actions/analytics';
 import { getSession } from 'next-auth/react';
 import styles from './page.module.css';
+import LoadingIndicator from '@/components/ui/LoadingIndicator';
 
 // Types for our analytic data
 interface AnalyticsData {
@@ -68,7 +69,7 @@ export default function AnalyticsPage() {
     };
 
     if (isLoading || !data) {
-        return <div className={styles.loading}>Loading analytics...</div>;
+        return <LoadingIndicator message="Gathering insights..." />;
     }
 
     const { metrics, revenueTrend, topClients, lawyerStats, matterDistribution, courtVisits } = data;

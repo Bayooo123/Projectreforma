@@ -135,8 +135,8 @@ export default function BriefActivityFeed({ briefId, inboundEmailId }: BriefActi
                     <div className={styles.empty}>No activity recorded yet.</div>
                 ) : (
                     activities.map((log) => (
-                        <div key={log.id} className={styles.feedItem}>
-                            <div className={`${styles.icon} ${styles[log.activityType] || ''}`}>
+                        <div key={log.id} className={`${styles.feedItem} ${log.activityType === 'note_added' ? styles.user_log : log.activityType === 'email_received' ? styles.inbound_email : styles.system_log}`}>
+                            <div className={styles.icon}>
                                 {getActivityIcon(log.activityType)}
                             </div>
                             <div className={styles.content}>
@@ -145,16 +145,16 @@ export default function BriefActivityFeed({ briefId, inboundEmailId }: BriefActi
                                         {log.user?.name || (log.activityType === 'email_received' ? (log.metadata as any)?.emailSender : 'System')}
                                     </span>
                                     <span className={styles.time}>
-                                        {new Date(log.timestamp).toLocaleString()}
+                                        {new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                     </span>
                                 </div>
                                 <p className={styles.description}>{log.description}</p>
 
+                                {/* AI Summary in a distinct box if present */}
                                 {log.activityType === 'email_received' && (log.metadata as any)?.aiAnalysis && (
                                     <div className={styles.aiSummary}>
-                                        <strong>AI Summary: </strong>
+                                        <strong>AI Insight: </strong>
                                         {(log.metadata as any).aiAnalysis.summary}
-                                        {/* Status Update Tag could go here */}
                                     </div>
                                 )}
                             </div>
