@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, Clock, Tag, User, Building, Calendar, Upload, Loader, FileText, Trash2, Edit } from 'lucide-react';
+import { getBriefDisplayTitle, getBriefDisplayNumber } from '@/lib/brief-display';
 import DocumentUpload from '@/components/briefs/DocumentUpload';
 import DocumentPreview from '@/components/briefs/DocumentPreview';
 // import BriefActivityFeed from '@/components/briefs/BriefActivityFeed'; // Removed for UI cleanup per request
@@ -20,6 +21,9 @@ interface Brief {
     dueDate: Date | null;
     createdAt: Date;
     updatedAt: Date;
+    isLitigationDerived: boolean;
+    customTitle: string | null;
+    customBriefNumber: string | null;
     client: {
         id: string;
         name: string;
@@ -31,6 +35,16 @@ interface Brief {
         name: string | null;
         email: string | null;
     };
+    lawyerInCharge: {
+        id: string;
+        name: string | null;
+        email: string | null;
+    } | null;
+    matter: {
+        id: string;
+        name: string;
+        caseNumber: string | null;
+    } | null;
     documents: Array<{
         id: string;
         name: string;
@@ -147,7 +161,7 @@ export default function BriefDetailClient({ brief }: BriefDetailClientProps) {
                 </div>
 
                 <div className={styles.titleRow}>
-                    <h1 className={styles.title}>{brief.name}</h1>
+                    <h1 className={styles.title}>{getBriefDisplayTitle(brief)}</h1>
                     <span className={`${styles.statusBadge} ${styles[brief.status.toLowerCase()]}`}>
                         {brief.status}
                     </span>
@@ -156,7 +170,7 @@ export default function BriefDetailClient({ brief }: BriefDetailClientProps) {
                 <div className={styles.metaRow}>
                     <div className={styles.metaItem}>
                         <span className={styles.metaLabel}>Brief Number:</span>
-                        <span className={styles.metaValue}>{brief.briefNumber}</span>
+                        <span className={styles.metaValue}>{getBriefDisplayNumber(brief)}</span>
                     </div>
                     <div className={styles.metaItem}>
                         <Tag size={14} className={styles.metaIcon} />
@@ -178,8 +192,8 @@ export default function BriefDetailClient({ brief }: BriefDetailClientProps) {
                     </div>
                     <div className={styles.compactInfoItem}>
                         <User size={14} className={styles.compactIcon} />
-                        <span className={styles.compactLabel}>Lawyer:</span>
-                        <span className={styles.compactValue}>{brief.lawyer.name || brief.lawyer.email}</span>
+                        <span className={styles.compactLabel}>Lawyer in Charge:</span>
+                        <span className={styles.compactValue}>{brief.lawyerInCharge?.name || brief.lawyer?.name || brief.lawyer?.email || 'Unassigned'}</span>
                     </div>
                     {brief.dueDate && (
                         <div className={styles.compactInfoItem}>

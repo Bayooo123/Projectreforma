@@ -30,9 +30,10 @@ interface Lawyer {
 
 const EditBriefModal = ({ isOpen, onClose, onSuccess, brief, workspaceId }: EditBriefModalProps) => {
     // Form state
-    const [briefName, setBriefName] = useState('');
+    const [briefName, setBriefName] = useState(''); // Maps to customTitle or name
+    const [customBriefNumber, setCustomBriefNumber] = useState('');
     const [selectedClientId, setSelectedClientId] = useState('');
-    const [selectedLawyerId, setSelectedLawyerId] = useState('');
+    const [selectedLawyerInChargeId, setSelectedLawyerInChargeId] = useState('');
     const [category, setCategory] = useState('');
     const [status, setStatus] = useState('active');
     const [description, setDescription] = useState('');
@@ -49,9 +50,12 @@ const EditBriefModal = ({ isOpen, onClose, onSuccess, brief, workspaceId }: Edit
             loadData();
             // Pre-fill form
             if (brief) {
-                setBriefName(brief.name || '');
+                // Use customTitle if it exists, otherwise name. For litigation briefs, name is the matter name.
+                setBriefName(brief.customTitle || brief.name || '');
+                setCustomBriefNumber(brief.customBriefNumber || brief.briefNumber || '');
                 setSelectedClientId(brief.client?.id || '');
-                setSelectedLawyerId(brief.lawyer?.id || '');
+                // Use lawyerInChargeId if available, fallback to lawyerId (creator) for old records
+                setSelectedLawyerInChargeId(brief.lawyerInCharge?.id || brief.lawyerInChargeId || brief.lawyer?.id || '');
                 setCategory(brief.category || '');
                 setStatus(brief.status || 'active');
                 setDescription(brief.description || '');
@@ -80,33 +84,45 @@ const EditBriefModal = ({ isOpen, onClose, onSuccess, brief, workspaceId }: Edit
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        // Client is now optional
-        // if (!selectedClientId) {
-        //     alert('Please select a client');
-        //     return;
-        // }
-
-        if (!selectedLawyerId) {
-            alert('Please select a lawyer');
+        if (!selectedLawyerInChargeId) {
+            alert('Please select a lawyer in charge');
             return;
         }
 
         setIsSubmitting(true);
 
         try {
-            const result = await updateBrief(brief.id, {
-                name: briefName,
+            // Determine if title changed
+            const titleChanged = briefName !== brief.name;
+            // If litigation derived, we only set customTitle. If standalone, we can update name (or customTitle, but simplify to name for now? No, use customTitle for overrides).
+            // Actually, the backend `updateBrief` handles `customTitle`. 
+            // If the brief is standalone, `name` is the main field. If it's litigation, `name` is matter name.
+            // Simpler approach: Always send `customTitle` if it differs from the original "source of truth" name, 
+            // OR if we treat `briefName` input as `customTitle` override.
+
+            // Let's rely on the action to handle it, but we need to pass the right fields.
+            // We'll send `customTitle` if it's different from the underlying matter name (if litigation)
+            // For now, let's just send `customTitle` = briefName. 
+            // Wait, if it's standalone, we might want to update `name`.
+            // The `updateBrief` action signature now takes `customTitle`. 
+
+            const updateData: any = {
+                customTitle: briefName, // Always set customTitle for edits
+                customBriefNumber: customBriefNumber !== brief.briefNumber ? customBriefNumber : undefined,
                 clientId: selectedClientId,
-                lawyerId: selectedLawyerId,
+                lawyerInChargeId: selectedLawyerInChargeId,
                 category,
                 status,
                 description: description || undefined,
-            });
+            };
+
+            // Remove undefined keys
+            Object.keys(updateData).forEach(key => updateData[key] === undefined && delete updateData[key]);
+
+            const result = await updateBrief(brief.id, updateData);
 
             if (result.success) {
                 console.log('[EditBriefModal] Brief updated successfully!', result.brief);
-
-                // Show success message
                 alert('Brief updated successfully!');
                 onSuccess(result.brief);
                 onClose();
@@ -145,9 +161,10 @@ const EditBriefModal = ({ isOpen, onClose, onSuccess, brief, workspaceId }: Edit
                                     <label className={styles.label}>Brief Number</label>
                                     <input
                                         type="text"
-                                        className={`${styles.input} bg-gray-100 cursor-not-allowed`}
-                                        value={brief.briefNumber}
-                                        disabled
+                                        className={styles.input}
+                                        value={customBriefNumber}
+                                        onChange={e => setCustomBriefNumber(e.target.value)}
+                                        placeholder={brief.briefNumber}
                                     />
                                 </div>
                                 <div className={styles.formGroup}>
@@ -182,8 +199,8 @@ const EditBriefModal = ({ isOpen, onClose, onSuccess, brief, workspaceId }: Edit
                                 <label className={styles.label}>Lawyer in Charge *</label>
                                 <select
                                     className={styles.select}
-                                    value={selectedLawyerId}
-                                    onChange={e => setSelectedLawyerId(e.target.value)}
+                                    value={selectedLawyerInChargeId}
+                                    onChange={e => setSelectedLawyerInChargeId(e.target.value)}
                                     required
                                 >
                                     <option value="">Select Lawyer...</option>
@@ -195,6 +212,7 @@ const EditBriefModal = ({ isOpen, onClose, onSuccess, brief, workspaceId }: Edit
                                 </select>
                             </div>
 
+                            {/* Rest of the form remains similar */}
                             <div className={styles.row}>
                                 <div className={styles.formGroup}>
                                     <label className={styles.label}>Category *</label>
@@ -243,7 +261,7 @@ const EditBriefModal = ({ isOpen, onClose, onSuccess, brief, workspaceId }: Edit
                                 <button type="button" onClick={onClose} className={styles.cancelBtn} disabled={isSubmitting}>
                                     Cancel
                                 </button>
-                                <button type="submit" className={styles.submitBtn} disabled={isSubmitting || lawyers.length === 0}>
+                                <button type="submit" className={styles.submitBtn} disabled={isSubmitting}>
                                     {isSubmitting ? (
                                         <>
                                             <Loader size={16} className="animate-spin mr-2" />

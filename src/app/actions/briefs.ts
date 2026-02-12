@@ -59,6 +59,20 @@ export async function getBriefs(workspaceId: string) {
                         email: true,
                     },
                 },
+                lawyerInCharge: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true,
+                    },
+                },
+                matter: {
+                    select: {
+                        id: true,
+                        name: true,
+                        caseNumber: true,
+                    },
+                },
                 _count: {
                     select: {
                         documents: true,
@@ -96,6 +110,13 @@ export async function getBriefById(id: string) {
             include: {
                 client: true,
                 lawyer: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true,
+                    },
+                },
+                lawyerInCharge: {
                     select: {
                         id: true,
                         name: true,

@@ -6,6 +6,7 @@ import { Search, Filter, MoreVertical, Plus, Trash2, UserPlus, Eye, Briefcase } 
 import styles from './BriefList.module.css';
 import FluidLoader from '@/components/ui/FluidLoader';
 import { getBriefs, deleteBrief } from '@/app/actions/briefs';
+import { getBriefDisplayTitle, getBriefDisplayNumber } from '@/lib/brief-display';
 import EditBriefModal from './EditBriefModal';
 import BriefActivityModal from './BriefActivityModal';
 import { MessageSquare, Edit } from 'lucide-react'; // Imports for new icons
@@ -176,17 +177,17 @@ const BriefList = forwardRef<BriefListRef, BriefListProps>(({ onUpload, workspac
                                 {filteredBriefs.map((brief) => (
                                     <tr key={brief.id}>
                                         <td className={styles.checkboxCell}><input type="checkbox" /></td>
-                                        <td className={styles.briefNumber}>{brief.briefNumber}</td>
+                                        <td className={styles.briefNumber}>{getBriefDisplayNumber(brief)}</td>
                                         <td>
                                             <div className={styles.briefInfo}>
                                                 <Link href={`/briefs/${brief.id}`} className={styles.briefName}>
-                                                    {brief.name}
+                                                    {getBriefDisplayTitle(brief)}
                                                 </Link>
                                                 <span className={styles.briefRef}>{brief.ref}</span>
                                             </div>
                                         </td>
                                         <td className={styles.clientName}>{brief.client?.name || 'Unassigned'}</td>
-                                        <td className={styles.lawyerName}>{brief.lawyer?.name || 'Unassigned'}</td>
+                                        <td className={styles.lawyerName}>{brief.lawyerInCharge?.name || brief.lawyer?.name || 'Unassigned'}</td>
                                         <td>{brief.category}</td>
                                         <td className={styles.dateCell}>{brief.dueDate ? new Date(brief.dueDate).toLocaleDateString() : '-'}</td>
                                         <td>
