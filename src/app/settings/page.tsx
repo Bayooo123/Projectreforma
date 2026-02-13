@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
-import { User, Building2, Lock, Save, Image as ImageIcon, Loader, FileText, AlertCircle, Key, Copy, Trash2, Plus, Eye, EyeOff, Check } from 'lucide-react';
-import { updateWorkspaceSettings, getWorkspaceSettings } from '@/app/actions/settings';
+import { User, Building2, Lock, Save, Image as ImageIcon, Loader, FileText, AlertCircle, Key, Copy, Trash2, Plus, Eye, EyeOff, Check, HardDrive } from 'lucide-react';
+import { updateWorkspaceSettings, getWorkspaceSettings, getStorageUsage } from '@/app/actions/settings';
 import { getUserProfile, updateUserProfile } from '@/app/actions/members';
 import { getBankAccounts, createBankAccount, deleteBankAccount } from '@/app/actions/bank-accounts';
 import { generateApiKey, listApiKeys, revokeApiKey } from '@/app/actions/api-keys';
@@ -12,7 +12,7 @@ import styles from './page.module.css';
 
 export default function SettingsPage() {
     const { data: session } = useSession();
-    const [activeTab, setActiveTab] = useState<'profile' | 'firm' | 'apikeys' | 'security'>('profile');
+    const [activeTab, setActiveTab] = useState<'profile' | 'firm' | 'apikeys' | 'security' | 'storage'>('profile');
 
     // Config State
     const [isLoading, setIsLoading] = useState(true);
@@ -39,6 +39,10 @@ export default function SettingsPage() {
     const [showKey, setShowKey] = useState(false);
     const [isPasswordChanging, setIsPasswordChanging] = useState(false);
     const [passwordFeedback, setPasswordFeedback] = useState<{ type: 'success' | 'error', message: string } | null>(null);
+
+    // Storage State
+    const [storageData, setStorageData] = useState<any>(null);
+    const [isLoadingStorage, setIsLoadingStorage] = useState(false);
 
     const loadProfile = async () => {
         const res = await getUserProfile();
@@ -73,13 +77,25 @@ export default function SettingsPage() {
         setIsLoading(false);
     };
 
+    const loadStorageData = async (workspaceId: string) => {
+        setIsLoadingStorage(true);
+        const res = await getStorageUsage(workspaceId);
+        if (res.success && res.data) {
+            setStorageData(res.data);
+        }
+        setIsLoadingStorage(false);
+    };
+
     useEffect(() => {
         if (session?.user?.workspaceId) {
             loadSettings(session.user.workspaceId);
             loadApiKeys();
+            if (activeTab === 'storage') {
+                loadStorageData(session.user.workspaceId);
+            }
         }
         loadProfile();
-    }, [session]);
+    }, [session, activeTab]);
 
     const handleSaveJobTitle = async () => {
         setIsSaving(true);
@@ -223,6 +239,9 @@ export default function SettingsPage() {
                     )}
                     <button className={`${styles.tab} ${activeTab === 'security' ? styles.activeTab : ''}`} onClick={() => setActiveTab('security')}>
                         <Lock size={18} /> Security
+                    </button>
+                    <button className={`${styles.tab} ${activeTab === 'storage' ? styles.activeTab : ''}`} onClick={() => setActiveTab('storage')}>
+                        <HardDrive size={18} /> Storage
                     </button>
                 </div>
             </div>
@@ -537,6 +556,104 @@ export default function SettingsPage() {
                                 </button>
                             </div>
                         </form>
+                    </div>
+                )}
+                {activeTab === 'storage' && (
+                    <div className={styles.card}>
+                        <div className={styles.cardHeader}>
+                            <HardDrive className={styles.icon} />
+                            <h2>Storage Usage</h2>
+                        </div>
+
+                        {isLoadingStorage ? (
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '3rem', gap: '0.75rem' }}>
+                                <Loader className="spin" size={20} />
+                                <span style={{ color: 'var(--text-secondary)' }}>Loading storage data...</span>
+                            </div>
+                        ) : storageData ? (
+                            <>
+                                {/* Storage Overview */}
+                                <div className={styles.storageOverview}>
+                                    <div className={styles.storageStats}>
+                                        <div className={styles.storageStat}>
+                                            <span className={styles.statLabel}>Used</span>
+                                            <span className={styles.statValue}>{storageData.totalUsedFormatted}</span>
+                                        </div>
+                                        <div className={styles.storageStat}>
+                                            <span className={styles.statLabel}>Total</span>
+                                            <span className={styles.statValue}>{storageData.totalLimitFormatted}</span>
+                                        </div>
+                                        <div className={styles.storageStat}>
+                                            <span className={styles.statLabel}>Documents</span>
+                                            <span className={styles.statValue}>{storageData.documentCount}</span>
+                                        </div>
+                                    </div>
+
+                                    {/* Progress Bar */}
+                                    <div className={styles.storageBarContainer}>
+                                        <div className={styles.storageBarHeader}>
+                                            <span style={{ fontSize: '0.9rem', fontWeight: 500 }}>
+                                                {storageData.percentageUsed}% used
+                                            </span>
+                                        </div>
+                                        <div className={styles.storageBar}>
+                                            <div
+                                                className={styles.storageProgress}
+                                                style={{
+                                                    width: `${Math.min(storageData.percentageUsed, 100)}%`,
+                                                    background: storageData.percentageUsed > 90
+                                                        ? 'linear-gradient(90deg, #EF4444, #DC2626)'
+                                                        : storageData.percentageUsed > 70
+                                                            ? 'linear-gradient(90deg, #F59E0B, #D97706)'
+                                                            : 'linear-gradient(90deg, #10B981, #059669)'
+                                                }}
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Storage Breakdown */}
+                                {storageData.breakdown && storageData.breakdown.length > 0 && (
+                                    <div className={styles.storageBreakdown}>
+                                        <h3 style={{ fontSize: '1rem', marginBottom: '1rem', color: 'var(--text-secondary)' }}>
+                                            Storage Breakdown by File Type
+                                        </h3>
+                                        <div className={styles.breakdownList}>
+                                            {storageData.breakdown
+                                                .sort((a: any, b: any) => b.size - a.size)
+                                                .map((item: any) => (
+                                                    <div key={item.type} className={styles.breakdownItem}>
+                                                        <div className={styles.breakdownInfo}>
+                                                            <span className={styles.breakdownType}>{item.type.toUpperCase()}</span>
+                                                            <span className={styles.breakdownCount}>{item.count} file{item.count !== 1 ? 's' : ''}</span>
+                                                        </div>
+                                                        <span className={styles.breakdownSize}>{item.sizeFormatted}</span>
+                                                    </div>
+                                                ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Storage Info */}
+                                <div style={{
+                                    marginTop: '1.5rem',
+                                    padding: '1rem',
+                                    background: 'var(--surface)',
+                                    borderRadius: '8px',
+                                    fontSize: '0.9rem',
+                                    color: 'var(--text-secondary)'
+                                }}>
+                                    <p style={{ margin: 0 }}>
+                                        💡 Storage includes all documents uploaded to briefs and matters.
+                                        {storageData.percentageUsed > 80 && ' Consider archiving old files to free up space.'}
+                                    </p>
+                                </div>
+                            </>
+                        ) : (
+                            <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-tertiary)' }}>
+                                <p>Unable to load storage data. Please try again later.</p>
+                            </div>
+                        )}
                     </div>
                 )}
             </div>

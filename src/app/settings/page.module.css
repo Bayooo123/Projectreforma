@@ -278,3 +278,159 @@
     display: block;
     margin-bottom: 0.5rem;
 }
+
+/* Storage Usage Styles */
+.storageOverview {
+    margin-bottom: 2rem;
+}
+
+.storageStats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.storageStat {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 1.5rem;
+    background: var(--background-subtle);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border);
+}
+
+.statLabel {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+}
+
+.statValue {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.storageBarContainer {
+    margin-top: 1.5rem;
+}
+
+.storageBarHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.75rem;
+}
+
+.storageBar {
+    width: 100%;
+    height: 24px;
+    background: var(--background-subtle);
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    position: relative;
+}
+
+.storageProgress {
+    height: 100%;
+    transition: width 0.5s ease, background 0.3s ease;
+    border-radius: 12px;
+    position: relative;
+}
+
+.storageProgress::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    animation: shimmer 2s infinite;
+}
+
+@keyframes shimmer {
+    0% {
+        transform: translateX(-100%);
+    }
+
+    100% {
+        transform: translateX(100%);
+    }
+}
+
+.storageBreakdown {
+    margin-top: 2rem;
+    padding-top: 2rem;
+    border-top: 1px solid var(--border);
+}
+
+.breakdownList {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.breakdownItem {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+    background: var(--background-subtle);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border);
+    transition: all 0.2s;
+}
+
+.breakdownItem:hover {
+    background: var(--background);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.breakdownInfo {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.breakdownType {
+    font-weight: 600;
+    font-size: 0.875rem;
+    color: var(--text-primary);
+}
+
+.breakdownCount {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+}
+
+.breakdownSize {
+    font-weight: 600;
+    color: var(--primary);
+    font-size: 0.9rem;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .storageStats {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+
+    .tabs {
+        flex-wrap: wrap;
+    }
+
+    .tab {
+        padding: 0.5rem 1rem;
+        font-size: 0.875rem;
+    }
+
+    .gridRow {
+        grid-template-columns: 1fr;
+    }
+}
