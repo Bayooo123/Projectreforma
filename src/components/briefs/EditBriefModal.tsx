@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react';
 import styles from './BriefUploadModal.module.css'; // Reuse existing styles
 import { updateBrief } from '@/app/actions/briefs';
 import { getClientsForWorkspace, getLawyersForWorkspace } from '@/lib/briefs';
+import { PinProtection } from '@/components/auth/PinProtection';
 
 interface EditBriefModalProps {
     isOpen: boolean;
@@ -155,124 +156,131 @@ const EditBriefModal = ({ isOpen, onClose, onSuccess, brief, workspaceId }: Edit
                             <Loader className="animate-spin text-gray-500" size={32} />
                         </div>
                     ) : (
-                        <form className={styles.form} onSubmit={handleSubmit}>
-                            <div className={styles.row}>
-                                <div className={styles.formGroup}>
-                                    <label className={styles.label}>Brief Number</label>
-                                    <input
-                                        type="text"
-                                        className={styles.input}
-                                        value={customBriefNumber}
-                                        onChange={e => setCustomBriefNumber(e.target.value)}
-                                        placeholder={brief.briefNumber}
-                                    />
+                        <PinProtection
+                            workspaceId={workspaceId}
+                            featureId="sensitive_action_edit_brief"
+                            title="Restricted Action"
+                            description="Enter Admin PIN to edit this brief."
+                        >
+                            <form className={styles.form} onSubmit={handleSubmit}>
+                                <div className={styles.row}>
+                                    <div className={styles.formGroup}>
+                                        <label className={styles.label}>Brief Number</label>
+                                        <input
+                                            type="text"
+                                            className={styles.input}
+                                            value={customBriefNumber}
+                                            onChange={e => setCustomBriefNumber(e.target.value)}
+                                            placeholder={brief.briefNumber}
+                                        />
+                                    </div>
+                                    <div className={styles.formGroup}>
+                                        <label className={styles.label}>Brief Name *</label>
+                                        <input
+                                            type="text"
+                                            className={styles.input}
+                                            value={briefName}
+                                            onChange={e => setBriefName(e.target.value)}
+                                            required
+                                        />
+                                    </div>
                                 </div>
+
                                 <div className={styles.formGroup}>
-                                    <label className={styles.label}>Brief Name *</label>
-                                    <input
-                                        type="text"
-                                        className={styles.input}
-                                        value={briefName}
-                                        onChange={e => setBriefName(e.target.value)}
-                                        required
-                                    />
-                                </div>
-                            </div>
-
-                            <div className={styles.formGroup}>
-                                <label className={styles.label}>Client (Optional)</label>
-                                <select
-                                    className={styles.select}
-                                    value={selectedClientId}
-                                    onChange={e => setSelectedClientId(e.target.value)}
-                                >
-                                    <option value="">Select Client...</option>
-                                    {clients.map(client => (
-                                        <option key={client.id} value={client.id}>
-                                            {client.name} {client.company ? `(${client.company})` : ''}
-                                        </option>
-                                    ))}
-                                </select>
-                            </div>
-
-                            <div className={styles.formGroup}>
-                                <label className={styles.label}>Lawyer in Charge *</label>
-                                <select
-                                    className={styles.select}
-                                    value={selectedLawyerInChargeId}
-                                    onChange={e => setSelectedLawyerInChargeId(e.target.value)}
-                                    required
-                                >
-                                    <option value="">Select Lawyer...</option>
-                                    {lawyers.map(lawyer => (
-                                        <option key={lawyer.id} value={lawyer.id}>
-                                            {lawyer.name || lawyer.email} ({lawyer.role})
-                                        </option>
-                                    ))}
-                                </select>
-                            </div>
-
-                            {/* Rest of the form remains similar */}
-                            <div className={styles.row}>
-                                <div className={styles.formGroup}>
-                                    <label className={styles.label}>Category *</label>
+                                    <label className={styles.label}>Client (Optional)</label>
                                     <select
                                         className={styles.select}
-                                        value={category}
-                                        onChange={e => setCategory(e.target.value)}
-                                        required
+                                        value={selectedClientId}
+                                        onChange={e => setSelectedClientId(e.target.value)}
                                     >
-                                        <option value="">Select Category...</option>
-                                        <option>Litigation</option>
-                                        <option>ADR</option>
-                                        <option>Tax advisory</option>
-                                        <option>Corporate advisory</option>
-                                        <option>Academic research</option>
-                                        <option>Real estate</option>
-                                        <option>Wills and intestate matters</option>
+                                        <option value="">Select Client...</option>
+                                        {clients.map(client => (
+                                            <option key={client.id} value={client.id}>
+                                                {client.name} {client.company ? `(${client.company})` : ''}
+                                            </option>
+                                        ))}
                                     </select>
                                 </div>
+
                                 <div className={styles.formGroup}>
-                                    <label className={styles.label}>Status</label>
+                                    <label className={styles.label}>Lawyer in Charge *</label>
                                     <select
                                         className={styles.select}
-                                        value={status}
-                                        onChange={e => setStatus(e.target.value)}
+                                        value={selectedLawyerInChargeId}
+                                        onChange={e => setSelectedLawyerInChargeId(e.target.value)}
+                                        required
                                     >
-                                        <option value="active">Active</option>
-                                        <option value="inactive">Inactive</option>
-                                        <option value="finalized">Finalized</option>
+                                        <option value="">Select Lawyer...</option>
+                                        {lawyers.map(lawyer => (
+                                            <option key={lawyer.id} value={lawyer.id}>
+                                                {lawyer.name || lawyer.email} ({lawyer.role})
+                                            </option>
+                                        ))}
                                     </select>
                                 </div>
-                            </div>
 
-                            <div className={styles.formGroup}>
-                                <label className={styles.label}>Description (Optional)</label>
-                                <textarea
-                                    className={styles.textarea}
-                                    placeholder="Brief description..."
-                                    value={description}
-                                    onChange={e => setDescription(e.target.value)}
-                                    rows={3}
-                                />
-                            </div>
+                                {/* Rest of the form remains similar */}
+                                <div className={styles.row}>
+                                    <div className={styles.formGroup}>
+                                        <label className={styles.label}>Category *</label>
+                                        <select
+                                            className={styles.select}
+                                            value={category}
+                                            onChange={e => setCategory(e.target.value)}
+                                            required
+                                        >
+                                            <option value="">Select Category...</option>
+                                            <option>Litigation</option>
+                                            <option>ADR</option>
+                                            <option>Tax advisory</option>
+                                            <option>Corporate advisory</option>
+                                            <option>Academic research</option>
+                                            <option>Real estate</option>
+                                            <option>Wills and intestate matters</option>
+                                        </select>
+                                    </div>
+                                    <div className={styles.formGroup}>
+                                        <label className={styles.label}>Status</label>
+                                        <select
+                                            className={styles.select}
+                                            value={status}
+                                            onChange={e => setStatus(e.target.value)}
+                                        >
+                                            <option value="active">Active</option>
+                                            <option value="inactive">Inactive</option>
+                                            <option value="finalized">Finalized</option>
+                                        </select>
+                                    </div>
+                                </div>
 
-                            <div className={styles.footer}>
-                                <button type="button" onClick={onClose} className={styles.cancelBtn} disabled={isSubmitting}>
-                                    Cancel
-                                </button>
-                                <button type="submit" className={styles.submitBtn} disabled={isSubmitting}>
-                                    {isSubmitting ? (
-                                        <>
-                                            <Loader size={16} className="animate-spin mr-2" />
-                                            Updating...
-                                        </>
-                                    ) : (
-                                        'Update Brief'
-                                    )}
-                                </button>
-                            </div>
-                        </form>
+                                <div className={styles.formGroup}>
+                                    <label className={styles.label}>Description (Optional)</label>
+                                    <textarea
+                                        className={styles.textarea}
+                                        placeholder="Brief description..."
+                                        value={description}
+                                        onChange={e => setDescription(e.target.value)}
+                                        rows={3}
+                                    />
+                                </div>
+
+                                <div className={styles.footer}>
+                                    <button type="button" onClick={onClose} className={styles.cancelBtn} disabled={isSubmitting}>
+                                        Cancel
+                                    </button>
+                                    <button type="submit" className={styles.submitBtn} disabled={isSubmitting}>
+                                        {isSubmitting ? (
+                                            <>
+                                                <Loader size={16} className="animate-spin mr-2" />
+                                                Updating...
+                                            </>
+                                        ) : (
+                                            'Update Brief'
+                                        )}
+                                    </button>
+                                </div>
+                            </form>
+                        </PinProtection>
                     )}
                 </div>
             </div>

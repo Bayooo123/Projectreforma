@@ -23,6 +23,8 @@ model Workspace {
   letterheadUrl     String?
   revenuePin        String?
   litigationPin     String?
+  // NEW: RBAC Logic
+  adminCode         String?               // Hashed PIN for admin override
   inviteLinkToken   String?               @unique
   bankAccounts      BankAccount[]
   briefs            Brief[]

@@ -18,7 +18,8 @@ export async function getUserBriefs() {
 
         const briefs = await prisma.brief.findMany({
             where: {
-                workspaceId: membership.workspaceId
+                workspaceId: membership.workspaceId,
+                deletedAt: null
             },
             include: {
                 client: { select: { name: true } }
@@ -43,6 +44,7 @@ export async function getBriefs(workspaceId: string) {
         const briefs = await prisma.brief.findMany({
             where: {
                 workspaceId,
+                deletedAt: null
             },
             include: {
                 client: {
@@ -106,7 +108,10 @@ export async function getBriefById(id: string) {
     noStore(); // Force dynamic fetching
     try {
         const brief = await prisma.brief.findUnique({
-            where: { id },
+            where: {
+                id,
+                deletedAt: null
+            },
             include: {
                 client: true,
                 lawyer: {
@@ -422,24 +427,20 @@ export async function deleteBrief(id: string) {
         }
 
         // 2. Security Check: Only 'partner' or 'owner' can delete
-        // We import dynamically to avoid circular deps if any, though not expected here
         const { requireWorkspaceRole } = await import('@/lib/auth-utils');
         await requireWorkspaceRole(brief.workspaceId, ['partner', 'owner']);
 
         // 3. Soft Delete Logic
-        // Instead of deleting, we mark as 'inactive'.
-        // NOTE: A background job (Cron) should run daily to permanently delete
-        // briefs that have been 'inactive' for > 15 days.
         await prisma.brief.update({
             where: { id },
             data: {
-                status: 'inactive',
-                updatedAt: new Date() // Updates timestamp for the 15-day timer
+                deletedAt: new Date(),
+                status: 'archived' // meaningful status update
             }
         });
 
         revalidatePath('/briefs');
-        return { success: true, message: 'Brief moved to trash (will be permanently deleted in 15 days)' };
+        return { success: true, message: 'Brief moved to trash' };
     } catch (error: any) {
         console.error('Error deleting brief:', error);
         return { success: false, error: error.message || 'Failed to delete brief' };

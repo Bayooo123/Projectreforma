@@ -2,6 +2,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import ComplianceDashboard from "@/components/compliance/ComplianceDashboard";
+import { PinProtection } from "@/components/auth/PinProtection";
 
 export const dynamic = 'force-dynamic';
 
@@ -26,8 +27,17 @@ export default async function ComplianceManagementPage() {
                     <p className="text-slate-500 dark:text-slate-400">Systematic tracking and enforcement of regulatory obligations</p>
                 </div>
 
+                {/* ... */}
+
                 <div className="mt-8">
-                    <ComplianceDashboard workspaceId={member.workspaceId} />
+                    <PinProtection
+                        workspaceId={member.workspaceId}
+                        featureId="compliance"
+                        title="Compliance Access Restricted"
+                        description="Strict access control. Enter admin PIN."
+                    >
+                        <ComplianceDashboard workspaceId={member.workspaceId} />
+                    </PinProtection>
                 </div>
             </div>
         </div>

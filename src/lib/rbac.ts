@@ -1,92 +1,53 @@
-/**
- * Role-Based Access Control (RBAC) Utilities
- * 
- * Defines role hierarchy and permission checks for the Reforma platform.
- */
 
-/**
- * Senior roles that have elevated permissions
- */
-export const SENIOR_ROLES = [
-    'principal_partner',
-    'partner',
-    'head_of_chambers',
-    'owner' // Workspace owner always has senior permissions
-] as const;
+import { createHash } from 'crypto';
 
-export type SeniorRole = typeof SENIOR_ROLES[number];
+// Default PIN is '0987'
+// SHA-256 hash of '0987'
+export const DEFAULT_ADMIN_PIN_HASH = '03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4';
 
-/**
- * Check if a user role has permission to edit the Lawyer in Charge field
- * 
- * @param userRole - The role of the user in the workspace
- * @returns true if the user can edit Lawyer in Charge, false otherwise
- */
-export function canEditLawyerInCharge(userRole: string): boolean {
-    return SENIOR_ROLES.includes(userRole as SeniorRole);
+export enum UserRole {
+    MANAGING_PARTNER = 'Managing Partner',
+    HEAD_OF_CHAMBERS = 'Head of Chambers',
+    PRACTICE_MANAGER = 'Practice Manager',
+    ASSOCIATE = 'Associate',
+    LEGAL_STAFF = 'Legal Staff', // General fallback
 }
 
-/**
- * Check if a user is a workspace owner
- * 
- * @param userRole - The role of the user in the workspace
- * @returns true if the user is the workspace owner
- */
-export function isWorkspaceOwner(userRole: string): boolean {
-    return userRole === 'owner';
-}
-
-/**
- * Get display-friendly role name
- * 
- * @param role - The role identifier
- * @returns Human-readable role name
- */
-export function getRoleDisplayName(role: string): string {
-    const roleMap: Record<string, string> = {
-        'principal_partner': 'Principal Partner',
-        'partner': 'Partner',
-        'head_of_chambers': 'Head of Chambers',
-        'senior_associate': 'Senior Associate',
-        'associate': 'Associate',
-        'junior_associate': 'Junior Associate',
-        'paralegal': 'Paralegal',
-        'admin': 'Administrator',
-        'owner': 'Owner'
-    };
-
-    return roleMap[role] || role;
-}
-
-/**
- * Brief-related permission checks
- */
-export const BriefPermissions = {
-    /**
-     * Can the user edit basic brief details (title, description, etc.)
-     */
-    canEditBriefDetails: (userRole: string, isCreator: boolean): boolean => {
-        return isCreator || canEditLawyerInCharge(userRole);
-    },
-
-    /**
-     * Can the user edit the brief number
-     */
-    canEditBriefNumber: (userRole: string): boolean => {
-        return canEditLawyerInCharge(userRole);
-    },
-
-    /**
-     * Can the user delete a brief
-     */
-    canDeleteBrief: (userRole: string): boolean => {
-        return canEditLawyerInCharge(userRole);
-    },
-
-    /**
-     * Can the user view audit logs
-     */
-    canViewAuditLogs: (userRole: string): boolean => {
-        return canEditLawyerInCharge(userRole);
-    }
+export const PERMISSIONS = {
+    DELETE_BRIEF: [UserRole.MANAGING_PARTNER, UserRole.HEAD_OF_CHAMBERS],
+    MANAGE_OFFICE: [UserRole.PRACTICE_MANAGER],
 };
+
+/**
+ * Hashes a PIN using SHA-256
+ */
+export function hashPin(pin: string): string {
+    return createHash('sha256').update(pin).digest('hex');
+}
+
+/**
+ * Verifies if a PIN matches the stored hash
+ */
+export function verifyPin(inputPin: string, storedHash: string | null): boolean {
+    if (!storedHash) return false;
+    const inputHash = hashPin(inputPin);
+    return inputHash === storedHash;
+}
+
+/**
+ * Checks if a user has the required role for an action
+ */
+export function hasRolePermission(userRole: string, allowedRoles: string[]): boolean {
+    // Normalize role string comparison
+    return allowedRoles.some(r => r.toLowerCase() === userRole.toLowerCase());
+}
+
+export const BriefPermissions = {
+    canDelete: (role: string) => hasRolePermission(role, PERMISSIONS.DELETE_BRIEF),
+    canEditLawyerInCharge: (role: string) => hasRolePermission(role, [UserRole.MANAGING_PARTNER, UserRole.HEAD_OF_CHAMBERS, UserRole.PRACTICE_MANAGER]),
+    canEditBriefNumber: (role: string) => hasRolePermission(role, [UserRole.MANAGING_PARTNER, UserRole.HEAD_OF_CHAMBERS, UserRole.PRACTICE_MANAGER]),
+};
+
+export function canEditLawyerInCharge(role: string) {
+    return BriefPermissions.canEditLawyerInCharge(role);
+}
