@@ -2,7 +2,7 @@
 
 import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
-import { list } from '@vercel/blob';
+import { head } from '@vercel/blob';
 
 export async function updateWorkspaceSettings(
     workspaceId: string,
@@ -39,39 +39,70 @@ export async function getWorkspaceSettings(workspaceId: string) {
 
 export async function getStorageUsage(workspaceId: string) {
     try {
-        // Get actual storage usage from Vercel Blob
+        // Get workspace-specific documents from database
+        const documents = await prisma.document.findMany({
+            where: {
+                brief: {
+                    workspaceId: workspaceId
+                }
+            },
+            select: {
+                url: true,
+                type: true,
+                name: true
+            }
+        });
+
+        // Get workspace letterhead if exists
+        const workspace = await prisma.workspace.findUnique({
+            where: { id: workspaceId },
+            select: { letterheadUrl: true }
+        });
+
         let totalBlobSize = 0;
         let blobCount = 0;
         const breakdown: Record<string, { count: number; size: number }> = {};
 
-        // List all blobs with pagination
-        let cursor: string | undefined;
-        let hasMore = true;
+        // Fetch actual sizes from Vercel Blob for each document
+        for (const doc of documents) {
+            try {
+                // Use head() to get actual blob metadata without downloading
+                const blobInfo = await head(doc.url);
+                const size = blobInfo.size;
 
-        while (hasMore) {
-            const response = await list({
-                cursor,
-                limit: 1000 // Maximum allowed
-            });
-
-            // Process each blob
-            response.blobs.forEach(blob => {
-                totalBlobSize += blob.size;
+                totalBlobSize += size;
                 blobCount++;
 
-                // Extract file extension from pathname
-                const pathname = blob.pathname || '';
-                const extension = pathname.split('.').pop()?.toLowerCase() || 'unknown';
+                // Extract file extension
+                const extension = doc.type || doc.name.split('.').pop()?.toLowerCase() || 'unknown';
 
                 if (!breakdown[extension]) {
                     breakdown[extension] = { count: 0, size: 0 };
                 }
                 breakdown[extension].count++;
-                breakdown[extension].size += blob.size;
-            });
+                breakdown[extension].size += size;
+            } catch (error) {
+                console.warn(`Failed to get size for blob: ${doc.url}`, error);
+                // Skip this blob if we can't access it
+            }
+        }
 
-            hasMore = response.hasMore;
-            cursor = response.cursor;
+        // Include letterhead in storage calculation
+        if (workspace?.letterheadUrl) {
+            try {
+                const letterheadInfo = await head(workspace.letterheadUrl);
+                totalBlobSize += letterheadInfo.size;
+                blobCount++;
+
+                const extension = 'letterhead';
+                if (!breakdown[extension]) {
+                    breakdown[extension] = { count: 0, size: 0 };
+                }
+                breakdown[extension].count++;
+                breakdown[extension].size += letterheadInfo.size;
+            } catch (error) {
+                console.warn('Failed to get letterhead size', error);
+            }
         }
 
         // Storage limits based on plan (in bytes)
@@ -98,12 +129,14 @@ export async function getStorageUsage(workspaceId: string) {
                 totalLimitFormatted: formatBytes(STORAGE_LIMIT),
                 percentageUsed: Math.round(percentageUsed * 100) / 100,
                 documentCount: blobCount,
-                breakdown: Object.entries(breakdown).map(([type, data]) => ({
-                    type,
-                    count: data.count,
-                    size: data.size,
-                    sizeFormatted: formatBytes(data.size)
-                }))
+                breakdown: Object.entries(breakdown)
+                    .map(([type, data]) => ({
+                        type,
+                        count: data.count,
+                        size: data.size,
+                        sizeFormatted: formatBytes(data.size)
+                    }))
+                    .sort((a, b) => b.size - a.size) // Sort by size descending
             }
         };
     } catch (error) {
