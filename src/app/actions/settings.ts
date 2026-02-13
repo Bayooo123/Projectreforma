@@ -2,6 +2,7 @@
 
 import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
+import { list } from '@vercel/blob';
 
 export async function updateWorkspaceSettings(
     workspaceId: string,
@@ -38,36 +39,44 @@ export async function getWorkspaceSettings(workspaceId: string) {
 
 export async function getStorageUsage(workspaceId: string) {
     try {
-        // Calculate total storage from documents
-        const documents = await prisma.document.findMany({
-            where: {
-                brief: {
-                    workspaceId: workspaceId
-                }
-            },
-            select: {
-                size: true,
-                type: true
-            }
-        });
+        // Get actual storage usage from Vercel Blob
+        let totalBlobSize = 0;
+        let blobCount = 0;
+        const breakdown: Record<string, { count: number; size: number }> = {};
 
-        const totalDocumentSize = documents.reduce((sum, doc) => sum + doc.size, 0);
-        const documentCount = documents.length;
+        // List all blobs with pagination
+        let cursor: string | undefined;
+        let hasMore = true;
+
+        while (hasMore) {
+            const response = await list({
+                cursor,
+                limit: 1000 // Maximum allowed
+            });
+
+            // Process each blob
+            response.blobs.forEach(blob => {
+                totalBlobSize += blob.size;
+                blobCount++;
+
+                // Extract file extension from pathname
+                const pathname = blob.pathname || '';
+                const extension = pathname.split('.').pop()?.toLowerCase() || 'unknown';
+
+                if (!breakdown[extension]) {
+                    breakdown[extension] = { count: 0, size: 0 };
+                }
+                breakdown[extension].count++;
+                breakdown[extension].size += blob.size;
+            });
+
+            hasMore = response.hasMore;
+            cursor = response.cursor;
+        }
 
         // Storage limits based on plan (in bytes)
         // For now, using a default 5GB limit - this can be made dynamic based on workspace.plan
         const STORAGE_LIMIT = 5 * 1024 * 1024 * 1024; // 5GB
-
-        // Calculate breakdown by type
-        const breakdown: Record<string, { count: number; size: number }> = {};
-        documents.forEach(doc => {
-            const type = doc.type || 'unknown';
-            if (!breakdown[type]) {
-                breakdown[type] = { count: 0, size: 0 };
-            }
-            breakdown[type].count++;
-            breakdown[type].size += doc.size;
-        });
 
         // Format sizes for display
         const formatBytes = (bytes: number): string => {
@@ -78,17 +87,17 @@ export async function getStorageUsage(workspaceId: string) {
             return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
         };
 
-        const percentageUsed = (totalDocumentSize / STORAGE_LIMIT) * 100;
+        const percentageUsed = (totalBlobSize / STORAGE_LIMIT) * 100;
 
         return {
             success: true,
             data: {
-                totalUsed: totalDocumentSize,
-                totalUsedFormatted: formatBytes(totalDocumentSize),
+                totalUsed: totalBlobSize,
+                totalUsedFormatted: formatBytes(totalBlobSize),
                 totalLimit: STORAGE_LIMIT,
                 totalLimitFormatted: formatBytes(STORAGE_LIMIT),
                 percentageUsed: Math.round(percentageUsed * 100) / 100,
-                documentCount,
+                documentCount: blobCount,
                 breakdown: Object.entries(breakdown).map(([type, data]) => ({
                     type,
                     count: data.count,
@@ -102,3 +111,4 @@ export async function getStorageUsage(workspaceId: string) {
         return { success: false, error: 'Failed to fetch storage usage' };
     }
 }
+
