@@ -11,7 +11,7 @@ import {
     Search
 } from 'lucide-react';
 import { approveWaitlistEntry } from '../../actions/admin';
-import styles from './Waitlist.module.css';
+import styles from './page.module.css';
 
 interface WaitlistEntry {
     id: string;
