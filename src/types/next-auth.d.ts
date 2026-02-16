@@ -13,10 +13,16 @@ declare module "next-auth" {
     }
 
     interface User {
-        role: "owner" | "partner" | "associate" | "admin" | "member";
-        workspaceId: string;
-        lawyerToken: string;
-        isPlatformAdmin: boolean;
+        role?: "owner" | "partner" | "associate" | "admin" | "member";
+        workspaceId?: string;
+        lawyerToken?: string;
+        isPlatformAdmin?: boolean;
+    }
+}
+
+declare module "@auth/core/adapters" {
+    interface AdapterUser {
+        isPlatformAdmin?: boolean;
     }
 }
 
