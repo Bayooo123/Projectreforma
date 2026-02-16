@@ -377,6 +377,7 @@ model Brief {
   description    String?
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
+  deletedAt      DateTime?
   inboundEmailId String    @unique @default(uuid())
 
   // NEW: Source tracking
