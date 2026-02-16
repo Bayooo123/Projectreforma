@@ -30,3 +30,19 @@ export async function requireWorkspaceRole(workspaceId: string, allowedRoles: st
 
     return membership;
 }
+
+export async function requirePlatformAdmin() {
+    const user = await requireAuth();
+
+    // Fetch user from DB to verify platform admin status
+    const dbUser = await prisma.user.findUnique({
+        where: { email: user.email! },
+        select: { isPlatformAdmin: true }
+    });
+
+    if (!dbUser || !dbUser.isPlatformAdmin) {
+        throw new Error('Forbidden: This action requires Platform Admin privileges');
+    }
+
+    return user;
+}

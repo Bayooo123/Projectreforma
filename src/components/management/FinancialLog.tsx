@@ -9,7 +9,7 @@ interface Expense {
     id: string;
     category: string;
     amount: number;
-    description: string;
+    description: string | null;
     date: string;
     reference?: string;
 }
@@ -17,6 +17,17 @@ interface Expense {
 interface FinancialLogProps {
     workspaceId?: string;
 }
+
+const CATEGORY_LABELS: Record<string, string> = {
+    'OFFICE_UTILITIES': 'Office Utilities',
+    'OFFICE_EQUIPMENT_MAINTENANCE': 'Office Equipment',
+    'COURT_LITIGATION': 'Court & Litigation',
+    'NON_LITIGATION_ADVISORY': 'Advisory & Non-Litigation',
+    'COMMUNICATION_SUBSCRIPTIONS': 'Communication',
+    'STAFF_COSTS': 'Staff Costs',
+    'VEHICLE_LOGISTICS': 'Vehicle & Logistics',
+    'MISCELLANEOUS': 'Miscellaneous',
+};
 
 const FinancialLog = ({ workspaceId }: FinancialLogProps) => {
     const [viewMode, setViewMode] = useState<'summary' | 'detail'>('summary');
@@ -64,7 +75,6 @@ const FinancialLog = ({ workspaceId }: FinancialLogProps) => {
 
     const handleExpenseAdded = () => {
         fetchExpenses();
-        // Create a fake event object or just pass a callback if needed, but fetchExpenses reloads everything
     };
 
     const handleDateClick = (date: string) => {
@@ -194,9 +204,9 @@ const FinancialLog = ({ workspaceId }: FinancialLogProps) => {
                                         <TrendingDown size={16} className={styles.expenseIcon} />
                                     </div>
                                     <div className={styles.transactionInfo}>
-                                        <p className={styles.transactionDesc}>{expense.description}</p>
+                                        <p className={styles.transactionDesc}>{expense.description || <em>No description</em>}</p>
                                         <div className={styles.transactionMeta}>
-                                            <span className={styles.category}>{expense.category}</span>
+                                            <span className={styles.category}>{CATEGORY_LABELS[expense.category] || expense.category}</span>
                                             {expense.reference && (
                                                 <>
                                                     <span>•</span>
@@ -229,3 +239,4 @@ const FinancialLog = ({ workspaceId }: FinancialLogProps) => {
 };
 
 export default FinancialLog;
+

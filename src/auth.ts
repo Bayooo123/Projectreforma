@@ -52,6 +52,7 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
                             role: (role as RoleType),
                             workspaceId: workspace.id,
                             lawyerToken: user.lawyerToken || '',
+                            isPlatformAdmin: user.isPlatformAdmin,
                         };
                         return authUser;
                     }
@@ -104,6 +105,7 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
                             role: (membership.role as RoleType),
                             workspaceId: workspaceId,
                             lawyerToken: user.lawyerToken || '',
+                            isPlatformAdmin: user.isPlatformAdmin,
                         };
                         return authUser;
                     }
@@ -117,6 +119,7 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
                         role: ((firstMembership?.role || 'member') as RoleType),
                         workspaceId: firstMembership?.workspaceId || '',
                         lawyerToken: user.lawyerToken || '',
+                        isPlatformAdmin: user.isPlatformAdmin,
                     };
                     return authUser;
                 }
@@ -132,6 +135,7 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
                 token.role = user.role;
                 token.workspaceId = user.workspaceId;
                 token.lawyerToken = user.lawyerToken;
+                token.isPlatformAdmin = user.isPlatformAdmin;
             }
             return token;
         },
@@ -141,6 +145,7 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
                 session.user.role = token.role as RoleType;
                 session.user.workspaceId = token.workspaceId as string;
                 session.user.lawyerToken = token.lawyerToken as string;
+                session.user.isPlatformAdmin = !!token.isPlatformAdmin;
             }
             return session;
         },

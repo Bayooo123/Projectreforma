@@ -88,6 +88,7 @@ model User {
   image                  String?
   jobTitle               String?
   lawyerToken            String?               @unique
+  isPlatformAdmin        Boolean               @default(false)
   accounts               Account[]
   apiKeys                ApiKey[]
   createdBriefs          Brief[]               @relation("BriefCreator")
@@ -527,17 +528,28 @@ model Payment {
   @@index([invoiceId])
 }
 
+enum ExpenseCategory {
+  OFFICE_UTILITIES
+  OFFICE_EQUIPMENT_MAINTENANCE
+  COURT_LITIGATION
+  NON_LITIGATION_ADVISORY
+  COMMUNICATION_SUBSCRIPTIONS
+  STAFF_COSTS
+  VEHICLE_LOGISTICS
+  MISCELLANEOUS
+}
+
 model Expense {
-  id          String    @id @default(cuid())
+  id          String          @id @default(cuid())
   workspaceId String
-  category    String
+  category    ExpenseCategory @default(MISCELLANEOUS) // Default for migration safety, will act as fallback
   amount      Int
-  description String
-  date        DateTime  @default(now())
+  description String?
+  date        DateTime        @default(now())
   reference   String?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  workspace   Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   @@index([workspaceId])
   @@index([date])

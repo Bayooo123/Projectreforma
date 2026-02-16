@@ -11,7 +11,8 @@ import {
   BarChart2,
   ShieldCheck,
   HelpCircle,
-  LogOut
+  LogOut,
+  ShieldAlert
 } from 'lucide-react';
 import styles from './Sidebar.module.css';
 import { signOut } from 'next-auth/react'; // Use client-side signOut
@@ -23,6 +24,7 @@ interface SidebarProps {
     name?: string | null;
     email?: string | null;
     image?: string | null;
+    isPlatformAdmin?: boolean;
   };
 }
 
@@ -82,6 +84,13 @@ const Sidebar = ({ user }: SidebarProps) => {
       </nav>
 
       <div className={styles.footer}>
+        {user?.isPlatformAdmin && (
+          <Link href="/admin" className={styles.footerLink} style={{ color: '#38bdf8' }}>
+            <ShieldAlert size={20} className={styles.navIcon} />
+            <span className={styles.navText}>Platform Admin</span>
+          </Link>
+        )}
+
         <Link href="#" className={styles.footerLink} onClick={(e) => e.preventDefault()}>
           <HelpCircle size={20} className={styles.navIcon} />
           <span className={styles.navText}>Help</span>

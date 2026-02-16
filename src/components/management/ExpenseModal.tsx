@@ -21,13 +21,14 @@ interface Expense {
 }
 
 const EXPENSE_CATEGORIES = [
-    'Office Repairs',
-    'Costs of Filing Processes',
-    'Transportation to Court (Lawyers)',
-    'Entertainment',
-    'Local Fees',
-    'Staff Salary',
-    'Other',
+    { label: 'Office Utilities and Electrical Maintenance', value: 'OFFICE_UTILITIES' },
+    { label: 'Office Equipment Maintenance and Supplies', value: 'OFFICE_EQUIPMENT_MAINTENANCE' },
+    { label: 'Court and Litigation Expenses', value: 'COURT_LITIGATION' },
+    { label: 'Non-Litigation / Advisory Related Expenses', value: 'NON_LITIGATION_ADVISORY' },
+    { label: 'Communication and Subscriptions', value: 'COMMUNICATION_SUBSCRIPTIONS' },
+    { label: 'Staff Costs, Salaries, Bonuses and Welfare', value: 'STAFF_COSTS' },
+    { label: 'Vehicle and Administrative Logistics', value: 'VEHICLE_LOGISTICS' },
+    { label: 'Miscellaneous', value: 'MISCELLANEOUS' },
 ];
 
 const ExpenseModal = ({ isOpen, onClose, onSuccess, workspaceId }: ExpenseModalProps) => {
@@ -60,8 +61,9 @@ const ExpenseModal = ({ isOpen, onClose, onSuccess, workspaceId }: ExpenseModalP
     if (!isOpen) return null;
 
     const handleAddItem = () => {
-        if (!category || !amount || !description || !date) {
-            setError('Please fill in all required fields to add an item.');
+        // category, amount, and date are required now. description is optional.
+        if (!category || !amount || !date) {
+            setError('Please fill in all required fields (Category, Amount, Date) to add an item.');
             return;
         }
 
@@ -113,9 +115,9 @@ const ExpenseModal = ({ isOpen, onClose, onSuccess, workspaceId }: ExpenseModalP
                     expenses: expenseList.map(item => ({
                         category: item.category,
                         amount: parseFloat(item.amount),
-                        description: item.description,
+                        description: item.description || null,
                         date: item.date,
-                        reference: item.reference
+                        reference: item.reference || null
                     }))
                 }),
             });
@@ -141,6 +143,10 @@ const ExpenseModal = ({ isOpen, onClose, onSuccess, workspaceId }: ExpenseModalP
     };
 
     const totalAmount = expenseList.reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0);
+
+    const getCategoryLabel = (value: string) => {
+        return EXPENSE_CATEGORIES.find(c => c.value === value)?.label || value;
+    };
 
     return (
         <div className={styles.overlay}>
@@ -168,7 +174,7 @@ const ExpenseModal = ({ isOpen, onClose, onSuccess, workspaceId }: ExpenseModalP
                                 >
                                     <option value="">Select category...</option>
                                     {EXPENSE_CATEGORIES.map(cat => (
-                                        <option key={cat} value={cat}>{cat}</option>
+                                        <option key={cat.value} value={cat.value}>{cat.label}</option>
                                     ))}
                                 </select>
                             </div>
@@ -187,7 +193,7 @@ const ExpenseModal = ({ isOpen, onClose, onSuccess, workspaceId }: ExpenseModalP
                             </div>
 
                             <div className={`${styles.formGroup} ${styles.fullWidth}`}>
-                                <label className={styles.label}>Description *</label>
+                                <label className={styles.label}>Description (Optional)</label>
                                 <textarea
                                     className={styles.textarea}
                                     rows={2}
@@ -254,10 +260,10 @@ const ExpenseModal = ({ isOpen, onClose, onSuccess, workspaceId }: ExpenseModalP
                                     expenseList.map((item) => (
                                         <tr key={item.id}>
                                             <td>
-                                                <div>{item.description}</div>
+                                                <div>{item.description || <em style={{ color: 'var(--text-secondary)' }}>No description</em>}</div>
                                                 {item.reference && <small style={{ color: 'var(--text-secondary)' }}>{item.reference}</small>}
                                             </td>
-                                            <td>{item.category}</td>
+                                            <td>{getCategoryLabel(item.category)}</td>
                                             <td>{item.date}</td>
                                             <td>{formatCurrency(item.amount)}</td>
                                             <td className={styles.colAction}>
@@ -312,3 +318,4 @@ const ExpenseModal = ({ isOpen, onClose, onSuccess, workspaceId }: ExpenseModalP
 };
 
 export default ExpenseModal;
+

@@ -1,0 +1,178 @@
+[
+  {
+    "id": "cmlp0m4bk0001h01wwvzqz573",
+    "workspaceId": "cmle84eye0002r9dbovl388l8",
+    "category": "Entertainment",
+    "amount": 2000000,
+    "description": "Birthday bonus for henriettta",
+    "date": "2026-02-02T00:00:00.000Z",
+    "reference": null,
+    "createdAt": "2026-02-16T10:12:05.410Z",
+    "updatedAt": "2026-02-16T10:12:05.410Z"
+  },
+  {
+    "id": "cmlp0m4bk0003h01widtpi13c",
+    "workspaceId": "cmle84eye0002r9dbovl388l8",
+    "category": "Local Fees",
+    "amount": 1330000,
+    "description": "Filing fees and transport for Lekan",
+    "date": "2026-02-02T00:00:00.000Z",
+    "reference": null,
+    "createdAt": "2026-02-16T10:12:05.410Z",
+    "updatedAt": "2026-02-16T10:12:05.410Z"
+  },
+  {
+    "id": "cmlp0m4bk0005h01wvb3abbrz",
+    "workspaceId": "cmle84eye0002r9dbovl388l8",
+    "category": "Other",
+    "amount": 12685000,
+    "description": "Cobranet Monthly Subscription",
+    "date": "2026-02-02T00:00:00.000Z",
+    "reference": null,
+    "createdAt": "2026-02-16T10:12:05.410Z",
+    "updatedAt": "2026-02-16T10:12:05.410Z"
+  },
+  {
+    "id": "cmlp0m4bk0007h01wfu45dlaq",
+    "workspaceId": "cmle84eye0002r9dbovl388l8",
+    "category": "Other",
+    "amount": 960000,
+    "description": "Towels",
+    "date": "2026-02-02T00:00:00.000Z",
+    "reference": null,
+    "createdAt": "2026-02-16T10:12:05.410Z",
+    "updatedAt": "2026-02-16T10:12:05.410Z"
+  },
+  {
+    "id": "cmlp0m4bl0009h01wgns3cypu",
+    "workspaceId": "cmle84eye0002r9dbovl388l8",
+    "category": "Other",
+    "amount": 3000000,
+    "description": "Appearance fee for Tolu in Ibadan",
+    "date": "2026-02-02T00:00:00.000Z",
+    "reference": null,
+    "createdAt": "2026-02-16T10:12:05.410Z",
+    "updatedAt": "2026-02-16T10:12:05.410Z"
+  },
+  {
+    "id": "cmlp0m4bl000bh01wi60ozxo1",
+    "workspaceId": "cmle84eye0002r9dbovl388l8",
+    "category": "Other",
+    "amount": 500000,
+    "description": "Appreciation fee",
+    "date": "2026-02-02T00:00:00.000Z",
+    "reference": null,
+    "createdAt": "2026-02-16T10:12:05.410Z",
+    "updatedAt": "2026-02-16T10:12:05.410Z"
+  },
+  {
+    "id": "cmlp0m4bl000dh01ww0gbh89v",
+    "workspaceId": "cmle84eye0002r9dbovl388l8",
+    "category": "Transportation to Court (Lawyers)",
+    "amount": 800000,
+    "description": "Transport fee for Ade to court",
+    "date": "2026-02-02T00:00:00.000Z",
+    "reference": null,
+    "createdAt": "2026-02-16T10:12:05.410Z",
+    "updatedAt": "2026-02-16T10:12:05.410Z"
+  },
+  {
+    "id": "cmlp0n9d4000fh01wwnd7tcv6",
+    "workspaceId": "cmle84eye0002r9dbovl388l8",
+    "category": "Other",
+    "amount": 560000,
+    "description": "Express fee",
+    "date": "2026-02-02T00:00:00.000Z",
+    "reference": null,
+    "createdAt": "2026-02-16T10:12:58.699Z",
+    "updatedAt": "2026-02-16T10:12:58.699Z"
+  },
+  {
+    "id": "cmlp0vbda0001rrk4u93ddccn",
+    "workspaceId": "cmle84eye0002r9dbovl388l8",
+    "category": "Local Fees",
+    "amount": 210000,
+    "description": "TFARE TO COURT",
+    "date": "2026-02-02T00:00:00.000Z",
+    "reference": null,
+    "createdAt": "2026-02-16T10:19:14.447Z",
+    "updatedAt": "2026-02-16T10:19:14.447Z"
+  },
+  {
+    "id": "cmlp0vbda0003rrk4selbcv9p",
+    "workspaceId": "cmle84eye0002r9dbovl388l8",
+    "category": "Local Fees",
+    "amount": 500000,
+    "description": "Packer and toilet brush",
+    "date": "2026-02-02T00:00:00.000Z",
+    "reference": null,
+    "createdAt": "2026-02-16T10:19:14.447Z",
+    "updatedAt": "2026-02-16T10:19:14.447Z"
+  },
+  {
+    "id": "cmlp120vs0005rrk476k5qqyy",
+    "workspaceId": "cmle84eye0002r9dbovl388l8",
+    "category": "Other",
+    "amount": 1000000,
+    "description": "Light bulb",
+    "date": "2026-02-03T00:00:00.000Z",
+    "reference": null,
+    "createdAt": "2026-02-16T10:24:26.881Z",
+    "updatedAt": "2026-02-16T10:24:26.881Z"
+  },
+  {
+    "id": "cmlp120vt0007rrk4om0byqcz",
+    "workspaceId": "cmle84eye0002r9dbovl388l8",
+    "category": "Office Repairs",
+    "amount": 300000,
+    "description": "workmanship for electrician",
+    "date": "2026-02-03T00:00:00.000Z",
+    "reference": null,
+    "createdAt": "2026-02-16T10:24:26.881Z",
+    "updatedAt": "2026-02-16T10:24:26.881Z"
+  },
+  {
+    "id": "cmlp120vt0009rrk42rv7qsef",
+    "workspaceId": "cmle84eye0002r9dbovl388l8",
+    "category": "Other",
+    "amount": 890000,
+    "description": "Charger, aboniki and Tfare",
+    "date": "2026-02-03T00:00:00.000Z",
+    "reference": null,
+    "createdAt": "2026-02-16T10:24:26.881Z",
+    "updatedAt": "2026-02-16T10:24:26.881Z"
+  },
+  {
+    "id": "cmlp120vt000brrk44hmc7sns",
+    "workspaceId": "cmle84eye0002r9dbovl388l8",
+    "category": "Local Fees",
+    "amount": 500000,
+    "description": "Data for prof",
+    "date": "2026-02-03T00:00:00.000Z",
+    "reference": null,
+    "createdAt": "2026-02-16T10:24:26.881Z",
+    "updatedAt": "2026-02-16T10:24:26.881Z"
+  },
+  {
+    "id": "cmlp15pxp000drrk4syrgxth3",
+    "workspaceId": "cmle84eye0002r9dbovl388l8",
+    "category": "Costs of Filing Processes",
+    "amount": 510000,
+    "description": "Filing and stamping",
+    "date": "2026-02-03T00:00:00.000Z",
+    "reference": null,
+    "createdAt": "2026-02-16T10:27:19.983Z",
+    "updatedAt": "2026-02-16T10:27:19.983Z"
+  },
+  {
+    "id": "cmlp16wa5000frrk4g1t6k2ua",
+    "workspaceId": "cmle84eye0002r9dbovl388l8",
+    "category": "Transportation to Court (Lawyers)",
+    "amount": 200000,
+    "description": "TFARE TO COURT",
+    "date": "2026-02-03T00:00:00.000Z",
+    "reference": null,
+    "createdAt": "2026-02-16T10:28:14.863Z",
+    "updatedAt": "2026-02-16T10:28:14.863Z"
+  }
+]

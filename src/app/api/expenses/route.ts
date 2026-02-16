@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { requireAuth } from '@/lib/auth-utils';
 import { notifyExpenseRecorded } from '@/lib/notifications';
+import { categorizeExpense } from '@/lib/services/expense-classification';
+import { ExpenseCategory } from '@prisma/client';
 
 // GET /api/expenses - Fetch expenses with optional filtering
 export async function GET(request: NextRequest) {
@@ -150,22 +152,30 @@ export async function POST(request: NextRequest) {
 
             // Create all expenses in a transaction
             const result = await prisma.$transaction(
-                expenses.map((expense: any) =>
-                    prisma.expense.create({
+                expenses.map((expense: any) => {
+                    // Auto-categorize if category is missing or invalid
+                    let finalCategory = expense.category as ExpenseCategory;
+                    if (!Object.values(ExpenseCategory).includes(finalCategory)) {
+                        finalCategory = categorizeExpense({
+                            description: expense.description,
+                            amount: expense.amount
+                        });
+                    }
+
+                    return prisma.expense.create({
                         data: {
                             workspaceId,
-                            category: expense.category,
+                            category: finalCategory,
                             amount: Math.round(expense.amount * 100), // Convert to kobo/cents
-                            description: expense.description,
+                            description: expense.description || null,
                             date: expense.date ? new Date(expense.date) : new Date(),
                             reference: expense.reference || null,
                         },
-                    })
-                )
+                    });
+                })
             );
 
-            // Notify Partners for each expense (or just once? Doing individually for now to match logic)
-            // Note: In a high volume scenario, we might want to batch notifications too, but this is fine for now.
+            // Notify Partners for each expense
             result.forEach(exp => {
                 notifyExpenseRecorded(exp, workspaceId)
                     .catch(err => console.error('Failed to notify partners:', err));
@@ -179,21 +189,30 @@ export async function POST(request: NextRequest) {
         }
 
         // Handle single creation (legacy support or single entry)
-        const { category, amount, description, date, reference } = singleExpense;
+        let { category, amount, description, date, reference } = singleExpense;
 
-        if (!category || !amount || !description) {
+        if (!amount) {
             return NextResponse.json(
-                { success: false, error: 'Missing required fields' },
+                { success: false, error: 'Amount is required' },
                 { status: 400 }
             );
+        }
+
+        // Auto-categorize if category is missing
+        let finalCategory = category as ExpenseCategory;
+        if (!category || !Object.values(ExpenseCategory).includes(finalCategory)) {
+            finalCategory = categorizeExpense({
+                description,
+                amount
+            });
         }
 
         const expense = await prisma.expense.create({
             data: {
                 workspaceId,
-                category,
+                category: finalCategory,
                 amount: Math.round(amount * 100), // Convert to kobo/cents
-                description,
+                description: description || null,
                 date: date ? new Date(date) : new Date(),
                 reference: reference || null,
             },
@@ -215,3 +234,4 @@ export async function POST(request: NextRequest) {
         );
     }
 }
+

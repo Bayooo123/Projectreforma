@@ -8,6 +8,7 @@ declare module "next-auth" {
             workspaceId: string;
             lawyerToken: string;
             role: "owner" | "partner" | "associate" | "admin" | "member";
+            isPlatformAdmin: boolean;
         } & DefaultSession["user"];
     }
 
@@ -15,6 +16,7 @@ declare module "next-auth" {
         role: "owner" | "partner" | "associate" | "admin" | "member";
         workspaceId: string;
         lawyerToken: string;
+        isPlatformAdmin: boolean;
     }
 }
 
@@ -22,5 +24,6 @@ declare module "next-auth/jwt" {
     interface JWT {
         workspaceId?: string;
         role?: string;
+        isPlatformAdmin?: boolean;
     }
 }
