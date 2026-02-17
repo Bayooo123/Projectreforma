@@ -13,6 +13,10 @@ export async function completeBranding(
         accentColor: string;
     }
 ) {
+    if (!workspaceId) {
+        return { success: false, error: 'No workspace ID provided' };
+    }
+
     try {
         const workspace = await prisma.workspace.update({
             where: { id: workspaceId },
@@ -22,11 +26,12 @@ export async function completeBranding(
             },
         });
 
+        revalidatePath('/management/office');
         revalidatePath('/');
         return { success: true, workspace };
     } catch (error) {
-        console.error('Error completing branding:', error);
-        return { success: false, error: 'Failed to complete branding' };
+        console.error('CRITICAL execution error in completeBranding:', error);
+        return { success: false, error: error instanceof Error ? error.message : 'Database update failed' };
     }
 }
 

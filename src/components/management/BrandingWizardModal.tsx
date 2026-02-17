@@ -15,6 +15,7 @@ import { completeBranding } from '@/app/actions/settings';
 interface BrandingWizardModalProps {
     workspaceId: string;
     workspaceName: string;
+    onComplete?: () => void;
 }
 
 const PRESET_PALETTES = [
@@ -25,7 +26,7 @@ const PRESET_PALETTES = [
     { name: 'Slate Integrity', main: '#334155', secondary: '#475569', accent: '#94a3b8' },
 ];
 
-export default function BrandingWizardModal({ workspaceId, workspaceName }: BrandingWizardModalProps) {
+export default function BrandingWizardModal({ workspaceId, workspaceName, onComplete }: BrandingWizardModalProps) {
     const [step, setStep] = useState(1);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [colors, setColors] = useState({
@@ -47,21 +48,27 @@ export default function BrandingWizardModal({ workspaceId, workspaceName }: Bran
         try {
             const result = await completeBranding(workspaceId, colors);
             if (result.success) {
+                if (onComplete) onComplete();
                 // Force a page reload to apply new CSS variables globally
                 window.location.reload();
             } else {
                 alert('Something went wrong. Please try again.');
             }
         } catch (error) {
-            console.error('Branding setup failed:', error);
+            console.error('CRITICAL: completeBranding failed:', error);
+            // This return statement is typically for server actions, but if the user intends to add it here,
+            // it would mean the handleComplete function itself returns this, which is not standard for a client-side handler.
+            // Assuming the user wants to add this for consistency or a future refactor where handleComplete might be a server action.
+            // For a client-side handler, this return value would not be used.
+            return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
         } finally {
             setIsSubmitting(false);
         }
     };
 
     return (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-            <div className="bg-[#1e293b] border border-white/10 w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden flex flex-col animate-modalFadeIn">
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto">
+            <div className="bg-[#1e293b] border border-white/10 w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden flex flex-col my-auto">
                 {/* Header */}
                 <div className="p-8 border-b border-white/5 bg-gradient-to-r from-white/5 to-transparent">
                     <div className="flex items-center gap-3 mb-2">
@@ -74,7 +81,7 @@ export default function BrandingWizardModal({ workspaceId, workspaceName }: Bran
                 </div>
 
                 {/* Content */}
-                <div className="p-8 flex-1">
+                <div className="p-8 flex-1 max-h-[60vh] overflow-y-auto custom-scrollbar">
                     {step === 1 ? (
                         <div className="space-y-6">
                             <div className="flex items-center gap-2 text-slate-300 font-medium mb-4">
@@ -198,7 +205,7 @@ export default function BrandingWizardModal({ workspaceId, workspaceName }: Bran
                         {step === 1 ? (
                             <button
                                 onClick={() => setStep(2)}
-                                className="bg-blue-600 hover:bg-blue-500 text-white px-8 py-2.5 rounded-lg font-semibold flex items-center gap-2 transition-all shadow-lg shadow-blue-500/20"
+                                className="bg-blue-600 hover:bg-blue-500 text-white px-8 py-2.5 rounded-full font-semibold flex items-center gap-2 transition-all shadow-lg shadow-blue-500/20"
                             >
                                 Next Step
                                 <ChevronRight size={18} />
@@ -207,7 +214,7 @@ export default function BrandingWizardModal({ workspaceId, workspaceName }: Bran
                             <button
                                 onClick={handleComplete}
                                 disabled={isSubmitting}
-                                className="bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white px-8 py-2.5 rounded-lg font-semibold flex items-center gap-2 transition-all shadow-lg shadow-emerald-500/20"
+                                className="bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white px-8 py-2.5 rounded-full font-semibold flex items-center gap-2 transition-all shadow-lg shadow-emerald-500/20"
                             >
                                 {isSubmitting ? 'Applying...' : 'Complete Setup'}
                                 <CheckCircle2 size={18} />
