@@ -26,8 +26,7 @@ export default async function OfficeManagementPage() {
             <PinProtection
                 workspaceId={member.workspaceId}
                 featureId="office_manager"
-                title="Office Management"
-                description="Restricted to Practice Manager or Admin."
+                variant="office"
             >
                 <OfficeManagerClient workspaceId={member.workspaceId} />
             </PinProtection>

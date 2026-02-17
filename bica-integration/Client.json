@@ -1,0 +1,43 @@
+{
+    "name": "Client",
+    "description": "Represents an individual or an organization that Reforma provides legal services to. A Client is the central entity for tracking matters, briefs, and financial interactions. Before creating a new Client, Bica should check for existing clients with similar names to prevent duplication.",
+    "fields": {
+        "id": {
+            "description": "The unique identifier (CUID) for the client.",
+            "validation_rules": "prohibited"
+        },
+        "name": {
+            "description": "The full legal name of the client or organization.",
+            "validation_rules": "required|string|max:255"
+        },
+        "email": {
+            "description": "The primary contact email for the client. Must be unique within the system.",
+            "validation_rules": "required|email|max:255"
+        },
+        "phone": {
+            "description": "The primary contact phone number.",
+            "validation_rules": "nullable|string|max:20"
+        },
+        "company": {
+            "description": "The name of the company if the client is an organization.",
+            "validation_rules": "nullable|string|max:255"
+        },
+        "industry": {
+            "description": "The industry sector the client operates in.",
+            "validation_rules": "nullable|string|max:100"
+        },
+        "status": {
+            "description": "The current status of the client relationship.",
+            "validation_rules": "required|in:active,inactive"
+        }
+    },
+    "child_relationships": [
+        "Matter",
+        "Brief",
+        "Invoice",
+        "Payment"
+    ],
+    "min_record_count": 0,
+    "max_record_count": null,
+    "preview_api_link": "https://app.reforma.ng/management/clients/{entity_id}"
+}

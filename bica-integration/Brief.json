@@ -1,0 +1,46 @@
+{
+    "name": "Brief",
+    "description": "A Brief is a formal legal document, assignment, or court-related task. Every Brief must be associated with a Client and optionally a Matter. It tracks deadlines (due dates), categories of law, and execution status. Before creating a Brief, ensure the relevant Client and Matter (if applicable) are identified.",
+    "fields": {
+        "id": {
+            "description": "The unique identifier (CUID) for the brief.",
+            "validation_rules": "prohibited"
+        },
+        "briefNumber": {
+            "description": "The system-generated unique number for the brief.",
+            "validation_rules": "prohibited"
+        },
+        "customBriefNumber": {
+            "description": "A firm-specific identifier for the brief for internal tracking.",
+            "validation_rules": "nullable|string|max:100"
+        },
+        "name": {
+            "description": "The title or subject of the brief.",
+            "validation_rules": "required|string|max:255"
+        },
+        "category": {
+            "description": "The legal category of the brief (e.g., Litigation, Advisory, Corporate).",
+            "validation_rules": "required|string|max:100"
+        },
+        "status": {
+            "description": "The current workflow status of the brief.",
+            "validation_rules": "required|in:active,completed,pending,archived"
+        },
+        "dueDate": {
+            "description": "The deadline for the brief's completion or filing.",
+            "validation_rules": "nullable|date"
+        },
+        "description": {
+            "description": "Detailed notes or background information regarding the brief.",
+            "validation_rules": "nullable|string"
+        }
+    },
+    "child_relationships": [
+        "Document",
+        "Task",
+        "CourtDate"
+    ],
+    "min_record_count": 0,
+    "max_record_count": null,
+    "preview_api_link": "https://app.reforma.ng/briefs/{entity_id}"
+}

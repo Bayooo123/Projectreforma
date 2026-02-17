@@ -1,0 +1,30 @@
+{
+    "name": "Payment",
+    "description": "Records a financial transaction received from a Client, usually against an Invoice. IMPORTANT: Payment recording is a restricted administrative action. Bica must ensure the user has 'Finance' or 'Admin' clearance before recording payments. Payments must specify the amount, payment method, and be tied to a Client.",
+    "fields": {
+        "id": {
+            "description": "The unique identifier for the payment.",
+            "validation_rules": "prohibited"
+        },
+        "amount": {
+            "description": "The amount received (in kobo).",
+            "validation_rules": "required|integer|min:0"
+        },
+        "method": {
+            "description": "The mode of payment used (e.g., Transfer, Cash, POS).",
+            "validation_rules": "required|string|max:50"
+        },
+        "reference": {
+            "description": "Payment reference number or transaction ID.",
+            "validation_rules": "nullable|string|max:255"
+        },
+        "date": {
+            "description": "The date the payment was received.",
+            "validation_rules": "required|date"
+        }
+    },
+    "child_relationships": [],
+    "min_record_count": 0,
+    "max_record_count": null,
+    "preview_api_link": "https://app.reforma.ng/management/office/payments/{entity_id}"
+}

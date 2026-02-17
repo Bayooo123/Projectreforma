@@ -1,0 +1,41 @@
+{
+    "name": "Invoice",
+    "description": "Represents a bill for legal services provided to a Client. IMPORTANT: Invoices can only be created or modified by users with 'Admin' or 'Managing Partner' roles. Bica must verify the user's authority before generating financial documents. Every Invoice must be linked to a Client and should ideally be linked to a specific Matter. All amounts are in kobo (e.g., 1000 = ₦10.00).",
+    "fields": {
+        "id": {
+            "description": "The unique identifier for the invoice.",
+            "validation_rules": "prohibited"
+        },
+        "invoiceNumber": {
+            "description": "The unique reference number for the invoice.",
+            "validation_rules": "prohibited"
+        },
+        "status": {
+            "description": "The current payment status of the invoice.",
+            "validation_rules": "required|in:pending,paid,overdue,cancelled"
+        },
+        "billToName": {
+            "description": "The entity or person being billed.",
+            "validation_rules": "required|string|max:255"
+        },
+        "totalAmount": {
+            "description": "The total amount due on the invoice (in kobo).",
+            "validation_rules": "required|integer|min:0"
+        },
+        "dueDate": {
+            "description": "The deadline for payment.",
+            "validation_rules": "nullable|date"
+        },
+        "notes": {
+            "description": "Additional information or payment instructions.",
+            "validation_rules": "nullable|string"
+        }
+    },
+    "child_relationships": [
+        "InvoiceItem",
+        "Payment"
+    ],
+    "min_record_count": 0,
+    "max_record_count": null,
+    "preview_api_link": "https://app.reforma.ng/management/office/invoices/{entity_id}"
+}

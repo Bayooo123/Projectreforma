@@ -97,8 +97,7 @@ export default function AnalyticsPage() {
         <PinProtection
             workspaceId={workspaceId}
             featureId="analytics"
-            title="Analytics Access Restricted"
-            description="Enter the admin PIN (0987) to view sensitive financial data."
+            variant="analytics"
         >
             <div className={styles.page}>
                 {/* Header */}

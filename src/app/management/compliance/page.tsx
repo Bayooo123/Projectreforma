@@ -33,8 +33,7 @@ export default async function ComplianceManagementPage() {
                     <PinProtection
                         workspaceId={member.workspaceId}
                         featureId="compliance"
-                        title="Compliance Access Restricted"
-                        description="Strict access control. Enter admin PIN."
+                        variant="compliance"
                     >
                         <ComplianceDashboard workspaceId={member.workspaceId} />
                     </PinProtection>
