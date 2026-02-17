@@ -374,6 +374,57 @@ const WorkspaceSettingsModal = ({ isOpen, onClose, workspaceId, currentLetterhea
                                 )}
                             </div>
 
+                            {/* Admin PIN Section */}
+                            <div style={{ marginBottom: '1.5rem', paddingTop: '1.5rem', borderTop: '1px solid var(--border)' }}>
+                                <h4 style={{ fontSize: '0.9rem', fontWeight: 600, marginBottom: '0.5rem', color: 'var(--text-primary)' }}>Admin Security</h4>
+                                <p className={styles.subtitle} style={{ marginBottom: '1rem' }}>
+                                    Set a 4-digit PIN to restrict access to Office Manager and Analytics.
+                                </p>
+                                <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-end' }}>
+                                    <div style={{ flex: 1 }}>
+                                        <label className={styles.formLabel}>Admin PIN</label>
+                                        <input
+                                            name="adminPin"
+                                            type="password"
+                                            maxLength={4}
+                                            placeholder="----"
+                                            className={styles.input}
+                                            style={{ width: '100%', padding: '0.75rem', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', textAlign: 'center', letterSpacing: '0.5rem' }}
+                                        />
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={async (e) => {
+                                            const input = (e.currentTarget.previousElementSibling?.querySelector('input') as HTMLInputElement);
+                                            const pin = input?.value;
+                                            if (pin && pin.length === 4) {
+                                                const { updateAdminPin } = await import('@/app/actions/rbac');
+                                                const res = await updateAdminPin(workspaceId, pin);
+                                                if (res.success) {
+                                                    alert('Admin PIN updated successfully');
+                                                    input.value = '';
+                                                } else {
+                                                    alert('Failed to update PIN: ' + res.error);
+                                                }
+                                            } else {
+                                                alert('Please enter exactly 4 digits');
+                                            }
+                                        }}
+                                        style={{
+                                            padding: '0.75rem 1rem',
+                                            background: 'var(--surface)',
+                                            border: '1px solid var(--border)',
+                                            borderRadius: 'var(--radius-md)',
+                                            cursor: 'pointer',
+                                            color: 'var(--text-primary)',
+                                            fontWeight: 500
+                                        }}
+                                    >
+                                        Set PIN
+                                    </button>
+                                </div>
+                            </div>
+
                             {/* Revenue PIN Section */}
                             <div style={{ marginBottom: '1.5rem', paddingTop: '1.5rem', borderTop: '1px solid var(--border)' }}>
                                 <h4 style={{ fontSize: '0.9rem', fontWeight: 600, marginBottom: '0.5rem', color: 'var(--text-primary)' }}>Finance Security</h4>

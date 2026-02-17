@@ -3,7 +3,7 @@ import { createHash } from 'crypto';
 
 // Default PIN is '0987'
 // SHA-256 hash of '0987'
-export const DEFAULT_ADMIN_PIN_HASH = '03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4';
+export const DEFAULT_ADMIN_PIN_HASH = '1ea2f89d934cb4a2af0b486736609cf9cb4bdafdc6e946e79aecb02b9d9dceb4';
 
 export enum UserRole {
     MANAGING_PARTNER = 'Managing Partner',
