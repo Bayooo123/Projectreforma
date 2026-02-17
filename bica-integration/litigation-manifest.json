@@ -1,0 +1,119 @@
+{
+    "app_id": "reforma_litigation_tracker",
+    "name": "Reforma Litigation Tracker",
+    "description": "Specialized interface for tracking court cases, managing legal matters, and monitoring hearing schedules (Litigation Monitor).",
+    "version": "1.0.0",
+    "ui_theme": {
+        "brand_color": "#1e293b",
+        "logo_url": "https://reforma.ng/assets/litigation-icon.png",
+        "greeting_message": "Litigation Monitor active. Ready to track hearing dates and case statuses for {user.name}."
+    },
+    "entities": {
+        "Matter": {
+            "name": "Matter",
+            "description": "Represents a specific legal case or matter. Tracks the case number, presiding judge, court jurisdiction, and opposing parties.",
+            "fields": {
+                "id": {
+                    "description": "Unique identifier (CUID).",
+                    "validation_rules": "prohibited"
+                },
+                "caseNumber": {
+                    "description": "The official court reference number.",
+                    "validation_rules": "required|string"
+                },
+                "name": {
+                    "description": "Internal name or title of the case.",
+                    "validation_rules": "required|string"
+                },
+                "court": {
+                    "description": "The court where the matter is being heard.",
+                    "validation_rules": "nullable|string"
+                },
+                "judge": {
+                    "description": "The presiding judge.",
+                    "validation_rules": "nullable|string"
+                },
+                "opponentName": {
+                    "description": "The name of the opposing party.",
+                    "validation_rules": "nullable|string"
+                },
+                "opponentCounsel": {
+                    "description": "Counsel representing the opponent.",
+                    "validation_rules": "nullable|string"
+                },
+                "status": {
+                    "description": "Current status (active, closed, pending).",
+                    "validation_rules": "required|in:active,closed,pending"
+                }
+            },
+            "child_relationships": [
+                "CourtDate",
+                "Brief"
+            ],
+            "preview_api_link": "https://app.reforma.ng/matters/{entity_id}"
+        },
+        "CourtDate": {
+            "name": "CourtDate",
+            "description": "An entry in the litigation timeline representing a specific hearing, appearance, or court activity.",
+            "fields": {
+                "id": {
+                    "description": "Unique identifier.",
+                    "validation_rules": "prohibited"
+                },
+                "date": {
+                    "description": "The date and time of the court appearance.",
+                    "validation_rules": "required|date"
+                },
+                "title": {
+                    "description": "Brief title summarizing the purpose of the appearance (e.g., 'Hearing', 'Ruling').",
+                    "validation_rules": "required|string"
+                },
+                "proceedings": {
+                    "description": "Detailed notes on what transpired during the appearance.",
+                    "validation_rules": "nullable|string"
+                },
+                "outcome": {
+                    "description": "The result or ruling from this specific appearance.",
+                    "validation_rules": "nullable|string"
+                },
+                "adjournedFor": {
+                    "description": "The reason the case was adjourned (if applicable).",
+                    "validation_rules": "nullable|string"
+                },
+                "judge": {
+                    "description": "The judge presiding over this specific date (may differ from matter judge).",
+                    "validation_rules": "nullable|string"
+                },
+                "externalCounsel": {
+                    "description": "External counsel appearing for the firm.",
+                    "validation_rules": "nullable|string"
+                }
+            },
+            "child_relationships": [],
+            "preview_api_link": "https://app.reforma.ng/matters/{matterId}/dates/{entity_id}"
+        },
+        "Brief": {
+            "name": "Brief",
+            "description": "Legal documents or filings associated with the matter.",
+            "fields": {
+                "briefNumber": {
+                    "description": "Unique system number.",
+                    "validation_rules": "prohibited"
+                },
+                "name": {
+                    "description": "Title of the brief.",
+                    "validation_rules": "required|string"
+                },
+                "category": {
+                    "description": "Type of document (e.g., Statement of Claim, Motion).",
+                    "validation_rules": "required|string"
+                },
+                "status": {
+                    "description": "Status of the document.",
+                    "validation_rules": "required|in:active,completed,pending"
+                }
+            },
+            "preview_api_link": "https://app.reforma.ng/briefs/{entity_id}"
+        }
+    }
+}
