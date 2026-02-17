@@ -111,7 +111,7 @@
         },
         "Invoice": {
             "name": "Invoice",
-            "description": "Represents a bill for legal services provided to a Client. IMPORTANT: Invoices can only be created or modified by users with 'Admin' or 'Managing Partner' roles. Bica must verify the user's authority before generating financial documents. Every Invoice must be linked to a Client.",
+            "description": "Represents a bill for legal services provided to a Client. IMPORTANT: Invoices can only be created or modified by users with 'Admin' or 'Managing Partner' roles. Bica must verify the user's authority before generating financial documents. Every Invoice must be linked to a Client and should ideally be linked to a specific Matter. All amounts are in kobo (e.g., 1000 = ₦10.00).",
             "fields": {
                 "id": {
                     "description": "The unique identifier for the invoice.",
@@ -136,6 +136,10 @@
                 "dueDate": {
                     "description": "The deadline for payment.",
                     "validation_rules": "nullable|date"
+                },
+                "notes": {
+                    "description": "Additional information or payment instructions.",
+                    "validation_rules": "nullable|string"
                 }
             },
             "child_relationships": [
@@ -148,7 +152,7 @@
         },
         "Payment": {
             "name": "Payment",
-            "description": "Records a financial transaction received from a Client. IMPORTANT: Payment recording is a restricted administrative action. Bica must ensure the user has 'Finance' or 'Admin' clearance before recording payments. Payments must be tied to a Client.",
+            "description": "Records a financial transaction received from a Client, usually against an Invoice. IMPORTANT: Payment recording is a restricted administrative action. Bica must ensure the user has 'Finance' or 'Admin' clearance before recording payments. Payments must specify the amount, payment method, and be tied to a Client.",
             "fields": {
                 "id": {
                     "description": "The unique identifier for the payment.",
@@ -165,6 +169,10 @@
                 "reference": {
                     "description": "Payment reference number or transaction ID.",
                     "validation_rules": "nullable|string|max:255"
+                },
+                "date": {
+                    "description": "The date the payment was received.",
+                    "validation_rules": "required|date"
                 }
             },
             "child_relationships": [],
