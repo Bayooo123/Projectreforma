@@ -4,9 +4,42 @@ import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
 import { head } from '@vercel/blob';
 
+
+export async function completeBranding(
+    workspaceId: string,
+    data: {
+        brandColor: string;
+        secondaryColor: string;
+        accentColor: string;
+    }
+) {
+    try {
+        const workspace = await prisma.workspace.update({
+            where: { id: workspaceId },
+            data: {
+                ...data,
+                brandingCompleted: true,
+            },
+        });
+
+        revalidatePath('/');
+        return { success: true, workspace };
+    } catch (error) {
+        console.error('Error completing branding:', error);
+        return { success: false, error: 'Failed to complete branding' };
+    }
+}
+
 export async function updateWorkspaceSettings(
     workspaceId: string,
-    data: { letterheadUrl?: string | null; firmCode?: string | null; joinPassword?: string | null; revenuePin?: string | null; litigationPin?: string | null }
+    data: {
+        letterheadUrl?: string | null;
+        firmCode?: string | null;
+        joinPassword?: string | null;
+        revenuePin?: string | null;
+        litigationPin?: string | null;
+        brandColor?: string | null;
+    }
 ) {
     try {
         const workspace = await prisma.workspace.update({
@@ -28,7 +61,7 @@ export async function getWorkspaceSettings(workspaceId: string) {
     try {
         const workspace = await prisma.workspace.findUnique({
             where: { id: workspaceId },
-            select: { id: true, name: true, firmCode: true, letterheadUrl: true, revenuePin: true, litigationPin: true }
+            select: { id: true, name: true, firmCode: true, letterheadUrl: true, revenuePin: true, litigationPin: true, brandColor: true }
         });
         return { success: true, workspace };
     } catch (error) {

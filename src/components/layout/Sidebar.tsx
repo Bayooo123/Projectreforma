@@ -26,9 +26,14 @@ interface SidebarProps {
     image?: string | null;
     isPlatformAdmin?: boolean;
   };
+  workspace?: {
+    id: string;
+    name: string;
+    letterheadUrl?: string | null;
+  } | null;
 }
 
-const Sidebar = ({ user }: SidebarProps) => {
+const Sidebar = ({ user, workspace }: SidebarProps) => {
   const pathname = usePathname();
 
   useEffect(() => {
@@ -64,6 +69,18 @@ const Sidebar = ({ user }: SidebarProps) => {
     <aside className={styles.sidebar}>
       <div className={styles.logoContainer}>
         <h1 className={styles.logo}>Reforma</h1>
+
+        <div className={styles.firmBranding}>
+          {workspace?.letterheadUrl && workspace.letterheadUrl.match(/\.(jpeg|jpg|png|gif|webp)$/i) ? (
+            <img
+              src={workspace.letterheadUrl}
+              alt={workspace.name}
+              className={styles.firmLogo}
+            />
+          ) : (
+            <span className={styles.firmName}>{workspace?.name || 'Loading firm...'}</span>
+          )}
+        </div>
       </div>
 
       <nav className={styles.nav}>

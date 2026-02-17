@@ -15,7 +15,7 @@ export default function AppLayout({ children, user, workspace }: AppLayoutProps)
     return (
         <div className={styles.gridContainer}>
             <aside className={styles.sidebar}>
-                <Sidebar user={user} />
+                <Sidebar user={user} workspace={workspace} />
             </aside>
             <div className={styles.mainContent}>
                 <div className={styles.headerWrapper}>

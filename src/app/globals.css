@@ -30,9 +30,9 @@
   --border: #E5E7EB;
   /* Gray 200 */
   /* Dashboard Specifics */
-  --primary: #8E2F39;
+  --primary: var(--accent-color, #8E2F39);
   /* Brand Burgundy - Exact Shade from User */
-  --primary-hover: #72222B;
+  --primary-hover: var(--accent-color, #72222B);
   --success: #059669;
   /* Emerald 600 - Muted */
   --success-bg: #ECFDF5;
@@ -56,11 +56,11 @@
     0 4px 6px -2px rgba(31, 41, 55, 0.025);
   --shadow-soft: 0 20px 40px -10px rgba(31, 41, 55, 0.08);
   /* Dashboard Specifics */
-  --bg-sidebar: #8E2F39;
+  --bg-sidebar: var(--secondary-color, #8E2F39);
   /* Brand Burgundy - Exact Shade */
   --red-bg: #FDF2F4;
-  --red-text: #8E2F39;
-  --hover-bg: #72222B;
+  --red-text: var(--brand-color, #8E2F39);
+  --hover-bg: var(--secondary-color, #72222B);
   /* Burgundy-700 Hover */
 
   /* Animation Timing */
@@ -127,11 +127,11 @@
   --glass-border: rgba(255, 255, 255, 0.08);
 
   /* Dashboard Specifics - Dark Mode */
-  --bg-sidebar: #421419;
+  --bg-sidebar: var(--secondary-color, #421419);
   /* Burgundy-900 - Deep Dark Burgundy for Sidebar */
   --red-bg: rgba(142, 47, 57, 0.15);
-  --red-text: #F5C2C9;
-  --hover-bg: #2A0C10;
+  --red-text: var(--brand-color, #F5C2C9);
+  --hover-bg: var(--secondary-color, #2A0C10);
   /* Burgundy-950 Hover */
 
   --border: #374151;
@@ -315,6 +315,7 @@ small {
     opacity: 1;
   }
 }
+
 
 /* Custom Scrollbar */
 .custom-scrollbar::-webkit-scrollbar {

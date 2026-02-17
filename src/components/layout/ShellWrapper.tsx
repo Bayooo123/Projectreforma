@@ -2,6 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import AppLayout from "./AppLayout";
+import BrandingWizardModal from "@/components/management/BrandingWizardModal";
 
 interface ShellWrapperProps {
     children: React.ReactNode;
@@ -27,8 +28,16 @@ export default function ShellWrapper({ children, user, workspace }: ShellWrapper
     }
 
     return (
-        <AppLayout user={user} workspace={workspace}>
-            {children}
-        </AppLayout>
+        <>
+            {!workspace?.brandingCompleted && pathname !== '/landing' && (
+                <BrandingWizardModal
+                    workspaceId={workspace?.id}
+                    workspaceName={workspace?.name}
+                />
+            )}
+            <AppLayout user={user} workspace={workspace}>
+                {children}
+            </AppLayout>
+        </>
     );
 }

@@ -38,7 +38,14 @@ export default async function RootLayout({
 
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={dmSans.variable}>
+      <body
+        className={dmSans.variable}
+        style={{
+          ['--brand-color' as any]: (workspaceData as any)?.brandColor || '#8E2F39',
+          ['--secondary-color' as any]: (workspaceData as any)?.secondaryColor || '#1e293b',
+          ['--accent-color' as any]: (workspaceData as any)?.accentColor || '#3182ce'
+        }}
+      >
         <NextTopLoader
           color="#0f766e"
           height={3}

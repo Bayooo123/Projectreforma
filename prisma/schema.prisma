@@ -23,6 +23,11 @@ model Workspace {
   letterheadUrl     String?
   revenuePin        String?
   litigationPin     String?
+  // NEW: Personalization
+  brandColor        String?               @default("#121826")
+  secondaryColor    String?               @default("#1e293b")
+  accentColor       String?               @default("#3182ce")
+  brandingCompleted Boolean               @default(false)
   // NEW: RBAC Logic
   adminCode         String?               // Hashed PIN for admin override
   inviteLinkToken   String?               @unique

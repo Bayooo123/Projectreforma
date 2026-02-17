@@ -110,6 +110,9 @@ export default function LandingPage() {
                             Request Early Access
                             <ArrowRight size={20} />
                         </button>
+                        <Link href="/register" className={styles.btnSecondary} style={{ padding: '1rem 2rem', height: 'auto', fontSize: '1.1rem' }}>
+                            Join Pilot Program
+                        </Link>
                     </div>
                 </div>
             </section>

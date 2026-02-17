@@ -22,8 +22,10 @@ export default function SettingsPage() {
     // Firm Settings
     const [firmCode, setFirmCode] = useState('');
     const [letterheadUrl, setLetterheadUrl] = useState('');
+    const [brandColor, setBrandColor] = useState('#121826');
     // Temp state for editing
     const [editLetterheadUrl, setEditLetterheadUrl] = useState('');
+    const [editBrandColor, setEditBrandColor] = useState('#121826');
 
     // Bank Accounts & Job Title
     const [jobTitle, setJobTitle] = useState('');
@@ -67,6 +69,8 @@ export default function SettingsPage() {
             setFirmCode(settingsRes.workspace.firmCode || '');
             setLetterheadUrl(settingsRes.workspace.letterheadUrl || '');
             setEditLetterheadUrl(settingsRes.workspace.letterheadUrl || '');
+            setBrandColor(settingsRes.workspace.brandColor || '#121826');
+            setEditBrandColor(settingsRes.workspace.brandColor || '#121826');
         }
 
         const accountsRes = await getBankAccounts(workspaceId);
@@ -164,10 +168,12 @@ export default function SettingsPage() {
         setIsSaving(true);
         const result = await updateWorkspaceSettings(session.user.workspaceId, {
             letterheadUrl: editLetterheadUrl,
-            firmCode: firmCode || null
+            firmCode: firmCode || null,
+            brandColor: editBrandColor
         });
         if (result.success) {
             setLetterheadUrl(editLetterheadUrl);
+            setBrandColor(editBrandColor);
             alert('Firm settings saved!');
         }
         setIsSaving(false);
@@ -341,6 +347,41 @@ export default function SettingsPage() {
                                             </span>
                                         </div>
                                     )}
+                                </div>
+                            </div>
+                            <div className={styles.formGroup} style={{ marginTop: '1rem' }}>
+                                <label>Brand Color</label>
+                                <p className={styles.hint} style={{ marginBottom: '1rem' }}>
+                                    Choose a primary color for your workspace theme (sidebar accents, buttons, etc).
+                                </p>
+                                <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                                    <input
+                                        type="color"
+                                        value={editBrandColor}
+                                        onChange={(e) => setEditBrandColor(e.target.value)}
+                                        style={{ width: '60px', height: '40px', padding: '2px', border: '1px solid var(--border)', borderRadius: '4px', cursor: 'pointer' }}
+                                    />
+                                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                        {['#121826', '#0f172a', '#1e293b', '#2d3748', '#3182ce', '#38a169', '#d53f8c', '#805ad5'].map(color => (
+                                            <button
+                                                key={color}
+                                                type="button"
+                                                onClick={() => setEditBrandColor(color)}
+                                                style={{
+                                                    width: '24px',
+                                                    height: '24px',
+                                                    borderRadius: '50%',
+                                                    backgroundColor: color,
+                                                    border: editBrandColor === color ? '2px solid white' : '1px solid rgba(0,0,0,0.1)',
+                                                    boxShadow: editBrandColor === color ? '0 0 0 2px var(--primary)' : 'none',
+                                                    cursor: 'pointer'
+                                                }}
+                                            />
+                                        ))}
+                                    </div>
+                                    <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', fontFamily: 'monospace' }}>
+                                        {editBrandColor.toUpperCase()}
+                                    </span>
                                 </div>
                             </div>
                             <div className={styles.actions}>
