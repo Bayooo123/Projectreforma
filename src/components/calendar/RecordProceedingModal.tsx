@@ -8,6 +8,7 @@ interface RecordProceedingModalProps {
     workspaceId: string;
     userId: string;
     onSuccess?: () => void;
+    initialMatter?: any;
 }
 
 const RecordProceedingModal = (props: RecordProceedingModalProps) => {

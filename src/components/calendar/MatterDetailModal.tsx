@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { X, Calendar, User, MapPin, FileText, AlertCircle, Loader, Building, Edit, Trash2, Scale } from 'lucide-react';
 import { adjournMatter, addMatterNote, updateMatter, deleteMatter, updateCourtDate } from '@/app/actions/matters';
 import { getLawyersForWorkspace } from '@/lib/briefs';
+import RecordProceedingModal from './RecordProceedingModal';
 import styles from './MatterDetailModal.module.css';
 
 interface Matter {
@@ -64,6 +65,7 @@ const MatterDetailModal = ({ isOpen, onClose, matter, userId }: MatterDetailModa
     const [proceedings, setProceedings] = useState('');
     const [observations, setObservations] = useState('');
     const [selectedLawyerIds, setSelectedLawyerIds] = useState<string[]>([]);
+    const [isRecordProceedingOpen, setIsRecordProceedingOpen] = useState(false);
 
     const [lawyers, setLawyers] = useState<Lawyer[]>([]);
     const [isLoadingLawyers, setIsLoadingLawyers] = useState(false);
@@ -510,47 +512,47 @@ const MatterDetailModal = ({ isOpen, onClose, matter, userId }: MatterDetailModa
                         )}
                     </div>
 
-                    <div className={styles.section} style={{ marginTop: '2rem', paddingTop: '1rem', borderTop: '1px solid #e2e8f0' }}>
-                        <h3 className={styles.sectionTitle}>
-                            <Calendar size={16} /> Quick Adjourn (Next Date)
-                        </h3>
-                        <p className="text-xs text-slate-500 mb-3">
-                            Use this to record a new adjournment if you haven't already. This creates a new future calendar entry.
-                        </p>
-                        <form onSubmit={handleAdjourn} className={styles.adjournForm}>
-                            <div className={styles.formRow}>
-                                <div className={styles.formGroup}>
-                                    <label className={styles.formLabel}>Adjourned To *</label>
-                                    <input
-                                        type="date"
-                                        className={styles.input}
-                                        value={newDate}
-                                        onChange={(e) => setNewDate(e.target.value)}
-                                        required
-                                        disabled={isSubmitting}
-                                    />
-                                </div>
-                                <div className={styles.formGroup}>
-                                    <label className={styles.formLabel}>Adjourned For *</label>
-                                    <select
-                                        className={styles.select}
-                                        value={adjournedFor}
-                                        onChange={(e) => setAdjournedFor(e.target.value)}
-                                        required
-                                        disabled={isSubmitting}
-                                    >
-                                        <option value="">Select purpose...</option>
-                                        <option value="ruling">Ruling</option>
-                                        <option value="judgment">Judgment</option>
-                                        <option value="hearing">Hearing</option>
-                                        <option value="further_arguments">Further Arguments</option>
-                                        <option value="mention">Mention</option>
-                                        <option value="adoption">Adoption of Address</option>
-                                        <option value="cross_examination">Cross Examination</option>
-                                        <option value="other">Other</option>
-                                    </select>
-                                </div>
+                    <h3 className={styles.sectionTitle}>
+                        <Calendar size={16} /> Quick Adjourn (Next Date)
+                    </h3>
+                    <p className="text-xs text-slate-500 mb-3">
+                        Use this to record a new adjournment if you haven't already. This creates a new future calendar entry.
+                    </p>
+                    <form onSubmit={handleAdjourn} className={styles.adjournForm}>
+                        <div className={styles.formRow}>
+                            <div className={styles.formGroup}>
+                                <label className={styles.formLabel}>Adjourned To *</label>
+                                <input
+                                    type="date"
+                                    className={styles.input}
+                                    value={newDate}
+                                    onChange={(e) => setNewDate(e.target.value)}
+                                    required
+                                    disabled={isSubmitting}
+                                />
                             </div>
+                            <div className={styles.formGroup}>
+                                <label className={styles.formLabel}>Adjourned For *</label>
+                                <select
+                                    className={styles.select}
+                                    value={adjournedFor}
+                                    onChange={(e) => setAdjournedFor(e.target.value)}
+                                    required
+                                    disabled={isSubmitting}
+                                >
+                                    <option value="">Select purpose...</option>
+                                    <option value="ruling">Ruling</option>
+                                    <option value="judgment">Judgment</option>
+                                    <option value="hearing">Hearing</option>
+                                    <option value="further_arguments">Further Arguments</option>
+                                    <option value="mention">Mention</option>
+                                    <option value="adoption">Adoption of Address</option>
+                                    <option value="cross_examination">Cross Examination</option>
+                                    <option value="other">Other</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div style={{ display: 'flex', gap: '0.75rem' }}>
                             <button
                                 type="submit"
                                 className={styles.adjournBtn}
@@ -565,11 +567,37 @@ const MatterDetailModal = ({ isOpen, onClose, matter, userId }: MatterDetailModa
                                     'Save Adjournment'
                                 )}
                             </button>
-                        </form>
-                    </div>
+                            <button
+                                type="button"
+                                onClick={() => setIsRecordProceedingOpen(true)}
+                                className={styles.fullRecordBtn}
+                                disabled={isSubmitting}
+                            >
+                                <Scale size={16} />
+                                Full Record Proceeding
+                            </button>
+                        </div>
+                    </form>
                 </div>
             </div>
         </div>
+
+            {
+        isRecordProceedingOpen && (
+            <RecordProceedingModal
+                isOpen={isRecordProceedingOpen}
+                onClose={() => setIsRecordProceedingOpen(false)}
+                workspaceId={matter.workspaceId}
+                userId={userId}
+                initialMatter={matter}
+                onSuccess={() => {
+                    setIsRecordProceedingOpen(false);
+                    onClose(); // Close details too to refresh calendar
+                }}
+            />
+        )
+    }
+        </div >
     );
 };
 

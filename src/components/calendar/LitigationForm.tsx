@@ -52,7 +52,7 @@ const LitigationForm = ({
 }: LitigationFormProps) => {
     // --- State ---
     const router = useRouter();
-    const [step, setStep] = useState<'select' | 'form'>(mode === 'update' && !initialMatter ? 'select' : 'form');
+    const [step, setStep] = useState<'select' | 'form'>(initialMatter ? 'form' : (mode === 'update' ? 'select' : 'form'));
 
     // Data List State
     const [clients, setClients] = useState<Client[]>([]);
@@ -89,7 +89,11 @@ const LitigationForm = ({
     useEffect(() => {
         if (isOpen && workspaceId) {
             loadData();
-            resetForm();
+            if (initialMatter) {
+                handleSelectMatter(initialMatter);
+            } else {
+                resetForm();
+            }
         }
     }, [isOpen, workspaceId, mode, initialMatter]);
 
@@ -160,9 +164,9 @@ const LitigationForm = ({
         setJudge(matter.judge || '');
 
         // Auto-select lawyers if available
-        if (matter.lawyers) {
-            const ids = matter.lawyers.map((l: any) => l.lawyerId);
-            setSelectedLawyerIds(ids);
+        if (matter.lawyers && matter.lawyers.length > 0) {
+            const ids = matter.lawyers.map((l: any) => l.lawyerId || l.lawyer?.id);
+            setSelectedLawyerIds(ids.filter(Boolean));
         } else {
             setSelectedLawyerIds([userId]);
         }

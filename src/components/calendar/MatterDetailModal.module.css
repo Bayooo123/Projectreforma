@@ -313,3 +313,29 @@
     background-color: var(--accent);
     color: var(--text-primary);
 }
+
+.fullRecordBtn {
+    background: transparent;
+    border: 1.5px solid var(--primary);
+    color: var(--primary);
+    padding: 0.75rem 1.5rem;
+    border-radius: var(--radius-md);
+    font-weight: 700;
+    font-size: var(--text-sm);
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+}
+
+.fullRecordBtn:hover {
+    background-color: var(--primary);
+    color: white;
+    box-shadow: 0 10px 15px -3px rgba(var(--primary-rgb, 124, 45, 18), 0.2);
+    transform: translateY(-1px);
+}
+
+.fullRecordBtn:active {
+    transform: translateY(0);
+}
