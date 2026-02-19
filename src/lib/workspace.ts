@@ -33,45 +33,69 @@ export async function isWorkspaceOwner(userId: string, workspaceId: string): Pro
  */
 export async function getPrimaryWorkspace(userId: string) {
     try {
-        // First, try to get an owned workspace
-        const ownedWorkspace = await prisma.workspace.findFirst({
-            where: { ownerId: userId },
-            include: {
-                members: {
-                    where: { userId },
-                    select: { role: true },
-                },
-            },
-        });
-
-        if (ownedWorkspace) {
-            return {
-                ...ownedWorkspace,
-                role: ownedWorkspace.members[0]?.role || 'owner',
-                isOwner: true,
-            };
-        }
-
-        // If no owned workspace, get the first workspace they're a member of
-        const membership = await prisma.workspaceMember.findFirst({
+        // Get all workspace memberships for the user
+        const memberships = await prisma.workspaceMember.findMany({
             where: { userId },
             include: {
-                workspace: true,
-            },
-            orderBy: {
-                joinedAt: 'desc',
-            },
+                workspace: {
+                    include: {
+                        _count: {
+                            select: {
+                                briefs: { where: { deletedAt: null } },
+                                matters: true
+                            }
+                        }
+                    }
+                }
+            }
         });
 
-        if (membership) {
-            return {
-                ...membership.workspace,
-                role: membership.role,
-                isOwner: false,
-            };
+        if (memberships.length === 0) {
+            // Check if they own any workspaces even if not explicitly a member (shouldn't happen with current schema but safe to check)
+            const owned = await prisma.workspace.findFirst({
+                where: { ownerId: userId },
+                include: {
+                    _count: {
+                        select: {
+                            briefs: { where: { deletedAt: null } },
+                            matters: true
+                        }
+                    }
+                }
+            });
+
+            if (owned) {
+                return {
+                    ...owned,
+                    role: 'owner',
+                    isOwner: true,
+                };
+            }
+            return null;
         }
 
-        return null;
+        // Sort by activity: Sum of active briefs and matters
+        const sorted = memberships.sort((a, b) => {
+            const scoreA = (a.workspace._count.briefs || 0) + (a.workspace._count.matters || 0);
+            const scoreB = (b.workspace._count.briefs || 0) + (b.workspace._count.matters || 0);
+
+            // If scores are equal, prefer owned workspaces
+            if (scoreA === scoreB) {
+                if (a.workspace.ownerId === userId && b.workspace.ownerId !== userId) return -1;
+                if (b.workspace.ownerId === userId && a.workspace.ownerId !== userId) return 1;
+                return 0;
+            }
+
+            return scoreB - scoreA;
+        });
+
+        const primary = sorted[0];
+
+        return {
+            ...primary.workspace,
+            role: primary.role,
+            isOwner: primary.workspace.ownerId === userId,
+        };
     } catch (error) {
         console.error('Failed to get primary workspace:', error);
         return null;
