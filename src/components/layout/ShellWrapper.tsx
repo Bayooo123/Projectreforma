@@ -1,9 +1,9 @@
 "use client";
 
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import AppLayout from "./AppLayout";
 import BrandingWizardModal from "@/components/management/BrandingWizardModal";
 import { useEffect, useState, Suspense } from "react";
+import { usePathname, useSearchParams } from "next/navigation";
 
 interface ShellWrapperProps {
     children: React.ReactNode;
@@ -11,6 +11,8 @@ interface ShellWrapperProps {
     workspace: any;
 }
 
+// Purely additive overlay: handles the branding wizard modal.
+// Does NOT make any structural layout decisions — those are resolved server-side in layout.tsx.
 function WizardTrigger({ workspace, user, children }: { workspace: any, user: any, children: React.ReactNode }) {
     const pathname = usePathname();
     const searchParams = useSearchParams();
@@ -49,23 +51,10 @@ function WizardTrigger({ workspace, user, children }: { workspace: any, user: an
     );
 }
 
+// ShellWrapper: renders the authenticated app shell.
+// The public-route guard is handled at the server level (layout.tsx).
+// This component is only mounted for authenticated, non-public routes.
 export default function ShellWrapper({ children, user, workspace }: ShellWrapperProps) {
-    const pathname = usePathname();
-
-    // Define routes that should NOT have the sidebar/header shell
-    // primarily the root landing page and auth pages (though auth pages usually don't have user session)
-    const isPublicRoute =
-        pathname === '/' ||
-        pathname === '/login' ||
-        pathname === '/register' ||
-        pathname === '/forgot-password' ||
-        pathname === '/join' ||
-        pathname.startsWith('/join/');
-
-    if (isPublicRoute) {
-        return <>{children}</>;
-    }
-
     return (
         <Suspense fallback={<AppLayout user={user} workspace={workspace}>{children}</AppLayout>}>
             <WizardTrigger user={user} workspace={workspace}>

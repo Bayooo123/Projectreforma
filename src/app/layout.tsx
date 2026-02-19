@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { DM_Sans } from "next/font/google";
+import { headers } from "next/headers";
 import "./globals.css";
 
 import ShellWrapper from "@/components/layout/ShellWrapper";
@@ -29,12 +30,24 @@ export default async function RootLayout({
   const session = await auth();
   const user = session?.user;
 
+  // Resolve pathname server-side to avoid client-side layout toggling
+  const headersList = await headers();
+  const pathname = headersList.get('x-pathname') || headersList.get('referer') || '';
+  const PUBLIC_ROUTES = ['/', '/login', '/register', '/forgot-password', '/join'];
+  const isPublicRoute =
+    PUBLIC_ROUTES.some(r => pathname.endsWith(r)) ||
+    pathname.includes('/join/');
+
   // Fetch user's workspace with owner info if authenticated
   let workspaceData = null;
   if (user?.id) {
     const data = await getCurrentUserWithWorkspace();
     workspaceData = data?.workspace;
   }
+
+  // Determine if we should render the app shell
+  // Shell is shown when user is authenticated AND not on a public route
+  const showShell = !!user && !isPublicRoute;
 
   return (
     <html lang="en" suppressHydrationWarning>
@@ -60,15 +73,15 @@ export default async function RootLayout({
           disableTransitionOnChange
         >
           <SessionProvider session={session}>
-            {user ? (
-              // Authenticated layout with Conditional Shell
+            {showShell ? (
+              // Authenticated shell — structure is deterministic from server
               <ShellWrapper user={user} workspace={workspaceData}>
                 <PageTransition>
                   {children}
                 </PageTransition>
               </ShellWrapper>
             ) : (
-              // Unauthenticated layout (auth pages handle their own layout)
+              // Public route — no shell
               <PageTransition>
                 {children}
               </PageTransition>
