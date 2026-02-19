@@ -3,7 +3,7 @@
     background: #0f172a;
     /* Deep Navy/Charcoal base */
     color: #f8fafc;
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-family: var(--font-ui);
     -webkit-font-smoothing: antialiased;
 }
 
@@ -127,8 +127,10 @@
 }
 
 .heroTitle {
+    font-family: var(--font-brand);
     font-size: 4.5rem;
-    font-weight: 800;
+    font-weight: var(--weight-semibold);
+    /* 600 per brand spec */
     line-height: 1.1;
     margin-bottom: 2rem;
     letter-spacing: -0.04em;
@@ -196,8 +198,9 @@
 }
 
 .sectionTitle {
+    font-family: var(--font-brand);
     font-size: 3rem;
-    font-weight: 800;
+    font-weight: var(--weight-semibold);
     margin-bottom: 1.5rem;
     letter-spacing: -0.02em;
     color: #ffffff;
@@ -244,7 +247,7 @@
 
 .featureTitle {
     font-size: 1.5rem;
-    font-weight: 700;
+    font-weight: var(--weight-semibold);
     margin-bottom: 1rem;
     color: #ffffff;
 }

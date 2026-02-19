@@ -21,7 +21,7 @@
     padding: 10px 18px;
     border-radius: var(--radius-md);
     font-size: 14px;
-    font-weight: 600;
+    font-weight: var(--weight-semibold);
     color: var(--text-secondary);
     transition: all 0.2s var(--ease-fluid);
     border: none;
@@ -67,7 +67,7 @@
 .tableHeader th {
     padding: 12px 16px;
     font-size: 11px;
-    font-weight: 700;
+    font-weight: var(--weight-bold);
     color: var(--text-tertiary);
     text-transform: uppercase;
     letter-spacing: 0.1em;
@@ -93,7 +93,7 @@
 
 .obligationTitle {
     font-size: 13px;
-    font-weight: 700;
+    font-weight: var(--weight-semibold);
     color: var(--text-primary);
     margin-bottom: 2px;
 }
@@ -111,12 +111,12 @@
     color: var(--text-primary);
     border-radius: var(--radius-sm);
     font-size: 11px;
-    font-weight: 600;
+    font-weight: var(--weight-medium);
 }
 
 .dueDateText {
-    font-family: var(--font-dm-sans);
-    font-weight: 600;
+    font-family: var(--font-ui);
+    font-weight: var(--weight-semibold);
     color: var(--text-primary);
     font-size: 12px;
 }
@@ -129,7 +129,7 @@
     padding: 6px 12px;
     border-radius: 100px;
     font-size: 12px;
-    font-weight: 600;
+    font-weight: var(--weight-semibold);
 }
 
 .status-pending {
@@ -162,7 +162,7 @@
     border: 1px solid var(--border);
     border-radius: var(--radius-md);
     font-size: 13px;
-    font-weight: 600;
+    font-weight: var(--weight-semibold);
     color: var(--text-primary);
     cursor: pointer;
     transition: all 0.2s var(--ease-fluid);
@@ -188,7 +188,7 @@
     color: var(--red-text);
     border-radius: var(--radius-md);
     font-size: 13px;
-    font-weight: 600;
+    font-weight: var(--weight-semibold);
     transition: all 0.2s var(--ease-fluid);
 }
 

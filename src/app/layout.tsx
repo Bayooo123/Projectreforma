@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { DM_Sans } from "next/font/google";
+import { IBM_Plex_Sans, Source_Serif_4 } from "next/font/google";
 import { headers } from "next/headers";
 import "./globals.css";
 
@@ -11,7 +11,19 @@ import { getCurrentUserWithWorkspace } from "@/lib/workspace";
 import { SessionProvider } from "next-auth/react";
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
 
-const dmSans = DM_Sans({ subsets: ["latin"], variable: "--font-dm-sans" });
+const ibmPlexSans = IBM_Plex_Sans({
+  subsets: ["latin"],
+  weight: ["300", "400", "500", "600"],
+  variable: "--font-ibm-plex-sans",
+  display: 'swap',
+});
+
+const sourceSerif4 = Source_Serif_4({
+  subsets: ["latin"],
+  weight: ["400", "600"],
+  variable: "--font-source-serif-4",
+  display: 'swap',
+});
 
 export const metadata: Metadata = {
   title: "ReformaOS | Legal Operating System",
@@ -52,7 +64,7 @@ export default async function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body
-        className={dmSans.variable}
+        className={`${ibmPlexSans.variable} ${sourceSerif4.variable}`}
         style={{
           ['--brand-color' as any]: (workspaceData as any)?.brandColor || '#8E2F39',
           ['--secondary-color' as any]: (workspaceData as any)?.secondaryColor || '#1e293b',

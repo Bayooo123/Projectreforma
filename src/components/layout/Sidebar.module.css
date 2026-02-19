@@ -17,10 +17,14 @@
 }
 
 .logo {
-    font-size: 24px;
-    font-weight: 600;
+    font-family: var(--font-brand);
+    font-size: 26px;
+    font-weight: var(--weight-normal);
+    /* 400 per brand spec */
     color: var(--text-inverse);
     margin-bottom: 8px;
+    letter-spacing: -0.02em;
+    /* Tightened for logo lockup */
 }
 
 .firmBranding {
@@ -85,7 +89,7 @@
 }
 
 .navText {
-    font-weight: 500;
+    font-weight: var(--weight-medium);
 }
 
 .footer {
@@ -113,6 +117,7 @@
 
 .footerLink:hover {
     color: var(--text-inverse);
+    font-weight: var(--weight-medium);
 }
 
 .userInfo {
