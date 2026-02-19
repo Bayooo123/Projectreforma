@@ -10,11 +10,10 @@ import {
 } from '@/app/actions/analytics';
 import AnalyticsClient from './AnalyticsClient';
 
-export default async function AnalyticsPage({
-    searchParams
-}: {
-    searchParams: { filter?: string }
+export default async function AnalyticsPage(props: {
+    searchParams: Promise<{ filter?: string }>
 }) {
+    const searchParams = await props.searchParams;
     const session = await auth();
     if (!session?.user?.id) return redirect('/login');
 
