@@ -44,11 +44,13 @@ export default async function RootLayout({
 
   // Resolve pathname server-side to avoid client-side layout toggling
   const headersList = await headers();
-  const pathname = headersList.get('x-pathname') || headersList.get('referer') || '';
+  const rawPathname = headersList.get('x-pathname') || '';
+  const pathname = rawPathname.replace(/\/$/, '') || '/'; // Normalize trailing slash
+
   const PUBLIC_ROUTES = ['/', '/login', '/register', '/forgot-password', '/join'];
   const isPublicRoute =
-    PUBLIC_ROUTES.some(r => pathname.endsWith(r)) ||
-    pathname.includes('/join/');
+    PUBLIC_ROUTES.includes(pathname) ||
+    pathname.startsWith('/join/');
 
   // Fetch user's workspace with owner info if authenticated
   let workspaceData = null;

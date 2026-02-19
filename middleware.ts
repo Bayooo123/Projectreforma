@@ -1,7 +1,21 @@
+import { NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
 import NextAuth from "next-auth";
 import { authConfig } from "./src/auth.config";
 
-export default NextAuth(authConfig).auth;
+const { auth } = NextAuth(authConfig);
+
+export default auth((req) => {
+    // Inject the current pathname into request headers so RootLayout (Server Component) can read it
+    const requestHeaders = new Headers(req.headers);
+    requestHeaders.set('x-pathname', req.nextUrl.pathname);
+
+    return NextResponse.next({
+        request: {
+            headers: requestHeaders,
+        }
+    });
+});
 
 export const config = {
     // Protect all routes except public ones
