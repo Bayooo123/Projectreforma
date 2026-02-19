@@ -580,24 +580,21 @@ const MatterDetailModal = ({ isOpen, onClose, matter, userId }: MatterDetailModa
                     </form>
                 </div>
             </div>
-        </div>
 
-            {
-        isRecordProceedingOpen && (
-            <RecordProceedingModal
-                isOpen={isRecordProceedingOpen}
-                onClose={() => setIsRecordProceedingOpen(false)}
-                workspaceId={matter.workspaceId}
-                userId={userId}
-                initialMatter={matter}
-                onSuccess={() => {
-                    setIsRecordProceedingOpen(false);
-                    onClose(); // Close details too to refresh calendar
-                }}
-            />
-        )
-    }
-        </div >
+            {isRecordProceedingOpen && (
+                <RecordProceedingModal
+                    isOpen={isRecordProceedingOpen}
+                    onClose={() => setIsRecordProceedingOpen(false)}
+                    workspaceId={matter.workspaceId}
+                    userId={userId}
+                    initialMatter={matter}
+                    onSuccess={() => {
+                        setIsRecordProceedingOpen(false);
+                        onClose(); // Close details too to refresh calendar
+                    }}
+                />
+            )}
+        </div>
     );
 };
 
