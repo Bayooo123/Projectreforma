@@ -10,25 +10,58 @@ export default async function OfficeManagementPage() {
     const session = await auth();
     if (!session?.user?.id) return redirect('/login');
 
-    const member = await prisma.workspaceMember.findFirst({
-        where: { userId: session.user.id },
-        select: { workspaceId: true }
+    const workspaceId = session.user.workspaceId;
+    if (!workspaceId) return redirect('/onboarding');
+
+    // Pre-fetch initial financial data server-side
+    const now = new Date();
+    const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+    const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+
+    const expenses = await prisma.expense.findMany({
+        where: {
+            workspaceId,
+            date: { gte: firstDay, lte: lastDay }
+        },
+        orderBy: { date: 'desc' }
     });
 
-    if (!member) {
-        return <div className="p-10 text-center">No Workspace Found</div>;
-    }
+    const byDate = expenses.reduce((acc, expense) => {
+        const dateKey = expense.date.toISOString().split('T')[0];
+        if (!acc[dateKey]) {
+            acc[dateKey] = { total: 0, count: 0 };
+        }
+        acc[dateKey].total += expense.amount;
+        acc[dateKey].count += 1;
+        return acc;
+    }, {} as Record<string, { total: number; count: number }>);
 
-    // ...
+    const summaries = Object.keys(byDate).sort().reverse().map(dateKey => ({
+        date: dateKey,
+        total: byDate[dateKey].total,
+        count: byDate[dateKey].count
+    }));
+
+    // Serialize dates for Client Component transmission
+    const serializedExpenses = expenses.map(e => ({
+        ...e,
+        date: e.date.toISOString(),
+        createdAt: e.createdAt.toISOString(),
+        updatedAt: e.updatedAt.toISOString(),
+    }));
 
     return (
         <div className="p-8">
             <PinProtection
-                workspaceId={member.workspaceId}
-                featureId="office_manager"
+                workspaceId={workspaceId}
+                featureId="office"
                 variant="office"
             >
-                <OfficeManagerClient workspaceId={member.workspaceId} />
+                <OfficeManagerClient
+                    workspaceId={workspaceId}
+                    initialExpenses={serializedExpenses}
+                    initialSummaries={summaries}
+                />
             </PinProtection>
         </div>
     );

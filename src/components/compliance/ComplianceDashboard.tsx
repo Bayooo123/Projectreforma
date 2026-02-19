@@ -8,16 +8,24 @@ import styles from "./Compliance.module.css";
 
 interface ComplianceDashboardProps {
     workspaceId: string;
+    initialTasks: ComplianceTask[];
+    initialTier: Tier;
 }
 
 type Tier = 'Federal' | 'State' | 'Local' | 'International';
 
-export default function ComplianceDashboard({ workspaceId }: ComplianceDashboardProps) {
-    const [activeTier, setActiveTier] = useState<Tier>('Federal');
-    const [tasks, setTasks] = useState<ComplianceTask[]>([]);
-    const [loading, setLoading] = useState(true);
+export default function ComplianceDashboard({
+    workspaceId,
+    initialTasks,
+    initialTier
+}: ComplianceDashboardProps) {
+    const [activeTier, setActiveTier] = useState<Tier>(initialTier);
+    const [tasks, setTasks] = useState<ComplianceTask[]>(initialTasks);
+    const [loading, setLoading] = useState(false);
 
     const fetchTasks = useCallback(async () => {
+        // If the current tasks match the tier we just switched to from props, skip fetch
+        // (This is a small optimization for the first load)
         setLoading(true);
         const result = await getComplianceTasks(workspaceId, activeTier);
         if (result.success) {
@@ -28,9 +36,12 @@ export default function ComplianceDashboard({ workspaceId }: ComplianceDashboard
         setLoading(false);
     }, [workspaceId, activeTier]);
 
+    // Handle tier changes via interaction
     useEffect(() => {
-        fetchTasks();
-    }, [fetchTasks]);
+        if (activeTier !== initialTier || tasks !== initialTasks) {
+            fetchTasks();
+        }
+    }, [activeTier, fetchTasks]);
 
     const tabs: { label: Tier; icon: any }[] = [
         { label: 'Local', icon: MapPin },

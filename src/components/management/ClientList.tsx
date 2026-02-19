@@ -51,19 +51,27 @@ interface ClientListProps {
     workspaceId: string;
     letterheadUrl?: string | null;
     onEditClient?: (client: Client) => void;
+    initialClients: Client[];
+    initialPages: number;
 }
 
-const ClientList = ({ workspaceId, letterheadUrl, onEditClient }: ClientListProps) => {
+const ClientList = ({
+    workspaceId,
+    letterheadUrl,
+    onEditClient,
+    initialClients,
+    initialPages
+}: ClientListProps) => {
     const searchParams = useSearchParams();
     const filterParam = searchParams.get('filter') || undefined;
 
     // Data State
-    const [clients, setClients] = useState<Client[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
+    const [clients, setClients] = useState<Client[]>(initialClients);
+    const [isLoading, setIsLoading] = useState(false);
 
     // Pagination & Filter State
     const [page, setPage] = useState(1);
-    const [totalPages, setTotalPages] = useState(1);
+    const [totalPages, setTotalPages] = useState(initialPages);
     const limit = 10;
 
     const [searchQuery, setSearchQuery] = useState('');
@@ -102,10 +110,13 @@ const ClientList = ({ workspaceId, letterheadUrl, onEditClient }: ClientListProp
         }
     }, [workspaceId, page, limit, debouncedSearch, statusFilter, filterParam]);
 
-    // Fetch when dependencies change
+    // Fetch when filters change (skip initial mount since we have data)
     useEffect(() => {
-        fetchClients();
-    }, [fetchClients]);
+        const isInitial = page === 1 && debouncedSearch === '' && statusFilter === 'all' && !filterParam;
+        if (!isInitial) {
+            fetchClients();
+        }
+    }, [fetchClients, page, debouncedSearch, statusFilter, filterParam]);
 
     // Reset page when filters change
     useEffect(() => {

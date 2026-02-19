@@ -1,12 +1,17 @@
-"use client";
-
 import FinancialLog from "@/components/management/FinancialLog";
+import { prisma } from "@/lib/prisma";
 
 interface OfficeManagerClientProps {
     workspaceId: string;
+    initialExpenses: any[];
+    initialSummaries: any[];
 }
 
-export default function OfficeManagerClient({ workspaceId }: OfficeManagerClientProps) {
+export default function OfficeManagerClient({
+    workspaceId,
+    initialExpenses,
+    initialSummaries
+}: OfficeManagerClientProps) {
     return (
         <div className="max-w-[1400px] mx-auto">
             <div className="mb-8">
@@ -15,7 +20,11 @@ export default function OfficeManagerClient({ workspaceId }: OfficeManagerClient
             </div>
 
             <div className="mt-8">
-                <FinancialLog workspaceId={workspaceId} />
+                <FinancialLog
+                    workspaceId={workspaceId}
+                    initialExpenses={initialExpenses}
+                    initialSummaries={initialSummaries}
+                />
             </div>
         </div>
     );

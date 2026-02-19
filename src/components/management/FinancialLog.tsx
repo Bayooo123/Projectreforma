@@ -15,7 +15,9 @@ interface Expense {
 }
 
 interface FinancialLogProps {
-    workspaceId?: string;
+    workspaceId: string;
+    initialExpenses: Expense[];
+    initialSummaries: any[];
 }
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -29,21 +31,20 @@ const CATEGORY_LABELS: Record<string, string> = {
     'MISCELLANEOUS': 'Miscellaneous',
 };
 
-const FinancialLog = ({ workspaceId }: FinancialLogProps) => {
+const FinancialLog = ({ workspaceId, initialExpenses, initialSummaries }: FinancialLogProps) => {
     const [viewMode, setViewMode] = useState<'summary' | 'detail'>('summary');
     const [selectedDate, setSelectedDate] = useState<string | null>(null);
-    const [expenses, setExpenses] = useState<Expense[]>([]);
-    const [dailySummaries, setDailySummaries] = useState<any[]>([]);
+    const [expenses, setExpenses] = useState<Expense[]>(initialExpenses);
+    const [dailySummaries, setDailySummaries] = useState<any[]>(initialSummaries);
     const [isExpenseModalOpen, setIsExpenseModalOpen] = useState(false);
-    const [isLoading, setIsLoading] = useState(true);
+    const [isLoading, setIsLoading] = useState(false); // Default to false since we have initial data
 
     const fetchExpenses = async () => {
         setIsLoading(true);
         try {
-            // Fetch this month's expenses by default to build the summary
             const queryParams = new URLSearchParams({
-                filter: 'this-month', // Broaden scope to see trends
-                ...(workspaceId && { workspaceId }),
+                filter: 'this-month',
+                workspaceId: workspaceId,
             });
             const response = await fetch(`/api/expenses?${queryParams}`);
             const data = await response.json();
@@ -51,7 +52,6 @@ const FinancialLog = ({ workspaceId }: FinancialLogProps) => {
             if (data.success) {
                 setExpenses(data.data.expenses);
 
-                // Process aggregations for daily summary
                 const byDate = data.data.aggregations.byDate;
                 const summaries = Object.keys(byDate).sort().reverse().map(dateKey => ({
                     date: dateKey,
@@ -66,12 +66,6 @@ const FinancialLog = ({ workspaceId }: FinancialLogProps) => {
             setIsLoading(false);
         }
     };
-
-    useEffect(() => {
-        if (workspaceId) {
-            fetchExpenses();
-        }
-    }, [workspaceId]);
 
     const handleExpenseAdded = () => {
         fetchExpenses();

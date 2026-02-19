@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import ComplianceDashboard from "@/components/compliance/ComplianceDashboard";
 import { PinProtection } from "@/components/auth/PinProtection";
+import { getComplianceTasks } from "@/app/actions/compliance";
 
 export const dynamic = 'force-dynamic';
 
@@ -16,8 +17,13 @@ export default async function ComplianceManagementPage() {
     });
 
     if (!member) {
-        return <div className="p-10 text-center">No Workspace Found</div>;
+        return <div className="p-10 text-center text-slate-500">No Workspace Found</div>;
     }
+
+    // Pre-fetch Federal compliance tasks server-side
+    const initialTier = 'Federal';
+    const result = await getComplianceTasks(member.workspaceId, initialTier);
+    const initialTasks = result.success ? result.data : [];
 
     return (
         <div className="p-8">
@@ -27,15 +33,17 @@ export default async function ComplianceManagementPage() {
                     <p className="text-slate-500 dark:text-slate-400">Systematic tracking and enforcement of regulatory obligations</p>
                 </div>
 
-                {/* ... */}
-
                 <div className="mt-8">
                     <PinProtection
                         workspaceId={member.workspaceId}
                         featureId="compliance"
                         variant="compliance"
                     >
-                        <ComplianceDashboard workspaceId={member.workspaceId} />
+                        <ComplianceDashboard
+                            workspaceId={member.workspaceId}
+                            initialTasks={initialTasks}
+                            initialTier={initialTier}
+                        />
                     </PinProtection>
                 </div>
             </div>

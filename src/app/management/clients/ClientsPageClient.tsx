@@ -13,9 +13,17 @@ interface ClientsPageClientProps {
     workspaceId: string;
     userId: string;
     letterheadUrl?: string | null;
+    initialClients: any[];
+    initialPages: number;
 }
 
-export default function ClientsPageClient({ workspaceId, userId, letterheadUrl }: ClientsPageClientProps) {
+export default function ClientsPageClient({
+    workspaceId,
+    userId,
+    letterheadUrl,
+    initialClients,
+    initialPages
+}: ClientsPageClientProps) {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingClient, setEditingClient] = useState<any>(null);
     const [refreshKey, setRefreshKey] = useState(0);
@@ -83,6 +91,8 @@ export default function ClientsPageClient({ workspaceId, userId, letterheadUrl }
                 workspaceId={workspaceId}
                 letterheadUrl={letterheadUrl}
                 onEditClient={handleEditClient}
+                initialClients={initialClients}
+                initialPages={initialPages}
             />
 
             <AddClientModal

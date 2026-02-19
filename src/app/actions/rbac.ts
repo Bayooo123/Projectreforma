@@ -15,8 +15,8 @@ export async function verifyWorkspacePin(workspaceId: string, pin: string): Prom
         }
 
         if (!workspace.adminCode) {
-            // Fallback if no code is set (should not happen after migration)
-            return { success: false, error: 'Admin code not configured' };
+            // If no PIN is configured, we allow access by default (optional PIN logic)
+            return { success: true };
         }
 
         const isValid = verifyPin(pin, workspace.adminCode);
@@ -51,5 +51,17 @@ export async function updateAdminPin(workspaceId: string, pin: string): Promise<
     } catch (error) {
         console.error('Error updating admin PIN:', error);
         return { success: false, error: 'Failed to update admin PIN' };
+    }
+}
+export async function isWorkspacePinSet(workspaceId: string): Promise<boolean> {
+    try {
+        const workspace = await prisma.workspace.findUnique({
+            where: { id: workspaceId },
+            select: { adminCode: true }
+        });
+        return !!workspace?.adminCode;
+    } catch (error) {
+        console.error('Error checking if PIN is set:', error);
+        return true; // Default to safe-side (require PIN) if check fails
     }
 }

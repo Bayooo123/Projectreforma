@@ -30,13 +30,35 @@ export function PinProtection({
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(true);
     const [isShaking, setIsShaking] = useState(false);
+    const [isConfigured, setIsConfigured] = useState(true);
 
     useEffect(() => {
-        const storedAuth = sessionStorage.getItem(`rbac_auth_${workspaceId}_${featureId}`);
-        if (storedAuth === 'true') {
-            setIsUnlocked(true);
+        async function checkPinConfig() {
+            try {
+                // Check if already unlocked in session
+                const storedAuth = sessionStorage.getItem(`rbac_auth_${workspaceId}_${featureId}`);
+                if (storedAuth === 'true') {
+                    setIsUnlocked(true);
+                    setIsLoading(false);
+                    return;
+                }
+
+                // Check if workspace even has a PIN set
+                const { isWorkspacePinSet } = await import('@/app/actions/rbac');
+                const isSet = await isWorkspacePinSet(workspaceId);
+
+                if (!isSet) {
+                    setIsUnlocked(true);
+                    setIsConfigured(false);
+                }
+            } catch (err) {
+                console.error("Failed to check PIN config:", err);
+            } finally {
+                setIsLoading(false);
+            }
         }
-        setIsLoading(false);
+
+        checkPinConfig();
     }, [workspaceId, featureId]);
 
     const handleVerify = async (e: React.FormEvent) => {
@@ -108,7 +130,7 @@ export function PinProtection({
     const styles = getVariantStyles();
     const Icon = styles.icon;
 
-    if (isLoading) return null;
+    if (isLoading) return null; // Small gap for local session check, but essentially instant if unlocked
 
     if (isUnlocked) {
         return <>{children}</>;
