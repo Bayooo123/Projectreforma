@@ -17,15 +17,16 @@ const ADMIN_ROLES = [
     'Managing Associate',
 ];
 
-export default function RegisterForm({ inviteToken, firmName }: { inviteToken?: string, firmName?: string }) {
+export default function RegisterForm({ inviteToken, firmName, isPilot }: { inviteToken?: string, firmName?: string, isPilot?: boolean }) {
     // Dynamically choose action
     const action = inviteToken ? registerMember : register;
     const [errorMessage, dispatch, isPending] = useActionState(action, undefined);
 
     return (
         <form action={dispatch} className={styles.form}>
-            {/* Hidden Input for Token */}
+            {/* Hidden Input for Token or Pilot Bypass */}
             {inviteToken && <input type="hidden" name="inviteToken" value={inviteToken} />}
+            {isPilot && <input type="hidden" name="isPilot" value="true" />}
 
             <div className={styles.formGroup}>
                 <label htmlFor="name" className={styles.label}>

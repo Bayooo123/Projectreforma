@@ -64,19 +64,97 @@ export async function register(
     const name = formData.get('name') as string;
     const email = (formData.get('email') as string).toLowerCase();
     const firmName = formData.get('firmName') as string;
+    const password = formData.get('password') as string;
+    const phone = formData.get('phone') as string;
+    const role = formData.get('role') as string;
+    const isPilot = formData.get('isPilot') === 'true';
 
-    // BLOCK NEW SIGNUPS (LOCKED FOR APRIL LAUNCH)
-    console.log('🔒 Public registration is currently disabled. Adding to waitlist instead.');
+    if (!isPilot) {
+        // BLOCK NEW SIGNUPS (LOCKED FOR APRIL LAUNCH)
+        console.log('🔒 Public registration is currently disabled. Adding to waitlist instead.');
+        try {
+            await prisma.waitlist.upsert({
+                where: { email },
+                update: { name, firmName },
+                create: { email, name, firmName }
+            });
+            return 'Registration is currently limited. You have been added to our waitlist and we will notify you once your workspace is ready.';
+        } catch (e) {
+            console.error('Waitlist error during registration attempt:', e);
+            return 'Registration is currently closed. Please join the waitlist on the home page.';
+        }
+    }
+
+    // PILOT BYPASS LOGIC
+    console.log('🚀 Pilot registration bypass triggered for:', { email, firmName });
+
+    if (!name || !email || !password || !firmName || !phone) {
+        return 'Please fill in all fields.';
+    }
+
     try {
-        await prisma.waitlist.upsert({
-            where: { email },
-            update: { name, firmName },
-            create: { email, name, firmName }
+        const hashedPassword = await bcrypt.hash(password, 10);
+        const lawyerToken = await generateUniqueLawyerToken();
+        const firmCode = nanoid(6).toUpperCase();
+        const inviteLinkToken = nanoid(12);
+        // Generate a unique slug from firm name
+        const slugBase = firmName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+        const slug = `${slugBase}-${nanoid(5).toLowerCase()}`;
+
+        await prisma.$transaction(async (tx) => {
+            // 1. Create User
+            const user = await tx.user.create({
+                data: {
+                    name,
+                    email,
+                    password: hashedPassword,
+                    phone,
+                    lawyerToken,
+                }
+            });
+
+            // 2. Create Workspace
+            const workspace = await tx.workspace.create({
+                data: {
+                    name: firmName,
+                    slug,
+                    firmCode,
+                    inviteLinkToken,
+                    ownerId: user.id,
+                }
+            });
+
+            // 3. Add User as Workspace Admin Member
+            await tx.workspaceMember.create({
+                data: {
+                    userId: user.id,
+                    workspaceId: workspace.id,
+                    role: role || 'Managing Partner',
+                    status: 'active'
+                }
+            });
         });
-        return 'Registration is currently limited. You have been added to our waitlist and we will notify you once your workspace is ready.';
-    } catch (e) {
-        console.error('Waitlist error during registration attempt:', e);
-        return 'Registration is currently closed. Please join the waitlist on the home page.';
+
+        // 4. Sign In
+        try {
+            await signIn('credentials', {
+                email,
+                password,
+                redirectTo: '/overview'
+            });
+        } catch (error) {
+            if (error instanceof AuthError) {
+                return 'Registration successful, but login failed. Please scan your login credentials manually.';
+            }
+            throw error;
+        }
+
+    } catch (error: any) {
+        console.error('Pilot registration error:', error);
+        if (error.code === 'P2002') {
+            return 'A user with this email already exists.';
+        }
+        return 'Failed to create pilot account. Please try again.';
     }
 }
 
@@ -97,8 +175,8 @@ export async function registerMember(
         return 'Please fill in all fields.';
     }
 
-    // BLOCK MEMBER JOINS FOR NOW
-    return 'Joins are currently restricted. Please contact your firm administrator.';
+    // UNBLOCKED MEMBER JOINS FOR PILOT FIRMS
+    // return 'Joins are currently restricted. Please contact your firm administrator.';
 
     try {
         const hashedPassword = await bcrypt.hash(password, 10);

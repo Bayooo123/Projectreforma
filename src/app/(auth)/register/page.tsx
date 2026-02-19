@@ -3,10 +3,13 @@
 import { UserPlus, Shield } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { useSearchParams } from 'next/navigation';
 import styles from '../auth.module.css';
 import RegisterForm from '@/components/auth/RegisterForm';
 
 export default function RegisterPage() {
+    const searchParams = useSearchParams();
+    const isPilot = searchParams.get('pilot') === 'true';
     return (
         <div className={styles.authContainer}>
             {/* Branding Side */}
@@ -64,7 +67,7 @@ export default function RegisterPage() {
                         </p>
                     </div>
 
-                    <RegisterForm />
+                    <RegisterForm isPilot={isPilot} />
                 </div>
             </div>
         </div>
