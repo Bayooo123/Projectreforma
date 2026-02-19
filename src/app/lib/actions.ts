@@ -135,21 +135,17 @@ export async function register(
             });
         });
 
-        // 4. Sign In
-        try {
-            await signIn('credentials', {
-                email,
-                password,
-                redirectTo: '/overview'
-            });
-        } catch (error) {
-            if (error instanceof AuthError) {
-                return 'Registration successful, but login failed. Please scan your login credentials manually.';
-            }
-            throw error;
-        }
+        // 4. Sign In — signIn with redirectTo throws a NEXT_REDIRECT internally on success
+        await signIn('credentials', {
+            email,
+            password,
+            redirectTo: '/overview'
+        });
 
     } catch (error: any) {
+        // Re-throw Next.js redirect (NEXT_REDIRECT) — this is the successful path
+        if (error?.digest?.startsWith('NEXT_REDIRECT')) throw error;
+
         console.error('Pilot registration error:', error);
         if (error.code === 'P2002') {
             return 'A user with this email already exists.';
