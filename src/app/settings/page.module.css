@@ -237,8 +237,8 @@
 }
 
 .error {
-    background: #FEF2F2;
-    color: #DC2626;
+    background: var(--danger-bg);
+    color: var(--danger);
     padding: 0.75rem;
     border-radius: var(--radius-md);
     margin-bottom: 1.5rem;
@@ -246,7 +246,7 @@
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    border: 1px solid #FEE2E2;
+    border: 1px solid var(--danger-bg);
 }
 
 .success {

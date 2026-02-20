@@ -332,8 +332,8 @@
 }
 
 .expenseDay:hover {
-    background-color: #FEE2E2;
-    border-color: #DC2626;
+    background-color: var(--danger-bg);
+    border-color: var(--danger);
     transform: translateY(-2px);
     box-shadow: var(--shadow-md);
 }
@@ -348,7 +348,7 @@
 .expenseDayAmount {
     font-size: 1.25rem;
     font-weight: 700;
-    color: #DC2626;
+    color: var(--danger);
     margin-bottom: 0.25rem;
 }
 

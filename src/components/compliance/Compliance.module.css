@@ -37,7 +37,7 @@
 .tierButton.active {
     color: var(--text-inverse);
     background: var(--primary);
-    box-shadow: 0 4px 12px rgba(142, 47, 57, 0.25);
+    box-shadow: 0 4px 12px var(--primary-soft);
 }
 
 .tableWrapper {
@@ -143,13 +143,13 @@
 }
 
 .status-overdue {
-    background: #FEF2F2;
-    color: #DC2626;
+    background: var(--danger-bg);
+    color: var(--danger);
 }
 
 .status-concluded {
-    background: #ECFDF5;
-    color: #059669;
+    background: var(--success-bg);
+    color: var(--success);
 }
 
 /* Action Buttons */

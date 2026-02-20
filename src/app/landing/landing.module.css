@@ -70,7 +70,7 @@
     font-weight: 600;
     text-decoration: none;
     transition: all 0.3s ease;
-    box-shadow: 0 4px 12px rgba(20, 184, 166, 0.2);
+    box-shadow: 0 4px 12px rgba(5, 150, 105, 0.2);
 }
 
 .btnPrimary:hover {
@@ -178,7 +178,7 @@
 .btnHero:hover {
     background: var(--primary-hover);
     transform: translateY(-2px);
-    box-shadow: 0 10px 25px rgba(20, 184, 166, 0.35);
+    box-shadow: 0 10px 25px rgba(5, 150, 105, 0.35);
 }
 
 /* Features Section */
@@ -236,7 +236,7 @@
 .featureIcon {
     width: 3.5rem;
     height: 3.5rem;
-    background: rgba(20, 184, 166, 0.1);
+    background: rgba(16, 185, 129, 0.1);
     border-radius: 0.5rem;
     display: flex;
     align-items: center;
@@ -292,7 +292,7 @@
 .input:focus {
     border-color: var(--primary-color);
     background: rgba(255, 255, 255, 0.05);
-    box-shadow: 0 0 0 4px rgba(20, 184, 166, 0.1);
+    box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.1);
 }
 
 .submitBtn {

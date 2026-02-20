@@ -68,7 +68,7 @@
     width: 48px;
     height: 48px;
     border-radius: 12px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, var(--primary) 0%, var(--bg-sidebar) 100%);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -188,9 +188,9 @@
 }
 
 .removeButton:hover {
-    background: #fef2f2;
-    border-color: #fecaca;
-    color: #dc2626;
+    background: var(--danger-bg);
+    border-color: var(--danger);
+    color: var(--danger);
 }
 
 .addButton {
@@ -248,10 +248,10 @@
 
 .error {
     padding: 12px 16px;
-    background: #fef2f2;
-    border: 1px solid #fecaca;
+    background: var(--danger-bg);
+    border: 1px solid var(--border);
     border-radius: 8px;
-    color: #dc2626;
+    color: var(--danger);
     font-size: 14px;
     margin-bottom: 16px;
 }
@@ -298,7 +298,7 @@
 
 .submitButton {
     padding: 10px 20px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, var(--primary) 0%, var(--bg-sidebar) 100%);
     border: none;
     border-radius: 8px;
     font-size: 14px;

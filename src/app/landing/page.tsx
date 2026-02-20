@@ -95,7 +95,7 @@ export default function LandingPage() {
 
                     <h1 className={styles.heroTitle}>
                         The Operating System for <br />
-                        <span style={{ color: 'var(--primary-color)' }}>All Law Firms</span>
+                        <span className="text-gradient-primary">All Law Firms</span>
                     </h1>
 
                     <p className={styles.heroDescription}>

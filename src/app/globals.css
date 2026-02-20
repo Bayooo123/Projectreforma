@@ -30,15 +30,15 @@
   --border: #E5E7EB;
   /* Gray 200 */
   /* Dashboard Specifics */
-  --primary: var(--accent-color, #8E2F39);
-  /* Brand Burgundy - Exact Shade from User */
-  --primary-hover: var(--accent-color, #72222B);
-  --success: #059669;
-  /* Emerald 600 - Muted */
+  --primary: var(--accent-color, #059669);
+  /* Official Reforma Green - Emerald 600 */
+  --primary-hover: var(--accent-color, #047857);
+  --success: #10B981;
+  /* Emerald 500 */
   --success-bg: #ECFDF5;
-  --warning: #D97706;
+  --warning: #F59E0B;
   --warning-bg: #FFFBEB;
-  --danger: #DC2626;
+  --danger: #EF4444;
   --danger-bg: #FEF2F2;
 
   /* Spacing & Radius */
@@ -56,12 +56,12 @@
     0 4px 6px -2px rgba(31, 41, 55, 0.025);
   --shadow-soft: 0 20px 40px -10px rgba(31, 41, 55, 0.08);
   /* Dashboard Specifics */
-  --bg-sidebar: var(--secondary-color, #8E2F39);
-  /* Brand Burgundy - Exact Shade */
-  --red-bg: #FDF2F4;
-  --red-text: var(--brand-color, #8E2F39);
-  --hover-bg: var(--secondary-color, #72222B);
-  /* Burgundy-700 Hover */
+  --bg-sidebar: var(--secondary-color, #064e3b);
+  /* Deep Emerald - Institutional Green */
+  --red-bg: #ECFDF5;
+  --red-text: var(--brand-color, #059669);
+  --hover-bg: var(--secondary-color, #022c22);
+  /* Deep Teal-950 Hover */
 
   /* Animation Timing */
   --ease-fluid: cubic-bezier(0.4, 0, 0.2, 1);
@@ -74,8 +74,8 @@
   --text-lp-primary: #1F2937;
   --text-lp-secondary: #6B7280;
   --text-lp-tertiary: #9CA3AF;
-  --primary-color: #DC2626;
-  --primary-hover: #B91C1C;
+  --primary-color: #059669;
+  --primary-hover: #047857;
 
   --card-bg: #FFFFFF;
   --card-hover-bg: #F3F4F6;
@@ -103,11 +103,11 @@
 /* Dark Mode Overrides */
 .dark {
   /* Brand Colors - Dark Mode */
-  --primary: #DC2626;
-  --primary-dark: #B91C1C;
-  --primary-light: #EF4444;
-  --primary-soft: rgba(220, 38, 38, 0.2);
-  --primary-glow: 0 0 25px rgba(220, 38, 38, 0.4);
+  --primary: #10B981;
+  --primary-dark: #059669;
+  --primary-light: #34D399;
+  --primary-soft: rgba(16, 185, 129, 0.2);
+  --primary-glow: 0 0 25px rgba(16, 185, 129, 0.4);
 
   --accent: #374151;
   /* Gray 700 */
@@ -133,12 +133,12 @@
   --glass-border: rgba(255, 255, 255, 0.08);
 
   /* Dashboard Specifics - Dark Mode */
-  --bg-sidebar: var(--secondary-color, #421419);
-  /* Burgundy-900 - Deep Dark Burgundy for Sidebar */
-  --red-bg: rgba(142, 47, 57, 0.15);
-  --red-text: var(--brand-color, #F5C2C9);
-  --hover-bg: var(--secondary-color, #2A0C10);
-  /* Burgundy-950 Hover */
+  --bg-sidebar: var(--secondary-color, #022c22);
+  /* Deepest Teal for Sidebar */
+  --red-bg: rgba(16, 185, 129, 0.15);
+  --red-text: var(--brand-color, #D1FAE5);
+  --hover-bg: var(--secondary-color, #064e3b);
+  /* Teal-900 Hover */
 
   --border: #374151;
   /* Gray 700 */
@@ -161,7 +161,7 @@
   --status-finalized-border: rgba(59, 130, 246, 0.3);
 
   /* Input Focus Glow */
-  --input-focus-glow: 0 0 0 3px rgba(220, 38, 38, 0.3);
+  --input-focus-glow: 0 0 0 3px rgba(16, 185, 129, 0.3);
 
   --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.5);
   --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.5);
@@ -174,11 +174,11 @@
   --text-lp-primary: #F3F4F6;
   --text-lp-secondary: #D1D5DB;
   --text-lp-tertiary: #9CA3AF;
-  --primary-color: #DC2626;
-  --primary-hover: #B91C1C;
+  --primary-color: #10B981;
+  --primary-hover: #059669;
 
   --card-bg: #1F2937;
-  --card-hover-bg: rgba(220, 38, 38, 0.1);
+  --card-hover-bg: rgba(16, 185, 129, 0.1);
 
   --section-hero-bg: #111827;
   --section-problem-bg: #1F2937;
@@ -436,7 +436,7 @@ small {
   position: absolute;
   width: 200px;
   height: 200px;
-  background: radial-gradient(circle, rgba(185, 28, 28, 0.3) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(16, 185, 129, 0.3) 0%, transparent 70%);
   filter: blur(40px);
   animation: beamMove 8s infinite alternate ease-in-out;
 }
@@ -475,7 +475,7 @@ small {
 .bento-card:hover {
   transform: translateY(-4px);
   box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.08);
-  border-color: rgba(220, 38, 38, 0.2);
+  border-color: rgba(16, 185, 129, 0.2);
 }
 
 .text-gradient {
@@ -486,8 +486,8 @@ small {
 }
 
 
-.text-gradient-red {
-  background: linear-gradient(135deg, #7F1D1D 0%, #EF4444 100%);
+.text-gradient-primary {
+  background: linear-gradient(135deg, #064e3b 0%, #10B981 100%);
   background-clip: text;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;

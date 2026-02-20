@@ -227,8 +227,8 @@ const WorkspaceSettingsModal = ({ isOpen, onClose, workspaceId, currentLetterhea
                             </div>
 
                             {/* Error/Success Messages Reused */}
-                            {uploadError && <p style={{ color: '#DC2626', fontSize: '0.875rem', marginTop: '0.5rem' }}>{uploadError}</p>}
-                            {successMessage && <p style={{ color: '#16A34A', fontSize: '0.875rem', marginTop: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}><Check size={16} /> {successMessage}</p>}
+                            {uploadError && <p style={{ color: 'var(--danger)', fontSize: '0.875rem', marginTop: '0.5rem' }}>{uploadError}</p>}
+                            {successMessage && <p style={{ color: 'var(--success)', fontSize: '0.875rem', marginTop: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}><Check size={16} /> {successMessage}</p>}
 
                             {currentLetterheadUrl && (
                                 <div style={{ marginTop: '1.5rem' }}>
@@ -307,7 +307,7 @@ const WorkspaceSettingsModal = ({ isOpen, onClose, workspaceId, currentLetterhea
                                                             onClick={() => handleReject(member.id)}
                                                             style={{
                                                                 padding: '0.5rem 1rem',
-                                                                background: '#dc2626',
+                                                                background: 'var(--danger)',
                                                                 color: 'white',
                                                                 border: 'none',
                                                                 borderRadius: '4px',
@@ -351,7 +351,7 @@ const WorkspaceSettingsModal = ({ isOpen, onClose, workspaceId, currentLetterhea
                                     style={{ width: '100%', padding: '0.75rem', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)' }}
                                 />
                                 {accessState.errors?.firmCode && (
-                                    <p style={{ color: '#dc2626', fontSize: '0.875rem', marginTop: '0.25rem' }}>{accessState.errors.firmCode[0]}</p>
+                                    <p style={{ color: 'var(--danger)', fontSize: '0.875rem', marginTop: '0.25rem' }}>{accessState.errors.firmCode[0]}</p>
                                 )}
                             </div>
 
@@ -370,7 +370,7 @@ const WorkspaceSettingsModal = ({ isOpen, onClose, workspaceId, currentLetterhea
                                     Leave blank to keep current password. Required if setting up for the first time.
                                 </p>
                                 {accessState.errors?.firmPassword && (
-                                    <p style={{ color: '#dc2626', fontSize: '0.875rem', marginTop: '0.25rem' }}>{accessState.errors.firmPassword[0]}</p>
+                                    <p style={{ color: 'var(--danger)', fontSize: '0.875rem', marginTop: '0.25rem' }}>{accessState.errors.firmPassword[0]}</p>
                                 )}
                             </div>
 
@@ -540,7 +540,7 @@ const WorkspaceSettingsModal = ({ isOpen, onClose, workspaceId, currentLetterhea
                             </div>
 
                             {accessState.errors?._form && (
-                                <div style={{ color: '#dc2626', background: '#fee2e2', padding: '0.75rem', borderRadius: '4px', marginBottom: '1rem' }}>
+                                <div style={{ color: 'var(--danger)', background: 'var(--danger-bg)', padding: '0.75rem', borderRadius: '4px', marginBottom: '1rem' }}>
                                     {accessState.errors._form[0]}
                                 </div>
                             )}

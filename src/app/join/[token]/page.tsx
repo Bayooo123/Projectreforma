@@ -90,7 +90,7 @@ export default function JoinPage({ params }: JoinPageProps) {
         return (
             <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f5f5f5' }}>
                 <div style={{ background: 'white', padding: '2rem', borderRadius: '12px', textAlign: 'center', maxWidth: '400px' }}>
-                    <h1 style={{ color: '#dc2626', marginBottom: '1rem' }}>Invalid Link</h1>
+                    <h1 style={{ color: 'var(--danger)', marginBottom: '1rem' }}>Invalid Link</h1>
                     <p style={{ color: '#666', marginBottom: '1.5rem' }}>{error}</p>
                     <button
                         onClick={() => router.push('/login')}
@@ -169,7 +169,7 @@ export default function JoinPage({ params }: JoinPageProps) {
                     </div>
 
                     {error && (
-                        <div style={{ background: '#fee2e2', color: '#991b1b', padding: '0.75rem', borderRadius: '6px', marginBottom: '1rem', fontSize: '0.875rem' }}>
+                        <div style={{ background: 'var(--danger-bg)', color: 'var(--danger)', padding: '0.75rem', borderRadius: '6px', marginBottom: '1rem', fontSize: '0.875rem' }}>
                             {error}
                         </div>
                     )}

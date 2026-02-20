@@ -68,9 +68,9 @@ export default async function RootLayout({
       <body
         className={`${ibmPlexSans.variable} ${sourceSerif4.variable}`}
         style={{
-          ['--brand-color' as any]: (workspaceData as any)?.brandColor || '#8E2F39',
-          ['--secondary-color' as any]: (workspaceData as any)?.secondaryColor || '#1e293b',
-          ['--accent-color' as any]: (workspaceData as any)?.accentColor || '#3182ce',
+          ['--brand-color' as any]: (workspaceData as any)?.brandColor || '#059669',
+          ['--secondary-color' as any]: (workspaceData as any)?.secondaryColor || '#064e3b',
+          ['--accent-color' as any]: (workspaceData as any)?.accentColor || '#10b981',
           minHeight: '100vh'
         }}
       >

@@ -68,7 +68,7 @@
     justify-content: space-between;
     align-items: center;
     padding: 1rem;
-    background-color: #FEE2E2;
+    background-color: var(--danger-bg);
     border-radius: var(--radius-md);
     margin-bottom: 1.5rem;
 }
@@ -76,13 +76,13 @@
 .summaryLabel {
     font-size: var(--text-sm);
     font-weight: 600;
-    color: #DC2626;
+    color: var(--danger);
 }
 
 .summaryValue {
     font-size: 1.5rem;
     font-weight: 700;
-    color: #DC2626;
+    color: var(--danger);
 }
 
 .expenseList {
@@ -138,7 +138,7 @@
 .expenseAmount {
     font-size: 1.125rem;
     font-weight: 700;
-    color: #DC2626;
+    color: var(--danger);
     white-space: nowrap;
     margin-left: 1rem;
 }

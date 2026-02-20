@@ -108,7 +108,7 @@
 }
 
 .expenseIcon {
-    color: #DC2626;
+    color: var(--danger);
 }
 
 .transactionInfo {
@@ -152,7 +152,7 @@
 }
 
 .amount.expense {
-    color: #DC2626;
+    color: var(--danger);
 }
 
 .time {

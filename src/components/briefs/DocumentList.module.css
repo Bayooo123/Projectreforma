@@ -158,8 +158,8 @@
 }
 
 .ocrFailed {
-    background-color: #FEE2E2;
-    color: #DC2626;
+    background-color: var(--danger-bg);
+    color: var(--danger);
 }
 
 .spinner {

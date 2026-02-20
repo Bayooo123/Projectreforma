@@ -214,7 +214,7 @@ const PaymentModal = ({ isOpen, onClose, clientName, clientId, selectedInvoice }
                                             <span>Already Paid:</span>
                                             <span>{formatCurrency(selectedInvoice.paidAmount || 0)}</span>
                                         </div>
-                                        <div className={`${styles.totalRow} ${styles.grandTotal}`} style={{ color: '#DC2626' }}>
+                                        <div className={`${styles.totalRow} ${styles.grandTotal}`} style={{ color: 'var(--danger)' }}>
                                             <span>Outstanding Balance:</span>
                                             <span>{formatCurrency(invoiceBalance)}</span>
                                         </div>

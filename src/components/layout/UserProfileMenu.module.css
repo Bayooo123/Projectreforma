@@ -23,7 +23,7 @@
     width: 36px;
     height: 36px;
     border-radius: 50%;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, var(--primary) 0%, var(--bg-sidebar) 100%);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -170,7 +170,7 @@
 }
 
 .menuItemDanger {
-    color: #dc2626;
+    color: var(--danger);
 }
 
 .menuItemDanger:hover {
@@ -178,5 +178,5 @@
 }
 
 .menuItemDanger svg {
-    color: #dc2626;
+    color: var(--danger);
 }

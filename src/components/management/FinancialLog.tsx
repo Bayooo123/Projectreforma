@@ -138,7 +138,7 @@ const FinancialLog = ({ workspaceId, initialExpenses, initialSummaries }: Financ
             {viewMode === 'summary' && (
                 <div className={styles.summary}>
                     <div className={styles.summaryCard}>
-                        <div className={styles.summaryIcon} style={{ backgroundColor: '#FEE2E2', color: '#DC2626' }}>
+                        <div className={styles.summaryIcon} style={{ backgroundColor: 'var(--danger-bg)', color: 'var(--danger)' }}>
                             <TrendingDown size={20} />
                         </div>
                         <div>

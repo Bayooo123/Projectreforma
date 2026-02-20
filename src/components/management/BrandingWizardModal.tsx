@@ -19,9 +19,8 @@ interface BrandingWizardModalProps {
 }
 
 const PRESET_PALETTES = [
-    { name: 'Classic Law', main: '#8E2F39', secondary: '#1e293b', accent: '#7c2d12' },
-    { name: 'Modern Corporate', main: '#0f172a', secondary: '#334155', accent: '#3b82f6' },
-    { name: 'Emerald Trust', main: '#064e3b', secondary: '#065f46', accent: '#10b981' },
+    { name: 'Emerald Trust', main: '#059669', secondary: '#064e3b', accent: '#10b981' },
+    { name: 'Classic Corporate', main: '#0f172a', secondary: '#334155', accent: '#10b981' },
     { name: 'Midnight Justice', main: '#1e1b4b', secondary: '#312e81', accent: '#6366f1' },
     { name: 'Slate Integrity', main: '#334155', secondary: '#475569', accent: '#94a3b8' },
 ];
@@ -30,9 +29,9 @@ export default function BrandingWizardModal({ workspaceId, workspaceName, onComp
     const [step, setStep] = useState(1);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [colors, setColors] = useState({
-        brandColor: '#8E2F39',
-        secondaryColor: '#1e293b',
-        accentColor: '#7c2d12'
+        brandColor: '#059669',
+        secondaryColor: '#064e3b',
+        accentColor: '#10b981'
     });
 
     const handlePaletteSelect = (palette: typeof PRESET_PALETTES[0]) => {
