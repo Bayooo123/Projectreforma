@@ -6,7 +6,7 @@ import styles from './DocumentUpload.module.css';
 
 interface DocumentUploadProps {
     briefId: string;
-    onUploadComplete: () => void;
+    onUploadComplete: (newDocs?: any[]) => void;
 }
 
 export default function DocumentUpload({ briefId, onUploadComplete }: DocumentUploadProps) {
@@ -43,52 +43,42 @@ export default function DocumentUpload({ briefId, onUploadComplete }: DocumentUp
         setIsUploading(true);
 
         try {
-            // Standardizing approach: Use Server Actions + Client Blob Upload
-            // This unifies logic with DocumentList.tsx and bypasses 4.5MB limit.
             const { upload } = await import('@vercel/blob/client');
             const { createDocument } = await import('@/app/actions/documents');
 
-            let successCount = 0;
+            // Parallel uploads
+            const uploadPromises = files.map(async (file) => {
+                const uniqueFilename = `${Date.now()}-${file.name}`;
+                const newBlob = await upload(uniqueFilename, file, {
+                    access: 'public',
+                    handleUploadUrl: '/api/upload/handle',
+                });
 
-            for (const file of files) {
-                try {
-                    // 1. Upload to Blob (Client Side)
-                    // Manual unique filename to avoid 'Blob already exists' error
-                    const uniqueFilename = `${Date.now()}-${file.name}`;
-                    const newBlob = await upload(uniqueFilename, file, {
-                        access: 'public',
-                        handleUploadUrl: '/api/upload/handle',
-                    });
+                const docType = file.type.includes('image') ? 'image' :
+                    file.type.includes('pdf') ? 'pdf' :
+                        file.name.endsWith('.docx') ? 'docx' : 'pdf';
 
-                    // 2. Create DB Record via Server Action
-                    const docType = file.type.includes('image') ? 'image' :
-                        file.type.includes('pdf') ? 'pdf' :
-                            file.name.endsWith('.docx') ? 'docx' : 'pdf';
+                const result = await createDocument({
+                    name: file.name,
+                    url: newBlob.url,
+                    type: docType,
+                    size: file.size,
+                    briefId: briefId,
+                });
 
-                    const result = await createDocument({
-                        name: file.name,
-                        url: newBlob.url,
-                        type: docType,
-                        size: file.size,
-                        briefId: briefId,
-                    });
-
-                    if (result.success) {
-                        successCount++;
-                    } else {
-                        console.error('DB Create failed:', result.error);
-                        throw new Error(result.error || 'Failed to record document');
-                    }
-
-                } catch (innerError) {
-                    console.error(`Failed to process ${file.name}:`, innerError);
-                    alert(`Failed to upload ${file.name}: ${(innerError as Error).message}`);
+                if (result.success) {
+                    return result.document;
+                } else {
+                    throw new Error(result.error || `Failed to record ${file.name}`);
                 }
-            }
+            });
 
-            if (successCount > 0) {
-                // Trigger refresh
-                onUploadComplete();
+            const results = await Promise.all(uploadPromises);
+            const successfulDocs = results.filter(doc => !!doc);
+
+            if (successfulDocs.length > 0) {
+                // Trigger refresh with the new documents
+                onUploadComplete(successfulDocs);
             }
 
         } catch (error) {

@@ -23,7 +23,7 @@ export default async function BriefDetailPage(props: BriefDetailPageProps) {
     // Retry logic to handle race condition with optimistic updates
     let brief = null;
     const maxRetries = 5;
-    const retryDelay = 1000; // ms
+    const retryDelay = 200; // ms
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
         console.log(`[BriefDetailPage] Attempt ${attempt}/${maxRetries} to fetch brief ${id}`);

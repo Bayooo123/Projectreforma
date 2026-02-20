@@ -80,17 +80,25 @@ export default function BriefDetailClient({ brief }: BriefDetailClientProps) {
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [isRefreshing, setIsRefreshing] = useState(false);
 
-    const refreshDocuments = async () => {
-        setIsRefreshing(true);
+    const refreshDocuments = async (silent = false) => {
+        if (!silent) setIsRefreshing(true);
         try {
             const docs = await getDocuments(brief.id);
-            // Ensure types match (handling potentially serialized dates if necessary, though server actions usually handle this well in modern Next)
             setDocuments(docs as any);
         } catch (error) {
             console.error('Error refreshing documents:', error);
         } finally {
-            setIsRefreshing(false);
+            if (!silent) setIsRefreshing(false);
         }
+    };
+
+    const handleUploadComplete = (newDocs?: any[]) => {
+        if (newDocs && newDocs.length > 0) {
+            // Optimistic update: Prepend new docs to current list
+            setDocuments(prev => [...newDocs, ...prev]);
+        }
+        // Background refresh to ensure everything is in sync
+        refreshDocuments(true);
     };
 
     const handleNavigateDocument = (direction: 'prev' | 'next') => {
@@ -219,7 +227,7 @@ export default function BriefDetailClient({ brief }: BriefDetailClientProps) {
 
             <div className={styles.content}>
                 <div className="mb-6">
-                    <DocumentUpload briefId={brief.id} onUploadComplete={refreshDocuments} />
+                    <DocumentUpload briefId={brief.id} onUploadComplete={handleUploadComplete} />
                 </div>
 
                 <div className={styles.documentsHeader}>
