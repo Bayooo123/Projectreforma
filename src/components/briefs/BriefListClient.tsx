@@ -84,10 +84,12 @@ export default function BriefListClient({ initialBriefs, workspaceId }: Omit<Bri
                     <h1 className={styles.title}>Legal Briefs</h1>
                     <p className={styles.subtitle}>Manage and collaborate on legal documents</p>
                 </div>
-                <button className={styles.uploadBtn} onClick={() => setIsUploadModalOpen(true)}>
-                    <Plus size={18} />
-                    <span>Create Brief</span>
-                </button>
+                {initialBriefs.length > 0 && (
+                    <button className={styles.uploadBtn} onClick={() => setIsUploadModalOpen(true)}>
+                        <Plus size={18} />
+                        <span>Create Brief</span>
+                    </button>
+                )}
             </div>
 
             <div className={styles.toolbar}>
