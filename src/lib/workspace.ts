@@ -35,7 +35,7 @@ export async function getPrimaryWorkspace(userId: string) {
     try {
         // Get all workspace memberships for the user
         const memberships = await prisma.workspaceMember.findMany({
-            where: { userId },
+            where: { userId, status: 'active' }, // Only active workspaces
             include: {
                 workspace: {
                     include: {
@@ -51,7 +51,7 @@ export async function getPrimaryWorkspace(userId: string) {
         });
 
         if (memberships.length === 0) {
-            // Check if they own any workspaces even if not explicitly a member (shouldn't happen with current schema but safe to check)
+            // Check if they own any workspaces even if not explicitly a member (fallback)
             const owned = await prisma.workspace.findFirst({
                 where: { ownerId: userId },
                 include: {
@@ -79,14 +79,17 @@ export async function getPrimaryWorkspace(userId: string) {
             const scoreA = (a.workspace._count.briefs || 0) + (a.workspace._count.matters || 0);
             const scoreB = (b.workspace._count.briefs || 0) + (b.workspace._count.matters || 0);
 
-            // If scores are equal, prefer owned workspaces
-            if (scoreA === scoreB) {
-                if (a.workspace.ownerId === userId && b.workspace.ownerId !== userId) return -1;
-                if (b.workspace.ownerId === userId && a.workspace.ownerId !== userId) return 1;
-                return 0;
+            // 1. Highest Activity wins
+            if (scoreA !== scoreB) {
+                return scoreB - scoreA;
             }
 
-            return scoreB - scoreA;
+            // 2. Score Tie: Prefer owned workspaces
+            if (a.workspace.ownerId === userId && b.workspace.ownerId !== userId) return -1;
+            if (b.workspace.ownerId === userId && a.workspace.ownerId !== userId) return 1;
+
+            // 3. Score & Ownership Tie: Prefer oldest membership (deterministic)
+            return new Date(a.joinedAt).getTime() - new Date(b.joinedAt).getTime();
         });
 
         const primary = sorted[0];

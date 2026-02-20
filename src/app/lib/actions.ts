@@ -139,7 +139,7 @@ export async function register(
         await signIn('credentials', {
             email,
             password,
-            redirectTo: '/overview'
+            redirectTo: '/briefs'
         });
 
     } catch (error: any) {

@@ -151,20 +151,16 @@ export default async function ManagementPage() {
     const session = await auth();
     if (!session?.user?.id) return redirect('/login');
 
-    // We need workspace ID. 
-    // Ideally user object has it or we fetch it.
-    // Let's find the user's active workspace.
-    const member = await prisma.workspaceMember.findFirst({
-        where: { userId: session.user.id },
-        select: { workspaceId: true }
-    });
+    // Let's find the user's active workspace (centralized logic).
+    const { getCurrentUserWithWorkspace } = await import("@/lib/workspace");
+    const dataObj = await getCurrentUserWithWorkspace();
 
-    if (!member) {
+    if (!dataObj?.workspace) {
         // Handle no workspace case (maybe redirect to onboarding or join)
-        return <div>No Workspace Found</div>;
+        return <div className="p-10 text-center text-slate-500">No active workspace found.</div>;
     }
 
-    const data = await getDashboardData(session.user.id, member.workspaceId);
+    const data = await getDashboardData(session.user.id, dataObj.workspace.id);
 
     return <DashboardClient initialData={data} />;
 }

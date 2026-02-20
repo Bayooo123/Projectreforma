@@ -11,18 +11,18 @@ export default async function ComplianceManagementPage() {
     const session = await auth();
     if (!session?.user?.id) return redirect('/login');
 
-    const member = await prisma.workspaceMember.findFirst({
-        where: { userId: session.user.id },
-        select: { workspaceId: true }
-    });
+    // Centralized workspace resolution
+    const { getCurrentUserWithWorkspace } = await import("@/lib/workspace");
+    const data = await getCurrentUserWithWorkspace();
+    const workspace = data?.workspace;
 
-    if (!member) {
-        return <div className="p-10 text-center text-slate-500">No Workspace Found</div>;
+    if (!workspace) {
+        return <div className="p-10 text-center text-slate-500">No active workspace found.</div>;
     }
 
     // Pre-fetch Federal compliance tasks server-side
     const initialTier = 'Federal';
-    const result = await getComplianceTasks(member.workspaceId, initialTier);
+    const result = await getComplianceTasks(workspace.id, initialTier);
     const initialTasks = result.success ? result.data : [];
 
     return (
