@@ -26,9 +26,9 @@ export default async function ClientsPage() {
     return (
         <div className="p-8">
             <ClientsPageClient
-                workspaceId={member.workspaceId}
+                workspaceId={workspace.id}
                 userId={session.user.id}
-                letterheadUrl={member.workspace.letterheadUrl}
+                letterheadUrl={workspace.letterheadUrl}
                 initialClients={initialClients as any}
                 initialPages={totalPages}
             />

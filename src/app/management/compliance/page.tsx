@@ -35,12 +35,12 @@ export default async function ComplianceManagementPage() {
 
                 <div className="mt-8">
                     <PinProtection
-                        workspaceId={member.workspaceId}
+                        workspaceId={workspace.id}
                         featureId="compliance"
                         variant="compliance"
                     >
                         <ComplianceDashboard
-                            workspaceId={member.workspaceId}
+                            workspaceId={workspace.id}
                             initialTasks={initialTasks}
                             initialTier={initialTier}
                         />
