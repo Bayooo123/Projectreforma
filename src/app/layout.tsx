@@ -70,7 +70,8 @@ export default async function RootLayout({
         style={{
           ['--brand-color' as any]: (workspaceData as any)?.brandColor || '#8E2F39',
           ['--secondary-color' as any]: (workspaceData as any)?.secondaryColor || '#1e293b',
-          ['--accent-color' as any]: (workspaceData as any)?.accentColor || '#3182ce'
+          ['--accent-color' as any]: (workspaceData as any)?.accentColor || '#3182ce',
+          minHeight: '100vh'
         }}
       >
         <NextTopLoader
