@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useActionState } from 'react';
+import { useActionState, useState } from 'react';
 import { register, registerMember } from '@/app/lib/actions';
 import { Loader2 } from 'lucide-react';
 import Link from 'next/link';
@@ -22,6 +22,11 @@ export default function RegisterForm({ inviteToken, firmName, isPilot }: { invit
     const action = inviteToken ? registerMember : register;
     const [errorMessage, dispatch, isPending] = useActionState(action, undefined);
 
+    const [termsAccepted, setTermsAccepted] = useState(false);
+    const [privacyAccepted, setPrivacyAccepted] = useState(false);
+
+    const isSubmitDisabled = isPending || !termsAccepted || !privacyAccepted;
+
     return (
         <form action={dispatch} className={styles.form}>
             {/* Hidden Input for Token or Pilot Bypass */}
@@ -40,6 +45,7 @@ export default function RegisterForm({ inviteToken, firmName, isPilot }: { invit
                     required
                     className={styles.input}
                     placeholder="John Doe"
+                    disabled={isPending}
                 />
             </div>
 
@@ -55,6 +61,7 @@ export default function RegisterForm({ inviteToken, firmName, isPilot }: { invit
                     required
                     className={styles.input}
                     placeholder="you@lawfirm.com"
+                    disabled={isPending}
                 />
             </div>
 
@@ -70,6 +77,7 @@ export default function RegisterForm({ inviteToken, firmName, isPilot }: { invit
                     required
                     className={styles.input}
                     placeholder="+234 800 000 0000"
+                    disabled={isPending}
                 />
             </div>
 
@@ -87,6 +95,7 @@ export default function RegisterForm({ inviteToken, firmName, isPilot }: { invit
                             required
                             className={styles.input}
                             placeholder="Doe & Associates"
+                            disabled={isPending}
                         />
                     </div>
 
@@ -99,6 +108,7 @@ export default function RegisterForm({ inviteToken, firmName, isPilot }: { invit
                             name="role"
                             required
                             className={styles.select}
+                            disabled={isPending}
                         >
                             <option value="">Select your role</option>
                             {ADMIN_ROLES.map((role) => (
@@ -124,8 +134,36 @@ export default function RegisterForm({ inviteToken, firmName, isPilot }: { invit
                     minLength={8}
                     className={styles.input}
                     placeholder="••••••••"
+                    disabled={isPending}
                 />
                 <p className={styles.hint}>Minimum 8 characters</p>
+            </div>
+
+            <div className={styles.checkboxGroup}>
+                <label className={styles.checkboxLabel}>
+                    <input
+                        type="checkbox"
+                        className={styles.checkboxInput}
+                        checked={termsAccepted}
+                        onChange={(e) => setTermsAccepted(e.target.checked)}
+                        disabled={isPending}
+                    />
+                    <span>
+                        I agree to the <a href="https://drive.google.com/file/d/1ibO2JLwop6qYr4EyS_WTYVVLspzTS2VV/view?usp=sharing" target="_blank" rel="noopener noreferrer">Terms of Service</a>
+                    </span>
+                </label>
+                <label className={styles.checkboxLabel}>
+                    <input
+                        type="checkbox"
+                        className={styles.checkboxInput}
+                        checked={privacyAccepted}
+                        onChange={(e) => setPrivacyAccepted(e.target.checked)}
+                        disabled={isPending}
+                    />
+                    <span>
+                        I have read the <a href="https://drive.google.com/file/d/18ss3O0Htm_mOEtRDIT9vI0w5xQDECTfV/view?usp=drive_link" target="_blank" rel="noopener noreferrer">Privacy Policy</a>
+                    </span>
+                </label>
             </div>
 
             {errorMessage && (
@@ -136,7 +174,7 @@ export default function RegisterForm({ inviteToken, firmName, isPilot }: { invit
 
             <button
                 type="submit"
-                disabled={isPending}
+                disabled={isSubmitDisabled}
                 className={styles.submitButton}
             >
                 {isPending ? (
@@ -148,10 +186,6 @@ export default function RegisterForm({ inviteToken, firmName, isPilot }: { invit
                     inviteToken ? `Join ${firmName || 'Firm'}` : 'Create Firm Account'
                 )}
             </button>
-
-            <p className={styles.terms}>
-                By creating an account, you agree to our Terms of Service and Privacy Policy
-            </p>
         </form>
     );
 }
