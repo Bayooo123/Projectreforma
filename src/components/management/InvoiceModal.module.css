@@ -162,13 +162,13 @@
 }
 
 .statusPaid {
-    background-color: #D1FAE5;
-    color: #059669;
+    background-color: var(--success-bg);
+    color: var(--success);
 }
 
 .statusPending {
-    background-color: #FEF3C7;
-    color: #D97706;
+    background-color: var(--warning-bg);
+    color: var(--warning);
 }
 
 .statusOverdue {
@@ -199,8 +199,8 @@
     justify-content: center;
     width: 40px;
     height: 40px;
-    background-color: #D1FAE5;
-    color: #059669;
+    background-color: var(--success-bg);
+    color: var(--success);
     border-radius: var(--radius-md);
     flex-shrink: 0;
 }

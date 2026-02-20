@@ -184,8 +184,8 @@
     align-items: center;
     gap: 8px;
     padding: 8px 16px;
-    background: var(--red-bg);
-    color: var(--red-text);
+    background: var(--primary-bg);
+    color: var(--primary-text);
     border-radius: var(--radius-md);
     font-size: 13px;
     font-weight: var(--weight-semibold);

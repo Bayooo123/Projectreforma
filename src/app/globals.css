@@ -56,10 +56,8 @@
     0 4px 6px -2px rgba(31, 41, 55, 0.025);
   --shadow-soft: 0 20px 40px -10px rgba(31, 41, 55, 0.08);
   /* Dashboard Specifics */
-  --bg-sidebar: var(--secondary-color, #064e3b);
-  /* Deep Emerald - Institutional Green */
-  --red-bg: #ECFDF5;
-  --red-text: var(--brand-color, #059669);
+  --primary-bg: #ECFDF5;
+  --primary-text: var(--brand-color, #059669);
   --hover-bg: var(--secondary-color, #022c22);
   /* Deep Teal-950 Hover */
 
@@ -134,11 +132,17 @@
 
   /* Dashboard Specifics - Dark Mode */
   --bg-sidebar: var(--secondary-color, #022c22);
-  /* Deepest Teal for Sidebar */
-  --red-bg: rgba(16, 185, 129, 0.15);
-  --red-text: var(--brand-color, #D1FAE5);
+  --primary-bg: rgba(16, 185, 129, 0.15);
+  --primary-text: var(--brand-color, #D1FAE5);
   --hover-bg: var(--secondary-color, #064e3b);
   /* Teal-900 Hover */
+
+  --success: #10B981;
+  --success-bg: rgba(16, 185, 129, 0.15);
+  --danger: #EF4444;
+  --danger-bg: rgba(239, 68, 68, 0.15);
+  --warning: #F59E0B;
+  --warning-bg: rgba(245, 158, 11, 0.15);
 
   --border: #374151;
   /* Gray 700 */
@@ -146,7 +150,7 @@
 
   /* Table Improvements */
   --table-header-bg: #1F2937;
-  --table-row-hover: rgba(220, 38, 38, 0.05);
+  --table-row-hover: var(--accent);
   --table-row-alternate: rgba(255, 255, 255, 0.02);
 
   /* Status Badge Colors */
