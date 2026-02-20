@@ -3,6 +3,7 @@
 import { prisma } from '@/lib/prisma';
 import { revalidatePath, unstable_noStore as noStore } from 'next/cache';
 import { requireAuth } from '@/lib/auth-utils';
+import { applySentenceCaseToFields } from '@/lib/sentence-case';
 
 export async function getUserBriefs() {
     const user = await requireAuth();
@@ -158,6 +159,8 @@ export async function createBrief(data: {
     description?: string;
 }) {
     await requireAuth();
+    // Normalise user-supplied text to sentence case before any validation or storage
+    data = applySentenceCaseToFields(data, ['name', 'description']);
     try {
         console.log('[createBrief] ========== START ==========');
         console.log('[createBrief] Creating brief with data:', JSON.stringify(data, null, 2));
@@ -294,6 +297,8 @@ export async function updateBrief(
     }
 ) {
     const session = await requireAuth();
+    // Normalise user-supplied text to sentence case before validation or storage
+    data = applySentenceCaseToFields(data, ['name', 'description', 'customTitle']);
     try {
         // Get existing brief and user's workspace role
         const existingBrief = await prisma.brief.findUnique({

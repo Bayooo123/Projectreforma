@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache';
 import { createNotification, RecipientType } from '@/lib/notifications';
 import { scheduleAdjournmentNotifications } from '@/lib/scheduleAdjournmentNotifications';
 import { auth } from '@/auth';
+import { applySentenceCaseToFields, toSentenceCase } from '@/lib/sentence-case';
 
 /**
  * Get all matters for a workspace
@@ -145,6 +146,9 @@ export async function createMatter(data: {
 }) {
     const session = await auth();
     if (!session?.user) return { success: false, error: 'Unauthorized' };
+
+    // Normalise user-supplied text to sentence case
+    data = applySentenceCaseToFields(data, ['name', 'opponentName', 'opponentCounsel', 'court', 'judge', 'proceedings']);
 
     try {
         let finalClientId = data.clientId;
@@ -346,6 +350,9 @@ export async function updateMatter(
     const session = await auth();
     if (!session?.user) return { success: false, error: 'Unauthorized' };
 
+    // Normalise user-supplied text to sentence case
+    data = applySentenceCaseToFields(data, ['name', 'court', 'judge']);
+
     try {
         // Ownership check: Only the submitting lawyer or owner can edit matter details
         const existingMatter = await prisma.matter.findUnique({
@@ -480,6 +487,10 @@ export async function adjournMatter(
 ) {
     const session = await auth();
     if (!session?.user) return { success: false, error: 'Unauthorized' };
+
+    // Normalise proceeding text to sentence case
+    proceedings = toSentenceCase(proceedings) || proceedings;
+    if (adjournedFor) adjournedFor = toSentenceCase(adjournedFor);
 
     try {
         const matterCheck = await prisma.matter.findUnique({
@@ -719,6 +730,9 @@ export async function updateCourtDate(
 ) {
     const session = await auth();
     if (!session?.user) return { success: false, error: 'Unauthorized' };
+
+    // Normalise court date text fields
+    data = applySentenceCaseToFields(data, ['proceedings', 'judge', 'title', 'adjournedFor']);
 
     try {
         const courtDate = await prisma.courtDate.findUnique({
