@@ -24,7 +24,7 @@
     display: flex;
     flex-direction: column;
     min-width: 0;
-    background-color: #f5f7fa;
+    background-color: var(--background);
 }
 
 :global(.dark) .mainContent {

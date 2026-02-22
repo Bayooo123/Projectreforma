@@ -2,44 +2,100 @@
 
 
 :root {
-  --accent: #F3F4F6;
-  --accent-hover: #E5E7EB;
+  /* =============================================
+     LIGHT MODE — Complete Design Token System
+     ============================================= */
 
-  /* Text Colors */
-  --text-primary: #1F2937;
-  /* Gray 800 - Replacing Black */
-  --text-secondary: #6B7280;
-  /* Gray 500 */
+  /* Brand Accent */
+  --accent: #EEF2FF;
+  /* Indigo-50 tinted, not flat gray */
+  --accent-hover: #E0E7FF;
+  /* Indigo-100 */
+
+  /* Text */
+  --text-primary: #111827;
+  /* Gray-900 — strong contrast */
+  --text-secondary: #4B5563;
+  /* Gray-600 — readable secondary */
   --text-tertiary: #9CA3AF;
-  /* Gray 400 */
+  /* Gray-400 — hints / placeholders */
   --text-inverse: #FFFFFF;
 
-  /* Backgrounds */
-  --background: #F3F4F6;
-  /* Gray 100 - More pronounced Gray foundation */
+  /* Backgrounds — layered depth */
+  --background: #F1F5F9;
+  /* Slate-100 — cool, clean page canvas */
   --surface: #FFFFFF;
-  --surface-subtle: #F9FAFB;
-  /* Gray 50 */
+  /* Pure white card surface */
+  --surface-subtle: #F8FAFC;
+  /* Slate-50 — subtle inset areas */
+  --surface-elevated: #FFFFFF;
+  /* Elevated modals / popovers */
+
+  /* Sidebar */
+  --bg-sidebar: var(--secondary-color, #064e3b);
+  /* Dark green sidebar in light mode too */
 
   /* Glassmorphism */
-  --glass-bg: rgba(255, 255, 255, 0.9);
-  --glass-border: rgba(220, 38, 38, 0.1);
-  --glass-shadow: 0 4px 30px rgba(0, 0, 0, 0.03);
+  --glass-bg: rgba(255, 255, 255, 0.85);
+  --glass-border: rgba(226, 232, 240, 0.8);
+  --glass-shadow: 0 4px 30px rgba(15, 23, 42, 0.06);
 
-  /* Functional Colors */
-  --border: #E5E7EB;
-  /* Gray 200 */
-  /* Dashboard Specifics */
+  /* Borders */
+  --border: #E2E8F0;
+  /* Slate-200 — crisper than gray-200 */
+  --border-subtle: #F1F5F9;
+  /* Slate-100 — barely-there dividers */
+
+  /* Brand / Primary */
   --primary: var(--accent-color, #059669);
-  /* Official Reforma Green - Emerald 600 */
+  /* Emerald-600 */
+  --primary-dark: var(--accent-color, #047857);
   --primary-hover: var(--accent-color, #047857);
+  --primary-bg: #ECFDF5;
+  /* Emerald-50 */
+  --primary-text: var(--brand-color, #065f46);
+  /* Emerald-800 */
+  --hover-bg: var(--secondary-color, #022c22);
+  /* Deep sidebar hover */
+
+  /* Semantic Colors */
   --success: #10B981;
-  /* Emerald 500 */
   --success-bg: #ECFDF5;
   --warning: #F59E0B;
   --warning-bg: #FFFBEB;
   --danger: #EF4444;
   --danger-bg: #FEF2F2;
+
+  /* Status Badge Colors — Light Mode */
+  --status-active-bg: #D1FAE5;
+  /* Emerald-100 */
+  --status-active-text: #065f46;
+  /* Emerald-800 */
+  --status-active-border: #6EE7B7;
+  /* Emerald-300 */
+  --status-inactive-bg: #FEF3C7;
+  /* Amber-100 */
+  --status-inactive-text: #92400E;
+  /* Amber-800 */
+  --status-inactive-border: #FCD34D;
+  /* Amber-300 */
+  --status-finalized-bg: #DBEAFE;
+  /* Blue-100 */
+  --status-finalized-text: #1E40AF;
+  /* Blue-800 */
+  --status-finalized-border: #93C5FD;
+  /* Blue-300 */
+
+  /* Table */
+  --table-header-bg: #F8FAFC;
+  /* Slate-50 — distinct from surface */
+  --table-row-hover: #F1F5F9;
+  /* Slate-100 */
+  --table-row-alternate: rgba(241, 245, 249, 0.5);
+
+  /* Input */
+  --input-focus-glow: 0 0 0 3px rgba(5, 150, 105, 0.2);
+  /* Green focus ring */
 
   /* Spacing & Radius */
   --radius-sm: 8px;
@@ -47,50 +103,46 @@
   --radius-lg: 20px;
   --radius-xl: 32px;
 
-  /* Shadows */
-  --shadow-sm: 0 1px 2px 0 rgba(31, 41, 55, 0.05);
-  /* Gray-based shadow */
-  --shadow-md: 0 4px 6px -1px rgba(31, 41, 55, 0.05),
-    0 2px 4px -1px rgba(31, 41, 55, 0.03);
-  --shadow-lg: 0 10px 15px -3px rgba(31, 41, 55, 0.05),
-    0 4px 6px -2px rgba(31, 41, 55, 0.025);
-  --shadow-soft: 0 20px 40px -10px rgba(31, 41, 55, 0.08);
-  /* Dashboard Specifics */
-  --primary-bg: #ECFDF5;
-  --primary-text: var(--brand-color, #059669);
-  --hover-bg: var(--secondary-color, #022c22);
-  /* Deep Teal-950 Hover */
+  /* Shadows — more pronounced for light mode depth */
+  --shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.08), 0 1px 2px rgba(15, 23, 42, 0.04);
+  --shadow-md: 0 4px 6px -1px rgba(15, 23, 42, 0.07), 0 2px 4px -1px rgba(15, 23, 42, 0.04);
+  --shadow-lg: 0 10px 15px -3px rgba(15, 23, 42, 0.08), 0 4px 6px -2px rgba(15, 23, 42, 0.04);
+  --shadow-soft: 0 20px 40px -10px rgba(15, 23, 42, 0.12);
 
   /* Animation Timing */
   --ease-fluid: cubic-bezier(0.4, 0, 0.2, 1);
   --ease-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
 
-  /* Landing Page Specific Globals */
-  --bg-page: #F3F4F6;
+  /* Landing Page */
+  --bg-page: #F1F5F9;
   --bg-nav: rgba(255, 255, 255, 0.95);
-  --border-color: #E5E7EB;
-  --text-lp-primary: #1F2937;
-  --text-lp-secondary: #6B7280;
+  --border-color: #E2E8F0;
+  --text-lp-primary: #111827;
+  --text-lp-secondary: #4B5563;
   --text-lp-tertiary: #9CA3AF;
   --primary-color: #059669;
-  --primary-hover: #047857;
-
   --card-bg: #FFFFFF;
-  --card-hover-bg: #F3F4F6;
+  --card-hover-bg: #F8FAFC;
 
-  --section-hero-bg: #F3F4F6;
+  --section-hero-bg: #F1F5F9;
   --section-problem-bg: #FFFFFF;
-  --section-system-bg: #F3F4F6;
+  --section-system-bg: #F1F5F9;
   --section-drafter-bg: #374151;
 
-  --icon-bg: #F3F4F6;
-  --icon-border: #E5E7EB;
+  --icon-bg: #F1F5F9;
+  --icon-border: #E2E8F0;
 
-  /* Typography Tokens - Institutional Grade */
+  /* Button - Secondary */
+  --btn-secondary-bg: #FFFFFF;
+  --btn-secondary-border: #E2E8F0;
+  --btn-secondary-text: #374151;
+  --btn-secondary-hover: #F8FAFC;
+
+  /* Typography */
   --font-ui: var(--font-ibm-plex-sans), system-ui, sans-serif;
   --font-brand: var(--font-source-serif-4), Georgia, serif;
 
-  /* Weight Scale - Minimalist & Disciplined */
+  /* Weight Scale */
   --weight-light: 300;
   --weight-normal: 400;
   --weight-medium: 500;
