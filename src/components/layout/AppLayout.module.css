@@ -1,6 +1,7 @@
 .gridContainer {
     display: flex;
-    min-height: 100vh;
+    height: 100vh;
+    max-height: 100vh;
     overflow: hidden;
     background-color: var(--background);
 }
@@ -20,10 +21,12 @@
 .mainContent {
     flex: 1;
     margin-left: 240px;
-    min-height: 100vh;
+    height: 100vh;
+    max-height: 100vh;
     display: flex;
     flex-direction: column;
     min-width: 0;
+    overflow: hidden;
     background-color: var(--background);
 }
 
@@ -46,6 +49,9 @@
     flex-direction: column;
     position: relative;
     z-index: 10;
+    min-height: 0;
+    /* allow flex child to shrink below content size */
+    overflow: hidden;
 }
 
 .contentContainer {
@@ -53,6 +59,14 @@
     max-width: 1400px;
     margin: 0 auto;
     width: 100%;
+    flex: 1;
+    min-height: 0;
+    /* flex shrink must work for children to scroll */
+    height: 100%;
+    overflow-y: auto;
+    /* page-level scroll lives here, not on document */
+    display: flex;
+    flex-direction: column;
     animation: fadeIn 0.4s var(--ease-fluid) forwards;
 }
 

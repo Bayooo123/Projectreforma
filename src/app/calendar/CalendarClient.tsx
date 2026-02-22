@@ -161,13 +161,15 @@ export default function CalendarClient({
                 </div>
             </div>
 
-            <CalendarGrid
-                events={filteredEvents}
-                currentDate={currentDate}
-                onDateChange={setCurrentDate}
-                onEventClick={handleEventClick}
-                isLoading={isLoadingMonth}
-            />
+            <div className={styles.calendarSection}>
+                <CalendarGrid
+                    events={filteredEvents}
+                    currentDate={currentDate}
+                    onDateChange={setCurrentDate}
+                    onEventClick={handleEventClick}
+                    isLoading={isLoadingMonth}
+                />
+            </div>
 
             <AddMatterModal
                 isOpen={isAddModalOpen}
