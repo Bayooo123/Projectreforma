@@ -6,6 +6,7 @@ import CalendarGrid from '@/components/calendar/CalendarGrid';
 import MatterDetailModal from '@/components/calendar/MatterDetailModal';
 import ScheduleMeetingModal from '@/components/calendar/ScheduleMeetingModal';
 import RecordMeetingModal from '@/components/calendar/RecordMeetingModal';
+import AddMatterModal from '@/components/calendar/AddMatterModal';
 import { getMattersForMonth } from '@/lib/matters';
 import styles from './page.module.css';
 
@@ -32,7 +33,7 @@ export default function CalendarClient({
     const [currentDate, setCurrentDate] = useState(new Date());
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [isScheduleMeetingModalOpen, setIsScheduleMeetingModalOpen] = useState(false);
-    const [isRecordMeetingModalOpen, setIsRecordMeetingMeetingModalOpen] = useState(false);
+    const [isRecordMeetingModalOpen, setIsRecordMeetingModalOpen] = useState(false);
     const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
 
     const [selectedMatter, setSelectedMatter] = useState<any | null>(null);
@@ -40,8 +41,9 @@ export default function CalendarClient({
     const [searchQuery, setSearchQuery] = useState('');
     const [filterType, setFilterType] = useState<CalendarEventType | 'ALL'>('ALL');
     const [filterCategory, setFilterCategory] = useState<'UPCOMING' | 'PAST' | 'ALL'>('ALL');
+    const [startDate, setStartDate] = useState('');
+    const [endDate, setEndDate] = useState('');
 
-    // ... (keep filtering logic)
     // Unified Filtering Logic
     const filteredEvents = events.filter(event => {
         const queryMatch = !searchQuery || (
@@ -57,7 +59,12 @@ export default function CalendarClient({
             (filterCategory === 'UPCOMING' && !isPast) ||
             (filterCategory === 'PAST' && isPast);
 
-        return queryMatch && typeMatch && categoryMatch;
+        // Date Range Match
+        const eventDate = new Date(event.date);
+        const rangeMatch = (!startDate || eventDate >= new Date(startDate)) &&
+            (!endDate || eventDate <= new Date(endDate));
+
+        return queryMatch && typeMatch && categoryMatch && rangeMatch;
     });
 
     // ... (keep refreshEvents)
@@ -80,6 +87,7 @@ export default function CalendarClient({
             workspaceId: workspaceId, // Ensure workspaceId is passed for lawyer fetching
             briefs: [],
             calendarEntries: [],
+            meetingRecords: [], // Added
             status: 'active', // Fallback status
             nextCourtDate: event.date,
             court: null,
@@ -115,41 +123,15 @@ export default function CalendarClient({
                     <p className={styles.subtitle}>Unified practice scheduling & documentation</p>
                 </div>
                 <div className={styles.headerActions}>
-                    <div className={styles.filtersWrapper}>
-                        <select
-                            className={styles.selectFilter}
-                            value={filterType}
-                            onChange={(e) => setFilterType(e.target.value as any)}
-                        >
-                            <option value="ALL">All Event Types</option>
-                            <option value="COURT_DATE">Court Dates</option>
-                            <option value="FILING_DEADLINE">FILING_DEADLINE</option>
-                            <option value="CLIENT_MEETING">Client Meetings</option>
-                            <option value="INTERNAL_MEETING">Internal Meetings</option>
-                        </select>
-
-                        <select
-                            className={styles.selectFilter}
-                            value={filterCategory}
-                            onChange={(e) => setFilterCategory(e.target.value as any)}
-                        >
-                            <option value="ALL">All Dates</option>
-                            <option value="UPCOMING">Upcoming</option>
-                            <option value="PAST">Past</option>
-                        </select>
-                    </div>
-
-                    <div className={styles.searchWrapper}>
-                        <input
-                            type="text"
-                            placeholder="Search calendar..."
-                            className={styles.searchInput}
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                        />
-                    </div>
-
                     <div className={styles.actionButtons}>
+                        <button
+                            className={styles.btnSecondary}
+                            onClick={() => setIsAddModalOpen(true)}
+                        >
+                            <Plus size={18} />
+                            <span>New Matter</span>
+                        </button>
+
                         <button
                             className={styles.btnSecondary}
                             onClick={() => setIsScheduleMeetingModalOpen(true)}
@@ -160,11 +142,66 @@ export default function CalendarClient({
 
                         <button
                             className={styles.btnPrimary}
-                            onClick={() => setIsRecordMeetingMeetingModalOpen(true)}
+                            onClick={() => setIsRecordMeetingModalOpen(true)}
                         >
                             <Gavel size={18} />
                             <span>Record Meeting</span>
                         </button>
+                    </div>
+                </div>
+            </div>
+
+            <div className={styles.toolBar}>
+                <div className={styles.tabs}>
+                    <button
+                        className={`${styles.tab} ${filterCategory === 'ALL' && filterType === 'ALL' ? styles.activeTab : ''}`}
+                        onClick={() => { setFilterCategory('ALL'); setFilterType('ALL'); }}
+                    >All Events</button>
+                    <button
+                        className={`${styles.tab} ${filterCategory === 'UPCOMING' ? styles.activeTab : ''}`}
+                        onClick={() => setFilterCategory('UPCOMING')}
+                    >Upcoming</button>
+                    <button
+                        className={`${styles.tab} ${filterCategory === 'PAST' ? styles.activeTab : ''}`}
+                        onClick={() => setFilterCategory('PAST')}
+                    >Past</button>
+                    <div className={styles.tabDivider} />
+                    <button
+                        className={`${styles.tab} ${filterType === 'COURT_DATE' ? styles.activeTab : ''}`}
+                        onClick={() => setFilterType('COURT_DATE')}
+                    >Court Dates</button>
+                    <button
+                        className={`${styles.tab} ${filterType === 'CLIENT_MEETING' || filterType === 'INTERNAL_MEETING' ? styles.activeTab : ''}`}
+                        onClick={() => setFilterType('CLIENT_MEETING')}
+                    >Meetings</button>
+                </div>
+
+                <div className={styles.filtersWrapper}>
+                    <div className={styles.filterGroup}>
+                        <label>Range:</label>
+                        <input
+                            type="date"
+                            className={styles.dateInput}
+                            value={startDate}
+                            onChange={(e) => setStartDate(e.target.value)}
+                        />
+                        <span>to</span>
+                        <input
+                            type="date"
+                            className={styles.dateInput}
+                            value={endDate}
+                            onChange={(e) => setEndDate(e.target.value)}
+                        />
+                    </div>
+
+                    <div className={styles.searchWrapper}>
+                        <input
+                            type="text"
+                            placeholder="Search case, number or title..."
+                            className={styles.searchInput}
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                        />
                     </div>
                 </div>
             </div>
@@ -198,7 +235,7 @@ export default function CalendarClient({
 
             <RecordMeetingModal
                 isOpen={isRecordMeetingModalOpen}
-                onClose={() => setIsRecordMeetingMeetingModalOpen(false)}
+                onClose={() => setIsRecordMeetingModalOpen(false)}
                 workspaceId={workspaceId}
                 userId={userId}
                 onSuccess={refreshEvents}

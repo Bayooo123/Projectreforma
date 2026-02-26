@@ -9,6 +9,7 @@
     /* allow flex-shrink to propagate inward */
     overflow: hidden;
     /* never let content bust the frame */
+    overflow: hidden;
 }
 
 /* Scrollable zone: wraps CalendarGrid, grows to fill remaining height */
@@ -107,7 +108,7 @@
 .actionButtons {
     display: flex;
     align-items: center;
-    gap: 0.75rem;
+    gap: 0.5rem;
 }
 
 .btnSecondary {
@@ -152,4 +153,78 @@
     background-color: var(--primary-hover);
     transform: translateY(-1px);
     box-shadow: 0 4px 12px rgba(20, 184, 166, 0.3);
+}
+
+.toolBar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--surface);
+    padding: 0.75rem 1.5rem;
+    border-bottom: 1px solid var(--border);
+    margin: 1rem -1.5rem;
+}
+
+.tabs {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.tab {
+    padding: 0.5rem 1rem;
+    font-size: var(--text-sm);
+    font-weight: 500;
+    color: var(--text-secondary);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: all 0.2s;
+    background: transparent;
+    border: none;
+}
+
+.tab:hover {
+    background: var(--surface-subtle);
+    color: var(--text-primary);
+}
+
+.activeTab {
+    background: var(--surface-subtle) !important;
+    color: var(--primary) !important;
+    font-weight: 600;
+}
+
+.tabDivider {
+    width: 1px;
+    height: 1.5rem;
+    background: var(--border);
+    margin: 0 0.5rem;
+}
+
+.filtersWrapper {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+}
+
+.filterGroup {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: var(--text-xs);
+    color: var(--text-secondary);
+}
+
+.dateInput {
+    padding: 0.4rem 0.6rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: var(--surface-subtle);
+    font-size: var(--text-xs);
+    color: var(--text-primary);
+    outline: none;
+}
+
+.dateInput:focus {
+    border-color: var(--primary);
 }

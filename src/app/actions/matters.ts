@@ -100,7 +100,6 @@ export async function getMatterById(id: string) {
                         briefNumber: true,
                     },
                 },
-                // Fetch full calendar entry history
                 calendarEntries: {
                     orderBy: { date: 'desc' }, // Newest first for timeline
                     include: {
@@ -112,6 +111,9 @@ export async function getMatterById(id: string) {
                             }
                         }
                     }
+                },
+                meetingRecords: {
+                    orderBy: { date: 'desc' }
                 }
             },
         });
