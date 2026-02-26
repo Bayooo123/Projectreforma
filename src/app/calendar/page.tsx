@@ -1,7 +1,7 @@
 import { auth } from '@/auth';
 import { redirect } from 'next/navigation';
 import { getCurrentUserWithWorkspace } from '@/lib/workspace';
-import { getCourtEvents } from '@/app/actions/court-dates';
+import { getCalendarEvents } from '@/app/actions/calendar-events';
 import CalendarClient from './CalendarClient';
 
 export default async function CalendarPage() {
@@ -23,8 +23,8 @@ export default async function CalendarPage() {
         );
     }
 
-    // Get all court events (past and future)
-    const events = await getCourtEvents(data.workspace.id);
+    // Get all calendar events (past and future)
+    const events = await getCalendarEvents(data.workspace.id);
 
     return (
         <CalendarClient

@@ -3,7 +3,7 @@
 import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
 import { createNotification, RecipientType } from '@/lib/notifications';
-import { scheduleAdjournmentNotifications } from '@/lib/scheduleAdjournmentNotifications';
+import { scheduleCalendarEntryNotifications } from '@/lib/scheduleAdjournmentNotifications';
 import { auth } from '@/auth';
 import { applySentenceCaseToFields, toSentenceCase } from '@/lib/sentence-case';
 
@@ -100,8 +100,8 @@ export async function getMatterById(id: string) {
                         briefNumber: true,
                     },
                 },
-                // Fetch full court date history
-                courtDates: {
+                // Fetch full calendar entry history
+                calendarEntries: {
                     orderBy: { date: 'desc' }, // Newest first for timeline
                     include: {
                         appearances: {
@@ -284,12 +284,13 @@ export async function createMatter(data: {
                 .filter(l => l.isAppearing)
                 .map(l => l.lawyerId);
 
-            await prisma.courtDate.create({
+            await prisma.calendarEntry.create({
                 data: {
                     matterId: matter.id,
                     briefId: matter.briefs[0].id,
                     clientId: finalClientId,
                     date: entryDate,
+                    type: 'COURT_DATE',
                     title: 'Initial Appearance',
                     proceedings: data.proceedings,
                     submittingLawyerId: session.user.id,
@@ -304,19 +305,20 @@ export async function createMatter(data: {
         }
 
         if (data.nextCourtDate) {
-            const futureCourtDate = await prisma.courtDate.create({
+            const futureEntry = await prisma.calendarEntry.create({
                 data: {
                     matterId: matter.id,
                     briefId: matter.briefs[0].id,
                     clientId: finalClientId,
                     date: data.nextCourtDate,
+                    type: 'COURT_DATE',
                     title: 'Upcoming Hearing',
                 }
             });
 
             await scheduleAdjournmentNotifications(
                 matter.id,
-                futureCourtDate.id,
+                futureEntry.id,
                 data.nextCourtDate,
                 data.workspaceId
             );
@@ -408,23 +410,25 @@ export async function updateMatter(
             },
         });
 
-        // AUTOMATIC CALENDAR SYNC: If nextCourtDate was updated, ensure a future CourtDate entry exists.
+        // AUTOMATIC CALENDAR SYNC: If nextCourtDate was updated, ensure a future CalendarEntry entry exists.
         if (data.nextCourtDate) {
             // Check if a future entry already exists for this exact date to avoid duplicates
-            const existingEntry = await prisma.courtDate.findFirst({
+            const existingEntry = await prisma.calendarEntry.findFirst({
                 where: {
                     matterId: id,
                     date: data.nextCourtDate,
+                    type: 'COURT_DATE'
                 }
             });
 
             if (!existingEntry) {
-                const futureCourtDate = await prisma.courtDate.create({
+                const futureEntry = await prisma.calendarEntry.create({
                     data: {
                         matterId: id,
                         briefId: existingMatter.briefs[0].id,
                         clientId: existingMatter.clientId as string,
                         date: data.nextCourtDate,
+                        type: 'COURT_DATE',
                         title: 'Upcoming Hearing',
                     }
                 });
@@ -432,7 +436,7 @@ export async function updateMatter(
                 // Schedule firm-wide notifications
                 await scheduleAdjournmentNotifications(
                     id,
-                    futureCourtDate.id,
+                    futureEntry.id,
                     data.nextCourtDate,
                     matter.workspaceId
                 );
@@ -534,12 +538,13 @@ export async function adjournMatter(
         const dateOfEvent = proceedingDate || matterCheck.nextCourtDate || new Date();
 
         // 2. Record the proceeding history
-        await prisma.courtDate.create({
+        await prisma.calendarEntry.create({
             data: {
                 matterId,
                 briefId,
                 clientId,
                 date: dateOfEvent,
+                type: 'COURT_DATE',
                 proceedings,
                 adjournedFor: adjournedFor || null,
                 externalCounsel: externalCounselName || null,
@@ -566,12 +571,13 @@ export async function adjournMatter(
             // If no specific reason given, generic title
             const nextTitle = adjournedFor || 'Continued Hearing';
 
-            const futureCourtDate = await prisma.courtDate.create({
+            const futureEntry = await prisma.calendarEntry.create({
                 data: {
                     matterId,
                     briefId,
                     clientId,
                     date: newDate,
+                    type: 'COURT_DATE',
                     title: nextTitle
                 }
             });
@@ -579,7 +585,7 @@ export async function adjournMatter(
             // Schedule notifications
             const notificationResult = await scheduleAdjournmentNotifications(
                 matterId,
-                futureCourtDate.id,
+                futureEntry.id,
                 newDate,
                 matterCheck.workspaceId
             );
@@ -714,10 +720,10 @@ export async function updateMatterStatus(
 }
 
 /**
- * Update specifically the court date record fields (proceedings, judge, etc.)
+ * Update specifically the calendar entry fields
  */
-export async function updateCourtDate(
-    courtDateId: string,
+export async function updateCalendarEntry(
+    calendarEntryId: string,
     data: {
         proceedings?: string;
         judge?: string;
@@ -725,18 +731,22 @@ export async function updateCourtDate(
         adjournedFor?: string;
         externalCounsel?: string;
         appearanceLawyerIds?: string[];
+        location?: string;
+        agenda?: string;
+        description?: string;
+        type?: 'COURT_DATE' | 'FILING_DEADLINE' | 'CLIENT_MEETING' | 'INTERNAL_MEETING' | 'OTHER';
     },
     performedBy: string
 ) {
     const session = await auth();
     if (!session?.user) return { success: false, error: 'Unauthorized' };
 
-    // Normalise court date text fields
-    data = applySentenceCaseToFields(data, ['proceedings', 'judge', 'title', 'adjournedFor']);
+    // Normalise text fields
+    data = applySentenceCaseToFields(data, ['proceedings', 'judge', 'title', 'adjournedFor', 'location', 'agenda', 'description']);
 
     try {
-        const courtDate = await prisma.courtDate.findUnique({
-            where: { id: courtDateId },
+        const calendarEntry = await prisma.calendarEntry.findUnique({
+            where: { id: calendarEntryId },
             include: {
                 matter: {
                     include: { workspace: true, lawyers: true }
@@ -744,19 +754,19 @@ export async function updateCourtDate(
             }
         });
 
-        if (!courtDate) return { success: false, error: 'Court date record not found' };
+        if (!calendarEntry) return { success: false, error: 'Calendar entry record not found' };
 
         // RBAC Check: Only the original submitting lawyer or owner can update
-        const { matter } = courtDate;
-        if (courtDate.submittingLawyerId && courtDate.submittingLawyerId !== session.user.id && matter.workspace.ownerId !== session.user.id) {
-            return { success: false, error: 'Permission denied: Only the lawyer who recorded this proceeding can edit it.' };
+        const { matter } = calendarEntry;
+        if (calendarEntry.submittingLawyerId && calendarEntry.submittingLawyerId !== session.user.id && matter?.workspace.ownerId !== session.user.id) {
+            return { success: false, error: 'Permission denied.' };
         }
 
         const { appearanceLawyerIds, ...rest } = data;
 
         // Update the record
-        const updatedRecord = await prisma.courtDate.update({
-            where: { id: courtDateId },
+        const updatedRecord = await prisma.calendarEntry.update({
+            where: { id: calendarEntryId },
             data: {
                 ...rest,
                 appearances: appearanceLawyerIds ? {
@@ -767,12 +777,110 @@ export async function updateCourtDate(
         });
 
         revalidatePath('/calendar');
-        revalidatePath(`/calendar/${matter.id}`);
+        if (matter) revalidatePath(`/calendar/${matter.id}`);
 
-        return { success: true, courtDate: updatedRecord };
+        return { success: true, calendarEntry: updatedRecord };
 
     } catch (error) {
-        console.error('Error updating court date:', error);
-        return { success: false, error: 'Failed to update court date' };
+        console.error('Error updating calendar entry:', error);
+        return { success: false, error: 'Failed to update calendar entry' };
+    }
+}
+
+/**
+ * Schedule a meeting
+ */
+export async function scheduleMeeting(data: {
+    title: string;
+    date: Date;
+    type: 'CLIENT_MEETING' | 'INTERNAL_MEETING';
+    matterId?: string;
+    location?: string;
+    agenda?: string;
+    participantIds?: string[];
+    workspaceId: string;
+}) {
+    const session = await auth();
+    if (!session?.user) return { success: false, error: 'Unauthorized' };
+
+    try {
+        let briefId: string | undefined;
+        let clientId: string | undefined;
+
+        if (data.matterId) {
+            const matter = await prisma.matter.findUnique({
+                where: { id: data.matterId },
+                include: { briefs: { take: 1 } }
+            });
+            briefId = matter?.briefs[0]?.id;
+            clientId = matter?.clientId || undefined;
+        }
+
+        const entry = await prisma.calendarEntry.create({
+            data: {
+                title: data.title,
+                date: data.date,
+                type: data.type,
+                matterId: data.matterId,
+                briefId,
+                clientId,
+                location: data.location,
+                agenda: data.agenda,
+                submittingLawyerId: session.user.id,
+                submittingLawyerToken: session.user.lawyerToken,
+                submittingLawyerName: session.user.name,
+                appearances: data.participantIds ? {
+                    connect: data.participantIds.map(id => ({ id }))
+                } : undefined
+            }
+        });
+
+        revalidatePath('/calendar');
+        if (data.matterId) revalidatePath(`/calendar/${data.matterId}`);
+
+        return { success: true, entry };
+    } catch (error) {
+        console.error('Error scheduling meeting:', error);
+        return { success: false, error: 'Failed to schedule meeting' };
+    }
+}
+
+/**
+ * Record a meeting
+ */
+export async function recordMeeting(data: {
+    calendarEntryId?: string;
+    matterId?: string;
+    date: Date;
+    participants: any;
+    summary: string;
+    actionItems?: string;
+    followUpDate?: Date;
+}) {
+    const session = await auth();
+    if (!session?.user) return { success: false, error: 'Unauthorized' };
+
+    try {
+        const record = await prisma.meetingRecord.create({
+            data: {
+                calendarEntryId: data.calendarEntryId,
+                matterId: data.matterId,
+                date: data.date,
+                participants: data.participants,
+                summary: data.summary,
+                actionItems: data.actionItems,
+                followUpDate: data.followUpDate
+            }
+        });
+
+        // If linked to a calendar entry, we might want to update the entry status or something
+        // For now, just revalidate
+        revalidatePath('/calendar');
+        if (data.matterId) revalidatePath(`/calendar/${data.matterId}`);
+
+        return { success: true, record };
+    } catch (error) {
+        console.error('Error recording meeting:', error);
+        return { success: false, error: 'Failed to record meeting' };
     }
 }

@@ -2,22 +2,26 @@ import { X, MapPin, Calendar, Scale } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/Button';
 
-interface Hearing {
+interface CalendarEntry {
     id: string;
-    caseNumber: string | null;
-    name: string;
-    court: string | null;
-    judge: string | null;
-    nextCourtDate: Date | null;
+    date: Date;
+    type: string;
+    title: string | null;
+    matter: {
+        name: string;
+        caseNumber: string | null;
+        court: string | null;
+        judge: string | null;
+    } | null;
 }
 
-interface CourtDatesModalProps {
+interface CalendarEntriesModalProps {
     isOpen: boolean;
     onClose: () => void;
-    hearings: Hearing[];
+    entries: CalendarEntry[];
 }
 
-export function CourtDatesModal({ isOpen, onClose, hearings }: CourtDatesModalProps) {
+export function CourtDatesModal({ isOpen, onClose, entries }: CalendarEntriesModalProps) {
     if (!isOpen) return null;
 
     const formatDateBadge = (date: Date) => {
@@ -37,7 +41,7 @@ export function CourtDatesModal({ isOpen, onClose, hearings }: CourtDatesModalPr
         <div className="fixed inset-0 bg-black/50 z-[1000] flex items-center justify-center animate-in fade-in duration-200">
             <div className="bg-white dark:bg-slate-800 rounded-[16px] w-[90%] max-w-[700px] max-h-[80vh] overflow-y-auto shadow-[0_20px_60px_rgba(0,0,0,0.3)] dark:shadow-[0_20px_60px_rgba(0,0,0,0.7)] animate-in zoom-in-95 duration-200 ring-1 ring-slate-200 dark:ring-slate-700">
                 <div className="p-[32px] border-b border-[#e2e8f0] dark:border-slate-700 flex justify-between items-center sticky top-0 bg-white dark:bg-slate-800 z-10">
-                    <h2 className="text-[20px] font-semibold text-[#1a202c] dark:text-slate-100">Court Dates - Next 7 Days</h2>
+                    <h2 className="text-[20px] font-semibold text-[#1a202c] dark:text-slate-100">Calendar Agenda - Next 7 Days</h2>
                     <button
                         onClick={onClose}
                         className="text-[#718096] dark:text-slate-400 hover:text-[#1a202c] dark:hover:text-white transition-colors text-[24px] leading-none"
@@ -47,37 +51,35 @@ export function CourtDatesModal({ isOpen, onClose, hearings }: CourtDatesModalPr
                 </div>
 
                 <div className="p-[32px]">
-                    {hearings.length === 0 ? (
+                    {entries.length === 0 ? (
                         <div className="text-center py-12 px-4 text-slate-500 dark:text-slate-400">
-                            <p>No upcoming court dates in the next 7 days.</p>
+                            <p>No upcoming events in the next 7 days.</p>
                         </div>
                     ) : (
-                        hearings.map((hearing) => (
-                            <div key={hearing.id} className="p-[20px] border border-[#e2e8f0] dark:border-slate-700 rounded-[10px] mb-[12px] hover:border-[#0f5f5a] dark:hover:border-teal-400 hover:bg-[#f8fffe] dark:hover:bg-slate-700/30 transition-all group">
-                                {hearing.nextCourtDate && (
-                                    <div className="inline-block px-[12px] py-[4px] bg-[#0f5f5a] dark:bg-teal-700 text-white rounded-[6px] text-[12px] font-semibold mb-[12px]">
-                                        {formatDateBadge(new Date(hearing.nextCourtDate))}
-                                    </div>
-                                )}
+                        entries.map((entry) => (
+                            <div key={entry.id} className="p-[20px] border border-[#e2e8f0] dark:border-slate-700 rounded-[10px] mb-[12px] hover:border-[#0f5f5a] dark:hover:border-teal-400 hover:bg-[#f8fffe] dark:hover:bg-slate-700/30 transition-all group">
+                                <div className="inline-block px-[12px] py-[4px] bg-[#0f5f5a] dark:bg-teal-700 text-white rounded-[6px] text-[12px] font-semibold mb-[12px]">
+                                    {formatDateBadge(new Date(entry.date))}
+                                </div>
                                 <div className="font-semibold text-[#1a202c] dark:text-slate-200 text-[15px] mb-[8px]">
-                                    {hearing.name} <span className="text-[#718096] dark:text-slate-500 font-normal text-xs ml-1">({hearing.caseNumber})</span>
+                                    {entry.matter?.name || entry.title || 'Event'}
+                                    {entry.matter?.caseNumber && <span className="text-[#718096] dark:text-slate-500 font-normal text-xs ml-1">({entry.matter.caseNumber})</span>}
                                 </div>
                                 <div className="space-y-[4px]">
-                                    {hearing.court && (
+                                    {entry.matter?.court && (
                                         <div className="flex items-center text-[13px] text-[#718096] dark:text-slate-400">
                                             <span className="mr-2">📍</span>
-                                            {hearing.court}
+                                            {entry.matter.court}
                                         </div>
                                     )}
-                                    {/* Placeholder for hearing type if data was available */}
                                     <div className="flex items-center text-[13px] text-[#718096] dark:text-slate-400">
-                                        <span className="mr-2">⚖️</span>
-                                        Hearing
+                                        <span className="mr-2">📅</span>
+                                        {entry.type.replace('_', ' ')}
                                     </div>
-                                    {hearing.judge && (
+                                    {entry.matter?.judge && (
                                         <div className="flex items-center text-[13px] text-[#718096] dark:text-slate-400">
                                             <span className="mr-2">👨‍⚖️</span>
-                                            {hearing.judge}
+                                            {entry.matter.judge}
                                         </div>
                                     )}
                                 </div>

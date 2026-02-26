@@ -114,7 +114,7 @@ model User {
   assignedTasks          Task[]                @relation("AssignedTasks")
   ownedWorkspaces        Workspace[]           @relation("WorkspaceOwner")
   workspaces             WorkspaceMember[]
-  courtAppearances       CourtDate[]           @relation("CourtAppearances")
+  calendarAppearances    CalendarEntry[]       @relation("CalendarAppearances")
 
   @@index([email])
   @@index([lawyerToken])
@@ -204,11 +204,13 @@ model Notification {
   metadata                Json?
   relatedInvoiceId        String?
   relatedPaymentId        String?
+  relatedCalendarEntryId   String?
   updatedAt               DateTime        @updatedAt
   brief                   Brief?          @relation(fields: [relatedBriefId], references: [id])
   complianceTask          ComplianceTask? @relation(fields: [relatedComplianceTaskId], references: [id])
   invoice                 Invoice?        @relation(fields: [relatedInvoiceId], references: [id])
   matter                  Matter?         @relation(fields: [relatedMatterId], references: [id])
+  calendarEntry           CalendarEntry?  @relation(fields: [relatedCalendarEntryId], references: [id])
   payment                 Payment?        @relation(fields: [relatedPaymentId], references: [id])
 
   @@index([recipientId, status])
@@ -256,7 +258,7 @@ model Matter {
   lawyerInCharge        User?                 @relation("MatterLawyerInCharge", fields: [lawyerInChargeId], references: [id])
   briefs                Brief[]
   clientCommunications  ClientCommunication[]
-  courtDates            CourtDate[]
+  calendarEntries       CalendarEntry[]
   invoices              Invoice[]
   client                Client?               @relation(fields: [clientId], references: [id])
   workspace             Workspace             @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
@@ -264,6 +266,7 @@ model Matter {
   lawyers               MatterLawyer[]
   notifications         Notification[]
   tasks                 Task[]
+  meetingRecords        MeetingRecord[]
 
   @@index([workspaceId])
   @@index([lastActivityAt])
@@ -285,28 +288,39 @@ model MatterLawyer {
   @@index([matterId])
 }
 
-model CourtDate {
+model CalendarEntry {
   id                     String                  @id @default(cuid())
-  matterId               String
+  matterId               String?
   date                   DateTime
+  type                   CalendarEventType       @default(COURT_DATE)
   title                  String?
+
+  // Court Specific
   proceedings            String?
   outcome                String?
   adjournedFor           String?
   externalCounsel        String?
   judge                  String?
+
+  // Meeting/Deadline Specific
+  location               String?
+  agenda                 String?
+  description            String?
+
   submittingLawyerId     String?
   submittingLawyerToken  String?
   submittingLawyerName   String?
   createdAt              DateTime                @default(now())
   updatedAt              DateTime                @updatedAt
-  briefId                String
-  clientId               String
-  brief                  Brief                   @relation(fields: [briefId], references: [id])
-  client                 Client                  @relation(fields: [clientId], references: [id])
-  matter                 Matter                  @relation(fields: [matterId], references: [id], onDelete: Cascade)
+  briefId                String?
+  clientId               String?
+  brief                  Brief?                   @relation(fields: [briefId], references: [id])
+  client                 Client?                  @relation(fields: [clientId], references: [id])
+  matter                 Matter?                  @relation(fields: [matterId], references: [id], onDelete: Cascade)
   scheduledNotifications ScheduledNotification[]
-  appearances            User[]                  @relation("CourtAppearances")
+  appearances            User[]                  @relation("CalendarAppearances")
+  notifications          Notification[]
+  meetingRecord          MeetingRecord?
 
   @@index([matterId])
   @@index([briefId])
@@ -315,10 +329,36 @@ model CourtDate {
   @@index([submittingLawyerId])
 }
 
+model MeetingRecord {
+  id               String          @id @default(cuid())
+  calendarEntryId  String?         @unique
+  matterId         String?
+  date             DateTime        @default(now())
+  participants     Json?           // Structured list of participants
+  summary          String
+  actionItems      String?
+  followUpDate     DateTime?
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+  calendarEntry    CalendarEntry?  @relation(fields: [calendarEntryId], references: [id])
+  matter           Matter?         @relation(fields: [matterId], references: [id], onDelete: Cascade)
+
+  @@index([matterId])
+  @@index([calendarEntryId])
+}
+
+enum CalendarEventType {
+  COURT_DATE
+  FILING_DEADLINE
+  CLIENT_MEETING
+  INTERNAL_MEETING
+  OTHER
+}
+
 model ScheduledNotification {
   id               String          @id @default(cuid())
   matterId         String?
-  courtDateId      String?
+  calendarEntryId  String?
   complianceTaskId String?
   recipientId      String
   notificationType String
@@ -328,11 +368,11 @@ model ScheduledNotification {
   createdAt        DateTime        @default(now())
   updatedAt        DateTime        @updatedAt
   complianceTask   ComplianceTask? @relation(fields: [complianceTaskId], references: [id], onDelete: Cascade)
-  courtDate        CourtDate?      @relation(fields: [courtDateId], references: [id], onDelete: Cascade)
+  calendarEntry   CalendarEntry?  @relation(fields: [calendarEntryId], references: [id], onDelete: Cascade)
 
   @@index([status, scheduledFor])
   @@index([matterId])
-  @@index([courtDateId])
+  @@index([calendarEntryId])
   @@index([complianceTaskId])
   @@index([recipientId])
 }
@@ -404,7 +444,7 @@ model Brief {
   matter         Matter?              @relation(fields: [matterId], references: [id])
   workspace      Workspace            @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   activityLogs   BriefActivityLog[]
-  courtDates     CourtDate[]
+  calendarEntries   CalendarEntry[]
   documents      Document[]
   notifications  Notification[]
   tasks          Task[]
@@ -460,7 +500,7 @@ model Client {
   briefs               Brief[]
   workspace            Workspace             @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   clientCommunications ClientCommunication[]
-  courtDates           CourtDate[]
+  calendarEntries      CalendarEntry[]
   invoices             Invoice[]
   matters              Matter[]
   payments             Payment[]

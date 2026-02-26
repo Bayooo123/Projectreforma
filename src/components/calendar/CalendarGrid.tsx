@@ -1,37 +1,33 @@
 "use client";
 
 import { useState } from 'react';
-import { ChevronLeft, ChevronRight, Gavel, Loader } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Gavel, Loader, Clock, Users, Briefcase, Calendar } from 'lucide-react';
 import styles from './CalendarGrid.module.css';
 
-interface CourtEvent {
+export type CalendarEventType = 'COURT_DATE' | 'FILING_DEADLINE' | 'CLIENT_MEETING' | 'INTERNAL_MEETING' | 'OTHER';
+
+export interface CalendarEvent {
     id: string;
     date: Date;
+    type: CalendarEventType;
     title: string | null;
     proceedings: string | null;
     adjournedFor: string | null;
-    matterId: string;
-    matter: {
+    matterId: string | null;
+    matter?: {
         id: string;
         caseNumber: string | null;
         name: string;
         client?: { name: string } | null;
-        lawyers: {
-            lawyer: {
-                id: string;
-                name: string | null;
-            };
-            role: string;
-        }[];
-    };
+    } | null;
     appearances: { id: string; name: string | null; image: string | null }[];
 }
 
 interface CalendarGridProps {
-    events: CourtEvent[];
+    events: CalendarEvent[];
     currentDate: Date;
     onDateChange: (date: Date) => void;
-    onEventClick: (event: CourtEvent) => void;
+    onEventClick: (event: CalendarEvent) => void;
     isLoading?: boolean;
 }
 
@@ -65,7 +61,7 @@ const CalendarGrid = ({
     // Note: We need to filter events that match the current month first? 
     // Or just map them. Ideally events passed are already relevant or we handle date checking.
     // If we passed ALL workspace events, we must check month here.
-    const eventsByDay: Record<number, CourtEvent[]> = {};
+    const eventsByDay: Record<number, CalendarEvent[]> = {};
 
     events.forEach(event => {
         const eventDate = new Date(event.date);
@@ -87,9 +83,25 @@ const CalendarGrid = ({
         if (!dayEvents || dayEvents.length === 0) return null;
 
         return dayEvents.map((event) => {
-            // Determine styling based on status or type
-            // e.g. past events vs new
             const isPast = new Date(event.date) < new Date() && new Date(event.date).getDate() !== new Date().getDate();
+
+            const getEventConfig = (type: CalendarEventType) => {
+                switch (type) {
+                    case 'COURT_DATE':
+                        return { icon: Gavel, color: '#3182CE', bg: '#EBF8FF', hover: '#BEE3F8', border: '#3182CE' };
+                    case 'FILING_DEADLINE':
+                        return { icon: Clock, color: '#E53E3E', bg: '#FFF5F5', hover: '#FED7D7', border: '#E53E3E' };
+                    case 'CLIENT_MEETING':
+                        return { icon: Users, color: '#38A169', bg: '#F0FFF4', hover: '#C6F6D5', border: '#38A169' };
+                    case 'INTERNAL_MEETING':
+                        return { icon: Briefcase, color: '#805AD5', bg: '#FAF5FF', hover: '#E9D8FD', border: '#805AD5' };
+                    default:
+                        return { icon: Calendar, color: '#718096', bg: '#F7FAFC', hover: '#EDF2F7', border: '#718096' };
+                }
+            };
+
+            const config = getEventConfig(event.type);
+            const Icon = config.icon;
 
             return (
                 <div
@@ -102,18 +114,18 @@ const CalendarGrid = ({
                     style={{
                         cursor: 'pointer',
                         opacity: isPast ? 0.6 : 1,
-                        backgroundColor: isPast ? '#f3f4f6' : undefined,
-                        borderLeft: isPast ? '2px solid #9ca3af' : '2px solid var(--primary)',
+                        backgroundColor: isPast ? '#f3f4f6' : config.bg,
+                        borderLeft: isPast ? '2px solid #9ca3af' : `2px solid ${config.border}`,
                         marginBottom: '2px',
                         padding: '2px 4px',
                         fontSize: '11px',
                         borderRadius: '2px'
                     }}
-                    title={`${event.title || 'Hearing'} - ${event.matter.name}`}
+                    title={`${event.title || 'Event'} - ${event.matter?.name || 'No Matter'}`}
                 >
-                    <Gavel size={10} className={styles.caseIcon} />
-                    <span className={styles.caseName}>
-                        {maybeTruncate(event.matter.name)}
+                    <Icon size={10} style={{ color: isPast ? '#9ca3af' : config.color }} />
+                    <span className={styles.caseName} style={{ color: isPast ? '#718096' : config.color }}>
+                        {maybeTruncate(event.matter?.name || event.title || 'Event')}
                     </span>
                 </div>
             );

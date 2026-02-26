@@ -69,8 +69,8 @@ export default function OverviewCockpit({ workspaceId, userId, userName, clients
                 >
                     <Gavel className="w-8 h-8 group-hover:scale-110 transition-transform duration-200" />
                     <div>
-                        <div className="font-semibold text-lg">Add Matter</div>
-                        <div className="text-red-200 text-sm">Litigation Tracker</div>
+                        <div className="font-semibold text-lg">Calendar Entry</div>
+                        <div className="text-red-200 text-sm">Legal Calendar</div>
                     </div>
                 </button>
             </div>

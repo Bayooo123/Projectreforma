@@ -3,20 +3,20 @@
 import { prisma } from '@/lib/prisma';
 
 /**
- * Schedule adjournment notifications for a court date
+ * Schedule notifications for a calendar entry
  * Creates 3 notifications per lawyer: 3-day, 2-day, and day-of reminders
  */
-export async function scheduleAdjournmentNotifications(
+export async function scheduleCalendarEntryNotifications(
     matterId: string,
-    courtDateId: string,
-    adjournmentDate: Date,
+    calendarEntryId: string,
+    eventDate: Date,
     workspaceId: string
 ): Promise<{ success: boolean; error?: string; scheduledCount?: number }> {
     try {
-        // 1. Cancel any existing pending notifications for this court date
+        // 1. Cancel any existing pending notifications for this entry
         await prisma.scheduledNotification.updateMany({
             where: {
-                courtDateId,
+                calendarEntryId,
                 status: 'pending'
             },
             data: {
@@ -43,16 +43,16 @@ export async function scheduleAdjournmentNotifications(
         }
 
         // 3. Calculate notification dates
-        const adjournmentDateTime = new Date(adjournmentDate);
-        const threeDaysBefore = new Date(adjournmentDateTime);
+        const eventDateTime = new Date(eventDate);
+        const threeDaysBefore = new Date(eventDateTime);
         threeDaysBefore.setDate(threeDaysBefore.getDate() - 3);
         threeDaysBefore.setHours(9, 0, 0, 0); // 9 AM
 
-        const twoDaysBefore = new Date(adjournmentDateTime);
+        const twoDaysBefore = new Date(eventDateTime);
         twoDaysBefore.setDate(twoDaysBefore.getDate() - 2);
         twoDaysBefore.setHours(9, 0, 0, 0); // 9 AM
 
-        const dayOf = new Date(adjournmentDateTime);
+        const dayOf = new Date(eventDateTime);
         dayOf.setHours(7, 0, 0, 0); // 7 AM on the day
 
         const now = new Date();
@@ -65,7 +65,7 @@ export async function scheduleAdjournmentNotifications(
             if (threeDaysBefore > now) {
                 notificationsToCreate.push({
                     matterId,
-                    courtDateId,
+                    calendarEntryId,
                     recipientId: member.userId,
                     notificationType: 'three_day',
                     scheduledFor: threeDaysBefore,
@@ -76,7 +76,7 @@ export async function scheduleAdjournmentNotifications(
             if (twoDaysBefore > now) {
                 notificationsToCreate.push({
                     matterId,
-                    courtDateId,
+                    calendarEntryId,
                     recipientId: member.userId,
                     notificationType: 'two_day',
                     scheduledFor: twoDaysBefore,
@@ -87,7 +87,7 @@ export async function scheduleAdjournmentNotifications(
             if (dayOf > now) {
                 notificationsToCreate.push({
                     matterId,
-                    courtDateId,
+                    calendarEntryId,
                     recipientId: member.userId,
                     notificationType: 'day_of',
                     scheduledFor: dayOf,
@@ -109,7 +109,7 @@ export async function scheduleAdjournmentNotifications(
         };
 
     } catch (error) {
-        console.error('Error scheduling adjournment notifications:', error);
+        console.error('Error scheduling calendar notifications:', error);
         return {
             success: false,
             error: error instanceof Error ? error.message : 'Failed to schedule notifications'
