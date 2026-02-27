@@ -21,7 +21,7 @@ async function migrateBriefs() {
             include: {
                 matter: {
                     include: {
-                        courtDates: {
+                        calendarEntries: {
                             include: { appearances: true },
                             orderBy: { date: 'asc' },
                             take: 1 // Get first court appearance
@@ -51,8 +51,8 @@ async function migrateBriefs() {
                 console.log(`✓ Brief ${brief.briefNumber}: Marked as litigation-derived`);
 
                 // 2. Set lawyer in charge from first appearance
-                const firstAppearance = brief.matter?.courtDates[0];
-                if (firstAppearance?.appearances?.length > 0 && !brief.lawyerInChargeId) {
+                const firstAppearance = brief.matter?.calendarEntries[0];
+                if (firstAppearance?.appearances && firstAppearance.appearances.length > 0 && !brief.lawyerInChargeId) {
                     const appearingLawyer = firstAppearance.appearances[0];
                     updates.lawyerInChargeId = appearingLawyer.id;
                     lawyerAssignedCount++;

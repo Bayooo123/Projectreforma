@@ -1,0 +1,20 @@
+src/app/actions/matters.ts(439,23): error TS2552: Cannot find name 'scheduleAdjournmentNotifications'. Did you mean 'scheduleCalendarEntryNotifications'?
+src/app/actions/matters.ts(588,46): error TS2552: Cannot find name 'scheduleAdjournmentNotifications'. Did you mean 'scheduleCalendarEntryNotifications'?
+src/app/management/DashboardClient.tsx(195,17): error TS2322: Type '{ isOpen: boolean; onClose: () => void; hearings: any[]; }' is not assignable to type 'IntrinsicAttributes & CalendarEntriesModalProps'.
+  Property 'hearings' does not exist on type 'IntrinsicAttributes & CalendarEntriesModalProps'.
+src/lib/processScheduledNotifications.ts(76,42): error TS18047: 'matter' is possibly 'null'.
+src/lib/processScheduledNotifications.ts(76,56): error TS18047: 'matter' is possibly 'null'.
+src/lib/processScheduledNotifications.ts(76,81): error TS18047: 'matter' is possibly 'null'.
+src/lib/processScheduledNotifications.ts(76,166): error TS18047: 'matter' is possibly 'null'.
+src/lib/processScheduledNotifications.ts(76,188): error TS18047: 'matter' is possibly 'null'.
+src/lib/processScheduledNotifications.ts(82,42): error TS18047: 'matter' is possibly 'null'.
+src/lib/processScheduledNotifications.ts(82,56): error TS18047: 'matter' is possibly 'null'.
+src/lib/processScheduledNotifications.ts(82,81): error TS18047: 'matter' is possibly 'null'.
+src/lib/processScheduledNotifications.ts(82,166): error TS18047: 'matter' is possibly 'null'.
+src/lib/processScheduledNotifications.ts(82,188): error TS18047: 'matter' is possibly 'null'.
+src/lib/processScheduledNotifications.ts(88,42): error TS18047: 'matter' is possibly 'null'.
+src/lib/processScheduledNotifications.ts(88,56): error TS18047: 'matter' is possibly 'null'.
+src/lib/processScheduledNotifications.ts(88,81): error TS18047: 'matter' is possibly 'null'.
+src/lib/processScheduledNotifications.ts(88,132): error TS18047: 'matter' is possibly 'null'.
+src/lib/processScheduledNotifications.ts(88,154): error TS18047: 'matter' is possibly 'null'.
+src/lib/processScheduledNotifications.ts(94,42): error TS18047: 'matter' is possibly 'null'.

@@ -13,7 +13,7 @@ async function deleteBriefs() {
             console.log(`Deleting brief: ${id}`);
 
             // Delete dependent records manually if cascade is not certain
-            await prisma.courtDate.deleteMany({ where: { briefId: id } });
+            await prisma.calendarEntry.deleteMany({ where: { briefId: id } });
             await prisma.briefActivityLog.deleteMany({ where: { briefId: id } });
 
             // Delete the brief

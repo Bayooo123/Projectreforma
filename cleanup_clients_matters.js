@@ -16,7 +16,7 @@ async function cleanup() {
     try {
         // Delete dependent records for matters if any (e.g. CourtDates)
         console.log('Deleting court dates...');
-        await prisma.courtDate.deleteMany({
+        await prisma.calendarEntry.deleteMany({
             where: { matterId: { in: matterIds } }
         });
 

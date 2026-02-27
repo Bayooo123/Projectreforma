@@ -3,10 +3,10 @@ const prisma = new PrismaClient();
 
 async function checkCourtDates() {
     try {
-        const totalCourtDates = await prisma.courtDate.count();
+        const totalCourtDates = await prisma.calendarEntry.count();
         console.log('Total CourtDate records:', totalCourtDates);
 
-        const courtDatesWithDetails = await prisma.courtDate.findMany({
+        const courtDatesWithDetails = await prisma.calendarEntry.findMany({
             take: 10,
             orderBy: { createdAt: 'desc' },
             include: {

@@ -31,18 +31,18 @@ async function main() {
     }
     console.log(`Found Workspace: ${workspace.name} (${workspace.id})`);
 
-    // 2. Count Court Dates
-    const courtDatesCount = await prisma.courtDate.count({
+    // 2. Count Calendar Entries
+    const courtDatesCount = await prisma.calendarEntry.count({
         where: { matter: { workspaceId: workspace.id } }
     });
-    console.log(`Total CourtDates in Workspace: ${courtDatesCount}`);
+    console.log(`Total CalendarEntries in Workspace: ${courtDatesCount}`);
 
-    // 3. Dump recent CourtDates (Jan/Feb 2026)
+    // 3. Dump recent CalendarEntries (Jan/Feb 2026)
     // Note: User said Jan/Feb. Assuming 2026 based on current time (Feb 2026).
     const startObj = new Date('2026-01-01');
     const endObj = new Date('2026-03-01');
 
-    const recentDates = await prisma.courtDate.findMany({
+    const recentDates = await prisma.calendarEntry.findMany({
         where: {
             matter: { workspaceId: workspace.id },
             date: {
@@ -56,7 +56,7 @@ async function main() {
         orderBy: { date: 'asc' }
     });
 
-    console.log(`\n--- Court Dates (Jan-Feb 2026) [Found: ${recentDates.length}] ---`);
+    console.log(`\n--- Calendar Entries (Jan-Feb 2026) [Found: ${recentDates.length}] ---`);
     recentDates.forEach(d => {
         console.log(`[${d.date.toISOString().split('T')[0]}] ${d.matter.name} (${d.title})`);
     });

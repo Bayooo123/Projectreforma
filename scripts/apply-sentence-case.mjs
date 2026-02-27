@@ -167,15 +167,15 @@ async function main() {
         await prisma.client.update({ where: { id }, data });
     });
 
-    // ── CourtDates ─────────────────────────────────────────────────────────────
+    // ── CalendarEntries ───────────────────────────────────────────────────────
     console.log('\n──────────────────────────────────────────────────────');
-    console.log(' Processing: CourtDate (proceedings, adjournedFor, title, judge)');
-    const courtDates = await prisma.courtDate.findMany({
+    console.log(' Processing: CalendarEntry (proceedings, adjournedFor, title, judge)');
+    const calendarEntries = await prisma.calendarEntry.findMany({
         where: { matter: { workspaceId } }
     });
-    console.log(`  Records found: ${courtDates.length}`);
-    await processBatch('CourtDate', courtDates, ['proceedings', 'adjournedFor', 'title', 'judge'], async (id, data) => {
-        await prisma.courtDate.update({ where: { id }, data });
+    console.log(`  Records found: ${calendarEntries.length}`);
+    await processBatch('CalendarEntry', calendarEntries, ['proceedings', 'adjournedFor', 'title', 'judge'], async (id, data) => {
+        await prisma.calendarEntry.update({ where: { id }, data });
     });
 
     // ── Summary ────────────────────────────────────────────────────────────────

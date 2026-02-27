@@ -27,7 +27,7 @@ export async function processScheduledNotifications(): Promise<{
                 }
             },
             include: {
-                courtDate: {
+                calendarEntry: {
                     include: {
                         matter: {
                             select: {
@@ -66,9 +66,13 @@ export async function processScheduledNotifications(): Promise<{
                     message = `The deadline for ${obligation.actionRequired} (${obligation.regulatoryBody}) is on ${scheduledNotif.complianceTask.dueDate?.toLocaleDateString()}. Please ensure evidence is uploaded.`;
                     priority = 'high';
                     type = 'compliance_reminder';
-                } else if (scheduledNotif.courtDate) {
-                    const { matter } = scheduledNotif.courtDate;
-                    const adjournmentDate = scheduledNotif.courtDate.date;
+                } else if (scheduledNotif.calendarEntry) {
+                    const { matter } = scheduledNotif.calendarEntry;
+                    if (!matter) {
+                        console.warn(`[Notification Processor] Calendar entry ${scheduledNotif.calendarEntry.id} has no associated matter`);
+                        continue;
+                    }
+                    const adjournmentDate = scheduledNotif.calendarEntry.date;
 
                     switch (scheduledNotif.notificationType) {
                         case 'three_day':

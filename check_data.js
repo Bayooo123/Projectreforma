@@ -14,7 +14,7 @@ async function checkData() {
         });
         console.log('MATTERS:' + JSON.stringify(matters));
 
-        const allDates = await prisma.courtDate.count();
+        const allDates = await prisma.calendarEntry.count();
         console.log('COURT_DATE_COUNT:' + allDates);
 
     } catch (e) {

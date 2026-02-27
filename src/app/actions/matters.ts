@@ -318,7 +318,7 @@ export async function createMatter(data: {
                 }
             });
 
-            await scheduleAdjournmentNotifications(
+            await scheduleCalendarEntryNotifications(
                 matter.id,
                 futureEntry.id,
                 data.nextCourtDate,
@@ -436,7 +436,7 @@ export async function updateMatter(
                 });
 
                 // Schedule firm-wide notifications
-                await scheduleAdjournmentNotifications(
+                await scheduleCalendarEntryNotifications(
                     id,
                     futureEntry.id,
                     data.nextCourtDate,
@@ -585,7 +585,7 @@ export async function adjournMatter(
             });
 
             // Schedule notifications
-            const notificationResult = await scheduleAdjournmentNotifications(
+            const notificationResult = await scheduleCalendarEntryNotifications(
                 matterId,
                 futureEntry.id,
                 newDate,

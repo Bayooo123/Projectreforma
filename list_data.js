@@ -8,23 +8,23 @@ async function listData() {
         const matters = await prisma.matter.findMany({
             where: { workspaceId },
             include: {
-                _count: { select: { courtDates: true } },
-                courtDates: {
-                    select: { id: true, date: true, title: true, proceedings: true }
+                _count: { select: { calendarEntries: true } },
+                calendarEntries: {
+                    include: { appearances: true }
                 }
             }
         });
 
         console.log(`MATTERS_COUNT:${matters.length}`);
         matters.forEach(m => {
-            console.log(`MATTER: ID=${m.id}, Name=${m.name}, DatesCount=${m._count.courtDates}`);
-            m.courtDates.forEach(d => {
+            console.log(`MATTER: ID=${m.id}, Name=${m.name}, DatesCount=${m._count.calendarEntries}`);
+            m.calendarEntries.forEach(d => {
                 console.log(`  DATE: ID=${d.id}, Date=${d.date}, Title=${d.title}, Proceedings=${d.proceedings ? d.proceedings.substring(0, 20) + '...' : 'null'}`);
             });
         });
 
         // Also check for ALL court dates to see if some are missing matter links
-        const allDates = await prisma.courtDate.findMany({
+        const allDates = await prisma.calendarEntry.findMany({
             include: {
                 matter: { select: { name: true, workspaceId: true } }
             }

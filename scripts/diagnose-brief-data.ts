@@ -21,7 +21,7 @@ async function diagnose() {
                 include: {
                     client: true,
                     lawyers: { include: { lawyer: true } },
-                    courtDates: { include: { appearances: true } }
+                    calendarEntries: { include: { appearances: true } }
                 }
             },
             lawyerInCharge: true,
@@ -38,7 +38,7 @@ async function diagnose() {
         console.log(`  Lawyer in Charge: ${brief.lawyerInCharge?.name || 'None'}`);
         console.log(`  Creator: ${brief.lawyer?.name}`);
         console.log(`  Matter Lawyers: ${brief.matter?.lawyers.map(ml => `${ml.lawyer.name} (${ml.role}, Appearing: ${ml.isAppearing})`).join(', ')}`);
-        console.log(`  Court Appearances: ${brief.matter?.courtDates.flatMap(cd => cd.appearances.map(a => a.name)).join(', ')}`);
+        console.log(`  Court Appearances: ${brief.matter?.calendarEntries.flatMap(cd => cd.appearances.map(a => a.name)).join(', ')}`);
         console.log('---');
     }
 

@@ -30,15 +30,15 @@ async function main() {
     console.log(`Found ${workspaces.length} total workspaces:`);
 
     for (const ws of workspaces) {
-        // Count count dates
-        const courtDateCount = await prisma.courtDate.count({
+        // Count calendar entries
+        const courtDateCount = await prisma.calendarEntry.count({
             where: { matter: { workspaceId: ws.id } }
         });
 
         console.log(`\n[${ws.createdAt.toISOString().split('T')[0]}] Name: ${ws.name} (Slug: ${ws.slug})`);
         console.log(`   ID: ${ws.id}`);
         console.log(`   Owner: ${ws.owner.name} (${ws.owner.email})`);
-        console.log(`   Court Dates: ${courtDateCount}`);
+        console.log(`   Calendar Entries: ${courtDateCount}`);
     }
 }
 

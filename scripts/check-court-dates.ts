@@ -18,12 +18,12 @@ if (fs.existsSync(envPath)) {
 }
 
 async function main() {
-    console.log('Checking CourtDate records...');
+    console.log('Checking CalendarEntry records...');
     try {
-        const total = await prisma.courtDate.count();
-        console.log(`Total CourtDates: ${total}`);
+        const total = await prisma.calendarEntry.count();
+        console.log(`Total CalendarEntries: ${total}`);
 
-        const allDates = await prisma.courtDate.findMany({
+        const allDates = await prisma.calendarEntry.findMany({
             select: {
                 date: true,
                 title: true,

@@ -11,9 +11,9 @@ async function migrateCourtDateSchema() {
         console.log('Executing SQL migration...\n');
 
         // Execute ALTER TABLE to add columns
-        console.log('Adding missing columns to CourtDate table...');
+        console.log('Adding missing columns to CalendarEntry table...');
         await prisma.$executeRawUnsafe(`
-            ALTER TABLE "CourtDate" 
+            ALTER TABLE "CalendarEntry" 
             ADD COLUMN IF NOT EXISTS "submittingLawyerId" TEXT,
             ADD COLUMN IF NOT EXISTS "submittingLawyerToken" TEXT,
             ADD COLUMN IF NOT EXISTS "submittingLawyerName" TEXT
@@ -23,8 +23,8 @@ async function migrateCourtDateSchema() {
         // Execute CREATE INDEX separately
         console.log('Creating index for performance...');
         await prisma.$executeRawUnsafe(`
-            CREATE INDEX IF NOT EXISTS "CourtDate_submittingLawyerId_idx" 
-            ON "CourtDate"("submittingLawyerId")
+            CREATE INDEX IF NOT EXISTS "CalendarEntry_submittingLawyerId_idx" 
+            ON "CalendarEntry"("submittingLawyerId")
         `);
         console.log('✓ Index created successfully!\n');
 
@@ -32,16 +32,16 @@ async function migrateCourtDateSchema() {
         const columns = await prisma.$queryRaw`
             SELECT column_name, data_type, is_nullable
             FROM information_schema.columns 
-            WHERE table_name = 'CourtDate'
+            WHERE table_name = 'CalendarEntry'
             ORDER BY ordinal_position
         `;
 
-        console.log('Current CourtDate table schema:');
+        console.log('Current CalendarEntry table schema:');
         console.table(columns);
 
         // Test that Prisma can now query the table
         console.log('\nTesting Prisma query...');
-        const courtDates = await prisma.courtDate.findMany({
+        const courtDates = await prisma.calendarEntry.findMany({
             take: 5,
             orderBy: { createdAt: 'desc' },
             include: {
@@ -54,7 +54,7 @@ async function migrateCourtDateSchema() {
             }
         });
 
-        console.log(`\n✓ Successfully retrieved ${courtDates.length} court date records!`);
+        console.log(`\n✓ Successfully retrieved ${courtDates.length} calendar entry records!`);
         console.log('\nSample records:');
         courtDates.forEach((cd, idx) => {
             console.log(`\n${idx + 1}. ${cd.matter.name} (${cd.matter.caseNumber})`);
@@ -63,8 +63,8 @@ async function migrateCourtDateSchema() {
         });
 
         // Get total count
-        const totalCount = await prisma.courtDate.count();
-        console.log(`\n✓ Total court date records in database: ${totalCount}`);
+        const totalCount = await prisma.calendarEntry.count();
+        console.log(`\n✓ Total calendar entry records in database: ${totalCount}`);
 
         console.log('\n✅ Migration completed successfully!');
         console.log('All litigation tracker records should now be visible in the UI.');

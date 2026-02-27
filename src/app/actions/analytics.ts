@@ -73,7 +73,7 @@ export async function getAnalyticsMetrics(workspaceId: string) {
     const nextWeek = new Date();
     nextWeek.setDate(today.getDate() + 7);
 
-    const pendingCourtDates = await prisma.courtDate.count({
+    const pendingCourtDates = await prisma.calendarEntry.count({
         where: {
             matter: { workspaceId },
             date: {
@@ -194,14 +194,14 @@ export async function getLawyerStats(workspaceId: string) {
 
     // 2. Get appearances for each user
     const stats = await Promise.all(members.map(async (m) => {
-        const appearances = await prisma.courtDate.count({
+        const appearances = await prisma.calendarEntry.count({
             where: {
                 appearances: { some: { id: m.userId } }
             }
         });
 
         // Get distinct courts visited (heuristic)
-        const visitedCourts = await prisma.courtDate.findMany({
+        const visitedCourts = await prisma.calendarEntry.findMany({
             where: { appearances: { some: { id: m.userId } } },
             select: { matter: { select: { court: true } } },
             distinct: ['matterId'] // Approximation since distinct on relation field is tricky
@@ -240,7 +240,7 @@ export async function getCourtVisits(workspaceId: string) {
     const today = new Date();
     const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
 
-    const visits = await prisma.courtDate.groupBy({
+    const visits = await prisma.calendarEntry.groupBy({
         by: ['matterId'], // Group by matter first to get to the court
         where: {
             matter: { workspaceId },
@@ -252,7 +252,7 @@ export async function getCourtVisits(workspaceId: string) {
     // We need the court name, which isn't in CourtDate but in Matter
     // groupBy doesn't support relation fields.
     // Fallback: findMany 
-    const courtDates = await prisma.courtDate.findMany({
+    const courtDates = await prisma.calendarEntry.findMany({
         where: {
             matter: { workspaceId },
             date: { gte: startOfMonth }
@@ -264,7 +264,7 @@ export async function getCourtVisits(workspaceId: string) {
 
     const courtCounts: Record<string, number> = {};
     courtDates.forEach(cd => {
-        const court = cd.matter.court || 'Unknown Court';
+        const court = cd.matter?.court || 'Unknown Court';
         courtCounts[court] = (courtCounts[court] || 0) + 1;
     });
 

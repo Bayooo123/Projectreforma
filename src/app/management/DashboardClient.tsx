@@ -192,7 +192,18 @@ export default function DashboardClient({ initialData }: DashboardClientProps) {
             <CourtDatesModal
                 isOpen={isCourtDatesOpen}
                 onClose={() => setIsCourtDatesOpen(false)}
-                hearings={initialData.upcomingHearings}
+                entries={initialData.upcomingHearings.map(h => ({
+                    id: h.id,
+                    date: h.nextCourtDate,
+                    type: 'COURT_DATE',
+                    title: 'Upcoming Hearing',
+                    matter: {
+                        name: h.name,
+                        caseNumber: h.caseNumber,
+                        court: h.court,
+                        judge: h.judge
+                    }
+                }))}
             />
 
         </div>

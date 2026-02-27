@@ -16,7 +16,7 @@ async function fixMetadata() {
                     where: { isAppearing: true },
                     include: { lawyer: true }
                 },
-                courtDates: {
+                calendarEntries: {
                     include: { appearances: true },
                     orderBy: { date: 'desc' }
                 }
@@ -39,7 +39,7 @@ async function fixMetadata() {
 
                 // 1. Try to find actual opponent name in court proceedings
                 let foundOpponent = null;
-                for (const cd of matter.courtDates) {
+                for (const cd of matter.calendarEntries) {
                     if (cd.proceedings?.includes('v.')) {
                         const parts = cd.proceedings.split('v.');
                         if (parts.length > 1) {
@@ -77,7 +77,7 @@ async function fixMetadata() {
             // Ensure lawyerInChargeId is set based on appearances or associations
             if (!matter.lawyerInChargeId) {
                 const appearingLawyer = matter.lawyers[0]?.lawyerId ||
-                    matter.courtDates[0]?.appearances[0]?.id;
+                    matter.calendarEntries[0]?.appearances[0]?.id;
 
                 if (appearingLawyer) {
                     updates.lawyerInChargeId = appearingLawyer;

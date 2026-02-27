@@ -25,18 +25,18 @@ async function main() {
             where: { workspaceId: ascolpWorkspace.id },
             include: {
                 _count: {
-                    select: { courtDates: true }
+                    select: { calendarEntries: true }
                 }
             }
         });
 
         console.log(`\nMatters in ASCOLP (${matters.length}):`);
         matters.forEach(m => {
-            console.log(`- Matter: ${m.name}, ID: ${m.id}, CourtDates: ${m._count.courtDates}`);
+            console.log(`- Matter: ${m.name}, ID: ${m.id}, CourtEntries: ${m._count.calendarEntries}`);
         });
 
-        // 3. Check for any CourtDates that might be missing links or linked to other things
-        const orphanedCourtDates = await prisma.courtDate.findMany({
+        // 3. Check for any CalendarEntries that might be missing links or linked to other things
+        const orphanedEntries = await prisma.calendarEntry.findMany({
             where: {
                 OR: [
                     { matterId: { notIn: matters.map(m => m.id) } },
@@ -49,13 +49,13 @@ async function main() {
             }
         });
 
-        if (orphanedCourtDates.length > 0) {
-            console.log(`\nFound ${orphanedCourtDates.length} CourtDates not linked to ASCOLP matters:`);
-            orphanedCourtDates.forEach(cd => {
-                console.log(`- CourtDate ID: ${cd.id}, Matter ID: ${cd.matterId}, Matter Name: ${cd.matter?.name || 'Unknown'}`);
+        if (orphanedEntries.length > 0) {
+            console.log(`\nFound ${orphanedEntries.length} CalendarEntries not linked to ASCOLP matters:`);
+            orphanedEntries.forEach(cd => {
+                console.log(`- Entry ID: ${cd.id}, Matter ID: ${cd.matterId}, Matter Name: ${cd.matter?.name || 'Unknown'}`);
             });
         } else {
-            console.log('\nNo orphaned CourtDates found among tracked matters.');
+            console.log('\nNo orphaned entries found among tracked matters.');
         }
     }
 

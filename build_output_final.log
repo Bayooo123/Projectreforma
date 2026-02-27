@@ -1,0 +1,101 @@
+
+> reforma-os@0.1.0 build
+> echo 'USING WEBPACK' && next build --webpack
+
+'USING WEBPACK' 
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+   ▲ Next.js 16.0.7 (webpack)
+   - Environments: .env.local, .env
+
+   Creating an optimized production build ...
+ ✓ Compiled successfully in 66s
+   Running TypeScript ...
+   Collecting page data using 3 workers ...
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+   Generating static pages using 3 workers (0/42) ...
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+   Generating static pages using 3 workers (10/42) 
+   Generating static pages using 3 workers (20/42) 
+   Generating static pages using 3 workers (31/42) 
+ ✓ Generating static pages using 3 workers (42/42) in 8.8s
+   Finalizing page optimization ...
+   Collecting build traces ...
+
+Route (app)
+┌ ƒ /
+├ ƒ /_not-found
+├ ƒ /admin
+├ ƒ /admin/users
+├ ƒ /admin/waitlist
+├ ƒ /admin/workspaces
+├ ƒ /analytics
+├ ƒ /api/admin/delete-user
+├ ƒ /api/admin/fix-schema
+├ ƒ /api/admin/reset-ascolp
+├ ƒ /api/admin/reset-join-password
+├ ƒ /api/admin/seed-tokens
+├ ƒ /api/admin/workspace-info
+├ ƒ /api/auth/[...nextauth]
+├ ƒ /api/clients
+├ ƒ /api/cron/daily
+├ ƒ /api/cron/notifications
+├ ƒ /api/cron/process-notifications
+├ ƒ /api/documents/ingest
+├ ƒ /api/expenses
+├ ƒ /api/invitations/[token]
+├ ƒ /api/invitations/accept
+├ ƒ /api/invitations/send
+├ ƒ /api/invoices
+├ ƒ /api/join-workspace
+├ ƒ /api/payments
+├ ƒ /api/upload
+├ ƒ /api/upload/handle
+├ ƒ /api/upload/letterhead
+├ ƒ /api/v1/auth/generate-key
+├ ƒ /api/v1/auth/validate
+├ ƒ /api/v1/briefs
+├ ƒ /api/v1/briefs/[id]
+├ ƒ /api/v1/calendar
+├ ƒ /api/v1/clients
+├ ƒ /api/v1/clients/[id]
+├ ƒ /api/v1/dashboard/firm-pulse
+├ ƒ /api/v1/dashboard/stats
+├ ƒ /api/v1/invoices
+├ ƒ /api/v1/invoices/[id]/payments
+├ ƒ /api/v1/matters
+├ ƒ /api/v1/matters/[id]
+├ ƒ /api/v1/matters/[id]/adjourn
+├ ƒ /api/webhooks/email-inbound
+├ ƒ /api/webhooks/incoming-email
+├ ƒ /api/webhooks/zoho-email
+├ ○ /apple-icon.png
+├ ƒ /auth/reset-password
+├ ƒ /briefs
+├ ƒ /briefs/[id]
+├ ƒ /calendar
+├ ƒ /forgot-password
+├ ○ /icon.png
+├ ƒ /invite/[token]
+├ ƒ /join
+├ ƒ /join/[token]
+├ ƒ /landing
+├ ƒ /login
+├ ƒ /management
+├ ƒ /management/clients
+├ ƒ /management/compliance
+├ ƒ /management/office
+├ ƒ /onboarding
+├ ƒ /overview
+├ ƒ /register
+├ ƒ /settings
+└ ƒ /test-upload
+
+
+ƒ Proxy (Middleware)
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+

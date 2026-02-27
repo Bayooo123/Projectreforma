@@ -41,8 +41,8 @@ async function main() {
     console.log(`Found ${workspaces.length} potential workspaces:`);
 
     for (const ws of workspaces) {
-        // Count court dates via matters for this workspace
-        const courtDateCount = await prisma.courtDate.count({
+        // Count calendar entries via matters for this workspace
+        const courtDateCount = await prisma.calendarEntry.count({
             where: { matter: { workspaceId: ws.id } }
         });
 
@@ -51,15 +51,15 @@ async function main() {
         console.log(`Slug: ${ws.slug}`);
         console.log(`Created At: ${ws.createdAt.toISOString()}`);
         console.log(`Matters: ${ws._count.matters}`);
-        console.log(`Court Dates (Actual): ${courtDateCount}`);
+        console.log(`Calendar Entries (Actual): ${courtDateCount}`);
         console.log(`Members: ${ws._count.members}`);
 
         if (courtDateCount > 0) {
-            const latestDate = await prisma.courtDate.findFirst({
+            const latestDate = await prisma.calendarEntry.findFirst({
                 where: { matter: { workspaceId: ws.id } },
                 orderBy: { date: 'desc' }
             });
-            console.log(`Latest Court Date: ${latestDate?.date.toISOString() || 'None'}`);
+            console.log(`Latest Calendar Entry: ${latestDate?.date.toISOString() || 'None'}`);
         }
     }
 }
