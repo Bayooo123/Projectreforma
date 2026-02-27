@@ -135,50 +135,11 @@ const RecordMeetingModal = ({
                 <div className={styles.content}>
                     <div className="flex flex-col gap-6">
                         {/* Recording Section */}
-                        <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
-                            <div className="flex items-center justify-between mb-4">
-                                <div className="flex items-center gap-2 font-semibold text-slate-700">
-                                    <Mic size={18} className="text-red-500" />
-                                    AI Meeting Assistant
-                                </div>
-                                {status === 'reviewing' && (
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            setStatus('idle');
-                                            setAudioUrl(null);
-                                            setTranscription('');
-                                        }}
-                                        className="text-[10px] text-red-500 hover:underline font-bold uppercase tracking-wider"
-                                    >
-                                        Retake Recording
-                                    </button>
-                                )}
-                            </div>
-
-                            {status === 'reviewing' ? (
-                                <div className="flex items-center gap-3 bg-white p-3 rounded-lg border border-slate-200">
-                                    <div className="bg-green-100 text-green-700 p-2 rounded-full">
-                                        <Check size={16} />
-                                    </div>
-                                    <div className="flex-1">
-                                        <div className="text-sm font-medium text-slate-700">Audio Prepared</div>
-                                        <div className="text-[10px] text-slate-400 font-mono">
-                                            {Math.floor(duration / 60)}:{(duration % 60).toString().padStart(2, '0')} recorded
-                                        </div>
-                                    </div>
-                                </div>
-                            ) : (
-                                <div className="flex flex-col items-center py-2">
-                                    <AudioRecorder
-                                        onRecordingComplete={handleRecordingComplete}
-                                        onStatusChange={setStatus}
-                                    />
-                                    <p className="text-[10px] text-slate-400 mt-2 text-center max-w-[200px]">
-                                        Record audio to automatically transcribe and summarize your meeting.
-                                    </p>
-                                </div>
-                            )}
+                        <div className="flex flex-col items-center py-2">
+                            <AudioRecorder
+                                onRecordingComplete={handleRecordingComplete}
+                                onStatusChange={setStatus}
+                            />
                         </div>
 
                         <div className="grid grid-cols-2 gap-4">

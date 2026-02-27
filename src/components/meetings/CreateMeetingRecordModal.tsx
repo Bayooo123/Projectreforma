@@ -107,10 +107,7 @@ export const CreateMeetingRecordModal: React.FC<CreateMeetingRecordModalProps> =
 
                 <div className={styles.content}>
                     {status === 'idle' || status === 'recording' || status === 'processing' ? (
-                        <div className="flex flex-col items-center justify-center py-10 gap-6">
-                            <p className="text-slate-500 text-center max-w-sm">
-                                Record your meeting audio. It will be automatically transcribed and summarized for your records.
-                            </p>
+                        <div className="flex flex-col items-center justify-center py-6">
                             <AudioRecorder
                                 onRecordingComplete={handleRecordingComplete}
                                 onStatusChange={setStatus}
