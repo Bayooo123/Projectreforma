@@ -26,6 +26,7 @@ export const CreateMeetingRecordModal: React.FC<CreateMeetingRecordModalProps> =
     const [duration, setDuration] = useState(0);
     const [transcription, setTranscription] = useState('');
     const [summary, setSummary] = useState('');
+    const [actionItems, setActionItems] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isTranscribing, setIsTranscribing] = useState(false);
 
@@ -34,7 +35,7 @@ export const CreateMeetingRecordModal: React.FC<CreateMeetingRecordModalProps> =
         setDuration(dur);
         setStatus('reviewing');
 
-        // Auto-transcribe
+        // Auto-transcribe and summarize
         setIsTranscribing(true);
         try {
             const response = await fetch('/api/transcribe', {
@@ -47,11 +48,8 @@ export const CreateMeetingRecordModal: React.FC<CreateMeetingRecordModalProps> =
 
             const data = await response.json();
             setTranscription(data.transcription);
-
-            // If summary is empty, use first part of transcription as a placeholder
-            if (!summary) {
-                setSummary(data.transcription.slice(0, 200) + (data.transcription.length > 200 ? '...' : ''));
-            }
+            setSummary(data.summary);
+            setActionItems(data.actionItems || '');
         } catch (err) {
             console.error('Transcription error:', err);
         } finally {
@@ -73,6 +71,7 @@ export const CreateMeetingRecordModal: React.FC<CreateMeetingRecordModalProps> =
                 participants: 'Recorded Session', // We can add a participants field to the UI later
                 summary,
                 transcription,
+                actionItems,
                 audioUrl: audioUrl || undefined,
                 audioDuration: duration
             });
@@ -127,7 +126,12 @@ export const CreateMeetingRecordModal: React.FC<CreateMeetingRecordModalProps> =
                                     Audio Recorded ({Math.floor(duration / 60)}:{(duration % 60).toString().padStart(2, '0')})
                                 </div>
                                 <button
-                                    onClick={() => setStatus('idle')}
+                                    onClick={() => {
+                                        setStatus('idle');
+                                        setSummary('');
+                                        setTranscription('');
+                                        setActionItems('');
+                                    }}
                                     className="text-xs text-red-500 hover:underline font-medium"
                                 >
                                     Discard and Retake
@@ -141,7 +145,18 @@ export const CreateMeetingRecordModal: React.FC<CreateMeetingRecordModalProps> =
                                     placeholder="Briefly describe what was discussed and any outcomes..."
                                     value={summary}
                                     onChange={(e) => setSummary(e.target.value)}
-                                    rows={4}
+                                    rows={3}
+                                />
+                            </div>
+
+                            <div className={styles.formGroup}>
+                                <label className={styles.formLabel}>Action Items</label>
+                                <textarea
+                                    className={styles.textarea}
+                                    placeholder="What needs to be done next..."
+                                    value={actionItems}
+                                    onChange={(e) => setActionItems(e.target.value)}
+                                    rows={3}
                                 />
                             </div>
 
@@ -153,14 +168,14 @@ export const CreateMeetingRecordModal: React.FC<CreateMeetingRecordModalProps> =
                                         placeholder={isTranscribing ? "Generating transcription..." : "AI Generated transcription will appear here..."}
                                         value={transcription}
                                         onChange={(e) => setTranscription(e.target.value)}
-                                        rows={8}
+                                        rows={6}
                                         readOnly={isTranscribing}
                                     />
                                     {isTranscribing && (
                                         <div className="absolute inset-0 flex items-center justify-center bg-slate-50/50 backdrop-blur-[1px] rounded-md">
                                             <div className="flex items-center gap-2 text-blue-600 font-medium text-sm">
                                                 <Loader2 className="animate-spin" size={16} />
-                                                Transcribing audio...
+                                                Transcribing and Summarizing...
                                             </div>
                                         </div>
                                     )}

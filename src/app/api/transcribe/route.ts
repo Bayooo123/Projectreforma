@@ -18,8 +18,25 @@ export async function POST(request: Request) {
         const audioResponse = await fetch(audioUrl);
         const audioBuffer = await audioResponse.arrayBuffer();
 
-        // Use Gemini 1.5 Flash for transcription (supports audio)
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+        // Use Gemini 1.5 Flash for transcription and analysis
+        const model = genAI.getGenerativeModel({
+            model: "gemini-1.5-flash",
+            generationConfig: {
+                responseMimeType: "application/json",
+            }
+        });
+
+        const prompt = `
+            Please provide a verbatim transcription of this audio. 
+            Also, provide a concise summary of the meeting and a list of key action items.
+            Format the response as a JSON object with the following structure:
+            {
+                "transcription": "Verbatim text here...",
+                "summary": "Concise summary here...",
+                "actionItems": "List of action items as a string or markdown list..."
+            }
+            If there are multiple speakers, try to distinguish them in the transcription.
+        `;
 
         const result = await model.generateContent([
             {
@@ -28,13 +45,16 @@ export async function POST(request: Request) {
                     data: Buffer.from(audioBuffer).toString("base64")
                 }
             },
-            { text: "Please provide a verbatim transcription of this audio. If there are multiple speakers, try to distinguish them." },
+            { text: prompt },
         ]);
 
         const response = await result.response;
-        const text = response.text();
+        const resultText = response.text();
 
-        return NextResponse.json({ transcription: text });
+        // Parse the JSON response
+        const parsedData = JSON.parse(resultText);
+
+        return NextResponse.json(parsedData);
     } catch (error: any) {
         console.error('Transcription error:', error);
         return NextResponse.json({ error: 'Failed to transcribe audio' }, { status: 500 });
