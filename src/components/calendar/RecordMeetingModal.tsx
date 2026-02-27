@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { X, Save, Loader, Search, FileText, Calendar, User } from 'lucide-react';
+import { X, Save, Loader, Search, FileText, Calendar, User, Mic, Check, Loader2 } from 'lucide-react';
 import { recordMeeting } from '@/app/actions/matters';
 import { getLawyersForWorkspace, getBriefs } from '@/lib/briefs';
+import { AudioRecorder } from '../meetings/AudioRecorder';
 import styles from './LitigationForm.module.css';
 
 interface RecordMeetingModalProps {
@@ -31,6 +32,40 @@ const RecordMeetingModal = ({
     const [matters, setMatters] = useState<any[]>([]);
     const [isLoadingData, setIsLoadingData] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
+
+    // AI Recording State
+    const [status, setStatus] = useState<'idle' | 'recording' | 'processing' | 'reviewing'>('idle');
+    const [audioUrl, setAudioUrl] = useState<string | null>(null);
+    const [duration, setDuration] = useState(0);
+    const [transcription, setTranscription] = useState('');
+    const [isTranscribing, setIsTranscribing] = useState(false);
+
+    const handleRecordingComplete = async (url: string, dur: number) => {
+        setAudioUrl(url);
+        setDuration(dur);
+        setStatus('reviewing');
+
+        // Auto-transcribe and summarize
+        setIsTranscribing(true);
+        try {
+            const response = await fetch('/api/transcribe', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ audioUrl: url }),
+            });
+
+            if (!response.ok) throw new Error('Transcription failed');
+
+            const data = await response.json();
+            setTranscription(data.transcription);
+            setSummary(data.summary);
+            setActionItems(data.actionItems || '');
+        } catch (err) {
+            console.error('Transcription error:', err);
+        } finally {
+            setIsTranscribing(false);
+        }
+    };
 
     useEffect(() => {
         if (isOpen && workspaceId) {
@@ -62,14 +97,13 @@ const RecordMeetingModal = ({
             const result = await recordMeeting({
                 matterId: selectedMatterId || undefined,
                 date: new Date(date),
-                participants: participants, // JSON or Bson? PRISMA schema says Json? 
-                // Wait, schema.prisma: participants Json?
-                // Actually my Prisma schema in Step 143 says: participants Json
-                // So I should pass it as string or array?
-                // Let's pass it as string for now if it's a textarea.
+                participants: participants,
                 summary,
+                transcription,
                 actionItems: actionItems || undefined,
-                followUpDate: followUpDate ? new Date(followUpDate) : undefined
+                followUpDate: followUpDate ? new Date(followUpDate) : undefined,
+                audioUrl: audioUrl || undefined,
+                audioDuration: duration
             });
 
             if (result.success) {
@@ -98,83 +132,158 @@ const RecordMeetingModal = ({
                     </button>
                 </div>
 
-                <form className={styles.content} onSubmit={handleSubmit}>
-                    <div className={styles.formGroup}>
-                        <label className={styles.label}>Date of Meeting *</label>
-                        <input
-                            type="date"
-                            className={styles.input}
-                            value={date}
-                            onChange={(e) => setDate(e.target.value)}
-                            required
-                        />
-                    </div>
+                <div className={styles.content}>
+                    <div className="flex flex-col gap-6">
+                        {/* Recording Section */}
+                        <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
+                            <div className="flex items-center justify-between mb-4">
+                                <div className="flex items-center gap-2 font-semibold text-slate-700">
+                                    <Mic size={18} className="text-red-500" />
+                                    AI Meeting Assistant
+                                </div>
+                                {status === 'reviewing' && (
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setStatus('idle');
+                                            setAudioUrl(null);
+                                            setTranscription('');
+                                        }}
+                                        className="text-[10px] text-red-500 hover:underline font-bold uppercase tracking-wider"
+                                    >
+                                        Retake Recording
+                                    </button>
+                                )}
+                            </div>
 
-                    <div className={styles.formGroup}>
-                        <label className={styles.label}>Linked Matter (Optional)</label>
-                        <select
-                            className={styles.select}
-                            value={selectedMatterId}
-                            onChange={(e) => setSelectedMatterId(e.target.value)}
-                        >
-                            <option value="">No linked matter</option>
-                            {matters.map(m => (
-                                <option key={m.id} value={m.id}>{m.name}</option>
-                            ))}
-                        </select>
-                    </div>
+                            {status === 'reviewing' ? (
+                                <div className="flex items-center gap-3 bg-white p-3 rounded-lg border border-slate-200">
+                                    <div className="bg-green-100 text-green-700 p-2 rounded-full">
+                                        <Check size={16} />
+                                    </div>
+                                    <div className="flex-1">
+                                        <div className="text-sm font-medium text-slate-700">Audio Prepared</div>
+                                        <div className="text-[10px] text-slate-400 font-mono">
+                                            {Math.floor(duration / 60)}:{(duration % 60).toString().padStart(2, '0')} recorded
+                                        </div>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="flex flex-col items-center py-2">
+                                    <AudioRecorder
+                                        onRecordingComplete={handleRecordingComplete}
+                                        onStatusChange={setStatus}
+                                    />
+                                    <p className="text-[10px] text-slate-400 mt-2 text-center max-w-[200px]">
+                                        Record audio to automatically transcribe and summarize your meeting.
+                                    </p>
+                                </div>
+                            )}
+                        </div>
 
-                    <div className={styles.formGroup}>
-                        <label className={styles.label}>Participants</label>
-                        <div className="relative">
-                            <User size={16} className="absolute left-3 top-3 text-slate-400" />
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className={styles.formGroup}>
+                                <label className={styles.label}>Date of Meeting *</label>
+                                <input
+                                    type="date"
+                                    className={styles.input}
+                                    value={date}
+                                    onChange={(e) => setDate(e.target.value)}
+                                    required
+                                />
+                            </div>
+
+                            <div className={styles.formGroup}>
+                                <label className={styles.label}>Linked Matter (Optional)</label>
+                                <select
+                                    className={styles.select}
+                                    value={selectedMatterId}
+                                    onChange={(e) => setSelectedMatterId(e.target.value)}
+                                >
+                                    <option value="">No linked matter</option>
+                                    {matters.map(m => (
+                                        <option key={m.id} value={m.id}>{m.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+                        </div>
+
+                        <div className={styles.formGroup}>
+                            <label className={styles.label}>Participants</label>
+                            <div className="relative">
+                                <User size={16} className="absolute left-3 top-3 text-slate-400" />
+                                <textarea
+                                    className={`${styles.textarea} pl-10`}
+                                    style={{ height: '50px' }}
+                                    placeholder="Who attended this meeting?"
+                                    value={participants}
+                                    onChange={(e) => setParticipants(e.target.value)}
+                                />
+                            </div>
+                        </div>
+
+                        <div className={styles.formGroup}>
+                            <label className={styles.label}>Meeting Summary *</label>
+                            <div className="relative">
+                                <textarea
+                                    className={styles.textarea}
+                                    style={{ height: '120px' }}
+                                    placeholder={isTranscribing ? "Generating summary..." : "What was discussed? Decisions made..."}
+                                    value={summary}
+                                    onChange={(e) => setSummary(e.target.value)}
+                                    required
+                                    readOnly={isTranscribing}
+                                />
+                                {isTranscribing && (
+                                    <div className="absolute inset-0 flex items-center justify-center bg-white/50 backdrop-blur-[1px] rounded-md">
+                                        <div className="flex items-center gap-2 text-blue-600 font-medium text-sm">
+                                            <Loader2 className="animate-spin" size={16} />
+                                            Analyzing...
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        <div className={styles.formGroup}>
+                            <label className={styles.label}>Action Items</label>
                             <textarea
-                                className={`${styles.textarea} pl-10`}
-                                style={{ height: '60px' }}
-                                placeholder="Who attended this meeting?"
-                                value={participants}
-                                onChange={(e) => setParticipants(e.target.value)}
+                                className={styles.textarea}
+                                style={{ height: '80px' }}
+                                placeholder={isTranscribing ? "Extracting action items..." : "Points for follow-up..."}
+                                value={actionItems}
+                                onChange={(e) => setActionItems(e.target.value)}
+                                readOnly={isTranscribing}
                             />
                         </div>
-                    </div>
 
-                    <div className={styles.formGroup}>
-                        <label className={styles.label}>Meeting Summary *</label>
-                        <textarea
-                            className={styles.textarea}
-                            style={{ height: '150px' }}
-                            placeholder="What was discussed? Decisions made..."
-                            value={summary}
-                            onChange={(e) => setSummary(e.target.value)}
-                            required
-                        />
-                    </div>
+                        {transcription && (
+                            <div className={styles.formGroup}>
+                                <label className={styles.label}>Full Transcription</label>
+                                <textarea
+                                    className={`${styles.textarea} font-mono text-[10px] bg-slate-50`}
+                                    style={{ height: '80px' }}
+                                    value={transcription}
+                                    readOnly
+                                />
+                            </div>
+                        )}
 
-                    <div className={styles.formGroup}>
-                        <label className={styles.label}>Action Items</label>
-                        <textarea
-                            className={styles.textarea}
-                            style={{ height: '80px' }}
-                            placeholder="Points for follow-up..."
-                            value={actionItems}
-                            onChange={(e) => setActionItems(e.target.value)}
-                        />
-                    </div>
-
-                    <div className={styles.formGroup}>
-                        <label className={styles.label}>Follow-up Date</label>
-                        <div className="relative">
-                            <Calendar size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                            <input
-                                type="date"
-                                className={styles.input}
-                                style={{ paddingLeft: '2.5rem' }}
-                                value={followUpDate}
-                                onChange={(e) => setFollowUpDate(e.target.value)}
-                            />
+                        <div className={styles.formGroup}>
+                            <label className={styles.label}>Follow-up Date</label>
+                            <div className="relative">
+                                <Calendar size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                                <input
+                                    type="date"
+                                    className={styles.input}
+                                    style={{ paddingLeft: '2.5rem' }}
+                                    value={followUpDate}
+                                    onChange={(e) => setFollowUpDate(e.target.value)}
+                                />
+                            </div>
                         </div>
                     </div>
-                </form>
+                </div>
 
                 <div className={styles.footer}>
                     <button onClick={onClose} className={styles.cancelBtn} disabled={isSubmitting}>
