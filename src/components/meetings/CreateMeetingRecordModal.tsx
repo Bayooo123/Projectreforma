@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { X, Mic, Check, Loader2, Save, FileText, Play } from 'lucide-react';
 import { AudioRecorder } from './AudioRecorder';
 import { recordMeeting } from '@/app/actions/matters';
-import styles from './MatterDetailModal.module.css';
+import styles from '../calendar/MatterDetailModal.module.css';
 
 interface CreateMeetingRecordModalProps {
     isOpen: boolean;
