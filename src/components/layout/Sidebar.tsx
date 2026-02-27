@@ -50,7 +50,7 @@ const Sidebar = ({ user, workspace }: SidebarProps) => {
 
   const navItems = [
     { name: 'Briefs Manager', href: '/briefs', icon: FileText },
-    { name: 'Litigation', href: '/calendar', icon: Gavel },
+    { name: 'Calendar and meetings', href: '/calendar', icon: Gavel },
     { name: 'Client Management', href: '/management/clients', icon: Users },
     { name: 'Office Manager', href: '/management/office', icon: Briefcase },
     { name: 'Compliance', href: '/management/compliance', icon: ShieldCheck },

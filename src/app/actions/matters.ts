@@ -858,6 +858,9 @@ export async function recordMeeting(data: {
     summary: string;
     actionItems?: string;
     followUpDate?: Date;
+    audioUrl?: string;
+    transcription?: string;
+    audioDuration?: number;
 }) {
     const session = await auth();
     if (!session?.user) return { success: false, error: 'Unauthorized' };
@@ -871,7 +874,10 @@ export async function recordMeeting(data: {
                 participants: data.participants,
                 summary: data.summary,
                 actionItems: data.actionItems,
-                followUpDate: data.followUpDate
+                followUpDate: data.followUpDate,
+                audioUrl: data.audioUrl,
+                transcription: data.transcription,
+                audioDuration: data.audioDuration
             }
         });
 

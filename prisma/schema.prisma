@@ -338,6 +338,12 @@ model MeetingRecord {
   summary          String
   actionItems      String?
   followUpDate     DateTime?
+  
+  // Audio & Transcription
+  audioUrl         String?
+  transcription    String?
+  audioDuration    Int?            // Duration in seconds
+
   createdAt        DateTime        @default(now())
   updatedAt        DateTime        @updatedAt
   calendarEntry    CalendarEntry?  @relation(fields: [calendarEntryId], references: [id])
@@ -346,6 +352,7 @@ model MeetingRecord {
   @@index([matterId])
   @@index([calendarEntryId])
 }
+
 
 enum CalendarEventType {
   COURT_DATE

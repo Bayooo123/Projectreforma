@@ -20,7 +20,7 @@ export async function POST(request: Request): Promise<NextResponse> {
         }
 
         // 2. Security: File Type Validation
-        const allowedExtensions = ['pdf', 'doc', 'docx', 'txt', 'ppt', 'pptx', 'png', 'jpg', 'jpeg'];
+        const allowedExtensions = ['pdf', 'doc', 'docx', 'txt', 'ppt', 'pptx', 'png', 'jpg', 'jpeg', 'mp3', 'webm', 'wav', 'm4a', 'ogg'];
         const extension = filename.split('.').pop()?.toLowerCase();
 
         if (!extension || !allowedExtensions.includes(extension)) {

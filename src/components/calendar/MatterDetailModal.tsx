@@ -1,10 +1,11 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { X, Calendar, User, Users, MapPin, FileText, AlertCircle, Loader, Building, Edit, Trash2, Scale } from 'lucide-react';
+import { X, Calendar, User, Users, MapPin, FileText, AlertCircle, Loader, Building, Edit, Trash2, Scale, Mic, Play } from 'lucide-react';
 import { adjournMatter, addMatterNote, updateMatter, deleteMatter, updateCalendarEntry } from '@/app/actions/matters';
 import { getLawyersForWorkspace } from '@/lib/briefs';
 import RecordProceedingModal from './RecordProceedingModal';
+import { CreateMeetingRecordModal } from '../meetings/CreateMeetingRecordModal';
 import styles from './MatterDetailModal.module.css';
 
 interface Matter {
@@ -53,6 +54,8 @@ interface Matter {
         summary: string;
         actionItems: string | null;
         followUpDate: Date | null;
+        transcription?: string | null;
+        audioUrl?: string | null;
     }[];
 }
 
@@ -77,6 +80,8 @@ const MatterDetailModal = ({ isOpen, onClose, matter, userId }: MatterDetailModa
     const [observations, setObservations] = useState('');
     const [selectedLawyerIds, setSelectedLawyerIds] = useState<string[]>([]);
     const [isRecordProceedingOpen, setIsRecordProceedingOpen] = useState(false);
+    const [isRecordMeetingOpen, setIsRecordMeetingOpen] = useState(false);
+    const [expandedTranscription, setExpandedTranscription] = useState<string | null>(null);
 
     const [lawyers, setLawyers] = useState<Lawyer[]>([]);
     const [isLoadingLawyers, setIsLoadingLawyers] = useState(false);
@@ -486,26 +491,60 @@ const MatterDetailModal = ({ isOpen, onClose, matter, userId }: MatterDetailModa
                             </h3>
                             <div className="flex flex-col gap-4 mt-3">
                                 {matter.meetingRecords.map((record) => (
-                                    <div key={record.id} className="bg-slate-50 border border-slate-200 rounded-lg p-4">
+                                    <div key={record.id} className="bg-slate-50 border border-slate-200 rounded-lg p-4 shadow-sm">
                                         <div className="flex justify-between items-start mb-2">
-                                            <span className="font-semibold text-sm">
-                                                {new Date(record.date).toLocaleDateString()}
-                                            </span>
-                                            {record.followUpDate && (
-                                                <span className="text-[10px] bg-orange-50 text-orange-700 px-2 py-0.5 rounded-full">
-                                                    Follow-up: {new Date(record.followUpDate).toLocaleDateString()}
+                                            <div className="flex flex-col">
+                                                <span className="font-semibold text-sm text-slate-800">
+                                                    {new Date(record.date).toLocaleDateString(undefined, { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' })}
                                                 </span>
-                                            )}
+                                                <span className="text-[10px] text-slate-400 font-mono">
+                                                    {record.participants || 'General Meeting'}
+                                                </span>
+                                            </div>
+                                            <div className="flex gap-2">
+                                                {record.audioUrl && (
+                                                    <a
+                                                        href={record.audioUrl}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="text-[10px] bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full hover:bg-blue-100 flex items-center gap-1"
+                                                    >
+                                                        <Play size={10} fill="currentColor" /> Audio
+                                                    </a>
+                                                )}
+                                                {record.followUpDate && (
+                                                    <span className="text-[10px] bg-orange-50 text-orange-700 px-2 py-0.5 rounded-full">
+                                                        Follow-up: {new Date(record.followUpDate).toLocaleDateString()}
+                                                    </span>
+                                                )}
+                                            </div>
                                         </div>
-                                        <div className="text-xs text-slate-500 mb-2">
-                                            <strong>Attendees:</strong> {record.participants || '—'}
-                                        </div>
-                                        <div className="text-sm text-slate-700 whitespace-pre-wrap mb-2">
+
+                                        <div className="text-sm text-slate-700 whitespace-pre-wrap mb-3 leading-relaxed">
                                             {record.summary}
                                         </div>
+
+                                        {record.transcription && (
+                                            <div className="mt-3 border-t border-slate-200 pt-3">
+                                                <button
+                                                    onClick={() => setExpandedTranscription(expandedTranscription === record.id ? null : record.id)}
+                                                    className="flex items-center gap-1.5 text-xs font-medium text-slate-500 hover:text-slate-800 transition-colors"
+                                                >
+                                                    <FileText size={14} />
+                                                    {expandedTranscription === record.id ? 'Hide Transcription' : 'View Full Transcription'}
+                                                </button>
+
+                                                {expandedTranscription === record.id && (
+                                                    <div className="mt-2 text-xs text-slate-600 bg-white border border-slate-200 p-3 rounded-md font-mono max-h-[200px] overflow-y-auto leading-normal">
+                                                        {record.transcription}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+
                                         {record.actionItems && (
-                                            <div className="text-xs bg-white border border-slate-200 p-2 rounded">
-                                                <strong>Action Items:</strong> {record.actionItems}
+                                            <div className="mt-3 bg-blue-50/50 border border-blue-100 p-2 rounded text-xs text-slate-700">
+                                                <strong className="text-blue-800">Action Items:</strong> {record.actionItems}
                                             </div>
                                         )}
                                     </div>
@@ -579,6 +618,16 @@ const MatterDetailModal = ({ isOpen, onClose, matter, userId }: MatterDetailModa
                             <Scale size={16} />
                             Full Record Proceeding
                         </button>
+                        <button
+                            type="button"
+                            onClick={() => setIsRecordMeetingOpen(true)}
+                            className={styles.fullRecordBtn}
+                            style={{ borderColor: '#3b82f6', color: '#3b82f6' }}
+                            disabled={isSubmitting}
+                        >
+                            <Mic size={16} />
+                            Record Meeting (AI)
+                        </button>
                     </div>
                 </form>
 
@@ -592,6 +641,19 @@ const MatterDetailModal = ({ isOpen, onClose, matter, userId }: MatterDetailModa
                         onSuccess={() => {
                             setIsRecordProceedingOpen(false);
                             onClose(); // Close details too to refresh calendar
+                        }}
+                    />
+                )}
+
+                {isRecordMeetingOpen && (
+                    <CreateMeetingRecordModal
+                        isOpen={isRecordMeetingOpen}
+                        onClose={() => setIsRecordMeetingOpen(false)}
+                        matterId={matter.id}
+                        workspaceId={matter.workspaceId}
+                        onSuccess={() => {
+                            setIsRecordMeetingOpen(false);
+                            // Optionally refresh or show success
                         }}
                     />
                 )}
