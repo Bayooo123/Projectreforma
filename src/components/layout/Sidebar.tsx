@@ -37,15 +37,16 @@ const Sidebar = ({ user, workspace }: SidebarProps) => {
   const pathname = usePathname();
 
   useEffect(() => {
-    // Check for invoice follow-ups on mount (once per session/refresh)
-    const runChecks = async () => {
+    // Check for invoice follow-ups in background with a delay to prioritize navigation interactivity
+    const timer = setTimeout(async () => {
       try {
         await checkOverdueInvoices();
       } catch (e) {
         console.error(e);
       }
-    };
-    runChecks();
+    }, 2000); // 2 second delay
+
+    return () => clearTimeout(timer);
   }, []);
 
   const navItems = [

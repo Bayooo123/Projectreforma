@@ -1,3 +1,4 @@
+import { cache } from 'react';
 import { prisma } from './prisma';
 import { auth } from '@/auth';
 
@@ -29,16 +30,45 @@ export async function isWorkspaceOwner(userId: string, workspaceId: string): Pro
 }
 
 /**
- * Get the user's primary workspace (first owned workspace or first joined workspace)
+ * Get a lightweight version of a workspace (branding only) for shell rendering.
+ * Optimized for performance by skipping heavy aggregations/counts.
  */
-export async function getPrimaryWorkspace(userId: string) {
+export const getLightweightWorkspace = cache(async (workspaceId: string) => {
+    if (!workspaceId) return null;
+    return await prisma.workspace.findUnique({
+        where: { id: workspaceId },
+        select: {
+            id: true,
+            name: true,
+            brandColor: true,
+            secondaryColor: true,
+            accentColor: true,
+            letterheadUrl: true,
+            brandingCompleted: true,
+        },
+    });
+});
+
+/**
+ * Get the user's primary workspace (first owned workspace or first joined workspace)
+ * Wrapped in React cache to prevent redundant DB calls in a single request.
+ */
+export const getPrimaryWorkspace = cache(async (userId: string) => {
     try {
         // Get all workspace memberships for the user
         const memberships = await prisma.workspaceMember.findMany({
             where: { userId, status: 'active' }, // Only active workspaces
             include: {
                 workspace: {
-                    include: {
+                    select: {
+                        id: true,
+                        name: true,
+                        ownerId: true,
+                        brandColor: true,
+                        secondaryColor: true,
+                        accentColor: true,
+                        letterheadUrl: true,
+                        brandingCompleted: true,
                         _count: {
                             select: {
                                 briefs: { where: { deletedAt: null } },
@@ -54,13 +84,15 @@ export async function getPrimaryWorkspace(userId: string) {
             // Check if they own any workspaces even if not explicitly a member (fallback)
             const owned = await prisma.workspace.findFirst({
                 where: { ownerId: userId },
-                include: {
-                    _count: {
-                        select: {
-                            briefs: { where: { deletedAt: null } },
-                            matters: true
-                        }
-                    }
+                select: {
+                    id: true,
+                    name: true,
+                    ownerId: true,
+                    brandColor: true,
+                    secondaryColor: true,
+                    accentColor: true,
+                    letterheadUrl: true,
+                    brandingCompleted: true,
                 }
             });
 
@@ -76,8 +108,8 @@ export async function getPrimaryWorkspace(userId: string) {
 
         // Sort by activity: Sum of active briefs and matters
         const sorted = memberships.sort((a, b) => {
-            const scoreA = (a.workspace._count.briefs || 0) + (a.workspace._count.matters || 0);
-            const scoreB = (b.workspace._count.briefs || 0) + (b.workspace._count.matters || 0);
+            const scoreA = (a.workspace._count?.briefs || 0) + (a.workspace._count?.matters || 0);
+            const scoreB = (b.workspace._count?.briefs || 0) + (b.workspace._count?.matters || 0);
 
             // 1. Highest Activity wins
             if (scoreA !== scoreB) {
@@ -103,49 +135,13 @@ export async function getPrimaryWorkspace(userId: string) {
         console.error('Failed to get primary workspace:', error);
         return null;
     }
-}
+});
 
 /**
- * Get workspace details with member count
+ * Get current authenticated user with workspace info.
+ * Optimized to use lighter queries and React cache.
  */
-export async function getWorkspaceDetails(workspaceId: string) {
-    return await prisma.workspace.findUnique({
-        where: { id: workspaceId },
-        include: {
-            owner: {
-                select: {
-                    id: true,
-                    name: true,
-                    email: true,
-                },
-            },
-            members: {
-                include: {
-                    user: {
-                        select: {
-                            id: true,
-                            name: true,
-                            email: true,
-                            image: true,
-                        },
-                    },
-                },
-            },
-            _count: {
-                select: {
-                    members: true,
-                    matters: true,
-                    clients: true,
-                },
-            },
-        },
-    });
-}
-
-/**
- * Get current authenticated user with workspace info
- */
-export async function getCurrentUserWithWorkspace() {
+export const getCurrentUserWithWorkspace = cache(async () => {
     try {
         const session = await auth();
 
@@ -153,20 +149,25 @@ export async function getCurrentUserWithWorkspace() {
             return null;
         }
 
-        const user = await prisma.user.findUnique({
-            where: { id: session.user.id },
-            select: {
-                id: true,
-                name: true,
-                email: true,
-                image: true,
-            },
-        });
+        const user = {
+            id: session.user.id,
+            name: session.user.name,
+            email: session.user.email,
+            image: session.user.image,
+            role: session.user.role,
+            workspaceId: session.user.workspaceId,
+        };
 
-        if (!user) {
-            return null;
+        // If we already have a workspaceId in the session, use the lightweight fetcher
+        if (session.user.workspaceId) {
+            const workspace = await getLightweightWorkspace(session.user.workspaceId);
+            return {
+                user,
+                workspace: workspace ? { ...workspace, role: session.user.role, isOwner: session.user.role === 'owner' } : null,
+            };
         }
 
+        // Fallback for sessions without workspaceId (older sessions or first-time setup)
         const workspace = await getPrimaryWorkspace(user.id);
 
         return {
@@ -177,4 +178,4 @@ export async function getCurrentUserWithWorkspace() {
         console.error('Failed to get current user with workspace:', error);
         return null;
     }
-}
+});

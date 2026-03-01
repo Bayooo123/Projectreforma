@@ -7,7 +7,7 @@ import ShellWrapper from "@/components/layout/ShellWrapper";
 import PageTransition from "@/components/layout/PageTransition";
 import NextTopLoader from 'nextjs-toploader';
 import { auth } from "@/auth";
-import { getCurrentUserWithWorkspace } from "@/lib/workspace";
+import { getCurrentUserWithWorkspace, getLightweightWorkspace } from "@/lib/workspace";
 import { SessionProvider } from "next-auth/react";
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
 
@@ -52,25 +52,22 @@ export default async function RootLayout({
     PUBLIC_ROUTES.includes(pathname) ||
     pathname.startsWith('/join/');
 
-  // Fetch user's workspace with owner info if authenticated
-  let workspaceData = null;
-  if (user?.id) {
-    const data = await getCurrentUserWithWorkspace();
-    workspaceData = data?.workspace;
-  }
-
   // Determine if we should render the app shell
-  // Shell is shown when user is authenticated AND not on a public route
   const showShell = !!user && !isPublicRoute;
+
+  // Resolve lightweight workspace data (branding only) ONLY IF necessary for initial theme/colors
+  // Note: we don't await the FULL user+workspace object here to avoid blocking
+  const workspaceId = session?.user?.workspaceId;
+  const workspaceData = workspaceId ? await getLightweightWorkspace(workspaceId) : null;
 
   return (
     <html lang="en" suppressHydrationWarning>
       <body
         className={`${ibmPlexSans.variable} ${sourceSerif4.variable}`}
         style={{
-          ['--brand-color' as any]: (workspaceData as any)?.brandColor || '#059669',
-          ['--secondary-color' as any]: (workspaceData as any)?.secondaryColor || '#064e3b',
-          ['--accent-color' as any]: (workspaceData as any)?.accentColor || '#10b981',
+          ['--brand-color' as any]: (workspaceData as any)?.brandColor || '#121826',
+          ['--secondary-color' as any]: (workspaceData as any)?.secondaryColor || '#1e293b',
+          ['--accent-color' as any]: (workspaceData as any)?.accentColor || '#3182ce',
           minHeight: '100vh'
         }}
       >
@@ -89,7 +86,7 @@ export default async function RootLayout({
         >
           <SessionProvider session={session}>
             {showShell ? (
-              // Authenticated shell — structure is deterministic from server
+              // Authenticated shell — workspace parameter is now lightweight
               <ShellWrapper user={user} workspace={workspaceData}>
                 <PageTransition>
                   {children}

@@ -11,12 +11,23 @@ interface ShellWrapperProps {
     workspace: any;
 }
 
-// Purely additive overlay: handles the branding wizard modal.
-// Does NOT make any structural layout decisions — those are resolved server-side in layout.tsx.
-function WizardTrigger({ workspace, user, children }: { workspace: any, user: any, children: React.ReactNode }) {
+import { getCurrentUserWithWorkspace } from "@/lib/workspace";
+
+// WizardTrigger: renders the branding wizard modal if needed.
+function WizardTrigger({ user, children }: { user: any, children: React.ReactNode }) {
     const pathname = usePathname();
     const searchParams = useSearchParams();
     const [shouldShowWizard, setShouldShowWizard] = useState(false);
+    const [fullWorkspace, setFullWorkspace] = useState<any>(null);
+
+    // Fetch full workspace data in background if needed for the wizard
+    useEffect(() => {
+        const fetchWorkspace = async () => {
+            const data = await getCurrentUserWithWorkspace();
+            if (data?.workspace) setFullWorkspace(data.workspace);
+        };
+        fetchWorkspace();
+    }, []);
 
     useEffect(() => {
         const isPilotParam = searchParams.get('pilot') === 'true';
@@ -37,14 +48,14 @@ function WizardTrigger({ workspace, user, children }: { workspace: any, user: an
 
     return (
         <>
-            {shouldShowWizard && !workspace?.brandingCompleted && pathname !== '/landing' && (
+            {shouldShowWizard && fullWorkspace && !fullWorkspace.brandingCompleted && pathname !== '/landing' && (
                 <BrandingWizardModal
-                    workspaceId={workspace?.id}
-                    workspaceName={workspace?.name}
+                    workspaceId={fullWorkspace.id}
+                    workspaceName={fullWorkspace.name}
                     onComplete={handleCloseWizard}
                 />
             )}
-            <AppLayout user={user} workspace={workspace}>
+            <AppLayout user={user} workspace={fullWorkspace}>
                 {children}
             </AppLayout>
         </>
@@ -52,12 +63,12 @@ function WizardTrigger({ workspace, user, children }: { workspace: any, user: an
 }
 
 // ShellWrapper: renders the authenticated app shell.
-// The public-route guard is handled at the server level (layout.tsx).
-// This component is only mounted for authenticated, non-public routes.
 export default function ShellWrapper({ children, user, workspace }: ShellWrapperProps) {
+    // We use the initial (lightweight) workspace for immediate shell rendering
+    // and let WizardTrigger hydrate the full details.
     return (
         <Suspense fallback={<AppLayout user={user} workspace={workspace}>{children}</AppLayout>}>
-            <WizardTrigger user={user} workspace={workspace}>
+            <WizardTrigger user={user}>
                 {children}
             </WizardTrigger>
         </Suspense>

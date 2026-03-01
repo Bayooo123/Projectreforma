@@ -4,6 +4,7 @@
     max-height: 100vh;
     overflow: hidden;
     background-color: var(--background);
+    contain: layout paint;
 }
 
 .sidebar {
@@ -11,11 +12,14 @@
     z-index: 100;
     overflow-y: auto;
     width: 240px;
+    min-width: 240px;
+    max-width: 240px;
     flex-shrink: 0;
     position: fixed;
     top: 0;
     bottom: 0;
     left: 0;
+    contain: layout paint;
 }
 
 .mainContent {
