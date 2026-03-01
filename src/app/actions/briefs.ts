@@ -37,11 +37,7 @@ export async function getUserBriefs() {
 
 export async function getBriefs(workspaceId: string) {
     await requireAuth();
-    noStore(); // Force dynamic fetching, disable cache
     try {
-        console.log('[getBriefs] ========== START ==========');
-        console.log('[getBriefs] Fetching briefs for workspace:', workspaceId);
-
         const briefs = await prisma.brief.findMany({
             where: {
                 workspaceId,
@@ -87,19 +83,9 @@ export async function getBriefs(workspaceId: string) {
             },
         });
 
-        console.log('[getBriefs] ✅ Found', briefs.length, 'briefs');
-        if (briefs.length > 0) {
-            console.log('[getBriefs] Brief IDs:', briefs.map(b => b.id));
-            console.log('[getBriefs] Brief Numbers:', briefs.map(b => b.briefNumber));
-            console.log('[getBriefs] Brief Names:', briefs.map(b => b.name));
-        }
-        console.log('[getBriefs] ========== END ==========');
-
         return briefs;
     } catch (error) {
-        console.error('[getBriefs] ========== ERROR ==========');
         console.error('[getBriefs] Error fetching briefs:', error);
-        console.error('[getBriefs] ========== ERROR END ==========');
         return [];
     }
 }

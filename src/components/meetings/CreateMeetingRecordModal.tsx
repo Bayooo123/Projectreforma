@@ -35,25 +35,31 @@ export const CreateMeetingRecordModal: React.FC<CreateMeetingRecordModalProps> =
         setDuration(dur);
         setStatus('reviewing');
 
-        // Auto-transcribe and summarize
-        setIsTranscribing(true);
+        // AUTOMATION: Immediately save the record and let processing happen in background
+        setIsSubmitting(true);
         try {
-            const response = await fetch('/api/transcribe', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ audioUrl: url }),
+            const result = await recordMeeting({
+                matterId,
+                date: new Date(),
+                participants: 'Recorded Session',
+                summary: 'Processing meeting insights...',
+                transcription: 'Transcription in progress...',
+                actionItems: '',
+                audioUrl: url,
+                audioDuration: dur
             });
 
-            if (!response.ok) throw new Error('Transcription failed');
-
-            const data = await response.json();
-            setTranscription(data.transcription);
-            setSummary(data.summary);
-            setActionItems(data.actionItems || '');
+            if (result.success) {
+                onSuccess();
+                onClose();
+            } else {
+                alert('Error saving record: ' + result.error);
+            }
         } catch (err) {
-            console.error('Transcription error:', err);
+            console.error('Auto-save error:', err);
+            alert('An error occurred while saving automatically.');
         } finally {
-            setIsTranscribing(false);
+            setIsSubmitting(false);
         }
     };
 

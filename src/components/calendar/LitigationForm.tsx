@@ -202,6 +202,11 @@ const LitigationForm = ({
         }
 
         setIsSubmitting(true);
+
+        // OPTIMISTIC FEEDBACK: Close modal and refresh UI immediately
+        onSuccess?.();
+        onClose();
+
         try {
             if (mode === 'create') {
                 const result = await createMatter({
@@ -227,11 +232,8 @@ const LitigationForm = ({
                     externalCounselName: isExternalCounsel ? externalCounselName : undefined
                 });
 
-                if (result.success) {
-                    onSuccess?.();
-                    onClose();
-                } else {
-                    alert(result.error);
+                if (!result.success) {
+                    alert('Background Error: ' + result.error);
                 }
             } else {
                 // Update mode
@@ -248,16 +250,12 @@ const LitigationForm = ({
                     judge || undefined
                 );
 
-                if (result.success) {
-                    onSuccess?.();
-                    onClose();
-                } else {
-                    alert(result.error || 'Failed to record proceeding.');
+                if (!result.success) {
+                    alert('Background Error: ' + (result.error || 'Failed to record proceeding.'));
                 }
             }
         } catch (error) {
-            console.error('Error submitting form:', error);
-            alert('An error occurred.');
+            console.error('Submission error:', error);
         } finally {
             setIsSubmitting(false);
         }

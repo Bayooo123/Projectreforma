@@ -67,9 +67,8 @@ export default function CalendarClient({
         return queryMatch && typeMatch && categoryMatch && rangeMatch;
     });
 
-    // ... (keep refreshEvents)
-    const refreshEvents = async () => {
-        console.log('Refreshing events...'); // Debug log
+    const refreshEvents = async (silent = false) => {
+        if (!silent) console.log('Refreshing events...');
         try {
             const { getCalendarEvents } = await import('@/app/actions/calendar-events');
             const newEvents = await getCalendarEvents(workspaceId);
@@ -78,6 +77,14 @@ export default function CalendarClient({
             console.error(e);
         }
     };
+
+    // AUTOMATION: Background Polling (30 seconds)
+    useEffect(() => {
+        const interval = setInterval(() => {
+            refreshEvents(true);
+        }, 30000);
+        return () => clearInterval(interval);
+    }, [workspaceId]);
 
     // ... (keep handleEventClick, handleDetailClose)
     const handleEventClick = async (event: CalendarEvent) => {

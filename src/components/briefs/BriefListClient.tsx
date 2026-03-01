@@ -23,6 +23,18 @@ export default function BriefListClient({ initialBriefs, workspaceId }: Omit<Bri
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState<string>('all');
 
+    // AUTOMATION: Background Polling (30 seconds)
+    useState(() => {
+        const interval = setInterval(async () => {
+            const { getBriefs } = await import('@/app/actions/briefs');
+            const newBriefs = await getBriefs(workspaceId);
+            if (newBriefs && newBriefs.length >= 0) {
+                setBriefs(newBriefs);
+            }
+        }, 30000);
+        return () => clearInterval(interval);
+    });
+
     // Modal states
     const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
     const [editingBrief, setEditingBrief] = useState<any | null>(null);

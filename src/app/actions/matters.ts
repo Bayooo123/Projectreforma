@@ -253,21 +253,20 @@ export async function createMatter(data: {
 
 
 
-        // Log activity
+        // Log activity (Background)
         const performedBy = data.createdById || session.user.id;
-
-        await prisma.matterActivityLog.create({
+        prisma.matterActivityLog.create({
             data: {
                 matterId: matter.id,
                 activityType: 'matter_created',
                 description: `Matter "${matter.name}" created. Auto-linked to client and brief.`,
                 performedBy: performedBy,
             },
-        });
+        }).catch(console.error);
 
-        // Create audit entry for initial lawyer in charge assignment
+        // Create audit entry for initial lawyer in charge assignment (Background)
         if (matter.briefs[0]) {
-            await prisma.briefLawyerHistory.create({
+            prisma.briefLawyerHistory.create({
                 data: {
                     briefId: matter.briefs[0].id,
                     previousLawyerId: null,
@@ -275,7 +274,7 @@ export async function createMatter(data: {
                     changedBy: session.user.id,
                     reason: 'Initial assignment from court appearance',
                 },
-            });
+            }).catch(console.error);
         }
 
 
@@ -318,12 +317,12 @@ export async function createMatter(data: {
                 }
             });
 
-            await scheduleCalendarEntryNotifications(
+            scheduleCalendarEntryNotifications(
                 matter.id,
                 futureEntry.id,
                 data.nextCourtDate,
                 data.workspaceId
-            );
+            ).catch(console.error);
         }
 
         revalidatePath('/calendar');
@@ -584,17 +583,12 @@ export async function adjournMatter(
                 }
             });
 
-            // Schedule notifications
-            const notificationResult = await scheduleCalendarEntryNotifications(
+            scheduleCalendarEntryNotifications(
                 matterId,
                 futureEntry.id,
                 newDate,
                 matterCheck.workspaceId
-            );
-
-            if (!notificationResult.success) {
-                console.error('Failed to schedule adjournment notifications:', notificationResult.error);
-            }
+            ).catch(console.error);
 
             // Log activity
             await prisma.matterActivityLog.create({
@@ -606,10 +600,10 @@ export async function adjournMatter(
                 },
             });
 
-            // Notify team
+            // Notify team (Background)
             for (const assoc of matterCheck.lawyers) {
                 if (assoc.lawyerId !== performedBy) {
-                    await createNotification({
+                    createNotification({
                         title: 'Case Adjourned',
                         message: `Matter ${matterCheck.caseNumber} adjourned to ${newDate.toLocaleDateString()}.`,
                         recipientId: assoc.lawyerId,
@@ -617,7 +611,7 @@ export async function adjournMatter(
                         type: 'info',
                         priority: 'high',
                         relatedMatterId: matterId
-                    });
+                    }).catch(console.error);
                 }
             }
         } else {
@@ -861,6 +855,7 @@ export async function recordMeeting(data: {
     audioUrl?: string;
     transcription?: string;
     audioDuration?: number;
+    skipTranscription?: boolean;
 }) {
     const session = await auth();
     if (!session?.user) return { success: false, error: 'Unauthorized' };
@@ -868,21 +863,24 @@ export async function recordMeeting(data: {
     try {
         const record = await prisma.meetingRecord.create({
             data: {
-                calendarEntryId: data.calendarEntryId,
-                matterId: data.matterId,
+                matterId: data.matterId || null,
                 date: data.date,
-                participants: data.participants,
-                summary: data.summary,
-                actionItems: data.actionItems,
-                followUpDate: data.followUpDate,
-                audioUrl: data.audioUrl,
-                transcription: data.transcription,
-                audioDuration: data.audioDuration
+                participants: JSON.stringify(data.participants || []),
+                summary: data.summary || 'Processing meeting insights...',
+                actionItems: data.actionItems || '',
+                followUpDate: data.followUpDate || null,
+                audioUrl: data.audioUrl || null,
+                transcription: data.transcription || 'Transcription in progress...',
             }
         });
 
-        // If linked to a calendar entry, we might want to update the entry status or something
-        // For now, just revalidate
+        // Trigger background transcription if requested and audio is present
+        if (!data.skipTranscription && data.audioUrl && (!data.summary || !data.transcription)) {
+            // We don't await this so it runs in "background" from the client's perspective
+            processMeetingAction(record.id, data.audioUrl).catch(console.error);
+        }
+
+        // revalidate
         revalidatePath('/calendar');
         if (data.matterId) revalidatePath(`/calendar/${data.matterId}`);
 
@@ -890,5 +888,54 @@ export async function recordMeeting(data: {
     } catch (error) {
         console.error('Error recording meeting:', error);
         return { success: false, error: 'Failed to record meeting' };
+    }
+}
+
+/**
+ * Background action to process meeting audio
+ * This updates the record once transcription is complete
+ */
+export async function processMeetingAction(recordId: string, audioUrl: string) {
+    try {
+        // Construct base URL for internal API call
+        // In a real staging/prod env, we'd use an absolute URL or a direct function call
+        // For local dev, we can use process.env.NEXT_PUBLIC_APP_URL
+        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+
+        const response = await fetch(`${baseUrl}/api/transcribe`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ audioUrl }),
+        });
+
+        if (!response.ok) throw new Error('Transcription API failed');
+
+        const data = await response.json();
+
+        // Update the record with insights
+        await prisma.meetingRecord.update({
+            where: { id: recordId },
+            data: {
+                transcription: data.transcription,
+                summary: data.summary,
+                actionItems: data.actionItems,
+            }
+        });
+
+        revalidatePath('/calendar');
+        return { success: true };
+    } catch (error) {
+        console.error('Background processing error:', error);
+
+        // Update record with error status if possible
+        await prisma.meetingRecord.update({
+            where: { id: recordId },
+            data: {
+                summary: 'Failed to process AI insights automatically. Please try again later.',
+                transcription: 'Transcription failed.'
+            }
+        }).catch(console.error);
+
+        return { success: false, error: 'Processing failed' };
     }
 }

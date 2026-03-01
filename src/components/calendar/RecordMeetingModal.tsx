@@ -45,25 +45,32 @@ const RecordMeetingModal = ({
         setDuration(dur);
         setStatus('reviewing');
 
-        // Auto-transcribe and summarize
-        setIsTranscribing(true);
+        // AUTOMATION: Immediately save the record and let processing happen in background
+        setIsSubmitting(true);
         try {
-            const response = await fetch('/api/transcribe', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ audioUrl: url }),
+            const result = await recordMeeting({
+                matterId: selectedMatterId || undefined,
+                date: new Date(date),
+                participants: participants || 'Recorded Session',
+                summary: 'Processing meeting insights...',
+                transcription: 'Transcription in progress...',
+                actionItems: '',
+                followUpDate: followUpDate ? new Date(followUpDate) : undefined,
+                audioUrl: url,
+                audioDuration: dur
             });
 
-            if (!response.ok) throw new Error('Transcription failed');
-
-            const data = await response.json();
-            setTranscription(data.transcription);
-            setSummary(data.summary);
-            setActionItems(data.actionItems || '');
+            if (result.success) {
+                onSuccess?.();
+                onClose();
+            } else {
+                alert(result.error);
+            }
         } catch (err) {
-            console.error('Transcription error:', err);
+            console.error('Auto-save error:', err);
+            alert('Failed to save record automatically.');
         } finally {
-            setIsTranscribing(false);
+            setIsSubmitting(false);
         }
     };
 
