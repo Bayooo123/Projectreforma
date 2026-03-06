@@ -47,13 +47,7 @@
     "tesseract.js": "^6.0.1"
   },
   "overrides": {
-    "react": "$react",
-    "react-dom": "$react-dom",
-    "@react-email/render": {
-      "react": "$react",
-      "react-dom": "$react-dom"
-    },
-    "nodemailer": "$nodemailer"
+    "nodemailer": "7.0.12"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.17",
