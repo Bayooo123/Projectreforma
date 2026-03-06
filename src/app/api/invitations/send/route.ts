@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma';
 import { isWorkspaceOwner } from '@/lib/workspace';
 import { sendInvitationEmail } from '@/lib/email';
 import { nanoid } from 'nanoid';
+import { hashToken } from '@/lib/services/auth/tokens';
 import { isValidRole, canInviteMembers, canAssignRole } from '@/lib/roles';
 
 export async function POST(request: NextRequest) {
@@ -130,7 +131,7 @@ export async function POST(request: NextRequest) {
                         workspaceId,
                         email: email.toLowerCase(),
                         role,
-                        token,
+                        tokenHash: hashToken(token),
                         invitedBy: session.user.id,
                         expiresAt,
                     },
