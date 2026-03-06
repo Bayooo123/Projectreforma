@@ -1,21 +1,21 @@
 'use client';
 
-import { useActionState, useEffect } from 'react';
+import { useActionState, useEffect, Suspense } from 'react';
 import { authenticate } from '@/app/lib/actions';
 import { Loader2, Shield, Users } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { useSearchParams } from 'next/navigation';
 import styles from '../auth.module.css';
 
-export default function LoginPage() {
+function LoginForm() {
     const [state, dispatch, isPending] = useActionState(authenticate, undefined);
+    const searchParams = useSearchParams();
+    const queryMessage = searchParams.get('message');
+    const queryError = searchParams.get('error');
 
     useEffect(() => {
         if (state?.success) {
-            // Use hard navigation to ensure:
-            // 1. Router cache is completely cleared
-            // 2. Fresh data is fetched from server
-            // 3. Session cookies are strictly applied
             window.location.href = '/briefs';
         }
     }, [state?.success]);
@@ -81,6 +81,24 @@ export default function LoginPage() {
                     </div>
 
                     <form action={dispatch} className={styles.form}>
+                        {queryMessage && (
+                            <div className="p-3 mb-4 text-sm text-green-700 bg-green-50 rounded-lg border border-green-200">
+                                {queryMessage}
+                            </div>
+                        )}
+
+                        {queryError && (
+                            <div className="p-3 mb-4 text-sm text-red-700 bg-red-50 rounded-lg border border-red-200">
+                                {queryError}
+                            </div>
+                        )}
+
+                        {state?.message && (
+                            <div className={styles.error}>
+                                {state.message}
+                            </div>
+                        )}
+
                         {/* User Credentials */}
                         <div className={styles.formGroup}>
                             <label htmlFor="email" className={styles.label}>
@@ -93,7 +111,7 @@ export default function LoginPage() {
                                 autoComplete="email"
                                 required
                                 className={styles.input}
-                                placeholder="you@abiolasanniandco.com"
+                                placeholder="you@lawfirm.com"
                             />
                         </div>
 
@@ -112,19 +130,6 @@ export default function LoginPage() {
                             />
                         </div>
 
-                        {state?.message && (
-                            <div className={styles.error}>
-                                {state.message}
-                            </div>
-                        )}
-
-                        <Link
-                            href="/forgot-password"
-                            className="text-sm font-medium text-primary hover:text-primary/80"
-                        >
-                            Forgot password?
-                        </Link>
-
                         <button
                             type="submit"
                             disabled={isPending || state?.success}
@@ -139,15 +144,59 @@ export default function LoginPage() {
                                 'Sign in'
                             )}
                         </button>
-                    </form>
 
-                    <div className={styles.footer}>
-                        <Link href="/forgot-password" className={styles.footerLink}>
-                            Forgot your password?
-                        </Link>
-                    </div>
+                        <div className={styles.divider} style={{ margin: '24px 0', textAlign: 'center', position: 'relative' }}>
+                            <span style={{ background: '#fff', padding: '0 10px', color: '#94a3b8', fontSize: '14px' }}>OR</span>
+                            <div style={{ position: 'absolute', top: '50%', left: 0, right: 0, height: '1px', background: '#e2e8f0', zIndex: -1 }}></div>
+                        </div>
+
+                        <div className={styles.formGroup}>
+                            <p className={styles.formSubtitle} style={{ marginBottom: '12px' }}>
+                                Sign in with a secure link sent to your email
+                            </p>
+                            <button
+                                type="button"
+                                onClick={async () => {
+                                    const email = (document.getElementById('email') as HTMLInputElement).value;
+                                    if (!email) {
+                                        alert('Please enter your email address first.');
+                                        return;
+                                    }
+                                    const { signIn } = await import('next-auth/react');
+                                    await signIn('resend', { email, callbackUrl: '/briefs' });
+                                }}
+                                className={styles.submitButton}
+                                style={{ background: '#fff', color: '#121826', border: '1px solid #e2e8f0' }}
+                            >
+                                Send Magic Link
+                            </button>
+                        </div>
+
+                        <div className={styles.footer} style={{ marginTop: '20px', textAlign: 'center' }}>
+                            <Link href="/forgot-password" className={styles.footerLink}>
+                                Forgot your password?
+                            </Link>
+                        </div>
+                    </form>
                 </div>
             </div>
         </div>
+    );
+}
+
+export default function LoginPage() {
+    return (
+        <Suspense fallback={
+            <div className={styles.authContainer}>
+                <div className={styles.formSide}>
+                    <div className={styles.formContainer}>
+                        <Loader2 className="animate-spin" />
+                        <p>Loading login...</p>
+                    </div>
+                </div>
+            </div>
+        }>
+            <LoginForm />
+        </Suspense>
     );
 }

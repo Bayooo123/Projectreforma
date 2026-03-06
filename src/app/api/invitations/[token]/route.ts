@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { hashToken } from '@/lib/services/auth/tokens';
 
 export async function GET(
     request: NextRequest,
@@ -7,9 +8,10 @@ export async function GET(
 ) {
     try {
         const { token } = await params;
+        const tokenHash = hashToken(token);
 
-        const invitation = await prisma.invitation.findUnique({
-            where: { token },
+        const invitation = await prisma.invitation.findFirst({
+            where: { tokenHash },
             include: {
                 workspace: {
                     select: {
@@ -27,7 +29,7 @@ export async function GET(
 
         if (!invitation) {
             return NextResponse.json(
-                { error: 'Invitation not found' },
+                { error: 'Invalid or expired invitation link' },
                 { status: 404 }
             );
         }
@@ -55,7 +57,7 @@ export async function GET(
         });
 
     } catch (error) {
-        console.error('❌ Error fetching invitation:', error);
+        console.error('[GetInvite] Error:', error);
         return NextResponse.json(
             { error: 'Internal server error' },
             { status: 500 }

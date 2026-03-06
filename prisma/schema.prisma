@@ -64,20 +64,26 @@ model WorkspaceMember {
 }
 
 model Invitation {
-  id          String    @id @default(cuid())
+  id          String   @id @default(cuid())
   workspaceId String
   email       String
   role        String
-  token       String    @unique
+  tokenHash   String   @unique // Hashed token for security
   invitedBy   String
-  status      String    @default("pending")
+  status      String   @default("pending") // pending, accepted, revoked, expired
   expiresAt   DateTime
-  createdAt   DateTime  @default(now())
+  createdAt   DateTime @default(now())
   acceptedAt  DateTime?
+  revokedAt   DateTime?
+  
+  // Metadata for audit
+  ipAddress   String?
+  userAgent   String?
+
   inviter     User      @relation(fields: [invitedBy], references: [id])
   workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
-  @@index([token])
+  @@index([tokenHash])
   @@index([email])
 }
 
@@ -115,6 +121,11 @@ model User {
   ownedWorkspaces        Workspace[]           @relation("WorkspaceOwner")
   workspaces             WorkspaceMember[]
   calendarAppearances    CalendarEntry[]       @relation("CalendarAppearances")
+  
+  // Security & Audit
+  emailVerifications    EmailVerification[]
+  passwordResetRequests PasswordResetRequest[]
+  securityAuditLogs     SecurityAuditLog[]
 
   @@index([email])
   @@index([lawyerToken])
@@ -838,3 +849,62 @@ model BriefLawyerHistory {
   @@index([briefId])
   @@index([timestamp])
 }
+
+model RateLimit {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  count     Int      @default(0)
+  expiresAt DateTime
+  updatedAt DateTime @updatedAt
+}
+
+model EmailVerification {
+  id        String   @id @default(cuid())
+  userId    String
+  email     String
+  tokenHash String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  usedAt    DateTime?
+  
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([tokenHash])
+  @@index([userId])
+}
+
+model PasswordResetRequest {
+  id        String   @id @default(cuid())
+  userId    String
+  tokenHash String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  usedAt    DateTime?
+  
+  // Metadata
+  ipAddress String?
+  userAgent String?
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([tokenHash])
+  @@index([userId])
+}
+
+model SecurityAuditLog {
+  id          String   @id @default(cuid())
+  userId      String?
+  event       String   // e.g., "LOGIN_SUCCESS", "PASSWORD_RESET_REQUEST", "EMAIL_VERIFICATION_SUCCESS"
+  description String?
+  ipAddress   String?
+  userAgent   String?
+  metadata    Json?    // Additional context
+  createdAt   DateTime @default(now())
+  
+  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([event])
+  @@index([createdAt])
+}
+

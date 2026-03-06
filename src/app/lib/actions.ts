@@ -7,6 +7,12 @@ import bcrypt from 'bcryptjs';
 import { nanoid } from 'nanoid';
 import { redirect } from 'next/navigation';
 import { generateUniqueLawyerToken } from '@/lib/lawyer-tokens';
+import { createEmailVerificationToken } from '@/lib/services/auth/tokens';
+import { mailService } from '@/lib/services/mail/mail';
+import { getVerificationEmail } from '@/lib/services/mail/templates';
+import { logSecurityEvent, SecurityEvent } from '@/lib/services/auth/audit';
+import { headers } from 'next/headers';
+import { checkRateLimit, getClientIp } from '@/lib/services/auth/ratelimit';
 
 // Define AuthState type
 export type AuthState = {
@@ -69,6 +75,19 @@ export async function register(
     const role = formData.get('role') as string;
     const isPilot = formData.get('isPilot') === 'true';
 
+    // Rate Limiting: 5 attempts per 15 mins per IP
+    const h = await headers();
+    const ip = getClientIp(h);
+    const rl = await checkRateLimit({
+        key: `register:${ip}`,
+        limit: 5,
+        windowSeconds: 15 * 60,
+    });
+
+    if (!rl.success) {
+        return 'Too many registration attempts. Please try again later.';
+    }
+
     if (!isPilot) {
         // BLOCK NEW SIGNUPS (LOCKED FOR APRIL LAUNCH)
         console.log('🔒 Public registration is currently disabled. Adding to waitlist instead.');
@@ -101,7 +120,7 @@ export async function register(
         const slugBase = firmName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
         const slug = `${slugBase}-${nanoid(5).toLowerCase()}`;
 
-        await prisma.$transaction(async (tx) => {
+        const { user } = await prisma.$transaction(async (tx) => {
             // 1. Create User
             const user = await tx.user.create({
                 data: {
@@ -133,14 +152,31 @@ export async function register(
                     status: 'active'
                 }
             });
+
+            return { user, workspace };
         });
 
-        // 4. Sign In — signIn with redirectTo throws a NEXT_REDIRECT internally on success
-        await signIn('credentials', {
-            email,
-            password,
-            redirectTo: '/briefs'
+        // 4. Generate Verification Token
+        const verificationToken = await createEmailVerificationToken(user.id, email);
+        const domain = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+        const verificationUrl = `${domain}/api/auth/verify-email?token=${verificationToken}`;
+
+        // 5. Send Verification Email
+        await mailService.send({
+            to: email,
+            subject: 'Verify your Reforma account',
+            html: getVerificationEmail(name, verificationUrl)
         });
+
+        // 6. Log Security Event
+        await logSecurityEvent({
+            userId: user.id,
+            event: SecurityEvent.EMAIL_VERIFICATION_REQUEST,
+            description: `Verification email sent to ${email}`,
+            metadata: { email }
+        });
+
+        return 'Registration successful! Please check your email to verify your account before logging in.';
 
     } catch (error: any) {
         // Re-throw Next.js redirect (NEXT_REDIRECT) — this is the successful path
@@ -167,6 +203,19 @@ export async function registerMember(
 
     console.log('🔵 User Joining via Token:', { email, name });
 
+    // Rate Limiting: 5 attempts per 15 mins per IP
+    const h = await headers();
+    const ip = getClientIp(h);
+    const rl = await checkRateLimit({
+        key: `register-member:${ip}`,
+        limit: 5,
+        windowSeconds: 15 * 60,
+    });
+
+    if (!rl.success) {
+        return 'Too many joining attempts. Please try again later.';
+    }
+
     if (!name || !email || !password || !phone || !inviteToken) {
         return 'Please fill in all fields.';
     }
@@ -187,10 +236,6 @@ export async function registerMember(
             // 2. Check/Create User
             let user = await tx.user.findUnique({ where: { email } });
             if (user) {
-                // If user exists, just add them? 
-                // But we requested a password. If they entered a different password, that's weird.
-                // Assuming "Register" means new user.
-                // If user exists, they should "Login".
                 throw new Error('User already exists. Please log in instead.');
             }
 
@@ -207,25 +252,34 @@ export async function registerMember(
                     userId: user.id,
                     workspaceId: workspace.id,
                     role: role,
-                    status: 'active' // Magic link auto-activates?
+                    status: 'active'
                 }
             });
 
             return { user, workspace };
         });
 
-        // 4. Sign In (using the new auth logic that accepts inviteToken)
-        // We need to pass inviteToken so authorize() skips firm checks
-        // But wait, `signIn` calls `authorize`. 
-        // My `auth.ts` `authorize` logic handles `inviteToken`.
-        // So I pass `inviteToken` in the credentials object.
+        // 4. Generate Verification Token
+        const vToken = await createEmailVerificationToken(result.user.id, result.user.email);
+        const domain = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+        const vUrl = `${domain}/api/auth/verify-email?token=${vToken}`;
 
-        await signIn('credentials', {
-            email,
-            password,
-            inviteToken,
-            redirectTo: '/briefs' // Go to brief manager
+        // 5. Send Verification Email
+        await mailService.send({
+            to: email,
+            subject: 'Verify your Reforma account',
+            html: getVerificationEmail(name, vUrl)
         });
+
+        // 6. Log Security Event
+        await logSecurityEvent({
+            userId: result.user.id,
+            event: SecurityEvent.EMAIL_VERIFICATION_REQUEST,
+            description: `Verification email sent to ${email} (Member Join)`,
+            metadata: { email, workspaceId: result.workspace.id }
+        });
+
+        return 'Account created! Please check your email to verify your account before logging in.';
 
     } catch (error: any) {
         console.error('Join error:', error);

@@ -1,95 +1,70 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { signIn } from '@/auth';
 import bcrypt from 'bcryptjs';
+import { validateInvitationToken, createEmailVerificationToken } from '@/lib/services/auth/tokens';
+import { mailService } from '@/lib/services/mail/mail';
+import { getVerificationEmail } from '@/lib/services/mail/templates';
+import { logSecurityEvent, SecurityEvent } from '@/lib/services/auth/audit';
 
 export async function POST(request: NextRequest) {
     try {
         const body = await request.json();
         const { token, name, password } = body;
 
-        // Validate inputs
-        if (!token || !name || !password) {
-            return NextResponse.json(
-                { error: 'Missing required fields' },
-                { status: 400 }
-            );
+        if (!token) {
+            return NextResponse.json({ error: 'Missing token' }, { status: 400 });
         }
 
-        if (password.length < 8) {
-            return NextResponse.json(
-                { error: 'Password must be at least 8 characters long' },
-                { status: 400 }
-            );
-        }
-
-        // Find invitation
-        const invitation = await prisma.invitation.findUnique({
-            where: { token },
-            include: {
-                workspace: true,
-            },
-        });
+        const invitation = await validateInvitationToken(token);
 
         if (!invitation) {
-            return NextResponse.json(
-                { error: 'Invalid invitation link' },
-                { status: 404 }
-            );
-        }
-
-        // Check if invitation is expired
-        if (invitation.expiresAt < new Date()) {
-            return NextResponse.json(
-                { error: 'This invitation has expired' },
-                { status: 400 }
-            );
-        }
-
-        // Check if invitation is already accepted
-        if (invitation.status !== 'pending') {
-            return NextResponse.json(
-                { error: 'This invitation has already been used' },
-                { status: 400 }
-            );
+            return NextResponse.json({ error: 'Invalid, expired, or used invitation link' }, { status: 404 });
         }
 
         // Check if user already exists
-        let user = await prisma.user.findUnique({
-            where: { email: invitation.email },
+        const user = await prisma.user.findUnique({
+            where: { email: invitation.email.toLowerCase() },
         });
 
-        let isNewUser = false;
+        if (user) {
+            // User exists - they should login to accept
+            return NextResponse.json({
+                success: true,
+                message: 'Account already exists. Please log in to accept this invitation.',
+                requiresLogin: true,
+                email: user.email
+            });
+        }
 
-        if (!user) {
-            // Create new user
-            isNewUser = true;
-            const hashedPassword = await bcrypt.hash(password, 10);
+        // New User Flow
+        if (!name || !password) {
+            return NextResponse.json({ error: 'Name and password are required for new accounts' }, { status: 400 });
+        }
 
-            user = await prisma.user.create({
+        if (password.length < 8) {
+            return NextResponse.json({ error: 'Password must be at least 8 characters long' }, { status: 400 });
+        }
+
+        const hashedPassword = await bcrypt.hash(password, 10);
+
+        const newUser = await prisma.$transaction(async (tx) => {
+            const u = await tx.user.create({
                 data: {
                     name,
-                    email: invitation.email,
+                    email: invitation.email.toLowerCase(),
                     password: hashedPassword,
                 },
             });
 
-            console.log('✅ New user created:', { id: user.id, email: user.email });
-        } else {
-            console.log('ℹ️ Existing user found:', { id: user.id, email: user.email });
-        }
+            await tx.workspaceMember.create({
+                data: {
+                    userId: u.id,
+                    workspaceId: invitation.workspaceId,
+                    role: invitation.role,
+                },
+            });
 
-        // Check if user is already a member
-        const existingMembership = await prisma.workspaceMember.findFirst({
-            where: {
-                userId: user.id,
-                workspaceId: invitation.workspaceId,
-            },
-        });
-
-        if (existingMembership) {
-            // Update invitation status
-            await prisma.invitation.update({
+            await tx.invitation.update({
                 where: { id: invitation.id },
                 data: {
                     status: 'accepted',
@@ -97,53 +72,37 @@ export async function POST(request: NextRequest) {
                 },
             });
 
-            return NextResponse.json({
-                success: true,
-                message: 'You are already a member of this workspace',
-                workspaceSlug: invitation.workspace.slug,
-                isNewUser: false,
-            });
-        }
-
-        // Add user to workspace
-        await prisma.workspaceMember.create({
-            data: {
-                userId: user.id,
-                workspaceId: invitation.workspaceId,
-                role: invitation.role,
-            },
+            return u;
         });
 
-        console.log('✅ User added to workspace:', {
-            userId: user.id,
-            workspaceId: invitation.workspaceId,
-            role: invitation.role,
+        // Verification Email
+        const vToken = await createEmailVerificationToken(newUser.id, newUser.email);
+        const domain = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+        const vUrl = `${domain}/api/auth/verify-email?token=${vToken}`;
+
+        await mailService.send({
+            to: newUser.email,
+            subject: 'Verify your Reforma account',
+            html: getVerificationEmail(name, vUrl)
         });
 
-        // Update invitation status
-        await prisma.invitation.update({
-            where: { id: invitation.id },
-            data: {
-                status: 'accepted',
-                acceptedAt: new Date(),
-            },
+        await logSecurityEvent({
+            userId: newUser.id,
+            event: SecurityEvent.INVITATION_ACCEPTED,
+            description: `Invitation accepted and account created for ${newUser.email}`,
+            req: request,
+            metadata: { workspaceId: invitation.workspaceId }
         });
-
-        console.log('✅ Invitation accepted:', { invitationId: invitation.id });
 
         return NextResponse.json({
             success: true,
-            message: 'Successfully joined workspace',
-            workspaceSlug: invitation.workspace.slug,
-            isNewUser,
-            email: user.email,
+            message: 'Account created and invitation accepted! Please check your email to verify.',
+            isNewUser: true,
+            email: newUser.email,
         });
 
     } catch (error) {
-        console.error('❌ Error in accept invitation API:', error);
-        return NextResponse.json(
-            { error: 'Internal server error' },
-            { status: 500 }
-        );
+        console.error('[AcceptInvite] Error:', error);
+        return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 }

@@ -6,6 +6,9 @@ import Credentials from "next-auth/providers/credentials"
 import { authConfig } from "./auth.config"
 import { z } from "zod"
 import bcrypt from "bcryptjs"
+import Resend from "next-auth/providers/resend"
+import { mailService } from "@/lib/services/mail/mail"
+import { getVerificationEmail } from "@/lib/services/mail/templates"
 
 // Valid role types for type safety
 const ALLOWED_ROLES = ["owner", "partner", "associate", "admin", "member"] as const;
@@ -16,6 +19,21 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
     adapter: PrismaAdapter(prisma),
     session: { strategy: "jwt" },
     providers: [
+        Resend({
+            from: process.env.MAIL_FROM || "Reforma <Registration@reforma.ng>",
+            async sendVerificationRequest({ identifier: email, url, provider, theme }) {
+                const user = await prisma.user.findUnique({
+                    where: { email },
+                    select: { name: true }
+                });
+                const name = user?.name || "there";
+                await mailService.send({
+                    to: email,
+                    subject: `Sign in to Reforma`,
+                    html: getVerificationEmail(name, url),
+                });
+            },
+        }),
         Credentials({
             async authorize(credentials) {
                 // 1. Check for Magic Token Flow
@@ -91,6 +109,11 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
 
                     if (!user || !user.password) return null;
                     if (!await bcrypt.compare(password, user.password)) return null;
+
+                    // CHECK EMAIL VERIFICATION
+                    if (!user.emailVerified) {
+                        throw new Error('Email not verified. Please check your inbox.');
+                    }
 
                     // If checking firm context, verify membership
                     if (workspaceId) {
