@@ -29,7 +29,7 @@ class MailService {
                 subject,
                 html,
                 text: text || this.stripHtml(html),
-                reply_to: replyTo,
+                replyTo: replyTo,
             });
 
             return { success: true, data };
