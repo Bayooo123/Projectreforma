@@ -11,8 +11,10 @@ import { mailService } from "@/lib/services/mail/mail"
 import { getVerificationEmail } from "@/lib/services/mail/templates"
 
 // Valid role types for type safety
-const ALLOWED_ROLES = ["owner", "partner", "associate", "admin", "member"] as const;
-type RoleType = typeof ALLOWED_ROLES[number];
+import { RoleValue } from "@/lib/roles"
+
+// Valid role types for type safety
+type RoleType = "owner" | RoleValue;
 
 export const { auth, signIn, signOut, handlers } = NextAuth({
     ...authConfig,
@@ -139,7 +141,7 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
                         id: user.id,
                         email: user.email,
                         name: user.name,
-                        role: ((firstMembership?.role || 'member') as RoleType),
+                        role: ((firstMembership?.role || 'Associate') as RoleType),
                         workspaceId: firstMembership?.workspaceId || '',
                         lawyerToken: user.lawyerToken || '',
                         isPlatformAdmin: user.isPlatformAdmin,

@@ -107,11 +107,10 @@ export async function register(
     // PILOT BYPASS LOGIC
     console.log('🚀 Pilot registration bypass triggered for:', { email, firmName });
 
-    if (!name || !email || !password || !firmName || !phone) {
-        return 'Please fill in all fields.';
-    }
-
     try {
+        if (!name || !email || !password || !firmName || !phone) {
+            return 'Please fill in all fields.';
+        }
         const hashedPassword = await bcrypt.hash(password, 10);
         const lawyerToken = await generateUniqueLawyerToken();
         const firmCode = nanoid(6).toUpperCase();
@@ -182,11 +181,18 @@ export async function register(
         // Re-throw Next.js redirect (NEXT_REDIRECT) — this is the successful path
         if (error?.digest?.startsWith('NEXT_REDIRECT')) throw error;
 
-        console.error('Pilot registration error:', error);
+        // CRITICAL: Log full error details for debugging server-side exceptions
+        console.error('❌ Pilot registration failure:', {
+            error: error?.message || error,
+            stack: error?.stack,
+            digest: error?.digest,
+            data: { email, firmName, name }
+        });
+
         if (error.code === 'P2002') {
             return 'A user with this email already exists.';
         }
-        return 'Failed to create pilot account. Please try again.';
+        return `Error: ${error.message || 'Failed to create pilot account. Please try again.'}`;
     }
 }
 

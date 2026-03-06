@@ -163,7 +163,11 @@ export const getCurrentUserWithWorkspace = cache(async () => {
             const workspace = await getLightweightWorkspace(session.user.workspaceId);
             return {
                 user,
-                workspace: workspace ? { ...workspace, role: session.user.role, isOwner: session.user.role === 'owner' } : null,
+                workspace: workspace ? { 
+                ...workspace, 
+                role: session.user.role, 
+                isOwner: session.user.role?.toLowerCase() === 'owner' || session.user.role?.toLowerCase() === 'managing partner' 
+            } : null,
             };
         }
 
