@@ -52,7 +52,8 @@
     "@react-email/render": {
       "react": "$react",
       "react-dom": "$react-dom"
-    }
+    },
+    "nodemailer": "$nodemailer"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.17",
