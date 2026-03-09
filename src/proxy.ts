@@ -5,7 +5,7 @@ import { authConfig } from "./auth.config";
 
 const { auth } = NextAuth(authConfig);
 
-export const proxy = auth((req) => {
+export default auth((req) => {
     // Inject the current pathname into request headers so RootLayout (Server Component) can read it
     const requestHeaders = new Headers(req.headers);
     requestHeaders.set('x-pathname', req.nextUrl.pathname);
