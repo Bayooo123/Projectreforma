@@ -11,6 +11,7 @@ import { getMattersForMonth } from '@/lib/matters';
 import styles from './page.module.css';
 
 import { CalendarEvent, CalendarEventType } from '@/components/calendar/CalendarGrid';
+import { Matter } from '@/types/legal';
 
 interface CalendarClientProps {
     initialEvents: CalendarEvent[];
@@ -36,7 +37,7 @@ export default function CalendarClient({
     const [isRecordMeetingModalOpen, setIsRecordMeetingModalOpen] = useState(false);
     const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
 
-    const [selectedMatter, setSelectedMatter] = useState<any | null>(null);
+    const [selectedMatter, setSelectedMatter] = useState<Matter | null>(null);
     const [isLoadingMonth, setIsLoadingMonth] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [filterType, setFilterType] = useState<CalendarEventType | 'ALL'>('ALL');
@@ -91,15 +92,17 @@ export default function CalendarClient({
         // Instant feedback: Open modal with data we already have
         setSelectedMatter({
             ...event.matter,
-            workspaceId: workspaceId, // Ensure workspaceId is passed for lawyer fetching
+            workspaceId: workspaceId, 
             briefs: [],
             calendarEntries: [],
-            meetingRecords: [], // Added
-            status: 'active', // Fallback status
+            meetingRecords: [],
+            status: 'active',
             nextCourtDate: event.date,
             court: null,
             judge: null,
-        });
+            lawyers: [],
+            client: { id: '', name: event.matter?.client?.name || 'Loading...' },
+        } as Matter);
         setIsDetailModalOpen(true);
 
         // Fetch full-fidelity details in background

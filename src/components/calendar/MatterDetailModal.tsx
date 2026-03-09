@@ -8,56 +8,7 @@ import RecordProceedingModal from './RecordProceedingModal';
 import { CreateMeetingRecordModal } from '../meetings/CreateMeetingRecordModal';
 import styles from './MatterDetailModal.module.css';
 
-interface Matter {
-    id: string;
-    workspaceId: string; // Added workspaceId
-    caseNumber: string | null;
-    name: string;
-    court: string | null;
-    judge: string | null;
-    status: string;
-    nextCourtDate: Date | null;
-    client: {
-        id: string;
-        name: string;
-    };
-    lawyers: {
-        lawyer: {
-            id: string;
-            name: string | null;
-            email: string | null;
-        };
-        role: string;
-    }[];
-    briefs: {
-        id: string;
-        briefNumber: string;
-        name: string;
-    }[];
-    calendarEntries?: {
-        id: string;
-        date: Date;
-        type: string;
-        title: string | null;
-        proceedings: string | null;
-        adjournedFor: string | null;
-        location: string | null;
-        agenda: string | null;
-        judge: string | null;
-        externalCounsel: string | null;
-        appearances: { id: string; name: string | null }[];
-    }[];
-    meetingRecords?: {
-        id: string;
-        date: Date;
-        participants: any;
-        summary: string;
-        actionItems: string | null;
-        followUpDate: Date | null;
-        transcription?: string | null;
-        audioUrl?: string | null;
-    }[];
-}
+import { Matter } from '@/types/legal';
 
 interface MatterDetailModalProps {
     isOpen: boolean;

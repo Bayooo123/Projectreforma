@@ -136,13 +136,17 @@ const PaymentModal = ({ isOpen, onClose, clientName, clientId, selectedInvoice }
             // Append note if full settlement
             const finalReference = markAsFullyPaid ? `${reference} [FULL SETTLEMENT]` : reference;
 
+            const dateVal = formData.get('date') as string;
+            const parsedDate = dateVal ? new Date(dateVal) : undefined;
+            const finalDate = (parsedDate && !isNaN(parsedDate.getTime())) ? parsedDate : undefined;
+
             const result = await createPayment({
                 clientId,
                 invoiceId: invoiceId || undefined,
                 amount: Math.round(amount * 100), // Convert to kobo
                 method: method,
                 reference: finalReference,
-                date: formData.get('date') ? new Date(formData.get('date') as string) : undefined,
+                date: finalDate,
             });
 
             if (result.success) {

@@ -10,35 +10,12 @@ import { generateInvoicePDF } from '@/lib/invoice-pdf';
 import { generateInvoiceDOCX } from '@/lib/invoice-docx';
 import styles from './InvoiceModal.module.css';
 
+import { Matter, Invoice } from '@/types/legal';
+
 interface InvoiceItem {
     description: string;
     amount: number;
     quantity: number;
-}
-
-interface Matter {
-    id: string;
-    name: string;
-    caseNumber: string | null;
-}
-
-interface Invoice {
-    id: string;
-    invoiceNumber: string;
-    totalAmount: number;
-    paidAmount: number;
-    status: string;
-    dueDate: Date | null;
-    createdAt: Date;
-    items: any[];
-    billToName: string;
-    billToAddress?: string | null;
-    billToCity?: string | null;
-    billToState?: string | null;
-    attentionTo?: string | null;
-    client: {
-        name: string;
-    }
 }
 
 interface InvoiceModalProps {
@@ -57,7 +34,7 @@ const InvoiceModal = ({ isOpen, onClose, clientName, clientId, workspaceId, lett
     const [vatRate, setVatRate] = useState(7.5);
     const [securityChargeRate, setSecurityChargeRate] = useState(1.0);
     const [invoiceNumber, setInvoiceNumber] = useState('');
-    const [matters, setMatters] = useState<Matter[]>([]);
+    const [matters, setMatters] = useState<any[]>([]);
     const [isLoadingMatters, setIsLoadingMatters] = useState(false);
 
     const [invoices, setInvoices] = useState<Invoice[]>([]);

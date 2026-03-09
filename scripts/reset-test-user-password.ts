@@ -13,14 +13,20 @@ async function resetPassword() {
         const user = await prisma.user.update({
             where: { email },
             data: { password: hashedPassword },
+            include: { workspaces: true }
         });
 
-        // @ts-ignore
-        console.log(`Found user: ${user.email} (Workspace: ${user.workspaceId})`);
+        const workspaceId = user.workspaces[0]?.workspaceId;
+        console.log(`Found user: ${user.email} (Workspace: ${workspaceId})`);
+
+        if (!workspaceId) {
+            console.log('User has no workspace!');
+            return;
+        }
 
         // Also get Firm Code for login
         const workspace = await prisma.workspace.findUnique({
-            where: { id: user.workspaceId! }
+            where: { id: workspaceId }
         });
 
         if (workspace) {
