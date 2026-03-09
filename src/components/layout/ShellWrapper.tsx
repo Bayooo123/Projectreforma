@@ -11,7 +11,7 @@ interface ShellWrapperProps {
     workspace: any;
 }
 
-import { getCurrentUserWithWorkspace } from "@/lib/workspace";
+import { getCurrentUserWithWorkspaceAction } from "@/app/actions/workspace";
 
 // WizardTrigger: renders the branding wizard modal if needed.
 function WizardTrigger({ user, children }: { user: any, children: React.ReactNode }) {
@@ -23,8 +23,10 @@ function WizardTrigger({ user, children }: { user: any, children: React.ReactNod
     // Fetch full workspace data in background if needed for the wizard
     useEffect(() => {
         const fetchWorkspace = async () => {
-            const data = await getCurrentUserWithWorkspace();
-            if (data?.workspace) setFullWorkspace(data.workspace);
+            const res = await getCurrentUserWithWorkspaceAction();
+            if (res.success && res.data?.workspace) {
+                setFullWorkspace(res.data.workspace);
+            }
         };
         fetchWorkspace();
     }, []);
