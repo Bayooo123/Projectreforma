@@ -311,7 +311,14 @@ export async function updateBrief(
         // RBAC Check for Lawyer in Charge
         const { canEditLawyerInCharge, BriefPermissions } = await import('@/lib/rbac');
 
-        if (data.lawyerInChargeId && !canEditLawyerInCharge(membership.role)) {
+        // Reforma platform admins (isPlatformAdmin = true) bypass all workspace-level role restrictions
+        const dbUser = await prisma.user.findUnique({
+            where: { email: session.email! },
+            select: { isPlatformAdmin: true },
+        });
+        const isReformaSuperAdmin = dbUser?.isPlatformAdmin === true;
+
+        if (data.lawyerInChargeId && !isReformaSuperAdmin && !canEditLawyerInCharge(membership.role)) {
             return {
                 success: false,
                 error: 'Only Principal Partners, Partners, and Head of Chambers can change Lawyer in Charge'
