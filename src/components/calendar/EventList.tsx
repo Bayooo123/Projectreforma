@@ -1,5 +1,5 @@
 import { MapPin, User, Clock, Gavel, Briefcase, Users, Calendar as CalendarIcon } from 'lucide-react';
-import { CalendarEvent, CalendarEventType } from './CalendarGrid';
+import { CalendarEvent, CalendarEventType } from '@/types/legal';
 import styles from './EventList.module.css';
 
 interface EventListProps {
