@@ -6,6 +6,7 @@ import { createNotification, RecipientType } from '@/lib/notifications';
 import { scheduleCalendarEntryNotifications } from '@/lib/scheduleAdjournmentNotifications';
 import { auth } from '@/auth';
 import { applySentenceCaseToFields, toSentenceCase } from '@/lib/sentence-case';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 
 /**
  * Get all matters for a workspace
@@ -874,8 +875,10 @@ export async function recordMeeting(data: {
             }
         });
 
-        // Trigger background transcription if requested and audio is present
-        if (!data.skipTranscription && data.audioUrl && (!data.summary || !data.transcription)) {
+        // Trigger background transcription if audio is present and placeholders were used
+        const isPlaceholderSummary = !data.summary || data.summary === 'Processing meeting insights...';
+        const isPlaceholderTranscription = !data.transcription || data.transcription === 'Transcription in progress...';
+        if (!data.skipTranscription && data.audioUrl && (isPlaceholderSummary || isPlaceholderTranscription)) {
             // We don't await this so it runs in "background" from the client's perspective
             processMeetingAction(record.id, data.audioUrl).catch(console.error);
         }
@@ -897,29 +900,53 @@ export async function recordMeeting(data: {
  */
 export async function processMeetingAction(recordId: string, audioUrl: string) {
     try {
-        // Construct base URL for internal API call
-        // In a real staging/prod env, we'd use an absolute URL or a direct function call
-        // For local dev, we can use process.env.NEXT_PUBLIC_APP_URL
-        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+        // Fetch the audio file from storage
+        const audioResponse = await fetch(audioUrl);
+        if (!audioResponse.ok) throw new Error(`Failed to fetch audio from storage: ${audioResponse.status}`);
+        const audioBuffer = await audioResponse.arrayBuffer();
 
-        const response = await fetch(`${baseUrl}/api/transcribe`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ audioUrl }),
+        // Call Gemini SDK directly — no self-HTTP call needed, avoids auth issues
+        const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GENERATIVE_AI_API_KEY || '');
+        const model = genAI.getGenerativeModel({
+            model: 'gemini-1.5-flash',
+            generationConfig: {
+                responseMimeType: 'application/json',
+            },
         });
 
-        if (!response.ok) throw new Error('Transcription API failed');
+        const prompt = `
+            Please provide a verbatim transcription of this audio.
+            Also, provide a concise summary of the meeting and a list of key action items.
+            Format the response as a JSON object with the following structure:
+            {
+                "transcription": "Verbatim text here...",
+                "summary": "Concise summary here...",
+                "actionItems": "List of action items as a string or markdown list..."
+            }
+            If there are multiple speakers, try to distinguish them in the transcription.
+        `;
 
-        const data = await response.json();
+        const result = await model.generateContent([
+            {
+                inlineData: {
+                    mimeType: 'audio/webm',
+                    data: Buffer.from(audioBuffer).toString('base64'),
+                },
+            },
+            { text: prompt },
+        ]);
 
-        // Update the record with insights
+        const resultText = result.response.text();
+        const parsedData = JSON.parse(resultText);
+
+        // Update the record with AI insights
         await prisma.meetingRecord.update({
             where: { id: recordId },
             data: {
-                transcription: data.transcription,
-                summary: data.summary,
-                actionItems: data.actionItems,
-            }
+                transcription: parsedData.transcription || '',
+                summary: parsedData.summary || '',
+                actionItems: parsedData.actionItems || '',
+            },
         });
 
         revalidatePath('/calendar');
@@ -927,13 +954,13 @@ export async function processMeetingAction(recordId: string, audioUrl: string) {
     } catch (error) {
         console.error('Background processing error:', error);
 
-        // Update record with error status if possible
+        // Update record with error status so the user sees a meaningful message
         await prisma.meetingRecord.update({
             where: { id: recordId },
             data: {
                 summary: 'Failed to process AI insights automatically. Please try again later.',
-                transcription: 'Transcription failed.'
-            }
+                transcription: 'Transcription failed.',
+            },
         }).catch(console.error);
 
         return { success: false, error: 'Processing failed' };
