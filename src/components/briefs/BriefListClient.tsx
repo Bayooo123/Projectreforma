@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { Search, Filter, MoreVertical, Plus, Trash2, Eye, Briefcase, MessageSquare, Edit } from 'lucide-react';
 import styles from './BriefList.module.css';
@@ -24,16 +24,16 @@ export default function BriefListClient({ initialBriefs, workspaceId }: Omit<Bri
     const [statusFilter, setStatusFilter] = useState<string>('all');
 
     // AUTOMATION: Background Polling (30 seconds)
-    useState(() => {
+    useEffect(() => {
         const interval = setInterval(async () => {
             const { getBriefs } = await import('@/app/actions/briefs');
             const newBriefs = await getBriefs(workspaceId);
-            if (newBriefs && newBriefs.length >= 0) {
+            if (newBriefs && Array.isArray(newBriefs)) {
                 setBriefs(newBriefs);
             }
         }, 30000);
         return () => clearInterval(interval);
-    });
+    }, [workspaceId]);
 
     // Modal states
     const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
@@ -77,10 +77,10 @@ export default function BriefListClient({ initialBriefs, workspaceId }: Omit<Bri
         if (searchQuery) {
             const query = searchQuery.toLowerCase();
             const matchesSearch =
-                brief.name.toLowerCase().includes(query) ||
-                brief.briefNumber.toLowerCase().includes(query) ||
-                brief.client?.name.toLowerCase().includes(query) ||
-                brief.category.toLowerCase().includes(query);
+                brief.name?.toLowerCase().includes(query) ||
+                brief.briefNumber?.toLowerCase().includes(query) ||
+                (brief.client?.name || '').toLowerCase().includes(query) ||
+                brief.category?.toLowerCase().includes(query);
             if (!matchesSearch) return false;
         }
         if (statusFilter !== 'all' && brief.status.toLowerCase() !== statusFilter) {

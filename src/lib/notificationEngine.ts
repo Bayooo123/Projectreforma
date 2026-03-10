@@ -22,20 +22,7 @@ export interface Notification {
     actionedAt?: Date;
 }
 
-export interface Matter {
-    id: string;
-    caseNumber: string | null;
-    name: string;
-    clientId: string;
-    lawyers: { lawyerId: string; role: string }[];
-    court?: string;
-    judge?: string;
-    status: 'active' | 'inactive' | 'closed';
-    nextCourtDate?: Date;
-    lastActivityAt: Date;
-    lastClientContact?: Date;
-    createdAt: Date;
-}
+import { Matter } from '@/types/legal';
 
 // ============================================
 // INTELLIGENT DETECTION FUNCTIONS
@@ -49,7 +36,8 @@ export function detectDormantMatters(matters: Matter[], thresholdDays: number = 
     const threshold = thresholdDays * 24 * 60 * 60 * 1000; // Convert to milliseconds
 
     return matters.filter(matter => {
-        const daysSinceActivity = now.getTime() - matter.lastActivityAt.getTime();
+        const lastActivity = matter.lastActivityAt ? new Date(matter.lastActivityAt).getTime() : 0;
+        const daysSinceActivity = now.getTime() - lastActivity;
         return matter.status === 'active' && daysSinceActivity > threshold;
     });
 }
@@ -63,7 +51,7 @@ export function detectClientUpdateNeeded(matters: Matter[], thresholdDays: numbe
 
     return matters.filter(matter => {
         if (!matter.lastClientContact) return true; // Never contacted
-        const daysSinceContact = now.getTime() - matter.lastClientContact.getTime();
+        const daysSinceContact = now.getTime() - new Date(matter.lastClientContact).getTime();
         return matter.status === 'active' && daysSinceContact > threshold;
     });
 }
@@ -90,8 +78,9 @@ export function generateNotificationsForDormantMatters(
     thresholdDays: number
 ): Notification[] {
     return dormantMatters.flatMap(matter => {
+        const lastActivity = matter.lastActivityAt ? new Date(matter.lastActivityAt).getTime() : 0;
         const daysSinceActivity = Math.floor(
-            (new Date().getTime() - matter.lastActivityAt.getTime()) / (24 * 60 * 60 * 1000)
+            (new Date().getTime() - lastActivity) / (24 * 60 * 60 * 1000)
         );
 
         const priority: NotificationPriority =
@@ -99,11 +88,11 @@ export function generateNotificationsForDormantMatters(
                 daysSinceActivity > 21 ? 'high' : 'medium';
 
         return matter.lawyers.map(l => ({
-            id: `notif-${matter.id}-${l.lawyerId}-${Date.now()}`,
+            id: `notif-${matter.id}-${l.lawyer.id}-${Date.now()}`,
             type: priority === 'critical' ? 'alert' : 'warning',
             title: `Matter Inactive for ${daysSinceActivity} Days`,
             message: `${matter.name} (${matter.caseNumber}) has had no activity for ${daysSinceActivity} days. Please review and update.`,
-            recipientId: l.lawyerId,
+            recipientId: l.lawyer.id,
             recipientType: 'lawyer',
             relatedMatterId: matter.id,
             priority,
@@ -121,18 +110,19 @@ export function generateNotificationsForClientUpdates(
     matters: Matter[]
 ): Notification[] {
     return matters.flatMap(matter => {
+        const lastContact = matter.lastClientContact ? new Date(matter.lastClientContact).getTime() : 0;
         const daysSinceContact = matter.lastClientContact
-            ? Math.floor((new Date().getTime() - matter.lastClientContact.getTime()) / (24 * 60 * 60 * 1000))
+            ? Math.floor((new Date().getTime() - lastContact) / (24 * 60 * 60 * 1000))
             : 999;
 
         return matter.lawyers.map(l => ({
-            id: `notif-client-${matter.id}-${l.lawyerId}-${Date.now()}`,
+            id: `notif-client-${matter.id}-${l.lawyer.id}-${Date.now()}`,
             type: 'warning',
             title: 'Client Update Required',
             message: matter.lastClientContact
                 ? `Client for ${matter.name} hasn't been contacted in ${daysSinceContact} days. Please send an update.`
                 : `Client for ${matter.name} has never been contacted. Please reach out immediately.`,
-            recipientId: l.lawyerId,
+            recipientId: l.lawyer.id,
             recipientType: 'lawyer',
             relatedMatterId: matter.id,
             priority: daysSinceContact > 30 ? 'high' : 'medium',
@@ -159,11 +149,11 @@ export function generateNotificationsForCourtDates(
                 daysUntilCourt <= 3 ? 'high' : 'medium';
 
         return matter.lawyers.map(l => ({
-            id: `notif-court-${matter.id}-${l.lawyerId}-${Date.now()}`,
+            id: `notif-court-${matter.id}-${l.lawyer.id}-${Date.now()}`,
             type: daysUntilCourt <= 1 ? 'critical' : 'warning',
             title: `Court Date in ${daysUntilCourt} Day${daysUntilCourt > 1 ? 's' : ''}`,
             message: `${matter.name} has a court appearance on ${new Date(matter.nextCourtDate!).toLocaleDateString()}. Ensure client is notified and prepared.`,
-            recipientId: l.lawyerId,
+            recipientId: l.lawyer.id,
             recipientType: 'lawyer',
             relatedMatterId: matter.id,
             priority,

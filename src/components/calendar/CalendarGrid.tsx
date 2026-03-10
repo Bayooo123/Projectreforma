@@ -4,24 +4,7 @@ import { useState } from 'react';
 import { ChevronLeft, ChevronRight, Gavel, Loader, Clock, Users, Briefcase, Calendar } from 'lucide-react';
 import styles from './CalendarGrid.module.css';
 
-export type CalendarEventType = 'COURT_DATE' | 'FILING_DEADLINE' | 'CLIENT_MEETING' | 'INTERNAL_MEETING' | 'OTHER';
-
-export interface CalendarEvent {
-    id: string;
-    date: Date;
-    type: CalendarEventType;
-    title: string | null;
-    proceedings: string | null;
-    adjournedFor: string | null;
-    matterId: string | null;
-    matter?: {
-        id: string;
-        caseNumber: string | null;
-        name: string;
-        client?: { name: string } | null;
-    } | null;
-    appearances: { id: string; name: string | null; image: string | null }[];
-}
+import { CalendarEvent, CalendarEventType } from '@/types/legal';
 
 interface CalendarGridProps {
     events: CalendarEvent[];

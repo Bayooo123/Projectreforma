@@ -13,6 +13,24 @@ export interface ClientBriefSummary {
 export interface ClientSummary {
     id: string;
     name: string;
+    email?: string | null;
+}
+
+export interface CalendarEvent {
+    id: string;
+    date: Date;
+    type: CalendarEventType;
+    title: string | null;
+    proceedings: string | null;
+    adjournedFor: string | null;
+    matterId: string | null;
+    matter?: {
+        id: string;
+        caseNumber: string | null;
+        name: string;
+        client?: ClientSummary | null;
+    } | null;
+    appearances: LawyerSummary[];
 }
 
 export interface LawyerSummary {
@@ -66,6 +84,9 @@ export interface Matter {
     briefs: ClientBriefSummary[];
     calendarEntries?: CalendarEntry[];
     meetingRecords?: MeetingRecord[];
+    lastActivityAt?: Date;
+    lastClientContact?: Date;
+    createdAt?: Date;
 }
 
 export interface BankAccount {

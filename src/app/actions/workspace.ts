@@ -1,6 +1,8 @@
 'use server';
 
 import { getCurrentUserWithWorkspace } from '@/lib/workspace';
+import { prisma } from '@/lib/prisma';
+import bcrypt from 'bcryptjs';
 
 /**
  * Server Action to get the current user with workspace details.
@@ -13,5 +15,68 @@ export async function getCurrentUserWithWorkspaceAction() {
   } catch (error) {
     console.error('Action failed: getCurrentUserWithWorkspaceAction', error);
     return { success: false, error: 'Failed to fetch workspace data' };
+  }
+}
+
+/**
+ * Registers a user and joins them to a firm workspace using a firm code.
+ */
+export async function registerWithFirmCode(data: any) {
+  const { firmCode, firmPassword, name, email, password } = data;
+
+  try {
+    // 1. Find the workspace
+    const workspace = await prisma.workspace.findUnique({
+      where: { firmCode },
+    });
+
+    if (!workspace || !workspace.joinPassword) {
+      return { success: false, error: 'Invalid firm code.' };
+    }
+
+    // 2. Verify firm password
+    const firmPasswordsMatch = await bcrypt.compare(firmPassword, workspace.joinPassword);
+    if (!firmPasswordsMatch) {
+      return { success: false, error: 'Invalid firm password.' };
+    }
+
+    // 3. Check if user already exists
+    const existingUser = await prisma.user.findUnique({
+      where: { email },
+    });
+
+    if (existingUser) {
+      return { success: false, error: 'Account with this email already exists.' };
+    }
+
+    // 4. Hash user password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // 5. Create user and association in transaction
+    const result = await prisma.$transaction(async (tx) => {
+      const newUser = await tx.user.create({
+        data: {
+          name,
+          email,
+          password: hashedPassword,
+        },
+      });
+
+      await tx.workspaceMember.create({
+        data: {
+          userId: newUser.id,
+          workspaceId: workspace.id,
+          role: 'staff',
+          status: 'active',
+        },
+      });
+
+      return newUser;
+    });
+
+    return { success: true, userId: result.id };
+  } catch (error) {
+    console.error('Registration failed:', error);
+    return { success: false, error: 'Failed to create account. Please try again.' };
   }
 }

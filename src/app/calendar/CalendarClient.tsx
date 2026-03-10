@@ -10,8 +10,7 @@ import AddMatterModal from '@/components/calendar/AddMatterModal';
 import { getMattersForMonth } from '@/lib/matters';
 import styles from './page.module.css';
 
-import { CalendarEvent, CalendarEventType } from '@/components/calendar/CalendarGrid';
-import { Matter } from '@/types/legal';
+import { CalendarEvent, CalendarEventType, Matter } from '@/types/legal';
 
 interface CalendarClientProps {
     initialEvents: CalendarEvent[];

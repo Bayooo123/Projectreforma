@@ -25,11 +25,11 @@ export async function getCalendarEvents(workspaceId: string) {
                         id: true,
                         caseNumber: true,
                         name: true,
-                        client: { select: { name: true } }
+                        client: { select: { id: true, name: true } }
                     }
                 },
                 appearances: {
-                    select: { id: true, name: true, image: true }
+                    select: { id: true, name: true, email: true, image: true }
                 }
             },
             orderBy: { date: 'asc' }
@@ -42,7 +42,7 @@ export async function getCalendarEvents(workspaceId: string) {
                 nextCourtDate: { not: null }
             },
             include: {
-                client: { select: { name: true } }
+                client: { select: { id: true, name: true } }
             }
         });
 
@@ -58,7 +58,7 @@ export async function getCalendarEvents(workspaceId: string) {
                         id: true,
                         caseNumber: true,
                         name: true,
-                        client: { select: { name: true } }
+                        client: { select: { id: true, name: true } }
                     }
                 },
                 user: { select: { name: true, image: true } }

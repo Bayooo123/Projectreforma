@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
-import { runNotificationEngine, type Matter } from '@/lib/notificationEngine';
+import { runNotificationEngine } from '@/lib/notificationEngine';
+import { Matter } from '@/types/legal';
 
 // This endpoint will be called by Vercel Cron or a scheduler
 // For now, it uses mock data. In production, it will fetch from the database.
@@ -16,24 +17,30 @@ export async function GET() {
                 caseNumber: 'ID/1234/2025',
                 name: 'State v. Johnson',
                 clientId: 'client-1',
-                lawyers: [{ lawyerId: 'lawyer-1', role: 'Lead Counsel' }],
+                lawyers: [{ lawyer: { id: 'lawyer-1', name: 'Lead Counsel', email: 'lead@reforma.com' }, role: 'Lead Counsel' }],
                 court: 'High Court Lagos',
                 status: 'active',
                 nextCourtDate: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000), // 5 days from now
                 lastActivityAt: new Date(Date.now() - 20 * 24 * 60 * 60 * 1000), // 20 days ago
                 lastClientContact: new Date(Date.now() - 25 * 24 * 60 * 60 * 1000), // 25 days ago
                 createdAt: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000),
-            },
+                client: { id: 'client-1', name: 'Johnson' },
+                workspaceId: 'w1',
+                briefs: []
+            } as any,
             {
                 id: '2',
                 caseNumber: 'ID/5678/2025',
                 name: 'TechCorp v. FirstBank',
                 clientId: 'client-2',
-                lawyers: [{ lawyerId: 'lawyer-2', role: 'Lead Counsel' }],
+                lawyers: [{ lawyer: { id: 'lawyer-2', name: 'Lead Counsel', email: 'lead2@reforma.com' }, role: 'Lead Counsel' }],
                 status: 'active',
                 lastActivityAt: new Date(Date.now() - 35 * 24 * 60 * 60 * 1000), // 35 days ago - CRITICAL
                 createdAt: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000),
-            },
+                client: { id: 'client-2', name: 'TechCorp' },
+                workspaceId: 'w1',
+                briefs: []
+            } as any,
         ];
 
         // Run the notification engine
