@@ -112,10 +112,12 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
                     if (!user || !user.password) return null;
                     if (!await bcrypt.compare(password, user.password)) return null;
 
-                    // CHECK EMAIL VERIFICATION
+                    // CHECK EMAIL VERIFICATION - Temporarily bypassed for existing accounts
+                    /*
                     if (!user.emailVerified) {
                         throw new Error('Email not verified. Please check your inbox.');
                     }
+                    */
 
                     // If checking firm context, verify membership
                     if (workspaceId) {

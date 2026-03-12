@@ -277,7 +277,7 @@ model Matter {
   lawyers               MatterLawyer[]
   notifications         Notification[]
   tasks                 Task[]
-  meetingRecords        MeetingRecord[]
+  meetingRecordings     MeetingRecording[]
 
   @@index([workspaceId])
   @@index([lastActivityAt])
@@ -331,7 +331,7 @@ model CalendarEntry {
   scheduledNotifications ScheduledNotification[]
   appearances            User[]                  @relation("CalendarAppearances")
   notifications          Notification[]
-  meetingRecord          MeetingRecord?
+  meetingRecording       MeetingRecording?
 
   @@index([matterId])
   @@index([briefId])
@@ -340,21 +340,15 @@ model CalendarEntry {
   @@index([submittingLawyerId])
 }
 
-model MeetingRecord {
+model MeetingRecording {
   id               String          @id @default(cuid())
   calendarEntryId  String?         @unique
   matterId         String?
-  date             DateTime        @default(now())
-  participants     Json?           // Structured list of participants
-  summary          String
-  actionItems      String?
-  followUpDate     DateTime?
+  audioFileUrl     String?
+  transcriptText   String?
+  recordingDuration Int?            // Duration in seconds
+  createdById      String?         // NEW: Who created this recording (linked manually below if we choose, or just string)
   
-  // Audio & Transcription
-  audioUrl         String?
-  transcription    String?
-  audioDuration    Int?            // Duration in seconds
-
   createdAt        DateTime        @default(now())
   updatedAt        DateTime        @updatedAt
   calendarEntry    CalendarEntry?  @relation(fields: [calendarEntryId], references: [id])
