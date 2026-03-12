@@ -59,15 +59,16 @@ export interface CalendarEntry {
     appearances: LawyerSummary[];
 }
 
-export interface MeetingRecord {
+export interface MeetingRecording {
     id: string;
-    date: Date;
-    participants: any;
-    summary: string;
-    actionItems: string | null;
-    followUpDate: Date | null;
-    transcription?: string | null;
-    audioUrl?: string | null;
+    calendarEntryId: string | null;
+    matterId: string | null;
+    audioFileUrl: string | null;
+    transcriptText: string | null;
+    recordingDuration: number | null;
+    createdById: string | null;
+    createdAt: Date;
+    updatedAt: Date;
 }
 
 export interface Matter {
@@ -83,7 +84,7 @@ export interface Matter {
     lawyers: MatterLawyerAssociation[];
     briefs: ClientBriefSummary[];
     calendarEntries?: CalendarEntry[];
-    meetingRecords?: MeetingRecord[];
+    meetingRecordings?: MeetingRecording[];
     lastActivityAt?: Date;
     lastClientContact?: Date;
     createdAt?: Date;

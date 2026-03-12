@@ -113,8 +113,8 @@ export async function getMatterById(id: string) {
                         }
                     }
                 },
-                meetingRecords: {
-                    orderBy: { date: 'desc' }
+                meetingRecordings: {
+                    orderBy: { createdAt: 'desc' }
                 }
             },
         });
@@ -862,16 +862,14 @@ export async function recordMeeting(data: {
     if (!session?.user) return { success: false, error: 'Unauthorized' };
 
     try {
-        const record = await prisma.meetingRecord.create({
+        const record = await prisma.meetingRecording.create({
             data: {
                 matterId: data.matterId || null,
-                date: data.date,
-                participants: JSON.stringify(data.participants || []),
-                summary: data.summary || 'Processing meeting insights...',
-                actionItems: data.actionItems || '',
-                followUpDate: data.followUpDate || null,
-                audioUrl: data.audioUrl || null,
-                transcription: data.transcription || 'Transcription in progress...',
+                calendarEntryId: data.calendarEntryId || null,
+                audioFileUrl: data.audioUrl || null,
+                transcriptText: data.transcription || 'Transcription in progress...',
+                recordingDuration: data.audioDuration || null,
+                createdById: session.user.id,
             }
         });
 
@@ -940,12 +938,10 @@ export async function processMeetingAction(recordId: string, audioUrl: string) {
         const parsedData = JSON.parse(resultText);
 
         // Update the record with AI insights
-        await prisma.meetingRecord.update({
+        await prisma.meetingRecording.update({
             where: { id: recordId },
             data: {
-                transcription: parsedData.transcription || '',
-                summary: parsedData.summary || '',
-                actionItems: parsedData.actionItems || '',
+                transcriptText: `SUMMARY: ${parsedData.summary}\n\nACTION ITEMS: ${parsedData.actionItems}\n\nTRANSCRIPTION: ${parsedData.transcription}`
             },
         });
 
@@ -955,11 +951,10 @@ export async function processMeetingAction(recordId: string, audioUrl: string) {
         console.error('Background processing error:', error);
 
         // Update record with error status so the user sees a meaningful message
-        await prisma.meetingRecord.update({
+        await prisma.meetingRecording.update({
             where: { id: recordId },
             data: {
-                summary: 'Failed to process AI insights automatically. Please try again later.',
-                transcription: 'Transcription failed.',
+                transcriptText: 'Failed to process AI insights automatically. Please try again later. Transcription failed.',
             },
         }).catch(console.error);
 

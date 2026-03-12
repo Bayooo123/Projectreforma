@@ -91,10 +91,10 @@ export default function CalendarClient({
         // Instant feedback: Open modal with data we already have
         setSelectedMatter({
             ...event.matter,
-            workspaceId: workspaceId, 
+            workspaceId: workspaceId,
             briefs: [],
             calendarEntries: [],
-            meetingRecords: [],
+            meetingRecordings: [],
             status: 'active',
             nextCourtDate: event.date,
             court: null,

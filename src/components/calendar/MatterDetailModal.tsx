@@ -434,28 +434,28 @@ const MatterDetailModal = ({ isOpen, onClose, matter, userId }: MatterDetailModa
                         )}
                     </div>
 
-                    {/* NEW: Meeting Records Section */}
-                    {matter.meetingRecords && matter.meetingRecords.length > 0 && (
+                    {/* NEW: Meeting Recordings Section */}
+                    {matter.meetingRecordings && matter.meetingRecordings.length > 0 && (
                         <div className={styles.section}>
                             <h3 className={styles.sectionTitle}>
-                                <Users size={16} /> Meeting Notes & Minutes
+                                <Users size={16} /> Meeting Notes & AI Recordings
                             </h3>
                             <div className="flex flex-col gap-4 mt-3">
-                                {matter.meetingRecords.map((record) => (
+                                {matter.meetingRecordings.map((record) => (
                                     <div key={record.id} className="bg-slate-50 border border-slate-200 rounded-lg p-4 shadow-sm">
                                         <div className="flex justify-between items-start mb-2">
                                             <div className="flex flex-col">
                                                 <span className="font-semibold text-sm text-slate-800">
-                                                    {new Date(record.date).toLocaleDateString(undefined, { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' })}
+                                                    {new Date(record.createdAt).toLocaleDateString(undefined, { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' })}
                                                 </span>
                                                 <span className="text-[10px] text-slate-400 font-mono">
-                                                    {record.participants || 'General Meeting'}
+                                                    AI Recording | ID: {record.id.substring(0, 8)}
                                                 </span>
                                             </div>
                                             <div className="flex gap-2">
-                                                {record.audioUrl && (
+                                                {record.audioFileUrl && (
                                                     <a
-                                                        href={record.audioUrl}
+                                                        href={record.audioFileUrl}
                                                         target="_blank"
                                                         rel="noopener noreferrer"
                                                         className="text-[10px] bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full hover:bg-blue-100 flex items-center gap-1"
@@ -463,39 +463,28 @@ const MatterDetailModal = ({ isOpen, onClose, matter, userId }: MatterDetailModa
                                                         <Play size={10} fill="currentColor" /> Audio
                                                     </a>
                                                 )}
-                                                {record.followUpDate && (
-                                                    <span className="text-[10px] bg-orange-50 text-orange-700 px-2 py-0.5 rounded-full">
-                                                        Follow-up: {new Date(record.followUpDate).toLocaleDateString()}
-                                                    </span>
-                                                )}
                                             </div>
                                         </div>
 
                                         <div className="text-sm text-slate-700 whitespace-pre-wrap mb-3 leading-relaxed">
-                                            {record.summary}
+                                            {record.transcriptText ? (record.transcriptText.substring(0, 300) + (record.transcriptText.length > 300 ? '...' : '')) : 'No transcript text available.'}
                                         </div>
 
-                                        {record.transcription && (
+                                        {record.transcriptText && (
                                             <div className="mt-3 border-t border-slate-200 pt-3">
                                                 <button
                                                     onClick={() => setExpandedTranscription(expandedTranscription === record.id ? null : record.id)}
                                                     className="flex items-center gap-1.5 text-xs font-medium text-slate-500 hover:text-slate-800 transition-colors"
                                                 >
                                                     <FileText size={14} />
-                                                    {expandedTranscription === record.id ? 'Hide Transcription' : 'View Full Transcription'}
+                                                    {expandedTranscription === record.id ? 'Hide Full Transcription' : 'View Full Transcription'}
                                                 </button>
 
                                                 {expandedTranscription === record.id && (
                                                     <div className="mt-2 text-xs text-slate-600 bg-white border border-slate-200 p-3 rounded-md font-mono max-h-[200px] overflow-y-auto leading-normal">
-                                                        {record.transcription}
+                                                        {record.transcriptText}
                                                     </div>
                                                 )}
-                                            </div>
-                                        )}
-
-                                        {record.actionItems && (
-                                            <div className="mt-3 bg-blue-50/50 border border-blue-100 p-2 rounded text-xs text-slate-700">
-                                                <strong className="text-blue-800">Action Items:</strong> {record.actionItems}
                                             </div>
                                         )}
                                     </div>
