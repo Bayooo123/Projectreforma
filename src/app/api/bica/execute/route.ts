@@ -4,25 +4,32 @@ import crypto from 'crypto';
 import { prisma } from '@/lib/prisma';
 import { JEQLCompiler } from '@/lib/jeql/compiler';
 import { JEQLQuery } from '@/lib/jeql/types';
+import { executeCrudPayload, CrudParameterSet, CrudError } from '@/lib/bica/crud-engine';
+
+// ---------------------------------------------------------------------------
+// Config
+// ---------------------------------------------------------------------------
 
 const SHARED_SECRET = process.env.BICA_SHARED_SECRET || 'dev_secret_keys';
+const HMAC_ENABLED = process.env.BICA_HMAC_ENABLED !== 'false'; // set to 'false' for local dev
 
-// --- AUTHENTICATION ---
+// ---------------------------------------------------------------------------
+// Security
+// ---------------------------------------------------------------------------
 
-async function verifySignature(req: NextRequest, body: string): Promise<boolean> {
-    const signatureHeader = req.headers.get('X-Custom-Platform-Signature');
-    if (!signatureHeader) return false;
+async function verifySignature(req: NextRequest, rawBody: string): Promise<boolean> {
+    if (!HMAC_ENABLED) return true; // dev bypass
 
-    const computedSignature = crypto
+    const receivedSig = req.headers.get('X-Custom-Platform-Signature');
+    if (!receivedSig) return false;
+
+    const expected = crypto
         .createHmac('sha256', SHARED_SECRET)
-        .update(body)
+        .update(rawBody)
         .digest('hex');
 
     try {
-        return crypto.timingSafeEqual(
-            Buffer.from(signatureHeader),
-            Buffer.from(computedSignature)
-        );
+        return crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(receivedSig));
     } catch {
         return false;
     }
@@ -30,186 +37,342 @@ async function verifySignature(req: NextRequest, body: string): Promise<boolean>
 
 function validateTimestamp(timestamp: string): boolean {
     const requestTime = new Date(timestamp).getTime();
-    const currentTime = Date.now();
-    const fiveMinutes = 5 * 60 * 1000;
-
-    return Math.abs(currentTime - requestTime) <= fiveMinutes;
+    if (isNaN(requestTime)) return false;
+    return Math.abs(Date.now() - requestTime) <= 5 * 60 * 1000; // ±5 minutes
 }
 
-// --- HANDLERS ---
+// ---------------------------------------------------------------------------
+// Workspace resolution
+// ---------------------------------------------------------------------------
 
-async function handleLookup(payload: any, workspaceId: string) {
-    const { query_lang, scope, operations } = payload;
-    if (query_lang !== 'jeql') {
-        throw new Error('Only JEQL is supported for lookups');
+/**
+ * Given a `platform_entity_id` (which maps to User.id in our system),
+ * return the workspace the user belongs to.
+ */
+async function resolveWorkspace(platformEntityId: string): Promise<{ workspaceId: string; userId: string }> {
+    const member = await prisma.workspaceMember.findFirst({
+        where: { userId: platformEntityId },
+        select: { workspaceId: true, userId: true },
+    });
+
+    if (!member) {
+        throw Object.assign(
+            new Error('User not found or has no workspace membership.'),
+            { bicaCode: 'UNAUTHORIZED' }
+        );
     }
 
-    const compiler = new JEQLCompiler();
-    const prismaArgs = compiler.compile(operations as JEQLQuery);
+    return { workspaceId: member.workspaceId, userId: member.userId };
+}
 
-    // Ensure workspace scoping
-    prismaArgs.where = {
-        ...prismaArgs.where,
-        workspaceId: workspaceId
-    };
+// ---------------------------------------------------------------------------
+// Label mapping — picks the best human-readable label for each model
+// ---------------------------------------------------------------------------
 
-    const modelName = scope.charAt(0).toLowerCase() + scope.slice(1);
-    // Use dynamic prisma collection
-    const records = await (prisma as any)[modelName].findMany(prismaArgs);
+function buildLabel(record: any, scope: string): string {
+    return (
+        record.name ||
+        record.title ||
+        record.caseNumber ||
+        record.briefNumber ||
+        record.id
+    );
+}
+
+function buildSecondaryLabel(record: any): string {
+    const parts: string[] = [];
+    if (record.status) parts.push(`[${record.status}]`);
+    if (record.email) parts.push(record.email);
+    if (record.date) parts.push(`[${new Date(record.date).toISOString().slice(0, 10)}]`);
+    if (record.dueDate) parts.push(`[Due: ${new Date(record.dueDate).toISOString().slice(0, 10)}]`);
+    if (record.createdAt) parts.push(`[Added: ${new Date(record.createdAt).toISOString().slice(0, 10)}]`);
+    return parts.slice(0, 3).join(' ').slice(0, 255);
+}
+
+const compiler = new JEQLCompiler();
+
+// ---------------------------------------------------------------------------
+// Handler: lookup (JEQL)
+// ---------------------------------------------------------------------------
+
+async function handleLookup(payload: any, workspaceId: string): Promise<any> {
+    const { query_lang, scope, operations } = payload;
+
+    if (query_lang !== 'jeql') {
+        throw Object.assign(new Error('Only query_lang "jeql" is supported for lookups.'), { bicaCode: 'VALIDATION_ERROR' });
+    }
+    if (!scope) {
+        throw Object.assign(new Error('lookup payload must include a "scope" field.'), { bicaCode: 'VALIDATION_ERROR' });
+    }
+
+    // Resolve scope → Prisma model key (accept both "clients" and "Client")
+    const modelKey = scope.charAt(0).toLowerCase() + scope.slice(1);
+    const delegate = (prisma as any)[modelKey];
+    if (!delegate) {
+        throw Object.assign(new Error(`Unknown scope: '${scope}'.`), { bicaCode: 'VALIDATION_ERROR' });
+    }
+
+    const prismaArgs = compiler.compile((operations || {}) as JEQLQuery);
+
+    // Enforce workspace scope
+    prismaArgs.where = { ...(prismaArgs.where || {}), workspaceId };
+
+    const records = await delegate.findMany(prismaArgs);
 
     return {
-        records: records.map((record: any) => ({
-            id: record.id,
-            label: record.name || record.title || record.caseNumber || record.briefNumber || record.id,
-            secondary_label: record.description || record.email || record.status || '',
-            confidence: 1.0
-        }))
+        matches: records.map((r: any) => ({
+            id: r.id,
+            label: buildLabel(r, scope),
+            secondaryLabel: buildSecondaryLabel(r),
+            confidence: 1.0,
+        })),
     };
 }
 
-async function handleWrite(payload: any, workspaceId: string) {
-    const { action, model, parameters } = payload;
-    const modelName = model.charAt(0).toLowerCase() + model.slice(1);
-    const modelDelegate = (prisma as any)[modelName];
+// ---------------------------------------------------------------------------
+// Handler: direct_lookup (text search)
+// ---------------------------------------------------------------------------
 
-    if (!modelDelegate) throw new Error(`Model ${model} not found`);
+async function handleDirectLookup(payload: any, workspaceId: string): Promise<any> {
+    const { relationName, queryText } = payload;
 
-    let affectedRecords: any[] = [];
-    let summary = '';
-
-    // Enforce workspaceId on parameters
-    const paramsWithScope = { ...parameters, workspaceId };
-
-    switch (action) {
-        case 'create':
-            const created = await modelDelegate.create({ data: paramsWithScope });
-            affectedRecords = [{ id: created.id, model }];
-            summary = `Successfully created ${model}`;
-            break;
-        case 'update':
-            const { id, ...updateData } = parameters;
-            const updated = await modelDelegate.update({
-                where: { id, workspaceId },
-                data: updateData
-            });
-            affectedRecords = [{ id: updated.id, model }];
-            summary = `Successfully updated ${model}`;
-            break;
-        case 'delete':
-            await modelDelegate.delete({
-                where: { id: parameters.id, workspaceId }
-            });
-            summary = `Successfully deleted ${model}`;
-            break;
-        default:
-            throw new Error(`Unsupported action: ${action}`);
+    if (!relationName || typeof queryText !== 'string') {
+        throw Object.assign(
+            new Error('direct_lookup requires "relationName" and "queryText".'),
+            { bicaCode: 'VALIDATION_ERROR' }
+        );
     }
 
-    return { affected_records: affectedRecords, summary };
-}
+    const modelKey = relationName.charAt(0).toLowerCase() + relationName.slice(1);
+    // Also try stripping trailing 's' for plural form
+    const singularKey = modelKey.endsWith('s') ? modelKey.slice(0, -1) : modelKey;
+    const delegate = (prisma as any)[modelKey] || (prisma as any)[singularKey];
 
-async function handleInsight(payload: any, workspaceId: string) {
-    const { query } = payload;
-
-    // WARNING: Extreme caution with raw SQL. This is a simplified implementation.
-    // In production, use parameter binding or a safe SQL builder.
-    const queryUpper = query.toUpperCase();
-    if (!queryUpper.includes('WHERE')) {
-        throw new Error('All analytic queries must specify a workspace context');
+    if (!delegate) {
+        throw Object.assign(new Error(`Unknown relationName: '${relationName}'.`), { bicaCode: 'VALIDATION_ERROR' });
     }
 
-    // Attempt to inject workspace constraint if not perfectly formed
-    // This is still risky; a better approach is required for production
-    const isolatedQuery = query.replace(/;/g, '') + ` AND workspaceId = '${workspaceId}'`;
+    const term = queryText.trim();
+    const searchWhere = {
+        workspaceId,
+        OR: [
+            { name: { contains: term, mode: 'insensitive' } },
+            { title: { contains: term, mode: 'insensitive' } },
+            { caseNumber: { contains: term, mode: 'insensitive' } },
+            { email: { contains: term, mode: 'insensitive' } },
+        ].filter(cond => {
+            // keep conditions only for string fields that may exist
+            return true; // Prisma ignores unknown field filters gracefully
+        }),
+    };
 
-    const results = await prisma.$queryRawUnsafe(isolatedQuery);
-    return results;
+    let records: any[] = [];
+    try {
+        records = await delegate.findMany({ where: searchWhere, take: 20 });
+    } catch (e: any) {
+        // If some OR fields don't exist on the model, fall back to just name/title
+        records = await delegate.findMany({
+            where: {
+                workspaceId,
+                OR: [
+                    { name: { contains: term, mode: 'insensitive' } },
+                    { title: { contains: term, mode: 'insensitive' } },
+                ],
+            },
+            take: 20,
+        });
+    }
+
+    return {
+        matches: records.map((r: any) => ({
+            id: r.id,
+            label: buildLabel(r, relationName),
+            secondaryLabel: buildSecondaryLabel(r),
+            confidence: 0.9,
+        })),
+    };
 }
 
-// --- MAIN ROUTE ---
+// ---------------------------------------------------------------------------
+// Handler: write (Crud)
+// ---------------------------------------------------------------------------
+
+async function handleWrite(payload: any, workspaceId: string): Promise<any> {
+    const { action, parameterSets } = payload;
+
+    if (action !== 'Crud') {
+        throw Object.assign(
+            new Error(`Unsupported write action '${action}'. Only 'Crud' is supported.`),
+            { bicaCode: 'VALIDATION_ERROR' }
+        );
+    }
+    if (!Array.isArray(parameterSets)) {
+        throw Object.assign(new Error('write payload must include a "parameterSets" array.'), { bicaCode: 'VALIDATION_ERROR' });
+    }
+
+    const results = await executeCrudPayload(parameterSets as CrudParameterSet[], workspaceId);
+    return { results };
+}
+
+// ---------------------------------------------------------------------------
+// Handler: preview (HTML card snippets)
+// ---------------------------------------------------------------------------
+
+async function handlePreview(payload: any, workspaceId: string): Promise<any> {
+    const { model, ids } = payload;
+
+    if (!model || !Array.isArray(ids) || ids.length === 0) {
+        throw Object.assign(new Error('preview requires "model" and a non-empty "ids" array.'), { bicaCode: 'VALIDATION_ERROR' });
+    }
+
+    const modelKey = model.charAt(0).toLowerCase() + model.slice(1);
+    const delegate = (prisma as any)[modelKey];
+    if (!delegate) {
+        throw Object.assign(new Error(`Unknown model: '${model}'.`), { bicaCode: 'VALIDATION_ERROR' });
+    }
+
+    const records = await delegate.findMany({
+        where: { id: { in: ids }, workspaceId },
+    });
+
+    const cardMap: Record<string, string> = {};
+    for (const r of records) {
+        const label = buildLabel(r, model);
+        const secondaryLabel = buildSecondaryLabel(r);
+        cardMap[r.id] = `<div class="bica-preview-card">
+  <h4 style="margin:0 0 4px;font-size:14px;">${escapeHtml(label)}</h4>
+  <p style="margin:0;font-size:12px;color:#666;">${escapeHtml(secondaryLabel)}</p>
+  <span style="font-size:11px;color:#999;">${escapeHtml(model)} · ${escapeHtml(r.id)}</span>
+</div>`;
+    }
+
+    return cardMap;
+}
+
+function escapeHtml(str: string): string {
+    return String(str || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+}
+
+// ---------------------------------------------------------------------------
+// Idempotency
+// ---------------------------------------------------------------------------
+
+async function checkIdempotency(operationId: string): Promise<any | null> {
+    const existing = await prisma.securityAuditLog.findFirst({
+        where: { event: 'BICA_EXECUTE', description: operationId },
+    });
+    return existing?.metadata || null;
+}
+
+async function logIdempotency(userId: string, operationId: string, resultData: any): Promise<void> {
+    await prisma.securityAuditLog.create({
+        data: {
+            userId,
+            event: 'BICA_EXECUTE',
+            description: operationId,
+            metadata: resultData as any,
+        },
+    });
+}
+
+// ---------------------------------------------------------------------------
+// Main route handler
+// ---------------------------------------------------------------------------
 
 export async function POST(req: NextRequest) {
+    let userId = 'unknown';
+
     try {
         const rawBody = await req.text();
 
-        // 1. Verify Signature
+        // 1. Verify HMAC signature
         if (!(await verifySignature(req, rawBody))) {
-            return NextResponse.json({ status: 'failed', error: { code: 'UNAUTHORIZED', message: 'Invalid signature' } }, { status: 401 });
+            return NextResponse.json(
+                { status: 'failed', data: null, error: { code: 'UNAUTHORIZED', message: 'Invalid or missing signature.' } },
+                { status: 401 }
+            );
         }
 
         const body = JSON.parse(rawBody);
         const { operation_type, operation_id, payload, user_context, timestamp } = body;
 
-        // 2. Validate Timestamp
-        if (!validateTimestamp(timestamp)) {
-            return NextResponse.json({ status: 'failed', error: { code: 'UNAUTHORIZED', message: 'Request stale' } }, { status: 401 });
+        // 2. Validate timestamp (replay protection)
+        if (!timestamp || !validateTimestamp(timestamp)) {
+            return NextResponse.json(
+                { status: 'failed', data: null, error: { code: 'UNAUTHORIZED', message: 'Request timestamp outside ±5 minute window.' } },
+                { status: 401 }
+            );
         }
 
-        // 3. Authorization & Workspace Scoping
-        const member = await prisma.workspaceMember.findFirst({
-            where: { userId: user_context.external_user_id },
-            include: { workspace: true }
-        });
-
-        if (!member) {
-            return NextResponse.json({ status: 'failed', error: { code: 'UNAUTHORIZED', message: 'User not found or no workspace access' } }, { status: 401 });
+        // 3. Resolve workspace from user_context
+        // user_context.platform_entity_id is the User.id in our system
+        const platformEntityId: string = user_context?.platform_entity_id || user_context?.external_user_id;
+        if (!platformEntityId) {
+            return NextResponse.json(
+                { status: 'failed', data: null, error: { code: 'UNAUTHORIZED', message: 'user_context.platform_entity_id is required.' } },
+                { status: 401 }
+            );
         }
 
-        const workspaceId = member.workspaceId;
+        const { workspaceId, userId: resolvedUserId } = await resolveWorkspace(platformEntityId);
+        userId = resolvedUserId;
 
-        // 4. Idempotency using SecurityAuditLog
-        const existingLog = await prisma.securityAuditLog.findFirst({
-            where: {
-                event: 'BICA_EXECUTE_IDEMPOTENCY',
-                description: operation_id
+        // 4. Idempotency check (skip for non-idempotent or test operations)
+        if (operation_id && !body.test_mode) {
+            const cached = await checkIdempotency(operation_id);
+            if (cached) {
+                return NextResponse.json({ status: 'success', data: cached, error: null });
             }
-        });
-
-        if (existingLog && existingLog.metadata) {
-            return NextResponse.json({ status: 'success', data: existingLog.metadata, error: null });
         }
 
-        // 5. Route Operations
+        // 5. Route by operation_type
         let resultData: any;
+
         switch (operation_type) {
             case 'lookup':
                 resultData = await handleLookup(payload, workspaceId);
                 break;
+            case 'direct_lookup':
+                resultData = await handleDirectLookup(payload, workspaceId);
+                break;
             case 'write':
                 resultData = await handleWrite(payload, workspaceId);
                 break;
-            case 'insight':
-                resultData = await handleInsight(payload, workspaceId);
+            case 'preview':
+                resultData = await handlePreview(payload, workspaceId);
                 break;
+            case 'insight':
+                return NextResponse.json(
+                    { status: 'failed', data: null, error: { code: 'UNSUPPORTED', message: 'Insight operations are not supported by this platform.' } },
+                    { status: 422 }
+                );
             default:
-                throw new Error(`Unsupported operation type: ${operation_type}`);
+                return NextResponse.json(
+                    { status: 'failed', data: null, error: { code: 'VALIDATION_ERROR', message: `Unknown operation_type: '${operation_type}'.` } },
+                    { status: 400 }
+                );
         }
 
-        // 6. Log for Idempotency
-        await prisma.securityAuditLog.create({
-            data: {
-                userId: user_context.external_user_id,
-                event: 'BICA_EXECUTE_IDEMPOTENCY',
-                description: operation_id,
-                metadata: resultData as any
-            }
-        });
+        // 6. Log for idempotency
+        if (operation_id && !body.test_mode) {
+            await logIdempotency(userId, operation_id, resultData);
+        }
 
-        return NextResponse.json({
-            status: 'success',
-            data: resultData,
-            error: null
-        });
+        return NextResponse.json({ status: 'success', data: resultData, error: null });
 
-    } catch (error: any) {
-        console.error('Bica Execution Error:', error);
-        return NextResponse.json({
-            status: 'failed',
-            data: null,
-            error: {
-                code: error.code || 'SERVER_ERROR',
-                message: error.message || 'An unexpected error occurred'
-            }
-        }, { status: 500 });
+    } catch (err: any) {
+        console.error('[BICA EXECUTE]', err);
+
+        const code = err.bicaCode || (err instanceof CrudError ? err.code : null) || 'SERVER_ERROR';
+        const httpStatus = code === 'UNAUTHORIZED' ? 401 : code === 'NOT_FOUND' ? 404 : 500;
+
+        return NextResponse.json(
+            { status: 'failed', data: null, error: { code, message: err.message || 'An unexpected error occurred.' } },
+            { status: httpStatus }
+        );
     }
 }

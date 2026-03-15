@@ -3,26 +3,24 @@ import { MissingRelationshipKeyException, InvalidComparisonException } from './e
 
 export class JEQLCompiler {
     /**
-     * Compiles a JEQL query into Prisma arguments.
+     * Compiles a JEQL query object into Prisma findMany/updateMany/etc. arguments.
      * @param query The JEQL query object.
-     * @param modelName Optional model name for validation purposes.
+     * @param modelName Optional model name for relationship key validation.
      */
     compile(query: JEQLQuery, modelName?: string): PrismaQueryArgs {
         const args: PrismaQueryArgs = {};
 
-        // 1. Handle Selection
-        if (query.$select) {
+        // 1. Handle Selection ($select)
+        if (query.$select && query.$select.length > 0) {
             args.select = {};
-            if (query.$select.length > 0) {
-                query.$select.forEach(field => {
-                    if (field.includes('.')) {
-                        throw new InvalidComparisonException(`Dot-notation not allowed in $select: '${field}'. Use $with to shape related fields.`);
-                    }
-                    args.select[field] = true;
-                });
-            } else {
-                delete args.select;
-            }
+            query.$select.forEach(field => {
+                if (field.includes('.')) {
+                    throw new InvalidComparisonException(
+                        `Dot-notation not allowed in $select: '${field}'. Use $with to shape related fields.`
+                    );
+                }
+                args.select[field] = true;
+            });
         }
 
         // 2. Handle Eager Loading ($with)
@@ -31,7 +29,7 @@ export class JEQLCompiler {
                 this.validateRelationshipKeys(modelName, relation, query.$select);
 
                 const subArgs = this.compile(subQuery);
-                
+
                 if (args.select) {
                     args.select[relation] = Object.keys(subArgs).length > 0 ? subArgs : true;
                 } else {
@@ -43,14 +41,11 @@ export class JEQLCompiler {
 
         // 2b. Handle Semantic Matches ($withSemanticMatches)
         if (query.$withSemanticMatches) {
-            // This is a specialized join. In JEQL/Prisma context, we might mock this
-            // or join a pre-defined relation if it exists.
-            // For now, we'll assume it maps to an 'include' or 'select' for 'semanticMatches'
             const relation = 'semanticMatches';
             const semanticArgs = {
                 where: {
-                    concept: typeof query.$withSemanticMatches === 'string' 
-                        ? query.$withSemanticMatches 
+                    concept: typeof query.$withSemanticMatches === 'string'
+                        ? query.$withSemanticMatches
                         : { in: Array.isArray(query.$withSemanticMatches) ? query.$withSemanticMatches : Object.values(query.$withSemanticMatches) }
                 }
             };
@@ -66,23 +61,26 @@ export class JEQLCompiler {
         // 3. Handle Filtering ($whereAll, $whereAny)
         const whereConditions: any[] = [];
         if (query.$whereAll) {
-            whereConditions.push({ AND: this.compileConditions(query.$whereAll) });
+            // Spread $whereAll into the main conditions to avoid redundant AND nesting
+            whereConditions.push(...this.compileConditions(query.$whereAll));
         }
         if (query.$whereAny) {
             whereConditions.push({ OR: this.compileConditions(query.$whereAny) });
         }
-        
-        // 4. Handle Relationship Filters ($whereHas, $whereNotHas)
+
+        // 4. Handle Relationship Existence Filters ($whereHas, $whereNotHas)
         if (query.$whereHas) {
-            for (const [relation, subQuery] of Object.entries(query.$whereHas)) {
-                const subWhere = this.compile(subQuery).where;
-                whereConditions.push({ [relation]: { some: subWhere || {} } });
+            for (const [relation, conditions] of query.$whereHas) {
+                const subConditions = this.compileConditions(conditions);
+                const subWhere = subConditions.length === 1 ? subConditions[0] : { AND: subConditions };
+                whereConditions.push({ [relation]: { some: subWhere } });
             }
         }
         if (query.$whereNotHas) {
-            for (const [relation, subQuery] of Object.entries(query.$whereNotHas)) {
-                const subWhere = this.compile(subQuery).where;
-                whereConditions.push({ [relation]: { none: subWhere || {} } });
+            for (const [relation, conditions] of query.$whereNotHas) {
+                const subConditions = this.compileConditions(conditions);
+                const subWhere = subConditions.length === 1 ? subConditions[0] : { AND: subConditions };
+                whereConditions.push({ [relation]: { none: subWhere } });
             }
         }
 
@@ -106,31 +104,40 @@ export class JEQLCompiler {
 
     private compileConditions(conditions: JEQLCondition[]): any[] {
         return conditions.map(condition => {
+            // Nested group: { $whereAll: [...] }
+            if (!Array.isArray(condition) && '$whereAll' in condition) {
+                return { AND: this.compileConditions(condition.$whereAll) };
+            }
+            // Nested group: { $whereAny: [...] }
+            if (!Array.isArray(condition) && '$whereAny' in condition) {
+                return { OR: this.compileConditions(condition.$whereAny) };
+            }
+
             if (Array.isArray(condition)) {
                 const [fields, operator, value] = condition;
-                
-                // Handle dot-notation validation (not allowed in direct wheres)
-                if (typeof fields === 'string' && fields.includes('.')) {
-                    throw new InvalidComparisonException(`Dot-notation not allowed in JEQL filters: '${fields}'. Use $whereHas instead.`);
+
+                // Dot-notation is not allowed in direct where filters
+                if (typeof fields === 'string' && fields.includes('.') && !fields.startsWith('semantic_match:')) {
+                    throw new InvalidComparisonException(
+                        `Dot-notation not allowed in JEQL filters: '${fields}'. Use $whereHas instead.`
+                    );
                 }
 
-                // Handle search across multiple columns (composite search)
+                // search operator: fuzzy text match across one or more columns
                 if (operator === 'search') {
                     return this.compileSearch(fields, value);
                 }
 
-                // Standard field condition
                 if (typeof fields === 'string') {
                     return this.mapCondition(fields, operator, value);
                 } else if (Array.isArray(fields)) {
-                    // Multi-column condition logic (if requested, currently only for search)
-                    throw new InvalidComparisonException(`Multi-column comparison only supported for 'search' operator.`);
+                    // Multi-column only supported for 'search'
+                    throw new InvalidComparisonException(
+                        `Multi-column comparison only supported for 'search' operator.`
+                    );
                 }
-            } else if ('$whereAll' in condition) {
-                return { AND: this.compileConditions(condition.$whereAll) };
-            } else if ('$whereAny' in condition) {
-                return { OR: this.compileConditions(condition.$whereAny) };
             }
+
             return {};
         });
     }
@@ -147,19 +154,17 @@ export class JEQLCompiler {
             case 'not in': return { [field]: { notIn: value } };
             case 'like': return { [field]: { contains: value.replace(/%/g, ''), mode: 'insensitive' } };
             case 'json_contains': return { [field]: { array_contains: value } };
-            
-            // Date Operators
-            case 'date=':
-            case '=': 
-                if (operator.startsWith('date')) return { [field]: { equals: new Date(value) } };
-                return { [field]: value };
+
+            // Date operators
+            case 'date=': return { [field]: { equals: new Date(value) } };
+            case 'date!=': return { [field]: { not: { equals: new Date(value) } } };
             case 'date>': return { [field]: { gt: new Date(value) } };
             case 'date<': return { [field]: { lt: new Date(value) } };
             case 'date>=': return { [field]: { gte: new Date(value) } };
             case 'date<=': return { [field]: { lte: new Date(value) } };
-            case 'date_between': 
+            case 'date_between':
                 return { [field]: { gte: new Date(value[0]), lte: new Date(value[1]) } };
-                
+
             default: return { [field]: value };
         }
     }
@@ -169,21 +174,18 @@ export class JEQLCompiler {
         const orConditions = columns.map(col => ({
             [col]: { contains: term, mode: 'insensitive' }
         }));
-        return { OR: orConditions };
+        return orConditions.length === 1 ? orConditions[0] : { OR: orConditions };
     }
 
     private validateRelationshipKeys(model?: string, relation?: string, selects?: string[]) {
-        // This requires knowledge of the schema's foreign keys.
-        // For now, it's a stub. In a real implementation, we'd lookup model relations.
         if (model && relation && selects && selects.length > 0) {
-            // Mock validation logic
             const schema: any = {
                 'Matter': {
                     'client': ['clientId'],
                     'lawyers': ['id']
                 }
             };
-            
+
             const requiredKeys = schema[model]?.[relation];
             if (requiredKeys) {
                 const missing = requiredKeys.filter((k: string) => !selects.includes(k));

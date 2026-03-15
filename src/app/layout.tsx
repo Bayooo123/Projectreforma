@@ -47,7 +47,7 @@ export default async function RootLayout({
   const rawPathname = headersList.get('x-pathname') || '';
   const pathname = rawPathname.replace(/\/$/, '') || '/'; // Normalize trailing slash
 
-  const PUBLIC_ROUTES = ['/', '/login', '/register', '/forgot-password', '/join'];
+  const PUBLIC_ROUTES = ['/', '/login', '/register', '/forgot-password', '/join', '/landing'];
   const isPublicRoute =
     PUBLIC_ROUTES.includes(pathname) ||
     pathname.startsWith('/join/');
