@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Clock, Tag, User, Building, Calendar, Upload, Loader, FileText, Trash2, Edit } from 'lucide-react';
+import { ArrowLeft, Clock, Tag, User, Building, Calendar, Upload, Loader, FileText, Trash2, Edit, Sparkles } from 'lucide-react';
 import { getBriefDisplayTitle, getBriefDisplayNumber } from '@/lib/brief-display';
 import DocumentUpload from '@/components/briefs/DocumentUpload';
 import DocumentPreview from '@/components/briefs/DocumentPreview';
@@ -21,6 +21,8 @@ interface Brief {
     dueDate: Date | null;
     createdAt: Date;
     updatedAt: Date;
+    summary: string | null;
+    lastSummarizedAt: Date | null;
     isLitigationDerived: boolean;
     customTitle: string | null;
     customBriefNumber: string | null;
@@ -72,6 +74,8 @@ interface BriefDetailClientProps {
 
 // import { BriefActivityLogInput } from '@/components/briefs/BriefActivityLogInput'; // Removed
 import { getDocuments } from '@/app/actions/documents';
+import { summarizeBrief } from '@/app/actions/briefs';
+import { toast } from 'react-hot-toast'; // Assuming react-hot-toast is used or available
 
 export default function BriefDetailClient({ brief }: BriefDetailClientProps) {
     const router = useRouter();
@@ -79,6 +83,8 @@ export default function BriefDetailClient({ brief }: BriefDetailClientProps) {
     const [previewDocument, setPreviewDocument] = useState<typeof documents[0] | null>(null);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [isRefreshing, setIsRefreshing] = useState(false);
+    const [summary, setSummary] = useState<string | null>(brief.summary);
+    const [isSummarizing, setIsSummarizing] = useState(false);
 
     const refreshDocuments = async (silent = false) => {
         if (!silent) setIsRefreshing(true);
@@ -99,6 +105,24 @@ export default function BriefDetailClient({ brief }: BriefDetailClientProps) {
         }
         // Background refresh to ensure everything is in sync
         refreshDocuments(true);
+    };
+
+    const handleSummarize = async () => {
+        setIsSummarizing(true);
+        try {
+            const result = await summarizeBrief(brief.id);
+            if (result.success && result.summary) {
+                setSummary(result.summary);
+                // toast.success('Summary updated!');
+            } else {
+                console.error('Summarization failed:', result.error);
+                // toast.error('Failed to generate summary');
+            }
+        } catch (err) {
+            console.error('Error in summarization:', err);
+        } finally {
+            setIsSummarizing(false);
+        }
     };
 
     const handleNavigateDocument = (direction: 'prev' | 'next') => {
@@ -166,6 +190,14 @@ export default function BriefDetailClient({ brief }: BriefDetailClientProps) {
                             <Hammer size={16} />
                             Open Drafting Studio
                         </Link> */}
+                        <button 
+                            className={styles.summarizeBtn} 
+                            onClick={handleSummarize}
+                            disabled={isSummarizing}
+                        >
+                            {isSummarizing ? <Loader size={16} className="animate-spin" /> : <Sparkles size={16} />}
+                            {isSummarizing ? 'Summarizing...' : 'Summarize with AI'}
+                        </button>
                         <button className={styles.editBtn} onClick={() => setIsEditModalOpen(true)}>
                             <Edit size={16} />
                             Edit Brief
@@ -217,10 +249,35 @@ export default function BriefDetailClient({ brief }: BriefDetailClientProps) {
                     )}
                 </div>
 
-                {brief.description && (
-                    <div className={styles.descriptionBox}>
-                        <h3 className={styles.descriptionTitle}>Description</h3>
-                        <p className={styles.descriptionText}>{brief.description}</p>
+                    </div>
+                )}
+
+                {(brief.description || summary) && (
+                    <div className={styles.descriptionRow}>
+                        {brief.description && (
+                            <div className={styles.descriptionBox}>
+                                <h3 className={styles.descriptionTitle}>Description</h3>
+                                <p className={styles.descriptionText}>{brief.description}</p>
+                            </div>
+                        )}
+                        {summary && (
+                            <div className={styles.summaryBox}>
+                                <div className={styles.summaryHeader}>
+                                    <Sparkles size={14} className={styles.summaryIcon} />
+                                    <h3 className={styles.summaryTitle}>AI Intelligence Summary</h3>
+                                </div>
+                                <div className={styles.summaryText}>
+                                    {summary.split('\n').map((line, i) => (
+                                        <p key={i} className="mb-2">{line}</p>
+                                    ))}
+                                </div>
+                                {brief.lastSummarizedAt && (
+                                    <span className={styles.summaryTime}>
+                                        Last updated: {formatDate(brief.lastSummarizedAt)}
+                                    </span>
+                                )}
+                            </div>
+                        )}
                     </div>
                 )}
             </div>

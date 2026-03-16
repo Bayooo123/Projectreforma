@@ -436,6 +436,10 @@ model Brief {
   updatedAt      DateTime  @updatedAt
   deletedAt      DateTime?
   inboundEmailId String    @unique @default(uuid())
+  
+  // NEW: Summarization
+  summary           String?
+  lastSummarizedAt  DateTime?
 
   // NEW: Source tracking
   isLitigationDerived Boolean @default(false)

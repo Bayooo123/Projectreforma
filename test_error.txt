@@ -1,0 +1,36 @@
+﻿Running JEQL Compiler Unit Tests...
+
+Γ£à PASSED: Basic select
+Γ£à PASSED: Simple whereAll
+Γ£à PASSED: Date greater than
+Γ£à PASSED: In operator
+Γ£à PASSED: Nested logical groups
+node.exe : Γ¥î 
+FAILED: whereHas
+At line:1 char:1
++ & "C:\Program Files\
+nodejs/node.exe" 
+"C:\Program 
+Files\nodejs/node_mo 
+...
++ ~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~
+~~~~~
+    + CategoryInfo    
+          : NotSpeci  
+  fied: (Γ¥î FAILED   
+ : whereHas:String    
+) [], RemoteExcep    
+tion
+    + FullyQualifiedE 
+   rrorId : NativeCo  
+  mmandError
+ 
+   Expected: {"where":
+{"briefs":{"some":{"AN
+D":[{"status":"filed"}
+]}}}}
+   Actual:   {"where":
+{"briefs":{"some":{"st
+atus":"filed"}}}}

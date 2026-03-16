@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { Search, Bell, ChevronDown } from 'lucide-react';
 import NotificationPopover from './NotificationPopover';
 import UserProfileMenu from './UserProfileMenu';
+import GlobalSearch from './GlobalSearch';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { getUserNotifications } from '@/app/actions/notifications';
 import styles from './Header.module.css';
@@ -67,12 +68,7 @@ const Header = ({ user, workspace }: HeaderProps) => {
             </div>
 
             <div className={styles.searchContainer}>
-                <Search size={18} className={styles.searchIcon} />
-                <input
-                    type="text"
-                    placeholder="Search for anything..."
-                    className={styles.searchInput}
-                />
+                {workspace?.id && <GlobalSearch workspaceId={workspace.id} />}
             </div>
 
             <div className={styles.rightSection}>

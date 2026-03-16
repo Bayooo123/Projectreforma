@@ -490,3 +490,17 @@ export async function assignLawyer(briefId: string, lawyerId: string) {
         return { success: false, error: 'Failed to assign lawyer' };
     }
 }
+
+export async function summarizeBrief(briefId: string) {
+    await requireAuth();
+    try {
+        const { BriefSummarizer } = await import('@/lib/services/summarizer');
+        const summary = await BriefSummarizer.summarize(briefId);
+        
+        revalidatePath(`/briefs/${briefId}`);
+        return { success: true, summary };
+    } catch (error: any) {
+        console.error('[summarizeBrief] Action Error:', error);
+        return { success: false, error: error.message || 'Summarization failed' };
+    }
+}

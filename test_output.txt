@@ -1,0 +1,14 @@
+﻿Running JEQL Compiler Unit Tests...
+
+Γ£à PASSED: Basic select
+Γ£à PASSED: Simple whereAll
+Γ£à PASSED: Date greater than
+Γ£à PASSED: In operator
+Γ£à PASSED: Nested logical groups
+Γ£à PASSED: whereHas
+Γ£à PASSED: whereNotHas
+Γ£à PASSED: Ordering and Pagination
+Γ£à PASSED: Search operator (single column)
+Γ£à PASSED: Search operator (multi column)
+
+All JEQL Unit Tests Passed!
