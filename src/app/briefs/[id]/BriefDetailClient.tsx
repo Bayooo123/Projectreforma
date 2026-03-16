@@ -75,7 +75,6 @@ interface BriefDetailClientProps {
 // import { BriefActivityLogInput } from '@/components/briefs/BriefActivityLogInput'; // Removed
 import { getDocuments } from '@/app/actions/documents';
 import { summarizeBrief } from '@/app/actions/briefs';
-import { toast } from 'react-hot-toast'; // Assuming react-hot-toast is used or available
 
 export default function BriefDetailClient({ brief }: BriefDetailClientProps) {
     const router = useRouter();
@@ -248,9 +247,6 @@ export default function BriefDetailClient({ brief }: BriefDetailClientProps) {
                         </div>
                     )}
                 </div>
-
-                    </div>
-                )}
 
                 {(brief.description || summary) && (
                     <div className={styles.descriptionRow}>
