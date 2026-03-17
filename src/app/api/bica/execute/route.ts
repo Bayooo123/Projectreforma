@@ -12,6 +12,7 @@ import { executeCrudPayload, CrudParameterSet, CrudError } from '@/lib/bica/crud
 
 const SHARED_SECRET = process.env.BICA_SHARED_SECRET || 'dev_secret_keys';
 const DANGEROUSLY_DISABLE_HMAC = true;
+console.log(`[BICA CONFIG] HMAC check: ${DANGEROUSLY_DISABLE_HMAC ? '❌ DISABLED (dev mode)' : '✅ ENABLED'}`);
 
 // ---------------------------------------------------------------------------
 // Security
@@ -291,6 +292,8 @@ export async function POST(req: NextRequest) {
 
     try {
         const rawBody = await req.text();
+        console.log('[BICA DEBUG] Raw body received:', JSON.stringify(rawBody));
+        console.log('[BICA DEBUG] Body length:', rawBody.length);
 
         // 1. Verify HMAC signature
         if (!(await verifySignature(req, rawBody))) {
@@ -304,7 +307,7 @@ export async function POST(req: NextRequest) {
         const { operation_type, operation_id, payload, user_context, timestamp } = body;
 
         // 2. Validate timestamp (replay protection)
-        if (!timestamp || !validateTimestamp(timestamp)) {
+        if (!DANGEROUSLY_DISABLE_HMAC && (!timestamp || !validateTimestamp(timestamp))) {
             return NextResponse.json(
                 { status: 'failed', data: null, error: { code: 'UNAUTHORIZED', message: 'Request timestamp outside ±5 minute window.' } },
                 { status: 401 }
