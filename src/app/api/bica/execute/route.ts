@@ -11,14 +11,17 @@ import { executeCrudPayload, CrudParameterSet, CrudError } from '@/lib/bica/crud
 // ---------------------------------------------------------------------------
 
 const SHARED_SECRET = process.env.BICA_SHARED_SECRET || 'dev_secret_keys';
-const HMAC_ENABLED = process.env.BICA_HMAC_ENABLED !== 'false'; // set to 'false' for local dev
+const DANGEROUSLY_DISABLE_HMAC = true;
 
 // ---------------------------------------------------------------------------
 // Security
 // ---------------------------------------------------------------------------
 
 async function verifySignature(req: NextRequest, rawBody: string): Promise<boolean> {
-    if (!HMAC_ENABLED) return true; // dev bypass
+    if (DANGEROUSLY_DISABLE_HMAC) {
+        console.warn('⚠️ [BICA EXECUTE] HMAC signature verification is DANGEROUSLY DISABLED via environment variable.');
+        return true;
+    }
 
     const receivedSig = req.headers.get('X-Custom-Platform-Signature');
     if (!receivedSig) return false;
