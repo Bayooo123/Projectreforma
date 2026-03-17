@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma';
 import { JEQLCompiler } from '@/lib/jeql/compiler';
 import { JEQLQuery } from '@/lib/jeql/types';
 import { executeCrudPayload, CrudParameterSet, CrudError } from '@/lib/bica/crud-engine';
+import { morphRegistry, UnknownMorphTypeError, MorphEntityNotFoundError } from '@/lib/bica/morph-registry';
 
 // ---------------------------------------------------------------------------
 // Config
@@ -46,27 +47,51 @@ function validateTimestamp(timestamp: string): boolean {
 }
 
 // ---------------------------------------------------------------------------
-// Workspace resolution
+// Entity + Workspace resolution
 // ---------------------------------------------------------------------------
 
 /**
- * Given a `platform_entity_id` (which maps to User.id in our system),
- * return the workspace the user belongs to.
+ * Step 1: Resolve the platform entity by its type and ID using the MorphRegistry.
+ * Throws if the type is unknown or the entity is not found.
  */
-async function resolveWorkspace(platformEntityId: string): Promise<{ workspaceId: string; userId: string }> {
-    const member = await prisma.workspaceMember.findFirst({
-        where: { userId: platformEntityId },
-        select: { workspaceId: true, userId: true },
-    });
+async function resolvePlatformEntity(type: string, id: string) {
+    return morphRegistry.resolve(type, id);
+}
 
-    if (!member) {
-        throw Object.assign(
-            new Error('User not found or has no workspace membership.'),
-            { bicaCode: 'UNAUTHORIZED' }
-        );
+/**
+ * Step 2: Given a resolved entity and its type, find the associated workspaceId.
+ *
+ * - "user"  → look up WorkspaceMember by userId
+ * - "firm"  → the entity IS the workspace; use its id directly
+ */
+async function resolveWorkspaceFromEntity(
+    entityType: string,
+    entity: Record<string, any>
+): Promise<{ workspaceId: string; userId: string }> {
+    switch (entityType) {
+        case 'user': {
+            const member = await prisma.workspaceMember.findFirst({
+                where: { userId: entity.id },
+                select: { workspaceId: true, userId: true },
+            });
+            if (!member) {
+                throw Object.assign(
+                    new Error(`User "${entity.id}" has no workspace membership.`),
+                    { bicaCode: 'UNAUTHORIZED' }
+                );
+            }
+            return { workspaceId: member.workspaceId, userId: entity.id };
+        }
+        case 'firm': {
+            // The firm entity IS the workspace
+            return { workspaceId: entity.id, userId: entity.id };
+        }
+        default:
+            throw Object.assign(
+                new Error(`No workspace resolution strategy defined for entity type "${entityType}".`),
+                { bicaCode: 'SERVER_ERROR' }
+            );
     }
-
-    return { workspaceId: member.workspaceId, userId: member.userId };
 }
 
 // ---------------------------------------------------------------------------
@@ -314,18 +339,25 @@ export async function POST(req: NextRequest) {
             );
         }
 
-        // 3. Resolve workspace from user_context
-        // user_context.platform_entity_id is the User.id in our system
-        const platformEntityId: string = user_context?.platform_entity_id || user_context?.external_user_id;
-        if (!platformEntityId) {
+        // 3. Resolve entity and workspace from user_context
+        // platform_entity_type is snake_case singular e.g. "user", "firm"
+        const platformEntityType: string = user_context?.platform_entity_type;
+        const platformEntityId: string   = user_context?.platform_entity_id;
+
+        if (!platformEntityType || !platformEntityId) {
             return NextResponse.json(
-                { status: 'failed', data: null, error: { code: 'UNAUTHORIZED', message: 'user_context.platform_entity_id is required.' } },
+                { status: 'failed', data: null, error: { code: 'UNAUTHORIZED', message: 'user_context must include platform_entity_type and platform_entity_id.' } },
                 { status: 401 }
             );
         }
 
-        const { workspaceId, userId: resolvedUserId } = await resolveWorkspace(platformEntityId);
+        // Step 1: Load the entity from the morph registry
+        const entity = await resolvePlatformEntity(platformEntityType, platformEntityId);
+
+        // Step 2: Derive workspace context from the entity
+        const { workspaceId, userId: resolvedUserId } = await resolveWorkspaceFromEntity(platformEntityType, entity);
         userId = resolvedUserId;
+
 
         // 4. Idempotency check (skip for non-idempotent or test operations)
         if (operation_id && !body.test_mode) {
@@ -373,8 +405,13 @@ export async function POST(req: NextRequest) {
     } catch (err: any) {
         console.error('[BICA EXECUTE]', err);
 
-        const code = err.bicaCode || (err instanceof CrudError ? err.code : null) || 'SERVER_ERROR';
-        const httpStatus = code === 'UNAUTHORIZED' ? 401 : code === 'NOT_FOUND' ? 404 : 500;
+        const code =
+            err.bicaCode ||
+            (err instanceof CrudError ? err.code : null) ||
+            (err instanceof UnknownMorphTypeError ? 'VALIDATION_ERROR' : null) ||
+            (err instanceof MorphEntityNotFoundError ? 'NOT_FOUND' : null) ||
+            'SERVER_ERROR';
+        const httpStatus = code === 'UNAUTHORIZED' ? 401 : code === 'NOT_FOUND' ? 404 : code === 'VALIDATION_ERROR' ? 400 : 500;
 
         return NextResponse.json(
             { status: 'failed', data: null, error: { code, message: err.message || 'An unexpected error occurred.' } },
