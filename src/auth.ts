@@ -9,6 +9,7 @@ import bcrypt from "bcryptjs"
 import Resend from "next-auth/providers/resend"
 import { mailService } from "@/lib/services/mail/mail"
 import { getVerificationEmail } from "@/lib/services/mail/templates"
+import { logSecurityEvent, SecurityEvent } from "@/lib/services/auth/audit"
 
 // Valid role types for type safety
 import { RoleValue } from "@/lib/roles"
@@ -20,6 +21,18 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
     ...authConfig,
     adapter: PrismaAdapter(prisma),
     session: { strategy: "jwt" },
+    // Secure session cookies
+    cookies: {
+        sessionToken: {
+            options: {
+                httpOnly: true,
+                sameSite: 'lax' as const,
+                path: '/',
+                secure: process.env.NODE_ENV === 'production',
+            },
+        },
+    },
+    trustHost: true,
     providers: [
         Resend({
             from: process.env.MAIL_FROM || "Reforma <Registration@reforma.ng>",
@@ -83,7 +96,7 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
                 const parsedCredentials = z
                     .object({
                         email: z.string().email(),
-                        password: z.string().min(6),
+                        password: z.string().min(8, 'Password must be at least 8 characters'),
                         firmCode: z.string().optional(),
                         firmPassword: z.string().optional()
                     })
@@ -109,15 +122,20 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
                         include: { workspaces: true }
                     });
 
-                    if (!user || !user.password) return null;
-                    if (!await bcrypt.compare(password, user.password)) return null;
-
-                    // CHECK EMAIL VERIFICATION - Temporarily bypassed for existing accounts
-                    /*
-                    if (!user.emailVerified) {
-                        throw new Error('Email not verified. Please check your inbox.');
+                    if (!user || !user.password) {
+                        await logSecurityEvent({ event: SecurityEvent.LOGIN_FAILURE, description: `Login attempt for non-existent/password-less account: ${email}`, req: null as any });
+                        return null;
                     }
-                    */
+                    if (!await bcrypt.compare(password, user.password)) {
+                        await logSecurityEvent({ userId: user.id, event: SecurityEvent.LOGIN_FAILURE, description: `Incorrect password for ${email}`, req: null as any });
+                        return null;
+                    }
+
+                    // Email verification: warn if unverified but allow login (grace period)
+                    // To enforce hard block, change to: throw new Error('Email not verified.')
+                    if (!user.emailVerified) {
+                        console.warn(`[Auth] Unverified email login allowed (grace period): ${email}`);
+                    }
 
                     // If checking firm context, verify membership
                     if (workspaceId) {

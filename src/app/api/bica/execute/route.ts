@@ -12,8 +12,14 @@ import { morphRegistry, UnknownMorphTypeError, MorphEntityNotFoundError } from '
 // ---------------------------------------------------------------------------
 
 const SHARED_SECRET = process.env.BICA_SHARED_SECRET || 'dev_secret_keys';
-const DANGEROUSLY_DISABLE_HMAC = true;
-console.log(`[BICA CONFIG] HMAC check: ${DANGEROUSLY_DISABLE_HMAC ? '❌ DISABLED (dev mode)' : '✅ ENABLED'}`);
+// Set BICA_DISABLE_HMAC=true in .env to disable signature verification in development ONLY.
+// Production should NEVER set this to true.
+const DANGEROUSLY_DISABLE_HMAC = process.env.BICA_DISABLE_HMAC === 'true';
+if (DANGEROUSLY_DISABLE_HMAC) {
+    console.warn('⚠️ [BICA CONFIG] HMAC signature verification is DISABLED via BICA_DISABLE_HMAC env var. This must NOT be set in production.');
+} else {
+    console.log('[BICA CONFIG] ✅ HMAC signature verification is ENABLED.');
+}
 
 // ---------------------------------------------------------------------------
 // Security

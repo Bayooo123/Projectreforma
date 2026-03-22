@@ -1,12 +1,16 @@
 
 import { prisma } from '@/lib/prisma';
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { nanoid } from 'nanoid';
+import { requirePlatformAdminRoute } from '@/lib/admin-guard';
 
 // Prevent caching
 export const dynamic = 'force-dynamic';
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+    const guardResponse = await requirePlatformAdminRoute(req);
+    if (guardResponse) return guardResponse;
+
     try {
         // 1. Find all workspaces
         const workspaces = await prisma.workspace.findMany();

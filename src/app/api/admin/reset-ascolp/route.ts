@@ -1,10 +1,14 @@
 
 import { prisma } from '@/lib/prisma';
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { requirePlatformAdminRoute } from '@/lib/admin-guard';
 
 export const dynamic = 'force-dynamic';
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+    const guardResponse = await requirePlatformAdminRoute(req);
+    if (guardResponse) return guardResponse;
+
     try {
         const results = {
             deletedMembers: 0,

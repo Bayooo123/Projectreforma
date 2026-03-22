@@ -4,18 +4,30 @@ import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
 import { validatePasswordResetToken } from '@/lib/services/auth/tokens';
 import { logSecurityEvent, SecurityEvent } from '@/lib/services/auth/audit';
+import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
+import { z } from 'zod';
+
+const schema = z.object({
+    token: z.string().min(1, 'Token is required'),
+    password: z.string().min(8, 'Password must be at least 8 characters'),
+});
 
 export async function POST(req: NextRequest) {
+    // Rate limit: 5 requests per 15 minutes per IP
+    const ip = getClientIp(req);
+    const limited = await checkRateLimit(`reset-password:${ip}`, 5, 15 * 60 * 1000);
+    if (limited) {
+        return NextResponse.json({ error: 'Too many requests. Please try again later.' }, { status: 429 });
+    }
+
     try {
-        const { token, password } = await req.json();
-
-        if (!token || !password) {
-            return NextResponse.json({ error: 'Missing token or password' }, { status: 400 });
+        const body = await req.json();
+        const parsed = schema.safeParse(body);
+        if (!parsed.success) {
+            return NextResponse.json({ error: parsed.error.issues[0]?.message || 'Invalid input' }, { status: 400 });
         }
+        const { token, password } = parsed.data;
 
-        if (password.length < 8) {
-            return NextResponse.json({ error: 'Password must be at least 8 characters long' }, { status: 400 });
-        }
 
         const resetRequest = await validatePasswordResetToken(token);
 

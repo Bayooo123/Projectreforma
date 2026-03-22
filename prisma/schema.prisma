@@ -100,6 +100,8 @@ model User {
   jobTitle               String?
   lawyerToken            String?               @unique
   isPlatformAdmin        Boolean               @default(false)
+  mfaEnabled             Boolean               @default(false)
+  mfaSecret              String?
   accounts               Account[]
   apiKeys                ApiKey[]
   createdBriefs          Brief[]               @relation("BriefCreator")

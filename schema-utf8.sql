@@ -254,22 +254,18 @@ CREATE TABLE "CalendarEntry" (
 );
 
 -- CreateTable
-CREATE TABLE "MeetingRecord" (
+CREATE TABLE "MeetingRecording" (
     "id" TEXT NOT NULL,
     "calendarEntryId" TEXT,
     "matterId" TEXT,
-    "date" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "participants" JSONB,
-    "summary" TEXT NOT NULL,
-    "actionItems" TEXT,
-    "followUpDate" TIMESTAMP(3),
-    "audioUrl" TEXT,
-    "transcription" TEXT,
-    "audioDuration" INTEGER,
+    "audioFileUrl" TEXT,
+    "transcriptText" TEXT,
+    "recordingDuration" INTEGER,
+    "createdById" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
-    CONSTRAINT "MeetingRecord_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "MeetingRecording_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -332,6 +328,8 @@ CREATE TABLE "Brief" (
     "updatedAt" TIMESTAMP(3) NOT NULL,
     "deletedAt" TIMESTAMP(3),
     "inboundEmailId" TEXT NOT NULL,
+    "summary" TEXT,
+    "lastSummarizedAt" TIMESTAMP(3),
     "isLitigationDerived" BOOLEAN NOT NULL DEFAULT false,
     "customTitle" TEXT,
     "lawyerInChargeId" TEXT,
@@ -836,13 +834,13 @@ CREATE INDEX "CalendarEntry_date_idx" ON "CalendarEntry"("date");
 CREATE INDEX "CalendarEntry_submittingLawyerId_idx" ON "CalendarEntry"("submittingLawyerId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "MeetingRecord_calendarEntryId_key" ON "MeetingRecord"("calendarEntryId");
+CREATE UNIQUE INDEX "MeetingRecording_calendarEntryId_key" ON "MeetingRecording"("calendarEntryId");
 
 -- CreateIndex
-CREATE INDEX "MeetingRecord_matterId_idx" ON "MeetingRecord"("matterId");
+CREATE INDEX "MeetingRecording_matterId_idx" ON "MeetingRecording"("matterId");
 
 -- CreateIndex
-CREATE INDEX "MeetingRecord_calendarEntryId_idx" ON "MeetingRecord"("calendarEntryId");
+CREATE INDEX "MeetingRecording_calendarEntryId_idx" ON "MeetingRecording"("calendarEntryId");
 
 -- CreateIndex
 CREATE INDEX "ScheduledNotification_status_scheduledFor_idx" ON "ScheduledNotification"("status", "scheduledFor");
@@ -1109,10 +1107,10 @@ ALTER TABLE "CalendarEntry" ADD CONSTRAINT "CalendarEntry_clientId_fkey" FOREIGN
 ALTER TABLE "CalendarEntry" ADD CONSTRAINT "CalendarEntry_matterId_fkey" FOREIGN KEY ("matterId") REFERENCES "Matter"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "MeetingRecord" ADD CONSTRAINT "MeetingRecord_calendarEntryId_fkey" FOREIGN KEY ("calendarEntryId") REFERENCES "CalendarEntry"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "MeetingRecording" ADD CONSTRAINT "MeetingRecording_calendarEntryId_fkey" FOREIGN KEY ("calendarEntryId") REFERENCES "CalendarEntry"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "MeetingRecord" ADD CONSTRAINT "MeetingRecord_matterId_fkey" FOREIGN KEY ("matterId") REFERENCES "Matter"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "MeetingRecording" ADD CONSTRAINT "MeetingRecording_matterId_fkey" FOREIGN KEY ("matterId") REFERENCES "Matter"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "ScheduledNotification" ADD CONSTRAINT "ScheduledNotification_complianceTaskId_fkey" FOREIGN KEY ("complianceTaskId") REFERENCES "ComplianceTask"("id") ON DELETE CASCADE ON UPDATE CASCADE;

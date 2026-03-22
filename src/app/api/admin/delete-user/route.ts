@@ -1,12 +1,17 @@
 
 import { prisma } from '@/lib/prisma';
 import { NextRequest, NextResponse } from 'next/server';
+import { requirePlatformAdminRoute } from '@/lib/admin-guard';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
+    const guardResponse = await requirePlatformAdminRoute(request);
+    if (guardResponse) return guardResponse;
+
     const searchParams = request.nextUrl.searchParams;
     const email = searchParams.get('email');
+
 
     if (!email) {
         return NextResponse.json({ error: 'Email query parameter is required' }, { status: 400 });

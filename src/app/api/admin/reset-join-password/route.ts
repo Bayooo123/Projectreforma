@@ -2,13 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
 import { nanoid } from 'nanoid';
-
-// Admin endpoint to reset workspace join password
-// Usage: POST /api/admin/reset-join-password
-// Body: { workspaceName: "ASCOLP", newPassword: "mynewpassword" }
-// If no newPassword provided, auto-generates one
+import { requirePlatformAdminRoute } from '@/lib/admin-guard';
 
 export async function POST(req: NextRequest) {
+    const guardResponse = await requirePlatformAdminRoute(req);
+    if (guardResponse) return guardResponse;
+
     try {
         const body = await req.json();
         const { workspaceName, newPassword } = body;

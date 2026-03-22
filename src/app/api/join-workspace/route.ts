@@ -1,15 +1,33 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
+import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
+import { z } from 'zod';
+
+const schema = z.object({
+    token: z.string().min(1, 'Invite token is required'),
+    name: z.string().min(2, 'Name must be at least 2 characters').max(100),
+    email: z.string().email('A valid email is required'),
+    phone: z.string().optional(),
+    password: z.string().min(8, 'Password must be at least 8 characters'),
+});
 
 // API endpoint for joining a workspace via invite token
 export async function POST(req: NextRequest) {
-    try {
-        const { token, name, email, phone, password } = await req.json();
+    // Rate limit: 10 requests per hour per IP
+    const ip = getClientIp(req);
+    const limited = await checkRateLimit(`join-workspace:${ip}`, 10, 60 * 60 * 1000);
+    if (limited) {
+        return NextResponse.json({ error: 'Too many requests. Please try again later.' }, { status: 429 });
+    }
 
-        if (!token || !name || !email || !password) {
-            return NextResponse.json({ error: 'All fields are required' }, { status: 400 });
+    try {
+        const body = await req.json();
+        const parsed = schema.safeParse(body);
+        if (!parsed.success) {
+            return NextResponse.json({ error: parsed.error.issues[0]?.message || 'Invalid input' }, { status: 400 });
         }
+        const { token, name, email, phone, password } = parsed.data;
 
         // Find workspace by invite token
         const workspace = await prisma.workspace.findUnique({

@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-
-// Admin endpoint to retrieve workspace credentials
-// Usage: GET /api/admin/workspace-info?name=ASCOLP
-// WARNING: This is for admin use only - do not expose in production without auth
+import { requirePlatformAdminRoute } from '@/lib/admin-guard';
 
 export async function GET(req: NextRequest) {
+    const guardResponse = await requirePlatformAdminRoute(req);
+    if (guardResponse) return guardResponse;
+
     const name = req.nextUrl.searchParams.get('name');
 
     if (!name) {
