@@ -10,9 +10,10 @@ import styles from "./Compliance.module.css";
 interface ComplianceTableProps {
     tasks: ComplianceTask[];
     onUpdate: () => void;
+    onEdit?: (task: ComplianceTask) => void;
 }
 
-export default function ComplianceTable({ tasks, onUpdate }: ComplianceTableProps) {
+export default function ComplianceTable({ tasks, onUpdate, onEdit }: ComplianceTableProps) {
     const [uploadingId, setUploadingId] = useState<string | null>(null);
 
     const handleFileUpload = async (taskId: string, e: React.ChangeEvent<HTMLInputElement>) => {
@@ -178,7 +179,7 @@ export default function ComplianceTable({ tasks, onUpdate }: ComplianceTableProp
                                     )}
                                     <button
                                         className={styles.editBtn}
-                                        onClick={() => alert('Edit Obligation functionality is enabled and will open a side panel in the next update.')}
+                                        onClick={() => onEdit && onEdit(task)}
                                         title="Edit Obligation"
                                     >
                                         <Edit2 size={14} />
