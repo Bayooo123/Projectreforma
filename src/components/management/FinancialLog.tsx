@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { TrendingDown, Plus } from 'lucide-react';
 import ExpenseModal from './ExpenseModal';
+import ExpensePeriodFilter, { DateRange } from './ExpensePeriodFilter';
 import styles from './FinancialLog.module.css';
 
 interface Expense {
@@ -37,15 +38,24 @@ const FinancialLog = ({ workspaceId, initialExpenses, initialSummaries }: Financ
     const [expenses, setExpenses] = useState<Expense[]>(initialExpenses);
     const [dailySummaries, setDailySummaries] = useState<any[]>(initialSummaries);
     const [isExpenseModalOpen, setIsExpenseModalOpen] = useState(false);
-    const [isLoading, setIsLoading] = useState(false); // Default to false since we have initial data
+    const [isLoading, setIsLoading] = useState(false);
+    const [activeRange, setActiveRange] = useState<DateRange | null>(null);
 
-    const fetchExpenses = async () => {
+    const fetchExpenses = async (rangeOverride?: DateRange) => {
         setIsLoading(true);
         try {
-            const queryParams = new URLSearchParams({
-                filter: 'this-month',
-                workspaceId: workspaceId,
-            });
+            const rangeToUse = rangeOverride || activeRange;
+            const params: any = { workspaceId: workspaceId };
+            
+            if (rangeToUse) {
+                params.filter = 'date-range';
+                params.startDate = rangeToUse.startDate;
+                params.endDate = rangeToUse.endDate;
+            } else {
+                params.filter = 'this-month';
+            }
+            
+            const queryParams = new URLSearchParams(params);
             const response = await fetch(`/api/expenses?${queryParams}`);
             const data = await response.json();
 
@@ -69,6 +79,11 @@ const FinancialLog = ({ workspaceId, initialExpenses, initialSummaries }: Financ
 
     const handleExpenseAdded = () => {
         fetchExpenses();
+    };
+
+    const handleRangeChange = (range: DateRange) => {
+        setActiveRange(range);
+        fetchExpenses(range);
     };
 
     const handleDateClick = (date: string) => {
@@ -116,13 +131,16 @@ const FinancialLog = ({ workspaceId, initialExpenses, initialSummaries }: Financ
             <div className={styles.header}>
                 <div>
                     <h2 className={styles.title}>
-                        {viewMode === 'summary' ? 'Expense Log (This Month)' : formatDisplayDate(selectedDate!)}
+                        {viewMode === 'summary' ? (activeRange ? `Expense Log (${activeRange.label})` : 'Expense Log') : formatDisplayDate(selectedDate!)}
                     </h2>
                     <p className={styles.subtitle}>
                         {viewMode === 'summary' ? 'Daily breakdown' : 'Detailed transactions'}
                     </p>
                 </div>
-                <div style={{ display: 'flex', gap: '10px' }}>
+                <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                    {viewMode === 'summary' && (
+                        <ExpensePeriodFilter onChange={handleRangeChange} />
+                    )}
                     {viewMode === 'detail' && (
                         <button className={styles.secondaryBtn} onClick={handleBackToSummary}>
                             ← Back to Summary
@@ -142,7 +160,7 @@ const FinancialLog = ({ workspaceId, initialExpenses, initialSummaries }: Financ
                             <TrendingDown size={20} />
                         </div>
                         <div>
-                            <p className={styles.summaryLabel}>Total This Month</p>
+                            <p className={styles.summaryLabel}>Total for Period</p>
                             <p className={styles.summaryValue}>{formatCurrency(totalPeriodExpenses)}</p>
                         </div>
                     </div>
