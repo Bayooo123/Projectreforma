@@ -12,13 +12,13 @@ datasource db {
 
 model Workspace {
   id                String                @id @default(cuid())
-  name              String
-  slug              String                @unique
+  name              String                /// @searchable
+  slug              String                @unique /// @searchable
   ownerId           String
   plan              String                @default("free")
   createdAt         DateTime              @default(now())
   updatedAt         DateTime              @updatedAt
-  firmCode          String?               @unique
+  firmCode          String?               @unique /// @searchable
   joinPassword      String?
   letterheadUrl     String?
   revenuePin        String?
@@ -89,8 +89,8 @@ model Invitation {
 
 model User {
   id                     String                @id @default(cuid())
-  name                   String?
-  email                  String                @unique
+  name                   String?               /// @searchable
+  email                  String                @unique /// @searchable
   password               String?
   createdAt              DateTime              @default(now())
   updatedAt              DateTime              @updatedAt
@@ -247,8 +247,8 @@ model NotificationRule {
 
 model Matter {
   id                    String                @id @default(cuid())
-  caseNumber            String?               @unique
-  name                  String
+  caseNumber            String?               @unique /// @searchable
+  name                  String                /// @searchable
   clientId              String?
   clientNameRaw         String?
   workspaceId           String
@@ -424,8 +424,8 @@ model ClientCommunication {
 
 model Brief {
   id             String    @id @default(cuid())
-  briefNumber    String    @unique
-  name           String
+  briefNumber    String    @unique /// @searchable
+  name           String    /// @searchable
   clientId       String?
   matterId       String?
   lawyerId       String
@@ -506,10 +506,10 @@ model DocumentChunk {
 
 model Client {
   id                   String                @id @default(cuid())
-  name                 String
-  email                String                @unique
+  name                 String                /// @searchable
+  email                String                @unique /// @searchable
   phone                String?
-  company              String?
+  company              String?               /// @searchable
   industry             String?
   status               String                @default("active")
   workspaceId          String
@@ -529,7 +529,7 @@ model Client {
 
 model Invoice {
   id                   String         @id @default(cuid())
-  invoiceNumber        String         @unique
+  invoiceNumber        String         @unique /// @searchable
   clientId             String
   matterId             String?
   date                 DateTime       @default(now())
@@ -608,9 +608,9 @@ model Expense {
   workspaceId String
   category    ExpenseCategory @default(MISCELLANEOUS) // Default for migration safety, will act as fallback
   amount      Int
-  description String?
+  description String?               /// @searchable
   date        DateTime        @default(now())
-  reference   String?
+  reference   String?               /// @searchable
   createdAt   DateTime        @default(now())
   updatedAt   DateTime        @updatedAt
   workspace   Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
@@ -621,8 +621,8 @@ model Expense {
 
 model Task {
   id           String    @id @default(cuid())
-  title        String
-  description  String?
+  title        String    /// @searchable
+  description  String?   /// @searchable
   assignedToId String?
   assignedById String
   workspaceId  String

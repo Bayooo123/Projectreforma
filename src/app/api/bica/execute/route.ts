@@ -6,6 +6,7 @@ import { JEQLCompiler } from '@/lib/jeql/compiler';
 import { JEQLQuery } from '@/lib/jeql/types';
 import { executeCrudPayload, CrudParameterSet, CrudError } from '@/lib/bica/crud-engine';
 import { morphRegistry, UnknownMorphTypeError, MorphEntityNotFoundError } from '@/lib/bica/morph-registry';
+import { getSearchableFields, getModelKey } from '@/lib/bica/search-config';
 import { config } from '@/lib/config';
 
 // ---------------------------------------------------------------------------
@@ -179,45 +180,27 @@ async function handleDirectLookup(payload: any, workspaceId: string): Promise<an
         );
     }
 
-    const modelKey = relationName.charAt(0).toLowerCase() + relationName.slice(1);
-    // Also try stripping trailing 's' for plural form
-    const singularKey = modelKey.endsWith('s') ? modelKey.slice(0, -1) : modelKey;
-    const delegate = (prisma as any)[modelKey] || (prisma as any)[singularKey];
+    const modelKey = getModelKey(relationName);
+    const delegate = (prisma as any)[modelKey];
 
     if (!delegate) {
-        throw Object.assign(new Error(`Unknown relationName: '${relationName}'.`), { bicaCode: 'VALIDATION_ERROR' });
+        throw Object.assign(new Error(`Unknown relationName: '${relationName}' (resolved to '${modelKey}').`), { bicaCode: 'VALIDATION_ERROR' });
     }
 
     const term = queryText.trim();
+    const searchableFields = getSearchableFields(modelKey);
+
     const searchWhere = {
         workspaceId,
-        OR: [
-            { name: { contains: term, mode: 'insensitive' } },
-            { title: { contains: term, mode: 'insensitive' } },
-            { caseNumber: { contains: term, mode: 'insensitive' } },
-            { email: { contains: term, mode: 'insensitive' } },
-        ].filter(cond => {
-            // keep conditions only for string fields that may exist
-            return true; // Prisma ignores unknown field filters gracefully
-        }),
+        OR: searchableFields.map(field => ({
+            [field]: { contains: term, mode: 'insensitive' }
+        }))
     };
 
-    let records: any[] = [];
-    try {
-        records = await delegate.findMany({ where: searchWhere, take: 20 });
-    } catch (e: any) {
-        // If some OR fields don't exist on the model, fall back to just name/title
-        records = await delegate.findMany({
-            where: {
-                workspaceId,
-                OR: [
-                    { name: { contains: term, mode: 'insensitive' } },
-                    { title: { contains: term, mode: 'insensitive' } },
-                ],
-            },
-            take: 20,
-        });
-    }
+    const records = await delegate.findMany({
+        where: searchWhere,
+    });
+
 
     return {
         matches: records.map((r: any) => ({

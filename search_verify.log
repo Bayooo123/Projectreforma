@@ -1,0 +1,13 @@
+﻿--- Search Config Verification ---
+Input: "Client" -> ModelKey: "client" -> Fields: [name, email, company]
+Input: "Clients" -> ModelKey: "client" -> Fields: [name, email, company]
+Input: "Matter" -> ModelKey: "matter" -> Fields: [name, caseNumber]
+Input: "Matters" -> ModelKey: "matter" -> Fields: [name, caseNumber]
+Input: "Brief" -> ModelKey: "brief" -> Fields: [name, briefNumber]
+Input: "Briefs" -> ModelKey: "brief" -> Fields: [name, briefNumber]
+Input: "Task" -> ModelKey: "task" -> Fields: [title, description]
+Input: "Tasks" -> ModelKey: "task" -> Fields: [title, description]
+Input: "Invoice" -> ModelKey: "invoice" -> Fields: [invoiceNumber]
+Input: "Expense" -> ModelKey: "expense" -> Fields: [description, reference]
+Input: "UnknownModel" -> ModelKey: "unknownModel" -> Fields: [name]
+---------------------------------
