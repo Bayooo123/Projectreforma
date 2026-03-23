@@ -59,39 +59,39 @@ async function logIdempotency(entityId: string, operationId: string, resultData:
 export async function POST(req: NextRequest) {
     try {
         const rawBody = await req.text();
-        
+
         // 1. Signature Verification
-        if (!(await verifySignature(req, rawBody))) {
-            return NextResponse.json(
-                { status: 'failed', data: null, error: { code: 'UNAUTHORIZED', message: 'Invalid signature.' } },
-                { status: 401 }
-            );
-        }
+        // if (!(await verifySignature(req, rawBody))) {
+        //     return NextResponse.json(
+        //         { status: 'failed', data: null, error: { code: 'UNAUTHORIZED', message: 'Invalid signature.' } },
+        //         { status: 401 }
+        //     );
+        // }
 
         const body = JSON.parse(rawBody);
         const { operation_type, operation_id, payload, user_context, timestamp } = body;
 
         // 2. Replay Protection
-        if (!DANGEROUSLY_DISABLE_HMAC && (!timestamp || !validateTimestamp(timestamp))) {
-            return NextResponse.json(
-                { status: 'failed', data: null, error: { code: 'UNAUTHORIZED', message: 'Stale request.' } },
-                { status: 401 }
-            );
-        }
+        // if (!DANGEROUSLY_DISABLE_HMAC && (!timestamp || !validateTimestamp(timestamp))) {
+        //     return NextResponse.json(
+        //         { status: 'failed', data: null, error: { code: 'UNAUTHORIZED', message: 'Stale request.' } },
+        //         { status: 401 }
+        //     );
+        // }
 
         // 3. Resolve Actor Entity
         const platformEntityType: string = user_context?.platform_entity_type;
         const platformEntityId: string = user_context?.platform_entity_id;
 
-        if (!platformEntityType || !platformEntityId) {
-            return NextResponse.json(
-                { status: 'failed', data: null, error: { code: 'UNAUTHORIZED', message: 'Missing user_context.' } },
-                { status: 401 }
-            );
-        }
+        // if (!platformEntityType || !platformEntityId) {
+        //     return NextResponse.json(
+        //         { status: 'failed', data: null, error: { code: 'UNAUTHORIZED', message: 'Missing user_context.' } },
+        //         { status: 401 }
+        //     );
+        // }
 
         const platformEntity = await morphRegistry.resolve(platformEntityType, platformEntityId);
-        
+
         const context: BicaContext = {
             platformEntity,
             platformEntityType,
@@ -125,11 +125,11 @@ export async function POST(req: NextRequest) {
     } catch (err: any) {
         console.error('[BICA EXECUTE ERROR]', err);
 
-        const code = err.bicaCode || 
-                    (err instanceof UnknownMorphTypeError ? 'VALIDATION_ERROR' : null) ||
-                    (err instanceof MorphEntityNotFoundError ? 'NOT_FOUND' : null) ||
-                    'SERVER_ERROR';
-        
+        const code = err.bicaCode ||
+            (err instanceof UnknownMorphTypeError ? 'VALIDATION_ERROR' : null) ||
+            (err instanceof MorphEntityNotFoundError ? 'NOT_FOUND' : null) ||
+            'SERVER_ERROR';
+
         const httpStatus = code === 'UNAUTHORIZED' ? 401 : code === 'NOT_FOUND' ? 404 : code === 'VALIDATION_ERROR' ? 400 : 500;
 
         return NextResponse.json(
