@@ -166,7 +166,9 @@ export const getCurrentUserWithWorkspace = cache(async () => {
                 workspace: workspace ? { 
                 ...workspace, 
                 role: session.user.role, 
-                isOwner: session.user.role?.toLowerCase() === 'owner' || session.user.role?.toLowerCase() === 'managing partner' 
+                isOwner: session.user.role?.toLowerCase() === 'owner' || 
+                         session.user.role?.toLowerCase() === 'managing partner' || 
+                         !!session.user.isPlatformAdmin
             } : null,
             };
         }
