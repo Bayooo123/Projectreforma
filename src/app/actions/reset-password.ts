@@ -8,6 +8,7 @@ import { getPasswordResetEmail } from '@/lib/services/mail/templates';
 import { logSecurityEvent, SecurityEvent } from '@/lib/services/auth/audit';
 import { checkRateLimit, getClientIp } from '@/lib/services/auth/ratelimit';
 import { headers } from 'next/headers';
+import { config } from '@/lib/config';
 
 export interface ResetState {
     success?: boolean;
@@ -59,7 +60,7 @@ export async function resetPassword(state: ResetState, formData: FormData): Prom
 
         // Generate Token
         const token = await createPasswordResetToken(user.id);
-        const domain = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+        const domain = config.NEXT_PUBLIC_APP_URL;
         const resetLink = `${domain}/auth/reset-password?token=${token}`;
 
         // Send Email using MailService

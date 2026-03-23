@@ -2,7 +2,9 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth-utils';
 
-const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GENERATIVE_AI_API_KEY || '');
+import { config } from "@/lib/config";
+
+const genAI = new GoogleGenerativeAI(config.GOOGLE_API_KEY || '');
 
 export async function POST(request: Request) {
     try {

@@ -13,6 +13,7 @@ import { getVerificationEmail } from '@/lib/services/mail/templates';
 import { logSecurityEvent, SecurityEvent } from '@/lib/services/auth/audit';
 import { headers } from 'next/headers';
 import { checkRateLimit, getClientIp } from '@/lib/services/auth/ratelimit';
+import { config } from '@/lib/config';
 
 // Define AuthState type
 export type AuthState = {
@@ -157,7 +158,7 @@ export async function register(
 
         // 4. Generate Verification Token
         const verificationToken = await createEmailVerificationToken(user.id, email);
-        const domain = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+        const domain = config.NEXT_PUBLIC_APP_URL;
         const verificationUrl = `${domain}/api/auth/verify-email?token=${verificationToken}`;
 
         // 5. Send Verification Email
@@ -267,7 +268,7 @@ export async function registerMember(
 
         // 4. Generate Verification Token
         const vToken = await createEmailVerificationToken(result.user.id, result.user.email);
-        const domain = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+        const domain = config.NEXT_PUBLIC_APP_URL;
         const vUrl = `${domain}/api/auth/verify-email?token=${vToken}`;
 
         // 5. Send Verification Email

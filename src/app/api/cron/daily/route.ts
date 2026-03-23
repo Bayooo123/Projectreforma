@@ -1,15 +1,15 @@
 import { NextResponse } from 'next/server';
+import { config } from '@/lib/config';
 import { prisma } from '@/lib/prisma';
 import { createNotification, notifyWorkspaceMembers } from '@/lib/notifications';
 
 // This route should be called by a Cron Job (e.g., Vercel Cron) once a day
 export async function GET(request: Request) {
     try {
-        // Verify Cron Secret (Optional but recommended)
-        // const authHeader = request.headers.get('authorization');
-        // if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-        //     return new NextResponse('Unauthorized', { status: 401 });
-        // }
+        const authHeader = request.headers.get('authorization');
+        if (authHeader !== `Bearer ${config.CRON_SECRET}`) {
+            return new NextResponse('Unauthorized', { status: 401 });
+        }
 
         console.log('⏰ Starting Daily Cron Job...');
 

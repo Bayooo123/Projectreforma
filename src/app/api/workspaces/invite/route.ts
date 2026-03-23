@@ -7,6 +7,7 @@ import { mailService } from '@/lib/services/mail/mail';
 import { getWorkspaceInviteEmail } from '@/lib/services/mail/templates';
 import { logSecurityEvent, SecurityEvent } from '@/lib/services/auth/audit';
 import { checkRateLimit, getClientIp } from '@/lib/services/auth/ratelimit';
+import { config } from '@/lib/config';
 
 export async function POST(req: NextRequest) {
     try {
@@ -58,7 +59,7 @@ export async function POST(req: NextRequest) {
         // Generate Token and Create Invitation
         const { token } = await createInvitationToken(workspaceId, email.toLowerCase(), role, session.user.id);
 
-        const domain = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+        const domain = config.NEXT_PUBLIC_APP_URL;
         const inviteUrl = `${domain}/invite/${token}`;
 
         // Send Email

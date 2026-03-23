@@ -1,8 +1,9 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
+import { config } from '@/lib/config';
+
 // Initialize Gemini
-// Note: GOOGLE_API_KEY must be in .env. If not set, AI features will fail gracefully.
-const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY || 'mock-key-for-build');
+const genAI = new GoogleGenerativeAI(config.GOOGLE_API_KEY || 'mock-key-for-build');
 
 export interface EmailAnalysis {
     summary: string;
@@ -23,7 +24,7 @@ export async function identifyBriefFromContent(
     body: string,
     candidates: BriefCandidate[]
 ): Promise<{ briefId: string | null; confidence: number; reasoning: string }> {
-    if (!process.env.GOOGLE_API_KEY) {
+    if (!config.GOOGLE_API_KEY) {
         return { briefId: null, confidence: 0, reasoning: 'No AI Key' };
     }
 
@@ -76,7 +77,7 @@ export async function processEmailWithAI(
     body: string,
     sender: string
 ): Promise<EmailAnalysis> {
-    if (!process.env.GOOGLE_API_KEY) {
+    if (!config.GOOGLE_API_KEY) {
         console.warn('GOOGLE_API_KEY not set. Using mock AI response.');
         return {
             summary: 'AI processing unavailable (no API key).',

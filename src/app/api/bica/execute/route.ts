@@ -6,15 +6,16 @@ import { JEQLCompiler } from '@/lib/jeql/compiler';
 import { JEQLQuery } from '@/lib/jeql/types';
 import { executeCrudPayload, CrudParameterSet, CrudError } from '@/lib/bica/crud-engine';
 import { morphRegistry, UnknownMorphTypeError, MorphEntityNotFoundError } from '@/lib/bica/morph-registry';
+import { config } from '@/lib/config';
 
 // ---------------------------------------------------------------------------
 // Config
 // ---------------------------------------------------------------------------
 
-const SHARED_SECRET = process.env.BICA_SHARED_SECRET || 'dev_secret_keys';
+const SHARED_SECRET = config.BICA_SHARED_SECRET;
 // Set BICA_DISABLE_HMAC=true in .env to disable signature verification in development ONLY.
 // Production should NEVER set this to true.
-const DANGEROUSLY_DISABLE_HMAC = process.env.BICA_DISABLE_HMAC === 'true';
+const DANGEROUSLY_DISABLE_HMAC = config.BICA_DISABLE_HMAC;
 if (DANGEROUSLY_DISABLE_HMAC) {
     console.warn('⚠️ [BICA CONFIG] HMAC signature verification is DISABLED via BICA_DISABLE_HMAC env var. This must NOT be set in production.');
 } else {

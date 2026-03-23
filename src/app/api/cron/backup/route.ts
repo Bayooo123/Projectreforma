@@ -1,11 +1,12 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { config } from '@/lib/config';
 import { logSecurityEvent, SecurityEvent } from '@/lib/services/auth/audit';
 
 export async function GET(request: Request) {
     // Basic auth check for cron jobs if CRON_SECRET is provided
     const authHeader = request.headers.get('authorization');
-    const cronSecret = process.env.CRON_SECRET;
+    const cronSecret = config.CRON_SECRET;
     
     if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

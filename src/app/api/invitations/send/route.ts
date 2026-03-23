@@ -6,6 +6,7 @@ import { sendInvitationEmail } from '@/lib/email';
 import { nanoid } from 'nanoid';
 import { hashToken } from '@/lib/services/auth/tokens';
 import { isValidRole, canInviteMembers, canAssignRole } from '@/lib/roles';
+import { config } from '@/lib/config';
 
 export async function POST(request: NextRequest) {
     try {
@@ -138,7 +139,7 @@ export async function POST(request: NextRequest) {
                 });
 
                 // Send invitation email
-                const inviteLink = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/invite/${token}`;
+                const inviteLink = `${config.NEXT_PUBLIC_APP_URL}/invite/${token}`;
 
                 await sendInvitationEmail({
                     to: email,

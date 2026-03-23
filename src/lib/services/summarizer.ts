@@ -1,8 +1,10 @@
 import { PrismaClient } from '@prisma/client';
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
+import { config } from '@/lib/config';
+
 const prisma = new PrismaClient();
-const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GENERATIVE_AI_API_KEY || '');
+const genAI = new GoogleGenerativeAI(config.GOOGLE_API_KEY || '');
 
 export class BriefSummarizer {
     /**

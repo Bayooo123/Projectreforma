@@ -1,7 +1,8 @@
 
 import { Resend } from 'resend';
+import { config } from '@/lib/config';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+const resend = new Resend(config.RESEND_API_KEY);
 
 interface SendMailOptions {
     to: string | string[];
@@ -17,7 +18,7 @@ interface SendMailOptions {
  * Allows switching providers (e.g., SES, SendGrid) in the future.
  */
 class MailService {
-    private defaultFrom = process.env.MAIL_FROM || process.env.RESEND_FROM_EMAIL || 'Reforma <Registration@reforma.ng>';
+    private defaultFrom = config.MAIL_FROM;
 
     async send(options: SendMailOptions) {
         const { to, subject, html, text, from, replyTo } = options;

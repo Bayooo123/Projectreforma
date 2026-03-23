@@ -1,7 +1,9 @@
 
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GENERATIVE_AI_API_KEY || '');
+import { config } from '@/lib/config';
+
+const genAI = new GoogleGenerativeAI(config.GOOGLE_API_KEY || '');
 
 export class Vectorizer {
 
@@ -10,8 +12,8 @@ export class Vectorizer {
      * Uses 'embedding-001' model.
      */
     static async embed(text: string): Promise<number[]> {
-        if (!process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
-            console.error("Missing GOOGLE_GENERATIVE_AI_API_KEY");
+        if (!config.GOOGLE_API_KEY) {
+            console.error("Missing GOOGLE_API_KEY");
             // Return dummy vector for dev/test if key missing (Prevents crash, but useless for retrieval)
             // In prod this should throw.
             throw new Error("API Key for Embeddings not configured");

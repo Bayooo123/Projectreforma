@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { processScheduledNotifications } from '@/lib/processScheduledNotifications';
+import { config } from '@/lib/config';
 
 /**
  * Cron endpoint to process scheduled adjournment notifications
@@ -11,7 +12,7 @@ export async function GET(request: NextRequest) {
     try {
         // Verify cron secret for security
         const authHeader = request.headers.get('authorization');
-        const cronSecret = process.env.CRON_SECRET;
+        const cronSecret = config.CRON_SECRET;
 
         if (!cronSecret) {
             console.error('[Cron] CRON_SECRET not configured');

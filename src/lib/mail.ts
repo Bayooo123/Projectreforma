@@ -1,12 +1,13 @@
 
 import { Resend } from 'resend';
+import { config } from './config';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+const resend = new Resend(config.RESEND_API_KEY);
 
 export const sendPasswordResetEmail = async (email: string, token: string) => {
     // Construct the absolute link. 
     // In production, use NEXT_PUBLIC_APP_URL. For now, we assume standard localhost or provided env.
-    const domain = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    const domain = config.NEXT_PUBLIC_APP_URL;
     const resetLink = `${domain}/auth/reset-password?token=${token}`;
 
     await resend.emails.send({

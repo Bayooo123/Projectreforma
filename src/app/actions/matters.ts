@@ -7,6 +7,7 @@ import { scheduleCalendarEntryNotifications } from '@/lib/scheduleAdjournmentNot
 import { auth } from '@/auth';
 import { applySentenceCaseToFields, toSentenceCase } from '@/lib/sentence-case';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { config } from '@/lib/config';
 
 /**
  * Get all matters for a workspace
@@ -904,7 +905,7 @@ export async function processMeetingAction(recordId: string, audioUrl: string) {
         const audioBuffer = await audioResponse.arrayBuffer();
 
         // Call Gemini SDK directly — no self-HTTP call needed, avoids auth issues
-        const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GENERATIVE_AI_API_KEY || '');
+        const genAI = new GoogleGenerativeAI(config.GOOGLE_API_KEY || '');
         const model = genAI.getGenerativeModel({
             model: 'gemini-1.5-flash',
             generationConfig: {

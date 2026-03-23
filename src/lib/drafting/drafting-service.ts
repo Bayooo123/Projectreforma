@@ -3,8 +3,9 @@ import { prisma } from '@/lib/prisma';
 import { Vectorizer } from '@/lib/ingestion/vectorizer';
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { SYSTEM_PROMPTS } from './prompts';
+import { config } from '@/lib/config';
 
-const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GENERATIVE_AI_API_KEY || '');
+const genAI = new GoogleGenerativeAI(config.GOOGLE_API_KEY || '');
 
 export class DraftingService {
 

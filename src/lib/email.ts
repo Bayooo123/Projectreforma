@@ -1,11 +1,12 @@
 import nodemailer from 'nodemailer';
+import { config } from './config';
 
 /**
  * Zoho Mail SMTP Configuration
  */
 
 // Test mode flag - true when SMTP credentials are not configured
-const isTestMode = !process.env.SMTP_USER || !process.env.SMTP_PASSWORD;
+const isTestMode = !config.SMTP_USER || !config.SMTP_PASSWORD;
 
 // Create reusable transporter (lazy initialized)
 let transporter: nodemailer.Transporter | null = null;
@@ -13,12 +14,12 @@ let transporter: nodemailer.Transporter | null = null;
 function getTransporter() {
     if (!transporter && !isTestMode) {
         transporter = nodemailer.createTransport({
-            host: process.env.SMTP_HOST || 'smtp.zoho.com',
-            port: parseInt(process.env.SMTP_PORT || '465'),
-            secure: (process.env.SMTP_PORT || '465') === '465', // true for 465, false for 587
+            host: config.SMTP_HOST || 'smtp.zoho.com',
+            port: config.SMTP_PORT || 465,
+            secure: (config.SMTP_PORT || 465) === 465, 
             auth: {
-                user: process.env.SMTP_USER,
-                pass: process.env.SMTP_PASSWORD,
+                user: config.SMTP_USER,
+                pass: config.SMTP_PASSWORD,
             },
         });
     }
@@ -45,7 +46,7 @@ export async function sendInvitationEmail({
     inviteLink,
     role,
 }: InvitationEmailParams) {
-    const fromEmail = process.env.SMTP_FROM_EMAIL || process.env.SMTP_USER || 'info@reforma.ng';
+    const fromEmail = config.SMTP_FROM_EMAIL || config.SMTP_USER || 'info@reforma.ng';
     const subject = `You've been invited to join ${workspaceName} on Reforma`;
 
     if (isTestMode) {
@@ -74,7 +75,7 @@ export async function sendInvitationEmail({
 }
 
 export async function sendPasswordResetEmail({ to, resetLink }: PasswordResetEmailParams) {
-    const fromEmail = process.env.SMTP_FROM_EMAIL || process.env.SMTP_USER || 'info@reforma.ng';
+    const fromEmail = config.SMTP_FROM_EMAIL || config.SMTP_USER || 'info@reforma.ng';
     const subject = 'Reset your password - Reforma';
 
     if (isTestMode) {

@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
+import { config } from '@/lib/config';
+
 // Secret token to verify the request comes from your mail provider
-// Set this in your Vercel Environment Variables: EMAIL_WEBHOOK_SECRET
-const WEBHOOK_SECRET = process.env.EMAIL_WEBHOOK_SECRET;
+const WEBHOOK_SECRET = config.EMAIL_WEBHOOK_SECRET;
 
 export async function POST(req: NextRequest) {
     // 1. Security Check

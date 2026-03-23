@@ -7,6 +7,7 @@ import { getPasswordResetEmail } from '@/lib/services/mail/templates';
 import { logSecurityEvent, SecurityEvent } from '@/lib/services/auth/audit';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { z } from 'zod';
+import { config } from '@/lib/config';
 
 const schema = z.object({ email: z.string().email() });
 
@@ -47,7 +48,7 @@ export async function POST(req: NextRequest) {
 
         // Generate Token
         const token = await createPasswordResetToken(user.id);
-        const domain = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+        const domain = config.NEXT_PUBLIC_APP_URL;
         const resetUrl = `${domain}/auth/reset-password?token=${token}`;
 
         // Send Email

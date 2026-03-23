@@ -3,10 +3,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
+import { config } from '@/lib/config';
 
-const BICA_PLATFORM_ID = process.env.BICA_PLATFORM_ID || 'reforma_os';
-const BICA_SHARED_SECRET = process.env.BICA_SHARED_SECRET || 'dev_secret_keys';
-const FLADOV_BASE_URL = process.env.FLADOV_BASE_URL || 'https://fladov.app';
+const BICA_PLATFORM_ID = config.BICA_PLATFORM_ID;
+const BICA_SHARED_SECRET = config.BICA_SHARED_SECRET;
+const FLADOV_BASE_URL = config.FLADOV_BASE_URL;
 
 /**
  * POST /api/bica/sessions

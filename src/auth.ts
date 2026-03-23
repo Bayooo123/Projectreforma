@@ -10,6 +10,7 @@ import Resend from "next-auth/providers/resend"
 import { mailService } from "@/lib/services/mail/mail"
 import { getVerificationEmail } from "@/lib/services/mail/templates"
 import { logSecurityEvent, SecurityEvent } from "@/lib/services/auth/audit"
+import { config } from "@/lib/config"
 
 // Valid role types for type safety
 import { RoleValue } from "@/lib/roles"
@@ -28,14 +29,14 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
                 httpOnly: true,
                 sameSite: 'lax' as const,
                 path: '/',
-                secure: process.env.NODE_ENV === 'production',
+                secure: config.NODE_ENV === 'production',
             },
         },
     },
     trustHost: true,
     providers: [
         Resend({
-            from: process.env.MAIL_FROM || "Reforma <Registration@reforma.ng>",
+            from: config.MAIL_FROM,
             async sendVerificationRequest({ identifier: email, url, provider, theme }) {
                 const user = await prisma.user.findUnique({
                     where: { email },

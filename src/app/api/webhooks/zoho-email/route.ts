@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { addBriefActivity } from '@/lib/briefs';
+import { config } from '@/lib/config';
 
 // Secret token to verify the request comes from Zoho Flow
-const WEBHOOK_SECRET = process.env.EMAIL_WEBHOOK_SECRET;
+const WEBHOOK_SECRET = config.EMAIL_WEBHOOK_SECRET;
 
 interface ZohoEmailPayload {
     from: string;

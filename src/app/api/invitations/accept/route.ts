@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { config } from '@/lib/config';
 import bcrypt from 'bcryptjs';
 import { validateInvitationToken, createEmailVerificationToken } from '@/lib/services/auth/tokens';
 import { mailService } from '@/lib/services/mail/mail';
@@ -77,7 +78,7 @@ export async function POST(request: NextRequest) {
 
         // Verification Email
         const vToken = await createEmailVerificationToken(newUser.id, newUser.email);
-        const domain = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+        const domain = config.NEXT_PUBLIC_APP_URL;
         const vUrl = `${domain}/api/auth/verify-email?token=${vToken}`;
 
         await mailService.send({

@@ -1,0 +1,60 @@
+import { z } from 'zod';
+
+const envSchema = z.object({
+    // Standard Node Env
+    NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
+
+    // Database
+    DATABASE_URL: z.string().url(),
+
+    // Authentication
+    NEXTAUTH_SECRET: z.string().min(32),
+    NEXTAUTH_URL: z.string().url().optional(),
+    NEXT_PUBLIC_APP_URL: z.string().url().default('http://localhost:3000'),
+
+    // External Services
+    BLOB_READ_WRITE_TOKEN: z.string().optional(),
+    CRON_SECRET: z.string().min(32).optional(),
+    RESEND_API_KEY: z.string().optional(),
+    GOOGLE_API_KEY: z.string().optional(),
+    EMAIL_WEBHOOK_SECRET: z.string().optional(),
+
+    // Email Service (SMTP)
+    SMTP_HOST: z.string().optional(),
+    SMTP_PORT: z.coerce.number().optional(),
+    SMTP_USER: z.string().optional(),
+    SMTP_PASSWORD: z.string().optional(),
+    SMTP_FROM_EMAIL: z.string().optional(),
+    MAIL_FROM: z.string().default('Reforma <Registration@reforma.ng>'),
+    MAIL_DOMAIN_KEY: z.string().optional(),
+
+    // BICA Integration
+    BICA_PLATFORM_ID: z.string().default('reforma_os'),
+    BICA_SHARED_SECRET: z.string().default('dev_secret_keys'),
+    BICA_DISABLE_HMAC: z.preprocess((val) => val === 'true', z.boolean()).default(false),
+    FLADOV_BASE_URL: z.string().url().default('https://fladov.app'),
+});
+
+export type EnvConfig = z.infer<typeof envSchema>;
+
+let _config: EnvConfig | null = null;
+
+/**
+ * Validates and returns the environment configuration.
+ * In production, it expects process.env to be populated by the Secrets Manager.
+ */
+export function getConfig(): EnvConfig {
+    if (_config) return _config;
+
+    const result = envSchema.safeParse(process.env);
+
+    if (!result.success) {
+        console.error('❌ Invalid environment variables:', result.error.format());
+        throw new Error('Invalid environment configuration');
+    }
+
+    _config = result.data;
+    return _config;
+}
+
+export const config = getConfig();

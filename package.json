@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.1",
+    "@aws-sdk/client-secrets-manager": "^3.1014.0",
     "@google/generative-ai": "^0.24.1",
     "@prisma/client": "^5.22.0",
     "@react-email/render": "2.0.4",
@@ -47,7 +48,8 @@
     "react-pdf": "^10.2.0",
     "resend": "^6.5.2",
     "tailwind-merge": "^3.4.0",
-    "tesseract.js": "^6.0.1"
+    "tesseract.js": "^6.0.1",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.17",
