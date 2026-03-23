@@ -17,7 +17,7 @@ export default async function ComplianceManagementPage() {
     const workspace = data?.workspace;
 
     if (!workspace) {
-        return <div className="p-10 text-center text-slate-500">No active workspace found.</div>;
+        return <div className="p-10 text-center text-secondary">No active workspace found.</div>;
     }
 
     // Pre-fetch Federal compliance tasks server-side
@@ -29,8 +29,8 @@ export default async function ComplianceManagementPage() {
         <div className="p-8">
             <div className="max-w-[1400px] mx-auto">
                 <div className="mb-8">
-                    <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">Compliance Monitoring</h1>
-                    <p className="text-slate-500 dark:text-slate-400">Systematic tracking and enforcement of regulatory obligations</p>
+                    <h1 className="text-3xl font-bold text-primary mb-2">Compliance Monitoring</h1>
+                    <p className="text-secondary dark:text-slate-400">Systematic tracking and enforcement of regulatory obligations</p>
                 </div>
 
                 <div className="mt-8">

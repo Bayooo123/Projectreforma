@@ -43,16 +43,16 @@ export function UpcomingHearings({ hearings }: UpcomingHearingsProps) {
     };
 
     return (
-        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden h-full flex flex-col group transition-all hover:shadow-md">
+        <div className="bg-white rounded-2xl border border-border border shadow-sm overflow-hidden h-full flex flex-col group transition-all hover:shadow-md">
             {/* Header - Softened */}
-            <div className="bg-slate-50/50 p-6 flex justify-between items-center border-b border-slate-100">
+            <div className="bg-surface-subtle/50 p-6 flex justify-between items-center border-b border-border border">
                 <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-full bg-teal-50 flex items-center justify-center text-teal-600">
                         <Gavel className="w-5 h-5" />
                     </div>
                     <div>
                         <h3 className="text-lg font-semibold text-slate-800 tracking-tight">Upcoming Hearings</h3>
-                        <p className="text-xs font-medium text-slate-500">Next 7 days</p>
+                        <p className="text-xs font-medium text-secondary">Next 7 days</p>
                     </div>
                 </div>
                 <Link href="/calendar">
@@ -65,10 +65,10 @@ export function UpcomingHearings({ hearings }: UpcomingHearingsProps) {
             <div className="p-6 flex-1 bg-white">
                 {hearings.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-8 text-center h-full">
-                        <div className="w-16 h-16 rounded-full bg-slate-50 flex items-center justify-center mb-6">
+                        <div className="w-16 h-16 rounded-full bg-surface-subtle flex items-center justify-center mb-6">
                             <Calendar className="w-8 h-8 text-slate-300" />
                         </div>
-                        <h4 className="text-slate-900 font-medium text-base mb-2">No hearings this week</h4>
+                        <h4 className="text-primary font-medium text-base mb-2">No hearings this week</h4>
                         <p className="text-slate-400 font-light text-sm max-w-[200px] mb-6">Your calendar is clear. Enjoy the focus time.</p>
                         <Link href="/calendar/new">
                             <Button className="bg-teal-600 hover:bg-teal-700 text-white rounded-xl shadow-lg shadow-teal-900/10 transition-all">
@@ -84,15 +84,15 @@ export function UpcomingHearings({ hearings }: UpcomingHearingsProps) {
                                 <Link
                                     href={`/calendar?matterId=${hearing.id}`}
                                     key={hearing.id}
-                                    className="block p-4 rounded-xl hover:bg-slate-50 border border-transparent hover:border-slate-100 transition-all group/item"
+                                    className="block p-4 rounded-xl hover:bg-surface-subtle border border-transparent hover:border-border border transition-all group/item"
                                 >
                                     <div className="flex justify-between items-start mb-2">
                                         <div className="flex-1 min-w-0 pr-4">
                                             <h4 className="font-semibold text-slate-800 text-sm truncate group-hover/item:text-teal-700 transition-colors">
                                                 {hearing.name}
                                             </h4>
-                                            <div className="flex items-center text-xs text-slate-500 mt-1.5">
-                                                <span className="font-mono bg-slate-100 px-1.5 py-0.5 rounded text-slate-600 mr-2 border border-slate-200">
+                                            <div className="flex items-center text-xs text-secondary mt-1.5">
+                                                <span className="font-mono bg-slate-100 px-1.5 py-0.5 rounded text-tertiary mr-2 border border-border border">
                                                     {hearing.caseNumber}
                                                 </span>
                                                 {hearing.court && (
@@ -112,7 +112,7 @@ export function UpcomingHearings({ hearings }: UpcomingHearingsProps) {
                                     </div>
 
                                     <div className="flex items-center justify-between mt-3 text-sm">
-                                        <div className="flex items-center text-slate-600 font-medium bg-slate-50 px-3 py-1 rounded-full text-[11px] border border-slate-100">
+                                        <div className="flex items-center text-tertiary font-medium bg-surface-subtle px-3 py-1 rounded-full text-[11px] border border-border border">
                                             <Calendar className="w-3 h-3 mr-2 text-slate-400" />
                                             {hearing.nextCourtDate ? formatDate(new Date(hearing.nextCourtDate)) : 'No Date'}
                                         </div>

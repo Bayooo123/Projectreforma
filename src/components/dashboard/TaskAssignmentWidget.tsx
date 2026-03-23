@@ -25,7 +25,7 @@ export function TaskAssignmentWidget({ initialTasks, users, currentUserId }: Tas
     };
 
     return (
-        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm transition-all duration-300 hover:shadow-md p-8 h-full relative overflow-hidden group">
+        <div className="bg-white rounded-2xl border border-border border shadow-sm transition-all duration-300 hover:shadow-md p-8 h-full relative overflow-hidden group">
             {/* Ambient Background Effect */}
             <div className="absolute top-0 right-0 w-32 h-32 bg-teal-50 rounded-full blur-3xl opacity-50 -mr-10 -mt-10 pointer-events-none group-hover:opacity-70 transition-opacity" />
 
@@ -36,7 +36,7 @@ export function TaskAssignmentWidget({ initialTasks, users, currentUserId }: Tas
                     </h3>
                     <p className="text-sm font-medium text-slate-400 mt-1">Assign tasks instantly</p>
                 </div>
-                <div className="bg-slate-50 px-3 py-1 rounded-full text-[10px] font-bold text-slate-400 border border-slate-100 uppercase tracking-widest flex items-center gap-1.5 shadow-sm">
+                <div className="bg-surface-subtle px-3 py-1 rounded-full text-[10px] font-bold text-slate-400 border border-border border uppercase tracking-widest flex items-center gap-1.5 shadow-sm">
                     <Zap className="w-3 h-3 text-amber-400 fill-amber-400" />
                     Fast Track
                 </div>
@@ -45,7 +45,7 @@ export function TaskAssignmentWidget({ initialTasks, users, currentUserId }: Tas
             <div className="space-y-5 relative z-10">
                 <div className="space-y-2">
                     <textarea
-                        className="w-full p-4 rounded-xl bg-slate-50/50 border-slate-100 border-2 focus:ring-4 focus:ring-teal-500/10 focus:border-teal-500 text-slate-700 placeholder:text-slate-400 resize-none text-sm transition-all focus:bg-white min-h-[100px] outline-none shadow-sm"
+                        className="w-full p-4 rounded-xl bg-surface-subtle/50 border-border border border-2 focus:ring-4 focus:ring-teal-500/10 focus:border-teal-500 text-secondary placeholder:text-slate-400 resize-none text-sm transition-all focus:bg-white min-h-[100px] outline-none shadow-sm"
                         placeholder="Draft the motion on notice for Suit CV/2024/005..."
                         value={task}
                         onChange={(e) => setTask(e.target.value)}
@@ -60,7 +60,7 @@ export function TaskAssignmentWidget({ initialTasks, users, currentUserId }: Tas
                                 <User className="h-4 w-4 text-slate-400 group-hover/select:text-teal-500 transition-colors" />
                             </div>
                             <select
-                                className="block w-full pl-10 pr-4 py-3 text-sm rounded-xl border-slate-100 bg-slate-50/50 hover:bg-slate-50 focus:ring-4 focus:ring-teal-500/10 focus:border-teal-500 cursor-pointer hover:border-slate-200 transition-all appearance-none text-slate-700 font-medium outline-none"
+                                className="block w-full pl-10 pr-4 py-3 text-sm rounded-xl border-border border bg-surface-subtle/50 hover:bg-surface-subtle focus:ring-4 focus:ring-teal-500/10 focus:border-teal-500 cursor-pointer hover:border-border border transition-all appearance-none text-secondary font-medium outline-none"
                                 value={assignee}
                                 onChange={(e) => setAssignee(e.target.value)}
                             >
@@ -81,7 +81,7 @@ export function TaskAssignmentWidget({ initialTasks, users, currentUserId }: Tas
                             </div>
                             <input
                                 type="date"
-                                className="block w-full pl-10 pr-4 py-3 text-sm rounded-xl border-slate-100 bg-slate-50/50 hover:bg-slate-50 focus:ring-4 focus:ring-teal-500/10 focus:border-teal-500 hover:border-slate-200 transition-all text-slate-700 font-medium outline-none"
+                                className="block w-full pl-10 pr-4 py-3 text-sm rounded-xl border-border border bg-surface-subtle/50 hover:bg-surface-subtle focus:ring-4 focus:ring-teal-500/10 focus:border-teal-500 hover:border-border border transition-all text-secondary font-medium outline-none"
                                 value={dueDate}
                                 onChange={(e) => setDueDate(e.target.value)}
                             />

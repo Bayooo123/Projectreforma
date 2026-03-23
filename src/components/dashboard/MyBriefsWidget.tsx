@@ -26,7 +26,7 @@ export function MyBriefsWidget({ briefs }: MyBriefsWidgetProps) {
     };
 
     return (
-        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden h-full flex flex-col hover:shadow-md transition-all duration-300">
+        <div className="bg-white rounded-2xl border border-border border shadow-sm overflow-hidden h-full flex flex-col hover:shadow-md transition-all duration-300">
             {/* Header */}
             <div className="p-6 flex justify-between items-center border-b border-slate-50">
                 <div className="flex items-center gap-3">
@@ -35,7 +35,7 @@ export function MyBriefsWidget({ briefs }: MyBriefsWidgetProps) {
                     </div>
                     <div>
                         <h3 className="text-lg font-semibold text-slate-800 tracking-tight">My Briefs</h3>
-                        <p className="text-xs font-medium text-slate-500">Recently active</p>
+                        <p className="text-xs font-medium text-secondary">Recently active</p>
                     </div>
                 </div>
                 <Link href="/briefs" className="text-blue-600 hover:bg-blue-50 p-2 rounded-full transition-colors">
@@ -46,7 +46,7 @@ export function MyBriefsWidget({ briefs }: MyBriefsWidgetProps) {
             <div className="p-2">
                 {briefs.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-10 px-4 text-center">
-                        <p className="text-slate-500 text-sm">No active briefs assigned.</p>
+                        <p className="text-secondary text-sm">No active briefs assigned.</p>
                         <Link href="/briefs/new" className="mt-2 text-xs text-blue-600 font-medium hover:underline">
                             Create a new brief
                         </Link>
@@ -57,19 +57,19 @@ export function MyBriefsWidget({ briefs }: MyBriefsWidgetProps) {
                             <Link
                                 key={brief.id}
                                 href={`/briefs/${brief.id}`}
-                                className="block group p-3 rounded-lg hover:bg-slate-50 transition-all border border-transparent hover:border-slate-100"
+                                className="block group p-3 rounded-lg hover:bg-surface-subtle transition-all border border-transparent hover:border-border border"
                             >
                                 <div className="flex justify-between items-start mb-1">
                                     <h4 className="font-medium text-slate-800 text-sm group-hover:text-blue-700 transition-colors line-clamp-1">
                                         {brief.name}
                                     </h4>
-                                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium capitalize ${brief.status === 'active' ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-500'
+                                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium capitalize ${brief.status === 'active' ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-secondary'
                                         }`}>
                                         {brief.status}
                                     </span>
                                 </div>
                                 <div className="flex justify-between items-center mt-2">
-                                    <span className="text-xs text-slate-500 font-medium truncate max-w-[120px]">
+                                    <span className="text-xs text-secondary font-medium truncate max-w-[120px]">
                                         {brief.client?.name || 'Unassigned'}
                                     </span>
                                     <div className="flex items-center text-[10px] text-slate-400 font-medium">
@@ -84,8 +84,8 @@ export function MyBriefsWidget({ briefs }: MyBriefsWidgetProps) {
             </div>
 
             {briefs.length > 0 && (
-                <div className="mt-auto border-t border-slate-50 p-3 bg-slate-50/50">
-                    <Link href="/briefs" className="block w-full text-center text-xs font-medium text-slate-500 hover:text-slate-700 transition-colors">
+                <div className="mt-auto border-t border-slate-50 p-3 bg-surface-subtle/50">
+                    <Link href="/briefs" className="block w-full text-center text-xs font-medium text-secondary hover:text-secondary transition-colors">
                         View all briefs
                     </Link>
                 </div>

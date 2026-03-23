@@ -117,7 +117,7 @@ export default function ComplianceTable({ tasks, onUpdate, onEdit }: ComplianceT
                                     {task.obligation.regulatoryBody}
                                 </span>
                             </td>
-                            <td className={`${styles.tableCell} text-slate-500 font-medium`}>
+                            <td className={`${styles.tableCell} text-secondary font-medium`}>
                                 {task.obligation.nature}
                             </td>
                             <td className={styles.tableCell}>
@@ -132,7 +132,7 @@ export default function ComplianceTable({ tasks, onUpdate, onEdit }: ComplianceT
                                     )}
                                 </div>
                             </td>
-                            <td className={`${styles.tableCell} capitalize text-slate-500 font-medium`}>
+                            <td className={`${styles.tableCell} capitalize text-secondary font-medium`}>
                                 {task.obligation.frequency}
                             </td>
                             <td className={styles.tableCell}>

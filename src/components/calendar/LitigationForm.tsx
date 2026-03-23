@@ -310,11 +310,11 @@ const LitigationForm = ({
                                     filteredMatters.map(m => (
                                         <div
                                             key={m.id}
-                                            className="p-3 border border-slate-200 rounded-lg hover:bg-slate-50 cursor-pointer transition-colors"
+                                            className="p-3 border border-border border rounded-lg hover:bg-surface-subtle cursor-pointer transition-colors"
                                             onClick={() => handleSelectMatter(m)}
                                         >
-                                            <div className="font-medium text-slate-900">{m.name}</div>
-                                            <div className="text-xs text-slate-500 mt-1">
+                                            <div className="font-medium text-primary">{m.name}</div>
+                                            <div className="text-xs text-secondary mt-1">
                                                 {m.caseNumber && <span>{m.caseNumber} • </span>}
                                                 {m.client?.name || 'Unassigned Client'}
                                             </div>
@@ -336,7 +336,7 @@ const LitigationForm = ({
                                     <div>
                                         <div className="text-[10px] uppercase tracking-wider text-slate-400 font-bold mb-1">Target Matter</div>
                                         <div className="font-semibold text-slate-800">{selectedMatter.name}</div>
-                                        <div className="text-xs text-slate-500">{selectedMatter.caseNumber || 'No case number'}</div>
+                                        <div className="text-xs text-secondary">{selectedMatter.caseNumber || 'No case number'}</div>
                                     </div>
                                     {!initialMatter && (
                                         <button

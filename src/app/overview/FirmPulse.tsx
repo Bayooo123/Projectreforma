@@ -66,9 +66,9 @@ export default async function FirmPulse() {
     const activities = await getActivities(session.user.id);
 
     return (
-        <section className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700">
-            <div className="px-6 py-5 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
-                <h2 className="text-xl font-semibold text-slate-900 dark:text-white">
+        <section className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-border border">
+            <div className="px-6 py-5 border-b border-border border flex items-center justify-between">
+                <h2 className="text-xl font-semibold text-primary">
                     Firm Pulse
                 </h2>
                 <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold uppercase tracking-wide">
@@ -85,28 +85,28 @@ export default async function FirmPulse() {
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                             </svg>
                         </div>
-                        <p className="text-slate-500 dark:text-slate-400 font-medium">No recent activity</p>
-                        <p className="text-slate-400 dark:text-slate-500 text-sm mt-1">
+                        <p className="text-secondary dark:text-slate-400 font-medium">No recent activity</p>
+                        <p className="text-slate-400 dark:text-secondary text-sm mt-1">
                             Activity from matters, briefs, and invitations will appear here
                         </p>
                     </div>
                 ) : (
                     activities.map((activity) => (
-                        <div key={activity.id} className="px-6 py-4 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
+                        <div key={activity.id} className="px-6 py-4 hover:bg-surface-subtle dark:hover:bg-slate-700/50 transition-colors">
                             <div className="flex items-start gap-4">
                                 <div className={`w-2 h-2 mt-2 rounded-full flex-shrink-0 ${activity.type === 'matter' ? 'bg-teal-500' :
                                     activity.type === 'brief' ? 'bg-indigo-500' :
                                         'bg-amber-500'
                                     }`}></div>
                                 <div className="flex-1 min-w-0">
-                                    <p className="font-semibold text-slate-900 dark:text-white text-sm">
+                                    <p className="font-semibold text-primary text-sm">
                                         {activity.title}
                                     </p>
-                                    <p className="text-slate-600 dark:text-slate-300 text-sm mt-0.5">
+                                    <p className="text-tertiary dark:text-slate-300 text-sm mt-0.5">
                                         <span className="font-medium text-red-600 dark:text-red-400">{activity.person}</span>
                                         {' '}{activity.action}
                                     </p>
-                                    <p className="text-slate-400 dark:text-slate-500 text-xs mt-1">
+                                    <p className="text-slate-400 dark:text-secondary text-xs mt-1">
                                         {new Date(activity.timestamp).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })} • {new Date(activity.timestamp).toLocaleDateString()}
                                     </p>
                                 </div>
@@ -121,8 +121,8 @@ export default async function FirmPulse() {
 
 export function FirmPulseSkeleton() {
     return (
-        <section className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700">
-            <div className="px-6 py-5 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
+        <section className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-border border">
+            <div className="px-6 py-5 border-b border-border border flex items-center justify-between">
                 <div className="h-6 w-32 bg-slate-200 dark:bg-slate-700 rounded animate-pulse"></div>
                 <div className="h-6 w-16 bg-slate-200 dark:bg-slate-700 rounded-full animate-pulse"></div>
             </div>

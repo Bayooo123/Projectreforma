@@ -15,7 +15,7 @@ export default async function ClientsPage() {
     const user = dataObj?.user;
 
     if (!workspace) {
-        return <div className="p-10 text-center text-slate-500">No active workspace found.</div>;
+        return <div className="p-10 text-center text-secondary">No active workspace found.</div>;
     }
 
     // Pre-fetch initial clients list (page 1)

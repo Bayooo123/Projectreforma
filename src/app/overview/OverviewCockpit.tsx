@@ -79,27 +79,27 @@ export default function OverviewCockpit({ workspaceId, userId, userName, clients
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
                 <button
                     onClick={() => handleActionClick('invoice')}
-                    className="bg-white/60 dark:bg-slate-800/40 backdrop-blur-xl hover:bg-white/80 dark:hover:bg-slate-800/60 border border-slate-200/50 dark:border-white/5 p-4 rounded-xl transition-all duration-200 flex items-center gap-3 shadow-sm hover:shadow-md"
+                    className="bg-white/60 dark:bg-slate-800/40 backdrop-blur-xl hover:bg-white/80 dark:hover:bg-slate-800/60 border border-border border/50 dark:border-white/5 p-4 rounded-xl transition-all duration-200 flex items-center gap-3 shadow-sm hover:shadow-md"
                 >
                     <div className="p-2 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg">
                         <FileText className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
                     </div>
                     <div className="text-left">
-                        <div className="font-medium text-slate-900 dark:text-white">Create Invoice</div>
-                        <div className="text-slate-500 dark:text-slate-400 text-sm">Billing & Finance</div>
+                        <div className="font-medium text-primary">Create Invoice</div>
+                        <div className="text-secondary dark:text-slate-400 text-sm">Billing & Finance</div>
                     </div>
                 </button>
 
                 <button
                     onClick={() => handleActionClick('payment')}
-                    className="bg-white/60 dark:bg-slate-800/40 backdrop-blur-xl hover:bg-white/80 dark:hover:bg-slate-800/60 border border-slate-200/50 dark:border-white/5 p-4 rounded-xl transition-all duration-200 flex items-center gap-3 shadow-sm hover:shadow-md"
+                    className="bg-white/60 dark:bg-slate-800/40 backdrop-blur-xl hover:bg-white/80 dark:hover:bg-slate-800/60 border border-border border/50 dark:border-white/5 p-4 rounded-xl transition-all duration-200 flex items-center gap-3 shadow-sm hover:shadow-md"
                 >
                     <div className="p-2 bg-amber-100 dark:bg-amber-900/30 rounded-lg">
                         <DollarSign className="w-6 h-6 text-amber-600 dark:text-amber-400" />
                     </div>
                     <div className="text-left">
-                        <div className="font-medium text-slate-900 dark:text-white">Record Payment</div>
-                        <div className="text-slate-500 dark:text-slate-400 text-sm">Receipts & Tracking</div>
+                        <div className="font-medium text-primary">Record Payment</div>
+                        <div className="text-secondary dark:text-slate-400 text-sm">Receipts & Tracking</div>
                     </div>
                 </button>
             </div>
@@ -107,9 +107,9 @@ export default function OverviewCockpit({ workspaceId, userId, userName, clients
             {/* Client Picker Modal */}
             {showClientPicker && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-                    <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-white/10 w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200 ring-1 ring-black/5">
+                    <div className="bg-surface rounded-2xl shadow-2xl border border-white/10 w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200 ring-1 ring-black/5">
                         <div className="p-5 border-b border-gray-100 dark:border-gray-800 flex justify-between items-center bg-gray-50/50 dark:bg-slate-800/50">
-                            <h3 className="font-bold text-lg text-slate-900 dark:text-white">Select Client</h3>
+                            <h3 className="font-bold text-lg text-primary">Select Client</h3>
                             <button onClick={() => setShowClientPicker(null)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors">
                                 <X size={20} />
                             </button>
@@ -139,9 +139,9 @@ export default function OverviewCockpit({ workspaceId, userId, userName, clients
                                             className="w-full text-left p-3.5 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-all duration-200 flex items-center justify-between group border border-transparent hover:border-red-100 dark:hover:border-red-800"
                                         >
                                             <div>
-                                                <p className="font-semibold text-slate-700 dark:text-slate-200 group-hover:text-red-700 dark:group-hover:text-red-300 transition-colors">{client.name}</p>
+                                                <p className="font-semibold text-secondary dark:text-slate-200 group-hover:text-red-700 dark:group-hover:text-red-300 transition-colors">{client.name}</p>
                                                 {client.company && (
-                                                    <p className="text-xs text-slate-500 group-hover:text-red-600/70 dark:group-hover:text-red-400/70 transition-colors">{client.company}</p>
+                                                    <p className="text-xs text-secondary group-hover:text-red-600/70 dark:group-hover:text-red-400/70 transition-colors">{client.company}</p>
                                                 )}
                                             </div>
                                             <div className="h-6 w-6 rounded-full bg-red-100 dark:bg-red-900 text-red-600 dark:text-red-400 flex items-center justify-center opacity-0 group-hover:opacity-100 transform translate-x-2 group-hover:translate-x-0 transition-all">

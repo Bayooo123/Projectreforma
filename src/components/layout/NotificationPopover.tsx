@@ -75,8 +75,8 @@ const NotificationPopover = () => {
     };
 
     return (
-        <div className="absolute right-0 top-12 w-[480px] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg shadow-xl z-50 flex flex-col max-h-[85vh]">
-            <div className="p-4 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-900/50 rounded-t-lg">
+        <div className="absolute right-0 top-12 w-[480px] bg-surface border border-border border dark:border-slate-800 rounded-lg shadow-xl z-50 flex flex-col max-h-[85vh]">
+            <div className="p-4 border-b border-border border dark:border-slate-800 flex justify-between items-center bg-surface-subtle dark:bg-slate-900/50 rounded-t-lg">
                 <h3 className="font-semibold text-base text-slate-800 dark:text-slate-100">Notifications</h3>
                 {unreadCount > 0 && (
                     <button
@@ -90,9 +90,9 @@ const NotificationPopover = () => {
 
             <div className="overflow-y-auto flex-1 p-0">
                 {isLoading ? (
-                    <div className="p-8 text-center text-slate-500 text-sm">Loading...</div>
+                    <div className="p-8 text-center text-secondary text-sm">Loading...</div>
                 ) : notifications.length === 0 ? (
-                    <div className="p-10 text-center flex flex-col items-center text-slate-500">
+                    <div className="p-10 text-center flex flex-col items-center text-secondary">
                         <Bell size={32} className="mb-3 opacity-20" />
                         <p className="text-base">No notifications</p>
                     </div>
@@ -103,17 +103,17 @@ const NotificationPopover = () => {
                                 href={getLink(n)}
                                 key={n.id}
                                 onClick={() => handleMarkRead(n.id)}
-                                className={`block p-4 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors ${n.status === 'unread' ? 'bg-blue-50/40 dark:bg-blue-900/15' : ''}`}
+                                className={`block p-4 hover:bg-surface-subtle dark:hover:bg-slate-800/50 transition-colors ${n.status === 'unread' ? 'bg-blue-50/40 dark:bg-blue-900/15' : ''}`}
                             >
                                 <div className="flex gap-4 items-start">
                                     <div className={`mt-0.5 flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center bg-slate-100 dark:bg-slate-800`}>
                                         {getIcon(n.type)}
                                     </div>
                                     <div className="flex-1 min-w-0">
-                                        <p className={`text-[0.95rem] mb-1 ${n.status === 'unread' ? 'font-semibold text-slate-900 dark:text-slate-100' : 'text-slate-700 dark:text-slate-300'}`}>
+                                        <p className={`text-[0.95rem] mb-1 ${n.status === 'unread' ? 'font-semibold text-primary dark:text-slate-100' : 'text-secondary'}`}>
                                             {n.title}
                                         </p>
-                                        <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
+                                        <p className="text-sm text-tertiary leading-relaxed">
                                             {n.message}
                                         </p>
                                         <p className="text-xs text-slate-400 mt-2 font-medium">

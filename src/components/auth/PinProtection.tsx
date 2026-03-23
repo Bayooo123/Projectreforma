@@ -117,7 +117,7 @@ export function PinProtection({
                 return {
                     bg: 'bg-gray-50',
                     border: 'border-gray-100',
-                    accent: 'text-slate-600',
+                    accent: 'text-tertiary',
                     button: 'bg-slate-900 hover:bg-slate-800',
                     icon: Lock,
                     glow: '',
@@ -157,7 +157,7 @@ export function PinProtection({
             >
                 <motion.div
                     whileHover={{ scale: 1.05 }}
-                    className="bg-white p-6 rounded-3xl mb-8 shadow-sm border border-slate-100 relative group"
+                    className="bg-white p-6 rounded-3xl mb-8 shadow-sm border border-border border relative group"
                 >
                     <Icon className={cn("w-12 h-12 transition-colors duration-300", styles.accent)} />
                     <div className="absolute -top-1 -right-1">
@@ -165,8 +165,8 @@ export function PinProtection({
                     </div>
                 </motion.div>
 
-                <h3 className="text-2xl font-bold text-slate-900 mb-3 tracking-tight text-center">{styles.title}</h3>
-                <p className="text-slate-500 mb-10 text-center leading-relaxed px-4">{styles.desc}</p>
+                <h3 className="text-2xl font-bold text-primary mb-3 tracking-tight text-center">{styles.title}</h3>
+                <p className="text-secondary mb-10 text-center leading-relaxed px-4">{styles.desc}</p>
 
                 <motion.form
                     onSubmit={handleVerify}
@@ -182,7 +182,7 @@ export function PinProtection({
                             value={pin}
                             onChange={(e) => setPin(e.target.value)}
                             placeholder="••••"
-                            className="w-full pl-12 pr-4 py-4 bg-white border border-slate-200 rounded-2xl focus:ring-4 focus:ring-slate-100 focus:border-slate-400 outline-none transition-all text-center tracking-[1em] text-2xl font-bold shadow-inner"
+                            className="w-full pl-12 pr-4 py-4 bg-white border border-border border rounded-2xl focus:ring-4 focus:ring-slate-100 focus:border-slate-400 outline-none transition-all text-center tracking-[1em] text-2xl font-bold shadow-inner"
                             maxLength={4}
                             autoFocus
                         />

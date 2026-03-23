@@ -38,7 +38,7 @@ export function FirmPulse({ logs }: FirmPulseProps) {
         if (activityType.includes('client')) return <UserPlus className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />;
         if (activityType.includes('court')) return <Scale className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />;
         if (activityType.includes('note')) return <MessageSquare className="w-3.5 h-3.5 text-violet-500 dark:text-violet-400" />;
-        return <Activity className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />;
+        return <Activity className="w-3.5 h-3.5 text-secondary dark:text-slate-400" />;
     };
 
     const getIconBg = (activityType: string) => {
@@ -47,7 +47,7 @@ export function FirmPulse({ logs }: FirmPulseProps) {
         if (activityType.includes('client')) return 'bg-emerald-100 dark:bg-emerald-900/30 border-emerald-200 dark:border-emerald-800';
         if (activityType.includes('court')) return 'bg-indigo-100 dark:bg-indigo-900/30 border-indigo-200 dark:border-indigo-800';
         if (activityType.includes('note')) return 'bg-violet-100 dark:bg-violet-900/30 border-violet-200 dark:border-violet-800';
-        return 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700';
+        return 'bg-slate-100 dark:bg-slate-800 border-border border';
     };
 
     return (
@@ -59,8 +59,8 @@ export function FirmPulse({ logs }: FirmPulseProps) {
                         <Activity className="w-5 h-5" />
                     </div>
                     <div>
-                        <h3 className="text-lg font-bold text-slate-900 dark:text-white tracking-tight">Firm Pulse</h3>
-                        <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">Live system activity</p>
+                        <h3 className="text-lg font-bold text-primary tracking-tight">Firm Pulse</h3>
+                        <p className="text-xs font-semibold text-secondary dark:text-slate-400">Live system activity</p>
                     </div>
                 </div>
                 <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-white/50 dark:bg-slate-800/50 border border-emerald-100 dark:border-emerald-800/50 shadow-sm">
@@ -77,9 +77,9 @@ export function FirmPulse({ logs }: FirmPulseProps) {
                     {logs.length === 0 ? (
                         <div className="flex flex-col items-center justify-center py-16 px-4 text-center h-full opacity-60">
                             <div className="w-16 h-16 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center mb-4">
-                                <Layers className="w-8 h-8 text-slate-400 dark:text-slate-600" />
+                                <Layers className="w-8 h-8 text-slate-400 dark:text-tertiary" />
                             </div>
-                            <p className="text-slate-500 dark:text-slate-400 font-medium">No recent activity detected.</p>
+                            <p className="text-secondary dark:text-slate-400 font-medium">No recent activity detected.</p>
                         </div>
                     ) : (
                         <div className="relative pl-8 pr-6 py-8 space-y-8">
@@ -93,22 +93,22 @@ export function FirmPulse({ logs }: FirmPulseProps) {
                                         {getIcon(log.activityType)}
                                     </div>
 
-                                    <div className="flex flex-col gap-1.5 p-3 rounded-xl hover:bg-white/50 dark:hover:bg-slate-800/50 hover:shadow-sm border border-transparent hover:border-slate-200/50 dark:hover:border-slate-700/50 transition-all -mt-2 ml-2">
+                                    <div className="flex flex-col gap-1.5 p-3 rounded-xl hover:bg-white/50 dark:hover:bg-slate-800/50 hover:shadow-sm border border-transparent hover:border-border border/50 dark:hover:border-slate-700/50 transition-all -mt-2 ml-2">
                                         <div className="flex justify-between items-start">
                                             <p className="text-sm font-semibold text-slate-800 dark:text-slate-200 leading-snug">
                                                 {log.description}
                                             </p>
-                                            <span className="text-[10px] text-slate-400 dark:text-slate-500 font-medium whitespace-nowrap ml-2">
+                                            <span className="text-[10px] text-slate-400 dark:text-secondary font-medium whitespace-nowrap ml-2">
                                                 {formatTime(new Date(log.timestamp))}
                                             </span>
                                         </div>
 
                                         <div className="flex items-center gap-2 text-xs">
-                                            <span className="font-semibold text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded text-[10px] uppercase tracking-wide">
+                                            <span className="font-semibold text-tertiary bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded text-[10px] uppercase tracking-wide">
                                                 {log.entityName || 'System'}
                                             </span>
-                                            <span className="text-slate-400 dark:text-slate-500">•</span>
-                                            <span className="text-slate-500 dark:text-slate-400">{log.performedBy}</span>
+                                            <span className="text-slate-400 dark:text-secondary">•</span>
+                                            <span className="text-secondary dark:text-slate-400">{log.performedBy}</span>
                                         </div>
                                     </div>
                                 </div>

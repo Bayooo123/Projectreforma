@@ -47,7 +47,7 @@ const Card = ({ title, value, subtitle, icon: Icon, onClick, isActive, hasDropdo
 
         {/* Dropdown Content */}
         {hasDropdown && isActive && (
-            <div className="absolute top-full left-0 right-0 mt-[8px] bg-white dark:bg-slate-800 rounded-[12px] shadow-[0_8px_24px_rgba(0,0,0,0.15)] dark:shadow-[0_8px_24px_rgba(0,0,0,0.5)] z-[10] max-h-[400px] overflow-y-auto block border border-slate-100 dark:border-slate-700">
+            <div className="absolute top-full left-0 right-0 mt-[8px] bg-white dark:bg-slate-800 rounded-[12px] shadow-[0_8px_24px_rgba(0,0,0,0.15)] dark:shadow-[0_8px_24px_rgba(0,0,0,0.5)] z-[10] max-h-[400px] overflow-y-auto block border border-border border dark:border-slate-700">
                 {(!activeBriefs || activeBriefs.length === 0) ? (
                     <div className="p-5 text-center text-[#718096] dark:text-slate-400 text-sm">No active briefs</div>
                 ) : (
@@ -150,7 +150,7 @@ export default function DashboardClient({ initialData }: DashboardClientProps) {
 
                 <div className="flex flex-col gap-0">
                     {initialData.firmPulseLogs.length === 0 ? (
-                        <div className="text-center py-16 px-5 text-[#718096] dark:text-slate-500">
+                        <div className="text-center py-16 px-5 text-[#718096] dark:text-secondary">
                             <div className="text-5xl mb-4 opacity-30">📊</div>
                             <div className="text-base font-semibold text-[#1a202c] dark:text-slate-300 mb-2">No recent activity</div>
                             <div className="text-sm">Activity will appear here as your team works</div>
@@ -172,7 +172,7 @@ export default function DashboardClient({ initialData }: DashboardClientProps) {
                                         {/* Lowercase the first letter of description to flow with name */}
                                         {log.description.charAt(0).toLowerCase() + log.description.slice(1)}
                                     </div>
-                                    <div className="text-[13px] text-[#a0aec0] dark:text-slate-500 font-medium">
+                                    <div className="text-[13px] text-[#a0aec0] dark:text-secondary font-medium">
                                         {formatTime(new Date(log.timestamp))} • {formatDateShort(new Date(log.timestamp))}
                                     </div>
                                 </div>

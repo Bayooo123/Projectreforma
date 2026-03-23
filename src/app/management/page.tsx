@@ -157,7 +157,7 @@ export default async function ManagementPage() {
 
     if (!dataObj?.workspace) {
         // Handle no workspace case (maybe redirect to onboarding or join)
-        return <div className="p-10 text-center text-slate-500">No active workspace found.</div>;
+        return <div className="p-10 text-center text-secondary">No active workspace found.</div>;
     }
 
     const data = await getDashboardData(session.user.id, dataObj.workspace.id);

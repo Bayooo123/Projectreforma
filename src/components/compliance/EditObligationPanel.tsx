@@ -103,13 +103,13 @@ export default function EditObligationPanel({
             />
             
             <div className="relative w-full max-w-md bg-white border-l shadow-2xl animate-fade-in flex flex-col h-full overflow-hidden">
-                <div className="px-6 py-4 flex items-center justify-between border-b bg-slate-50">
-                    <h2 className="text-lg font-semibold text-slate-900">
+                <div className="px-6 py-4 flex items-center justify-between border-b bg-surface-subtle">
+                    <h2 className="text-lg font-semibold text-primary">
                         {task ? 'Edit Obligation' : 'Add Custom Obligation'}
                     </h2>
                     <button 
                         onClick={onClose}
-                        className="p-2 -mr-2 text-slate-400 hover:bg-slate-200 hover:text-slate-600 rounded-full transition-colors"
+                        className="p-2 -mr-2 text-slate-400 hover:bg-slate-200 hover:text-tertiary rounded-full transition-colors"
                     >
                         <X size={20} />
                     </button>
@@ -125,7 +125,7 @@ export default function EditObligationPanel({
 
                     <form id="obligation-form" onSubmit={handleSubmit} className="space-y-5">
                         <div className="space-y-1">
-                            <label className="text-sm font-semibold text-slate-700">Obligation <span className="text-red-500">*</span></label>
+                            <label className="text-sm font-semibold text-secondary">Obligation <span className="text-red-500">*</span></label>
                             <textarea 
                                 required
                                 value={actionRequired}
@@ -137,7 +137,7 @@ export default function EditObligationPanel({
 
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-1">
-                                <label className="text-sm font-semibold text-slate-700">Regulator <span className="text-red-500">*</span></label>
+                                <label className="text-sm font-semibold text-secondary">Regulator <span className="text-red-500">*</span></label>
                                 <input 
                                     type="text"
                                     required
@@ -148,7 +148,7 @@ export default function EditObligationPanel({
                                 />
                             </div>
                             <div className="space-y-1">
-                                <label className="text-sm font-semibold text-slate-700">Frequency <span className="text-red-500">*</span></label>
+                                <label className="text-sm font-semibold text-secondary">Frequency <span className="text-red-500">*</span></label>
                                 <input 
                                     type="text"
                                     required
@@ -161,7 +161,7 @@ export default function EditObligationPanel({
                         </div>
 
                         <div className="space-y-1">
-                            <label className="text-sm font-semibold text-slate-700">Requirement (Nature) <span className="text-red-500">*</span></label>
+                            <label className="text-sm font-semibold text-secondary">Requirement (Nature) <span className="text-red-500">*</span></label>
                             <input 
                                 type="text"
                                 required
@@ -174,7 +174,7 @@ export default function EditObligationPanel({
 
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-1">
-                                <label className="text-sm font-semibold text-slate-700">Status <span className="text-red-500">*</span></label>
+                                <label className="text-sm font-semibold text-secondary">Status <span className="text-red-500">*</span></label>
                                 <select 
                                     value={status}
                                     onChange={e => setStatus(e.target.value)}
@@ -188,7 +188,7 @@ export default function EditObligationPanel({
                                 </select>
                             </div>
                             <div className="space-y-1">
-                                <label className="text-sm font-semibold text-slate-700">Due Date</label>
+                                <label className="text-sm font-semibold text-secondary">Due Date</label>
                                 <input 
                                     type="date"
                                     value={dueDate}
@@ -199,7 +199,7 @@ export default function EditObligationPanel({
                         </div>
 
                         <div className="space-y-1 pt-2">
-                            <label className="text-sm font-semibold text-slate-700">Evidence URL</label>
+                            <label className="text-sm font-semibold text-secondary">Evidence URL</label>
                             <input 
                                 type="url"
                                 value={evidenceUrl}
@@ -207,16 +207,16 @@ export default function EditObligationPanel({
                                 className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary text-sm"
                                 placeholder="https://..."
                             />
-                            <p className="text-xs text-slate-500">Provide a link to an external document if applicable.</p>
+                            <p className="text-xs text-secondary">Provide a link to an external document if applicable.</p>
                         </div>
                     </form>
                 </div>
 
-                <div className="px-6 py-4 border-t bg-slate-50 flex justify-end gap-3">
+                <div className="px-6 py-4 border-t bg-surface-subtle flex justify-end gap-3">
                     <button 
                         type="button"
                         onClick={onClose}
-                        className="px-4 py-2 text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors"
+                        className="px-4 py-2 text-sm font-medium text-tertiary hover:text-primary transition-colors"
                         disabled={isSaving}
                     >
                         Cancel

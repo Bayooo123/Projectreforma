@@ -82,7 +82,7 @@
     box-shadow: var(--shadow-md);
     min-height: 1000px;
     padding: 3rem;
-    color: black;
+    color: var(--text-primary);
     /* Document text is usually black */
     font-family: 'Times New Roman', serif;
 }

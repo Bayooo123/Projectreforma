@@ -294,9 +294,9 @@ const MatterDetailModal = ({ isOpen, onClose, matter, userId }: MatterDetailModa
                                     {matter.lawyers && matter.lawyers.length > 0 ? (
                                         <div className="flex flex-col gap-1 mt-1">
                                             {matter.lawyers.map((assoc, idx) => (
-                                                <div key={idx} className="text-xs bg-slate-50 border border-slate-200 px-2 py-1 rounded">
+                                                <div key={idx} className="text-xs bg-surface-subtle border border-border border px-2 py-1 rounded">
                                                     <span className="font-semibold">{assoc.lawyer.name}</span>
-                                                    <span className="text-slate-500 ml-1">({assoc.role})</span>
+                                                    <span className="text-secondary ml-1">({assoc.role})</span>
                                                 </div>
                                             ))}
                                         </div>
@@ -362,7 +362,7 @@ const MatterDetailModal = ({ isOpen, onClose, matter, userId }: MatterDetailModa
                         {(matter.calendarEntries && matter.calendarEntries.length > 0) ? (
                             <div className="flex flex-col gap-4 mt-3">
                                 {matter.calendarEntries.map((entry, idx) => (
-                                    <div key={entry.id} className="relative pl-6 border-l-2 border-slate-200 pb-4 last:pb-0 last:border-0">
+                                    <div key={entry.id} className="relative pl-6 border-l-2 border-border border pb-4 last:pb-0 last:border-0">
                                         {/* Timestamp Dot */}
                                         <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-slate-300 border-2 border-white"></div>
 
@@ -392,7 +392,7 @@ const MatterDetailModal = ({ isOpen, onClose, matter, userId }: MatterDetailModa
 
                                             {/* Proceedings Narrative or Meeting Agenda */}
                                             {entry.proceedings || entry.agenda || entry.location ? (
-                                                <div className="text-sm text-slate-600 bg-slate-50 p-3 rounded-md mt-1 whitespace-pre-wrap">
+                                                <div className="text-sm text-tertiary bg-surface-subtle p-3 rounded-md mt-1 whitespace-pre-wrap">
                                                     {entry.proceedings}
                                                     {entry.agenda && <div><strong>Agenda:</strong> {entry.agenda}</div>}
                                                     {entry.location && <div><strong>Location:</strong> {entry.location}</div>}
@@ -406,9 +406,9 @@ const MatterDetailModal = ({ isOpen, onClose, matter, userId }: MatterDetailModa
                                                 <div className="flex flex-col gap-1.5 mt-2">
                                                     <div className="flex flex-wrap gap-2">
                                                         {entry.appearances.map(lawyer => (
-                                                            <div key={lawyer.id} className="flex items-center gap-1.5 bg-white border border-slate-200 px-2.5 py-1 rounded-md shadow-sm">
+                                                            <div key={lawyer.id} className="flex items-center gap-1.5 bg-white border border-border border px-2.5 py-1 rounded-md shadow-sm">
                                                                 <User size={12} className="text-maroon-600" />
-                                                                <span className="text-xs font-semibold text-slate-700">
+                                                                <span className="text-xs font-semibold text-secondary">
                                                                     {lawyer.name}
                                                                 </span>
                                                             </div>
@@ -421,7 +421,7 @@ const MatterDetailModal = ({ isOpen, onClose, matter, userId }: MatterDetailModa
                                 ))}
                             </div>
                         ) : (
-                            <div className="text-center py-8 text-slate-400 text-sm bg-slate-50 rounded-lg border border-dashed border-slate-200">
+                            <div className="text-center py-8 text-slate-400 text-sm bg-surface-subtle rounded-lg border border-dashed border-border border">
                                 {!matter.id.startsWith('temp') && (!matter.calendarEntries || matter.calendarEntries.length === 0) ? (
                                     <div className="flex flex-col items-center gap-2">
                                         <Loader className="animate-spin text-slate-300" size={20} />
@@ -442,7 +442,7 @@ const MatterDetailModal = ({ isOpen, onClose, matter, userId }: MatterDetailModa
                             </h3>
                             <div className="flex flex-col gap-4 mt-3">
                                 {matter.meetingRecordings.map((record) => (
-                                    <div key={record.id} className="bg-slate-50 border border-slate-200 rounded-lg p-4 shadow-sm">
+                                    <div key={record.id} className="bg-surface-subtle border border-border border rounded-lg p-4 shadow-sm">
                                         <div className="flex justify-between items-start mb-2">
                                             <div className="flex flex-col">
                                                 <span className="font-semibold text-sm text-slate-800">
@@ -466,22 +466,22 @@ const MatterDetailModal = ({ isOpen, onClose, matter, userId }: MatterDetailModa
                                             </div>
                                         </div>
 
-                                        <div className="text-sm text-slate-700 whitespace-pre-wrap mb-3 leading-relaxed">
+                                        <div className="text-sm text-secondary whitespace-pre-wrap mb-3 leading-relaxed">
                                             {record.transcriptText ? (record.transcriptText.substring(0, 300) + (record.transcriptText.length > 300 ? '...' : '')) : 'No transcript text available.'}
                                         </div>
 
                                         {record.transcriptText && (
-                                            <div className="mt-3 border-t border-slate-200 pt-3">
+                                            <div className="mt-3 border-t border-border border pt-3">
                                                 <button
                                                     onClick={() => setExpandedTranscription(expandedTranscription === record.id ? null : record.id)}
-                                                    className="flex items-center gap-1.5 text-xs font-medium text-slate-500 hover:text-slate-800 transition-colors"
+                                                    className="flex items-center gap-1.5 text-xs font-medium text-secondary hover:text-slate-800 transition-colors"
                                                 >
                                                     <FileText size={14} />
                                                     {expandedTranscription === record.id ? 'Hide Full Transcription' : 'View Full Transcription'}
                                                 </button>
 
                                                 {expandedTranscription === record.id && (
-                                                    <div className="mt-2 text-xs text-slate-600 bg-white border border-slate-200 p-3 rounded-md font-mono max-h-[200px] overflow-y-auto leading-normal">
+                                                    <div className="mt-2 text-xs text-tertiary bg-white border border-border border p-3 rounded-md font-mono max-h-[200px] overflow-y-auto leading-normal">
                                                         {record.transcriptText}
                                                     </div>
                                                 )}
@@ -497,7 +497,7 @@ const MatterDetailModal = ({ isOpen, onClose, matter, userId }: MatterDetailModa
                 <h3 className={styles.sectionTitle}>
                     <Calendar size={16} /> Quick Adjourn (Next Date)
                 </h3>
-                <p className="text-xs text-slate-500 mb-3">
+                <p className="text-xs text-secondary mb-3">
                     Use this to record a new adjournment if you haven't already. This creates a new future calendar entry.
                 </p>
                 <form onSubmit={handleAdjourn} className={styles.adjournForm}>

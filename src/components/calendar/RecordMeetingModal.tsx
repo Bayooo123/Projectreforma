@@ -229,7 +229,7 @@ const RecordMeetingModal = ({
                             <div className={styles.formGroup}>
                                 <label className={styles.label}>Full Transcription</label>
                                 <textarea
-                                    className={`${styles.textarea} font-mono text-[10px] bg-slate-50`}
+                                    className={`${styles.textarea} font-mono text-[10px] bg-surface-subtle`}
                                     style={{ height: '80px' }}
                                     value={transcription}
                                     readOnly

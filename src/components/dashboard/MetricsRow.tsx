@@ -42,15 +42,15 @@ const StatCard = ({
                 </div>
             )}
             {isPrivate && (
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 bg-slate-50 px-2 py-1 rounded-full border border-slate-100">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 bg-surface-subtle px-2 py-1 rounded-full border border-border border">
                     Private
                 </span>
             )}
         </div>
 
         <div className={cn("relative z-10", noIcon && "mt-2")}>
-            <div className="text-3xl font-light tracking-tight text-slate-900 mb-1">{value}</div>
-            <div className="text-sm font-medium text-slate-500 uppercase tracking-wide text-[11px]">{title}</div>
+            <div className="text-3xl font-light tracking-tight text-primary mb-1">{value}</div>
+            <div className="text-sm font-medium text-secondary uppercase tracking-wide text-[11px]">{title}</div>
             {subtext && <div className="text-xs font-medium text-emerald-600 mt-2 flex items-center bg-emerald-50 w-fit px-2 py-0.5 rounded-full">{subtext}</div>}
         </div>
     </div>
@@ -110,7 +110,7 @@ export function MetricsRow({ metrics, userRole }: MetricsRowProps) {
                     title="Firm Utilization"
                     value="--"
                     icon={BarChart2}
-                    gradientClass="bg-slate-500"
+                    gradientClass="bg-surface-subtle0"
                     iconClass="bg-gradient-to-br from-slate-400 to-slate-600"
                     subtext="Restricted"
                     isPrivate={true}

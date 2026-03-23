@@ -180,14 +180,14 @@ const ClientList = ({
             {/* Active Filter Indicator */}
             {filterParam && (
                 <div className="flex items-center gap-2 mb-4 px-1">
-                    <span className="text-sm font-medium text-slate-500">Filtered by:</span>
+                    <span className="text-sm font-medium text-secondary">Filtered by:</span>
                     <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-sm font-medium">
                         {filterParam === 'active_matters' && 'Active Matters'}
                         {filterParam === 'outstanding' && 'Outstanding Balance'}
                         {filterParam === 'revenue' && 'Revenue Contribution'}
                         <Link href="/management/clients" className="ml-2 hover:text-blue-900">×</Link>
                     </span>
-                    <Link href="/management/clients" className="text-xs text-slate-400 hover:text-slate-600 underline">
+                    <Link href="/management/clients" className="text-xs text-slate-400 hover:text-tertiary underline">
                         Clear all
                     </Link>
                 </div>
@@ -272,8 +272,8 @@ const ClientList = ({
                     </div>
 
                     {/* Pagination Controls */}
-                    <div className="flex items-center justify-between px-4 py-4 border-t border-slate-200 mt-auto">
-                        <span className="text-sm text-slate-500">
+                    <div className="flex items-center justify-between px-4 py-4 border-t border-border border mt-auto">
+                        <span className="text-sm text-secondary">
                             Page {page} of {totalPages}
                         </span>
                         <div className="flex gap-2">
@@ -282,14 +282,14 @@ const ClientList = ({
                                 disabled={page === 1}
                                 className="p-2 rounded hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                             >
-                                <ChevronLeft size={20} className="text-slate-600" />
+                                <ChevronLeft size={20} className="text-tertiary" />
                             </button>
                             <button
                                 onClick={() => setPage(p => Math.min(totalPages, p + 1))}
                                 disabled={page === totalPages}
                                 className="p-2 rounded hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                             >
-                                <ChevronRight size={20} className="text-slate-600" />
+                                <ChevronRight size={20} className="text-tertiary" />
                             </button>
                         </div>
                     </div>

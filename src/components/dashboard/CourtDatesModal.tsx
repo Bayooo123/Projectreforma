@@ -52,7 +52,7 @@ export function CourtDatesModal({ isOpen, onClose, entries }: CalendarEntriesMod
 
                 <div className="p-[32px]">
                     {entries.length === 0 ? (
-                        <div className="text-center py-12 px-4 text-slate-500 dark:text-slate-400">
+                        <div className="text-center py-12 px-4 text-secondary dark:text-slate-400">
                             <p>No upcoming events in the next 7 days.</p>
                         </div>
                     ) : (
@@ -63,7 +63,7 @@ export function CourtDatesModal({ isOpen, onClose, entries }: CalendarEntriesMod
                                 </div>
                                 <div className="font-semibold text-[#1a202c] dark:text-slate-200 text-[15px] mb-[8px]">
                                     {entry.matter?.name || entry.title || 'Event'}
-                                    {entry.matter?.caseNumber && <span className="text-[#718096] dark:text-slate-500 font-normal text-xs ml-1">({entry.matter.caseNumber})</span>}
+                                    {entry.matter?.caseNumber && <span className="text-[#718096] dark:text-secondary font-normal text-xs ml-1">({entry.matter.caseNumber})</span>}
                                 </div>
                                 <div className="space-y-[4px]">
                                     {entry.matter?.court && (

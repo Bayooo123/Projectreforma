@@ -64,7 +64,7 @@ export function PendingTasksModal({ isOpen, onClose, tasks }: PendingTasksModalP
 
                 <div className="p-[32px]">
                     {tasks.length === 0 ? (
-                        <div className="text-center py-12 px-4 text-slate-500 dark:text-slate-400">
+                        <div className="text-center py-12 px-4 text-secondary dark:text-slate-400">
                             <p>No pending tasks found.</p>
                         </div>
                     ) : (

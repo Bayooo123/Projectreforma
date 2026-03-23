@@ -121,8 +121,8 @@ export const CreateMeetingRecordModal: React.FC<CreateMeetingRecordModalProps> =
                         </div>
                     ) : (
                         <div className="flex flex-col gap-6">
-                            <div className="bg-slate-50 p-4 rounded-lg flex items-center justify-between border">
-                                <div className="flex items-center gap-3 font-medium text-slate-700">
+                            <div className="bg-surface-subtle p-4 rounded-lg flex items-center justify-between border">
+                                <div className="flex items-center gap-3 font-medium text-secondary">
                                     <div className="bg-green-100 text-green-700 p-2 rounded-full">
                                         <Check size={16} />
                                     </div>
@@ -167,7 +167,7 @@ export const CreateMeetingRecordModal: React.FC<CreateMeetingRecordModalProps> =
                                 <label className={styles.formLabel}>Transcription</label>
                                 <div className="relative">
                                     <textarea
-                                        className={`${styles.textarea} bg-slate-50 text-slate-600 font-mono text-xs`}
+                                        className={`${styles.textarea} bg-surface-subtle text-tertiary font-mono text-xs`}
                                         placeholder={isTranscribing ? "Generating transcription..." : "AI Generated transcription will appear here..."}
                                         value={transcription}
                                         onChange={(e) => setTranscription(e.target.value)}
@@ -175,7 +175,7 @@ export const CreateMeetingRecordModal: React.FC<CreateMeetingRecordModalProps> =
                                         readOnly={isTranscribing}
                                     />
                                     {isTranscribing && (
-                                        <div className="absolute inset-0 flex items-center justify-center bg-slate-50/50 backdrop-blur-[1px] rounded-md">
+                                        <div className="absolute inset-0 flex items-center justify-center bg-surface-subtle/50 backdrop-blur-[1px] rounded-md">
                                             <div className="flex items-center gap-2 text-blue-600 font-medium text-sm">
                                                 <Loader2 className="animate-spin" size={16} />
                                                 Transcribing and Summarizing...
@@ -188,10 +188,10 @@ export const CreateMeetingRecordModal: React.FC<CreateMeetingRecordModalProps> =
                     )}
                 </div>
 
-                <div className="flex justify-between items-center p-4 border-t bg-slate-50 rounded-b-lg">
+                <div className="flex justify-between items-center p-4 border-t bg-surface-subtle rounded-b-lg">
                     <button
                         onClick={onClose}
-                        className="px-4 py-2 text-slate-600 font-medium hover:bg-slate-200 rounded-md transition-colors"
+                        className="px-4 py-2 text-tertiary font-medium hover:bg-slate-200 rounded-md transition-colors"
                         disabled={isSubmitting}
                     >
                         Cancel

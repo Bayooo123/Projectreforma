@@ -187,7 +187,7 @@ export const AudioRecorder: React.FC<AudioRecorderProps> = ({ onRecordingComplet
                 {/* Header/Status */}
                 <div className="flex items-center justify-between w-full mb-2">
                     <div className="flex items-center gap-2">
-                        <div className={`w-2 h-2 rounded-full ${status === 'recording' ? 'bg-red-500 animate-pulse' : 'bg-slate-500'}`} />
+                        <div className={`w-2 h-2 rounded-full ${status === 'recording' ? 'bg-red-500 animate-pulse' : 'bg-surface-subtle0'}`} />
                         <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
                             {status === 'idle' && 'Ready to Record'}
                             {status === 'recording' && 'Recording Audio'}
@@ -217,8 +217,8 @@ export const AudioRecorder: React.FC<AudioRecorderProps> = ({ onRecordingComplet
                         </div>
                     ) : (
                         <div className="flex flex-col items-center opacity-30 select-none">
-                            <Activity size={32} className="text-slate-500" />
-                            <span className="text-xs text-slate-500 mt-2">Silence</span>
+                            <Activity size={32} className="text-secondary" />
+                            <span className="text-xs text-secondary mt-2">Silence</span>
                         </div>
                     )}
                 </div>
@@ -240,7 +240,7 @@ export const AudioRecorder: React.FC<AudioRecorderProps> = ({ onRecordingComplet
                             className="group relative flex items-center justify-center w-20 h-20 bg-slate-100 hover:bg-white rounded-full transition-all duration-300 hover:scale-105 active:scale-95 shadow-xl"
                             title="Stop Recording"
                         >
-                            <Square size={28} className="text-slate-900 fill-slate-900" />
+                            <Square size={28} className="text-primary fill-slate-900" />
                             <div className="absolute inset-0 rounded-full border-2 border-white/30 animate-ping" />
                         </button>
                     ) : (
@@ -255,7 +255,7 @@ export const AudioRecorder: React.FC<AudioRecorderProps> = ({ onRecordingComplet
                     )}
                 </div>
 
-                <p className="text-[10px] text-center text-slate-500 max-w-[240px] leading-relaxed">
+                <p className="text-[10px] text-center text-secondary max-w-[240px] leading-relaxed">
                     {status === 'idle' && 'Click the microphone to begin recording. Ensure your microphone is active.'}
                     {status === 'recording' && 'Speak clearly. The AI will handle transcription and summarization automatically.'}
                     {status === 'processing' && 'Almost done! Our AI is processing your audio for perfect insights.'}

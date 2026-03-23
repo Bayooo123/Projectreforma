@@ -67,7 +67,7 @@ export function StatsGridSkeleton() {
     return (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
             {[1, 2, 3, 4].map((i) => (
-                <div key={i} className="bg-white/60 dark:bg-slate-900/40 backdrop-blur-xl border border-slate-200/50 dark:border-slate-800 rounded-2xl p-5 h-32 animate-pulse" />
+                <div key={i} className="bg-white/60 dark:bg-slate-900/40 backdrop-blur-xl border border-border border/50 dark:border-slate-800 rounded-2xl p-5 h-32 animate-pulse" />
             ))}
         </div>
     );
