@@ -137,13 +137,19 @@ export default function ExpensePeriodFilter({ onChange }: ExpensePeriodFilterPro
     };
 
     return (
-        <div className="flex items-center gap-3 p-1 bg-surface-subtle border border-border border rounded-lg shadow-sm">
-            <div className="flex items-center gap-2 pl-3 border-r border-border border pr-2">
-                <Calendar size={16} className="text-slate-400" />
+        <div className="inline-flex items-center p-1 bg-surface border border-border rounded-full shadow-sm hover:shadow hover:border-primary/30 transition-all duration-300 animate-fade-in-up">
+            
+            {/* Type Selector Panel */}
+            <div className="relative flex items-center gap-2 px-3 py-1.5 rounded-full hover:bg-surface-subtle transition-colors group">
+                <Calendar size={15} className="text-primary/70 group-hover:text-primary group-hover:scale-110 transition-all duration-300" />
+                <span className="text-sm font-semibold text-secondary group-hover:text-primary transition-colors pointer-events-none select-none">
+                    {filterType}
+                </span>
                 <select
                     value={filterType}
                     onChange={(e) => setFilterType(e.target.value as FilterType)}
-                    className="bg-transparent text-sm font-semibold text-secondary outline-none cursor-pointer appearance-none pr-4"
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer appearance-none"
+                    title="Change Filter Type"
                 >
                     <option value="Month">Month</option>
                     <option value="Quarter">Quarter</option>
@@ -152,11 +158,20 @@ export default function ExpensePeriodFilter({ onChange }: ExpensePeriodFilterPro
                 </select>
             </div>
             
-            <div className="relative flex items-center pr-2">
+            <div className="w-px h-5 bg-border mx-1" />
+
+            {/* Value Selector Panel */}
+            <div className="relative flex items-center gap-2 pl-4 pr-3 py-1.5 rounded-full bg-primary/5 hover:bg-primary/10 transition-colors group">
+                <span className="text-sm font-bold text-primary pointer-events-none select-none tracking-tight">
+                    {options.find(o => o.value === selectedValue)?.label || 'Select...'}
+                </span>
+                <ChevronDown size={14} className="text-primary/60 group-hover:text-primary transition-all duration-300 group-hover:translate-y-0.5 ml-1" />
+                
                 <select
                     value={selectedValue}
                     onChange={(e) => handleValueChange(e.target.value)}
-                    className="bg-transparent text-sm font-medium text-primary outline-none cursor-pointer appearance-none pl-2 pr-8 w-40"
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer appearance-none"
+                    title="Change Period"
                 >
                     {options.map(opt => (
                         <option key={opt.value} value={opt.value}>
@@ -164,7 +179,6 @@ export default function ExpensePeriodFilter({ onChange }: ExpensePeriodFilterPro
                         </option>
                     ))}
                 </select>
-                <ChevronDown size={14} className="text-secondary absolute right-2 pointer-events-none" />
             </div>
         </div>
     );
