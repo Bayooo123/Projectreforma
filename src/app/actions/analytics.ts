@@ -85,20 +85,20 @@ export async function getAnalyticsMetrics(workspaceId: string) {
 
     return {
         revenue: {
-            total: thisMonthRevenue,
-            lastMonth: lastMonthRevenue,
-            growth: revenueGrowth
+            total: thisMonthRevenue || 0,
+            lastMonth: lastMonthRevenue || 0,
+            growth: revenueGrowth || 0
         },
         matters: {
-            active: activeMattersCount,
-            newThisMonth: newMattersThisMonth
+            active: activeMattersCount || 0,
+            newThisMonth: newMattersThisMonth || 0
         },
         expenses: {
-            total: thisMonthExpenses,
-            count: expenseCount
+            total: thisMonthExpenses || 0,
+            count: expenseCount || 0
         },
         courtDates: {
-            upcoming: pendingCourtDates
+            upcoming: pendingCourtDates || 0
         }
     };
 }
@@ -137,7 +137,10 @@ export async function getRevenueTrend(workspaceId: string) {
         }
     });
 
-    return Array.from(trendData.entries()).map(([month, amount]) => ({ month, amount }));
+    return Array.from(trendData.entries()).map(([month, amount]) => ({ 
+        month, 
+        amount: Math.max(0, amount) 
+    }));
 }
 
 export async function getTopClients(workspaceId: string, limit: number = 5) {
@@ -171,10 +174,10 @@ export async function getTopClients(workspaceId: string, limit: number = 5) {
             .reduce((sum, inv) => sum + inv.totalAmount, 0);
 
         return {
-            name: client.name,
-            totalRevenue: totalPaid,
-            activeMatters: client.matters.length,
-            outstanding,
+            name: client.name || 'Unknown Client',
+            totalRevenue: totalPaid || 0,
+            activeMatters: client.matters?.length || 0,
+            outstanding: outstanding || 0,
             status: outstanding > 0 ? (totalPaid > 0 ? 'PARTLY PAID' : 'UNPAID') : 'PAID'
         };
     });

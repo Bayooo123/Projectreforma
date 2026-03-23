@@ -24,22 +24,22 @@ export default async function AnalyticsPage(props: {
 
     const filter = searchParams.filter || 'this-month';
 
-    // Fetch all data in parallel on the server
-    const [
-        metrics,
-        revenueTrend,
-        topClients,
-        lawyerStats,
-        matterDistribution,
-        courtVisits
-    ] = await Promise.all([
-        getAnalyticsMetrics(workspaceId),
-        getRevenueTrend(workspaceId),
-        getTopClients(workspaceId),
-        getLawyerStats(workspaceId),
-        getMatterDistribution(workspaceId),
-        getCourtVisits(workspaceId)
-    ]);
+    let metrics, revenueTrend, topClients, lawyerStats, matterDistribution, courtVisits;
+
+    try {
+        const results = await Promise.all([
+            getAnalyticsMetrics(workspaceId),
+            getRevenueTrend(workspaceId),
+            getTopClients(workspaceId),
+            getLawyerStats(workspaceId),
+            getMatterDistribution(workspaceId),
+            getCourtVisits(workspaceId)
+        ]);
+        
+        [metrics, revenueTrend, topClients, lawyerStats, matterDistribution, courtVisits] = results;
+    } catch (error) {
+        console.error("Critical Analytics Fetch Failure:", error);
+    }
 
     const analyticsData = {
         metrics: metrics || {
