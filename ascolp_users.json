@@ -4,11 +4,6 @@
     "slug": "ascolp-uNfwr9",
     "members": [
       {
-        "name": "Adebayo Gbadebo",
-        "email": "Bayo@abiolasanniandco.com",
-        "role": "Associate"
-      },
-      {
         "name": "Professor Abiola Sanni SAN",
         "email": "Asanni@abiolasanniandco.com",
         "role": "owner"
@@ -56,7 +51,7 @@
       {
         "name": "Adebayo Gbadebo",
         "email": "bayo@abiolasanniandco.com",
-        "role": "admin"
+        "role": "Associate"
       }
     ]
   }

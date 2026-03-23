@@ -14,7 +14,7 @@ const USERS = [
     { name: 'Maureen Omaegbu', email: 'maureen@abiolasanniandco.com', role: 'Associate', designation: 'Associate' },
     { name: 'Adeola Adeoye', email: 'ade@abiolasanniandco.com', role: 'Associate', designation: 'Associate' },
     { name: 'Benjamin Adeyanju', email: 'ben@abiolasanniandco.com', role: 'Associate', designation: 'Associate' },
-    { name: 'Adebayo Gbadebo', email: 'bayo@abiolasanniandco.com', role: 'Owner', designation: 'Associate' },
+    { name: 'Adebayo Gbadebo', email: 'bayo@abiolasanniandco.com', role: 'Associate', designation: 'Associate' },
     { name: 'Henrietta Ofodirinwa', email: 'henrietta@abiolasanniandco.com', role: 'Practice Manager', designation: 'Practice Manager' },
     { name: 'Tosin Omisade', email: 'tosin@abiolasanniandco.com', role: 'Associate', designation: 'Associate' },
     { name: 'Samuel Adeleye', email: 'samuel@abiolasanniandco.com', role: 'Associate', designation: 'Associate' }

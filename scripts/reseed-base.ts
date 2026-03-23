@@ -25,7 +25,7 @@ async function main() {
         data: {
             workspaceId: workspace.id,
             userId: owner.id,
-            role: 'owner',
+            role: 'member',
             designation: 'Associate'
         }
     });
