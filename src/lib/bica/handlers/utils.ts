@@ -23,24 +23,24 @@ export const RELATION_RESOLVERS: Record<string, EntityResolver> = {
     return map[normalized] || map[normalized + 's'] || (normalized.endsWith('s') ? map[normalized.slice(0, -1)] : null);
   },
 
-  'firm': async (firm: any, _relation: string) => {
-    // Firm (Workspace) scoping is simple: everything belongs to this workspaceId
-    return { workspaceId: firm.id };
+  'workspace': async (workspace: any, _relation: string) => {
+    // workspace (Workspace) scoping is simple: everything belongs to this workspaceId
+    return { workspaceId: workspace.id };
   }
 };
 
 export async function resolveRelationScope(entity: any, entityType: string, relationName: string): Promise<any> {
-    const resolver = RELATION_RESOLVERS[entityType.toLowerCase()];
-    if (!resolver) {
-      throw new Error(`No relation resolver defined for entity type "${entityType}"`);
-    }
+  const resolver = RELATION_RESOLVERS[entityType.toLowerCase()];
+  if (!resolver) {
+    throw new Error(`No relation resolver defined for entity type "${entityType}"`);
+  }
 
-    const scope = await resolver(entity, relationName);
-    if (!scope) {
-      // Fallback: if we don't have a specific relation map, try a default workspaceId match
-      // assuming the entity has an ID that might be a workspaceId
-      return { workspaceId: entity.id };
-    }
+  const scope = await resolver(entity, relationName);
+  if (!scope) {
+    // Fallback: if we don't have a specific relation map, try a default workspaceId match
+    // assuming the entity has an ID that might be a workspaceId
+    return { workspaceId: entity.id };
+  }
 
-    return scope;
+  return scope;
 }
