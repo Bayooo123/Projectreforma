@@ -1,7 +1,7 @@
 /**
  * Bica Platform — Morph Registry
  *
- * Maps `platform_entity_type` strings (snake_case singular, e.g. "user", "firm")
+ * Maps `platform_entity_type` strings (snake_case singular, e.g. "user", "workspace")
  * to async resolver functions that load the corresponding Prisma entity by ID.
  *
  * Design principles:
@@ -60,13 +60,13 @@ const REGISTRY: Record<string, MorphResolver> = {
     },
 
     /**
-     * "firm" → prisma.workspace
+     * "workspace" → prisma.workspace
      * Represents the law firm / workspace itself.
-     * Useful when an action is actor is the firm, not an individual user.
+     * Useful when an action is actor is the workspace, not an individual user.
      */
-    firm: async (id) => {
+    workspace: async (id) => {
         const entity = await prisma.workspace.findUnique({ where: { id } });
-        if (!entity) throw new MorphEntityNotFoundError('firm', id);
+        if (!entity) throw new MorphEntityNotFoundError('workspace', id);
         return entity;
     },
 

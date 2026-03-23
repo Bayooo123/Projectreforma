@@ -1,25 +1,20 @@
 /**
  * Bica CRUD Execution Engine
  *
- * Processes a single `Crud` parameterSet from a Bica write operation.
- * All operations are scoped to a workspace identified by `workspaceId`.
+ * Processes Bica `Crud` parameterSets.
+ * Scoping is resolved polymorphically: $platformEntity->$relationName()
  */
 
 import { prisma } from '@/lib/prisma';
 import { JEQLCompiler } from '@/lib/jeql/compiler';
 import { JEQLQuery } from '@/lib/jeql/types';
+import { BicaContext } from './handlers/types';
+import { resolveRelationScope } from './handlers/utils';
 
 // ---------------------------------------------------------------------------
 // Model registry
 // ---------------------------------------------------------------------------
 
-/**
- * Maps the `relationName` (camelCase plural) used in Bica payloads to the
- * Prisma model delegate key (camelCase singular).
- *
- * The Bica spec sends relationName in camelCase plural form (e.g. "clients",
- * "matters", "calendarEntries"). Prisma delegates are singular.
- */
 const RELATION_TO_MODEL: Record<string, string> = {
     clients: 'client',
     matters: 'matter',
@@ -34,21 +29,14 @@ const RELATION_TO_MODEL: Record<string, string> = {
     documents: 'document',
 };
 
-/**
- * Resolves a relation name to the Prisma delegate.
- * Throws if the relation is not in the registry.
- */
 function resolveDelegate(relationName: string): any {
-    const modelKey = RELATION_TO_MODEL[relationName];
-    if (!modelKey) {
-        throw new CrudError(
-            'VALIDATION_ERROR',
-            `Unknown relationName '${relationName}'. Allowed: ${Object.keys(RELATION_TO_MODEL).join(', ')}`
-        );
-    }
+    const modelKey = RELATION_TO_MODEL[relationName] || 
+                     (relationName.toLowerCase().endsWith('s') ? RELATION_TO_MODEL[relationName.toLowerCase()] : null) ||
+                     relationName.charAt(0).toLowerCase() + relationName.slice(1);
+    
     const delegate = (prisma as any)[modelKey];
     if (!delegate) {
-        throw new CrudError('SERVER_ERROR', `Prisma delegate for '${modelKey}' is undefined.`);
+        throw new CrudError('VALIDATION_ERROR', `Unknown relation or model: '${relationName}'.`);
     }
     return delegate;
 }
@@ -83,231 +71,132 @@ export interface CrudResult {
 }
 
 // ---------------------------------------------------------------------------
-// Workspace scope helper
-// ---------------------------------------------------------------------------
-
-/**
- * Returns the workspaceId constraint to apply to every query.
- * All top-level Reforma entities are owned by a Workspace.
- */
-function workspaceConstraint(workspaceId: string) {
-    return { workspaceId };
-}
-
-// ---------------------------------------------------------------------------
 // Sub-action handlers
 // ---------------------------------------------------------------------------
 
 const compiler = new JEQLCompiler();
 
-/**
- * create — inserts a single new record under the parent.
- *
- * data:
- *   - relationName (string) : the child relationship to create in
- *   - definition  (object)  : field values for the new record
- */
-async function handleCreate(paramSet: CrudParameterSet, workspaceId: string): Promise<any> {
+async function handleCreate(paramSet: CrudParameterSet, context: BicaContext): Promise<any> {
     const { relationName, definition } = paramSet.data;
     if (!relationName || typeof definition !== 'object') {
-        throw new CrudError('VALIDATION_ERROR', 'create requires data.relationName (string) and data.definition (object).');
+        throw new CrudError('VALIDATION_ERROR', 'create requires data.relationName and data.definition.');
     }
 
     const delegate = resolveDelegate(relationName);
+    
+    // For creation, we automatically inject the parent scoping if applicable
+    // Note: $entity->$relation()->create() usually implies the entity's ID is the parent ID
+    const scope = await resolveRelationScope(context.platformEntity, context.platformEntityType, relationName);
 
     const record = await delegate.create({
         data: {
             ...definition,
-            ...workspaceConstraint(workspaceId),
+            ...scope,
         },
     });
 
-    return {
-        id: record.id,
-        created: true,
-        record,
-    };
+    return { id: record.id, created: true, record };
 }
 
-/**
- * createMany — inserts multiple records under the parent.
- *
- * data:
- *   - relationName (string)   : the child relationship to create in
- *   - definition  (object[])  : array of field value objects
- */
-async function handleCreateMany(paramSet: CrudParameterSet, workspaceId: string): Promise<any> {
+async function handleCreateMany(paramSet: CrudParameterSet, context: BicaContext): Promise<any> {
     const { relationName, definition } = paramSet.data;
     if (!relationName || !Array.isArray(definition)) {
-        throw new CrudError('VALIDATION_ERROR', 'createMany requires data.relationName (string) and data.definition (array).');
+        throw new CrudError('VALIDATION_ERROR', 'createMany requires data.relationName and data.definition (array).');
     }
 
     const delegate = resolveDelegate(relationName);
+    const scope = await resolveRelationScope(context.platformEntity, context.platformEntityType, relationName);
 
     const records = definition.map((def: any) => ({
         ...def,
-        ...workspaceConstraint(workspaceId),
+        ...scope,
     }));
 
     const result = await delegate.createMany({ data: records });
-
-    return {
-        count: result.count,
-        created: true,
-    };
+    return { count: result.count, created: true };
 }
 
-/**
- * read — fetches records using JEQL targetOperations.
- *
- * data:
- *   - scope            (string) : relation/model to query
- *   - targetOperations (object) : JEQL query
- */
-async function handleRead(paramSet: CrudParameterSet, workspaceId: string): Promise<any> {
+async function handleRead(paramSet: CrudParameterSet, context: BicaContext): Promise<any> {
     const { scope, targetOperations } = paramSet.data;
-    if (!scope) {
-        throw new CrudError('VALIDATION_ERROR', 'read requires data.scope (string).');
-    }
+    if (!scope) throw new CrudError('VALIDATION_ERROR', 'read requires data.scope.');
 
     const delegate = resolveDelegate(scope);
+    const whereScope = await resolveRelationScope(context.platformEntity, context.platformEntityType, scope);
     const jeqlArgs = compiler.compile((targetOperations || {}) as JEQLQuery);
 
-    // Always inject workspace scoping into the where clause
-    jeqlArgs.where = {
-        ...jeqlArgs.where,
-        ...workspaceConstraint(workspaceId),
-    };
+    jeqlArgs.where = { AND: [whereScope, jeqlArgs.where || {}] };
 
     const records = await delegate.findMany(jeqlArgs);
     return { records };
 }
 
-/**
- * count — counts records matching JEQL targetOperations.
- *
- * data:
- *   - scope            (string)  : relation/model to count
- *   - targetOperations (object?) : JEQL query (filter only)
- */
-async function handleCount(paramSet: CrudParameterSet, workspaceId: string): Promise<any> {
+async function handleCount(paramSet: CrudParameterSet, context: BicaContext): Promise<any> {
     const { scope, targetOperations } = paramSet.data;
-    if (!scope) {
-        throw new CrudError('VALIDATION_ERROR', 'count requires data.scope (string).');
-    }
+    if (!scope) throw new CrudError('VALIDATION_ERROR', 'count requires data.scope.');
 
     const delegate = resolveDelegate(scope);
+    const whereScope = await resolveRelationScope(context.platformEntity, context.platformEntityType, scope);
     const jeqlArgs = compiler.compile((targetOperations || {}) as JEQLQuery);
 
-    // count only uses 'where'
-    const countWhere = {
-        ...(jeqlArgs.where || {}),
-        ...workspaceConstraint(workspaceId),
-    };
-
-    const total = await delegate.count({ where: countWhere });
-    return { count: total };
+    const result = await delegate.count({ 
+        where: { AND: [whereScope, jeqlArgs.where || {}] } 
+    });
+    return { count: result };
 }
 
-/**
- * update — applies the same attributes to all records matching the JEQL query.
- *
- * data:
- *   - scope            (string) : relation/model to update
- *   - targetOperations (object) : JEQL conditions to identify targets
- *   - attributes       (object) : column values to apply
- */
-async function handleUpdate(paramSet: CrudParameterSet, workspaceId: string): Promise<any> {
+async function handleUpdate(paramSet: CrudParameterSet, context: BicaContext): Promise<any> {
     const { scope, targetOperations, attributes } = paramSet.data;
-    if (!scope || typeof attributes !== 'object' || Array.isArray(attributes)) {
-        throw new CrudError('VALIDATION_ERROR', 'update requires data.scope, data.targetOperations, and data.attributes (object).');
-    }
+    if (!scope || !attributes) throw new CrudError('VALIDATION_ERROR', 'update requires data.scope and data.attributes.');
 
     const delegate = resolveDelegate(scope);
+    const whereScope = await resolveRelationScope(context.platformEntity, context.platformEntityType, scope);
     const jeqlArgs = compiler.compile((targetOperations || {}) as JEQLQuery);
 
-    const updateWhere = {
-        ...(jeqlArgs.where || {}),
-        ...workspaceConstraint(workspaceId),
-    };
-
     const result = await delegate.updateMany({
-        where: updateWhere,
+        where: { AND: [whereScope, jeqlArgs.where || {}] },
         data: attributes,
     });
 
     return { count: result.count, updated: true };
 }
 
-/**
- * updateEach — applies a corresponding attributes object per matched record (one-to-one).
- *
- * data:
- *   - scope            (string)   : relation/model to update
- *   - targetOperations (object)   : JEQL conditions to identify targets
- *   - attributes       (object[]) : array of attribute objects, one per matched record
- */
-async function handleUpdateEach(paramSet: CrudParameterSet, workspaceId: string): Promise<any> {
+async function handleUpdateEach(paramSet: CrudParameterSet, context: BicaContext): Promise<any> {
     const { scope, targetOperations, attributes } = paramSet.data;
-    if (!scope || !Array.isArray(attributes)) {
-        throw new CrudError('VALIDATION_ERROR', 'updateEach requires data.scope, data.targetOperations, and data.attributes (array).');
-    }
+    if (!scope || !Array.isArray(attributes)) throw new CrudError('VALIDATION_ERROR', 'updateEach requires data.attributes (array).');
 
     const delegate = resolveDelegate(scope);
+    const whereScope = await resolveRelationScope(context.platformEntity, context.platformEntityType, scope);
     const jeqlArgs = compiler.compile((targetOperations || {}) as JEQLQuery);
 
-    const matchWhere = {
-        ...(jeqlArgs.where || {}),
-        ...workspaceConstraint(workspaceId),
-    };
-
-    // Fetch IDs of matching records
     const matches = await delegate.findMany({
-        where: matchWhere,
+        where: { AND: [whereScope, jeqlArgs.where || {}] },
         select: { id: true },
     });
 
     if (matches.length !== attributes.length) {
-        throw new CrudError(
-            'VALIDATION_ERROR',
-            `updateEach: attributes array length (${attributes.length}) does not match matched records (${matches.length}).`
-        );
+        throw new CrudError('VALIDATION_ERROR', `Attribute count mismatch. Expected ${matches.length}, got ${attributes.length}.`);
     }
 
     const updates = await Promise.all(
-        matches.map(({ id }: { id: string }, index: number) =>
-            delegate.update({
-                where: { id },
-                data: attributes[index],
-            })
+        matches.map(({ id }: any, index: number) =>
+            delegate.update({ where: { id }, data: attributes[index] })
         )
     );
 
     return { count: updates.length, updated: true };
 }
 
-/**
- * delete — deletes all records matching the JEQL query.
- *
- * data:
- *   - scope            (string) : relation/model to delete from
- *   - targetOperations (object) : JEQL conditions to identify targets
- */
-async function handleDelete(paramSet: CrudParameterSet, workspaceId: string): Promise<any> {
+async function handleDelete(paramSet: CrudParameterSet, context: BicaContext): Promise<any> {
     const { scope, targetOperations } = paramSet.data;
-    if (!scope) {
-        throw new CrudError('VALIDATION_ERROR', 'delete requires data.scope (string) and data.targetOperations.');
-    }
+    if (!scope) throw new CrudError('VALIDATION_ERROR', 'delete requires data.scope.');
 
     const delegate = resolveDelegate(scope);
+    const whereScope = await resolveRelationScope(context.platformEntity, context.platformEntityType, scope);
     const jeqlArgs = compiler.compile((targetOperations || {}) as JEQLQuery);
 
-    const deleteWhere = {
-        ...(jeqlArgs.where || {}),
-        ...workspaceConstraint(workspaceId),
-    };
-
-    const result = await delegate.deleteMany({ where: deleteWhere });
+    const result = await delegate.deleteMany({ 
+        where: { AND: [whereScope, jeqlArgs.where || {}] } 
+    });
     return { count: result.count, deleted: true };
 }
 
@@ -315,50 +204,39 @@ async function handleDelete(paramSet: CrudParameterSet, workspaceId: string): Pr
 // Main dispatcher
 // ---------------------------------------------------------------------------
 
-/**
- * Executes one Crud parameterSet and returns the result.
- * Throws CrudError on any validation failure or unsupported action.
- */
 export async function executeCrudParameterSet(
     paramSet: CrudParameterSet,
-    workspaceId: string
+    context: BicaContext
 ): Promise<CrudResult> {
     const { action } = paramSet;
-
     let result: any;
 
     switch (action) {
-        case 'create': result = await handleCreate(paramSet, workspaceId); break;
-        case 'createMany': result = await handleCreateMany(paramSet, workspaceId); break;
-        case 'read': result = await handleRead(paramSet, workspaceId); break;
-        case 'count': result = await handleCount(paramSet, workspaceId); break;
-        case 'update': result = await handleUpdate(paramSet, workspaceId); break;
-        case 'updateEach': result = await handleUpdateEach(paramSet, workspaceId); break;
-        case 'delete': result = await handleDelete(paramSet, workspaceId); break;
+        case 'create': result = await handleCreate(paramSet, context); break;
+        case 'createMany': result = await handleCreateMany(paramSet, context); break;
+        case 'read': result = await handleRead(paramSet, context); break;
+        case 'count': result = await handleCount(paramSet, context); break;
+        case 'update': result = await handleUpdate(paramSet, context); break;
+        case 'updateEach': result = await handleUpdateEach(paramSet, context); break;
+        case 'delete': result = await handleDelete(paramSet, context); break;
         default:
-            throw new CrudError('VALIDATION_ERROR', `Unknown Crud sub-action: '${action}'.`);
+            throw new CrudError('VALIDATION_ERROR', `Unknown action: '${action}'.`);
     }
 
     return { action, result };
 }
 
-/**
- * Processes an entire Crud payload (up to 5 parameterSets) sequentially.
- */
 export async function executeCrudPayload(
     parameterSets: CrudParameterSet[],
-    workspaceId: string
+    context: BicaContext
 ): Promise<CrudResult[]> {
     if (!Array.isArray(parameterSets) || parameterSets.length === 0) {
         throw new CrudError('VALIDATION_ERROR', 'Crud payload must have at least one parameterSet.');
     }
-    if (parameterSets.length > 5) {
-        throw new CrudError('VALIDATION_ERROR', `Crud payload exceeds max parameterSets limit of 5.`);
-    }
-
     const results: CrudResult[] = [];
     for (const paramSet of parameterSets) {
-        results.push(await executeCrudParameterSet(paramSet, workspaceId));
+        results.push(await executeCrudParameterSet(paramSet, context));
     }
     return results;
 }
+
