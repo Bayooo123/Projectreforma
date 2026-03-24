@@ -1,7 +1,7 @@
-import { LookupHandler } from './lookup';
-import { DirectLookupHandler } from './direct-lookup';
-import { WriteHandler } from './write';
-import { PreviewHandler } from './preview';
+import { LookupHandler } from '../operations/lookup';
+import { DirectLookupHandler } from '../operations/direct-lookup';
+import { WriteHandler } from '../operations/write';
+import { PreviewHandler } from '../operations/preview';
 import { BicaContext } from './types';
 
 export function getHandler(operationType: string, context: BicaContext) {

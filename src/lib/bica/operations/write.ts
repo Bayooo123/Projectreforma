@@ -1,4 +1,4 @@
-import { BicaHandler } from './base';
+import { BicaHandler } from '../handlers/base';
 import { executeCrudPayload, CrudParameterSet } from '@/lib/bica/crud-engine';
 
 export class WriteHandler extends BicaHandler {

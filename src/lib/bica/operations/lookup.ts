@@ -1,8 +1,7 @@
-import { BicaHandler } from './base';
+import { BicaHandler } from '../handlers/base';
 import { JEQLCompiler } from '@/lib/jeql/compiler';
 import { prisma } from '@/lib/prisma';
-import { getRecordLabel, getRecordSecondaryLabel } from './label-config';
-import { getModelKey } from '../search-config';
+import { getPlaybook } from '../playbooks';
 
 export class LookupHandler extends BicaHandler {
   async handle(payload: any): Promise<any> {
@@ -15,9 +14,12 @@ export class LookupHandler extends BicaHandler {
       throw Object.assign(new Error('lookup payload must include "scope".'), { bicaCode: 'VALIDATION_ERROR' });
     }
 
-    // Resolve scope -> Prisma model key
-    const modelKey = getModelKey(scope);
-    const delegate = (prisma as any)[modelKey];
+    const playbook = getPlaybook(scope);
+    if (!playbook) {
+      throw Object.assign(new Error(`Unknown scope: '${scope}'.`), { bicaCode: 'VALIDATION_ERROR' });
+    }
+
+    const delegate = (prisma as any)[playbook.modelKey];
     if (!delegate) {
       throw Object.assign(new Error(`Unknown scope: '${scope}'.`), { bicaCode: 'VALIDATION_ERROR' });
     }
@@ -36,8 +38,8 @@ export class LookupHandler extends BicaHandler {
     return {
       matches: records.map((r: any) => ({
         id: r.id,
-        label: getRecordLabel(modelKey, r),
-        secondaryLabel: getRecordSecondaryLabel(modelKey, r),
+        label: playbook.getLookupLabel(r),
+        secondaryLabel: playbook.getLookupSecondaryLabel(r),
         confidence: 1.0,
       })),
     };

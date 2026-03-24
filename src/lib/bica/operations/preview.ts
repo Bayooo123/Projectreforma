@@ -1,7 +1,6 @@
-import { BicaHandler } from './base';
+import { BicaHandler } from '../handlers/base';
 import { prisma } from '@/lib/prisma';
-import { getRecordLabel, getRecordSecondaryLabel } from './label-config';
-import { getModelKey } from '../search-config';
+import { getPlaybook } from '../playbooks';
 
 export class PreviewHandler extends BicaHandler {
   async handle(payload: any): Promise<any> {
@@ -11,8 +10,12 @@ export class PreviewHandler extends BicaHandler {
       throw Object.assign(new Error('preview requires "model" and "ids" array.'), { bicaCode: 'VALIDATION_ERROR' });
     }
 
-    const modelKey = getModelKey(model);
-    const delegate = (prisma as any)[modelKey];
+    const playbook = getPlaybook(model);
+    if (!playbook) {
+      throw Object.assign(new Error(`Unknown model: '${model}'.`), { bicaCode: 'VALIDATION_ERROR' });
+    }
+
+    const delegate = (prisma as any)[playbook.modelKey];
     if (!delegate) {
       throw Object.assign(new Error(`Unknown model: '${model}'.`), { bicaCode: 'VALIDATION_ERROR' });
     }
@@ -25,8 +28,8 @@ export class PreviewHandler extends BicaHandler {
 
     const cardMap: Record<string, string> = {};
     for (const r of records) {
-      const label = getRecordLabel(modelKey, r);
-      const secondaryLabel = getRecordSecondaryLabel(modelKey, r);
+      const label = playbook.getLookupLabel(r);
+      const secondaryLabel = playbook.getLookupSecondaryLabel(r);
       cardMap[r.id] = `<div class="bica-preview-card">
   <h4 style="margin:0 0 4px;font-size:14px;">${this.escapeHtml(label)}</h4>
   <p style="margin:0;font-size:12px;color:#666;">${this.escapeHtml(secondaryLabel)}</p>
