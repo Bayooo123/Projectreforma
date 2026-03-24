@@ -30,7 +30,8 @@ export async function getCalendarEvents(workspaceId: string) {
                 },
                 appearances: {
                     select: { id: true, name: true, email: true, image: true }
-                }
+                },
+                meetingRecording: true
             },
             orderBy: { date: 'asc' }
         });

@@ -6,7 +6,7 @@ import { AudioRecorder } from './AudioRecorder';
 import { recordMeeting } from '@/app/actions/matters';
 import styles from '../calendar/MatterDetailModal.module.css';
 
-interface CreateMeetingRecordModalProps {
+interface CreateMeetingRecordingModalProps {
     isOpen: boolean;
     onClose: () => void;
     matterId: string;
@@ -14,7 +14,7 @@ interface CreateMeetingRecordModalProps {
     onSuccess: () => void;
 }
 
-export const CreateMeetingRecordModal: React.FC<CreateMeetingRecordModalProps> = ({
+export const CreateMeetingRecordingModal: React.FC<CreateMeetingRecordingModalProps> = ({
     isOpen,
     onClose,
     matterId,
@@ -47,7 +47,7 @@ export const CreateMeetingRecordModal: React.FC<CreateMeetingRecordModalProps> =
                 actionItems: '',
                 audioUrl: url,
                 audioDuration: dur
-            } as any);
+            });
 
             if (result.success) {
                 onSuccess();
@@ -80,7 +80,7 @@ export const CreateMeetingRecordModal: React.FC<CreateMeetingRecordModalProps> =
                 actionItems,
                 audioUrl: audioUrl || undefined,
                 audioDuration: duration
-            } as any);
+            });
 
             if (result.success) {
                 onSuccess();

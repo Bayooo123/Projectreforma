@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { X, Save, Loader, Search, FileText, Calendar, User, Mic, Check, Loader2 } from 'lucide-react';
 import { recordMeeting } from '@/app/actions/matters';
-import { getLawyersForWorkspace, getBriefs } from '@/lib/briefs';
+import { getBriefs } from '@/lib/briefs';
 import { AudioRecorder } from '../meetings/AudioRecorder';
 import styles from './LitigationForm.module.css';
 
@@ -13,6 +13,7 @@ interface RecordMeetingModalProps {
     workspaceId: string;
     userId: string;
     onSuccess?: () => void;
+    calendarEntryId?: string; // Optional: if recording for an existing entry
 }
 
 const RecordMeetingModal = ({
@@ -20,7 +21,8 @@ const RecordMeetingModal = ({
     onClose,
     workspaceId,
     userId,
-    onSuccess
+    onSuccess,
+    calendarEntryId
 }: RecordMeetingModalProps) => {
     const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
     const [participants, setParticipants] = useState('');
@@ -36,44 +38,67 @@ const RecordMeetingModal = ({
     // AI Recording State
     const [status, setStatus] = useState<'idle' | 'recording' | 'processing' | 'reviewing'>('idle');
     const [audioUrl, setAudioUrl] = useState<string | null>(null);
+    const [recordingId, setRecordingId] = useState<string | null>(null);
     const [duration, setDuration] = useState(0);
-    const [transcription, setTranscription] = useState('');
+    const [transcriptText, setTranscriptText] = useState('');
     const [isTranscribing, setIsTranscribing] = useState(false);
+    
+    const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-    const handleRecordingComplete = async (url: string, dur: number) => {
+    const startPolling = (id: string) => {
+        if (pollingIntervalRef.current) clearInterval(pollingIntervalRef.current);
+        
+        pollingIntervalRef.current = setInterval(async () => {
+            try {
+                const res = await fetch(`/api/meetings/status?id=${id}`);
+                const result = await res.json();
+                
+                if (result.status === 'completed') {
+                    setTranscriptText(result.data.transcriptText || '');
+                    setSummary(result.data.summary || '');
+                    setActionItems(result.data.actionItems || '');
+                    setIsTranscribing(false);
+                    if (pollingIntervalRef.current) clearInterval(pollingIntervalRef.current);
+                } else if (result.status === 'failed') {
+                    setIsTranscribing(false);
+                    if (pollingIntervalRef.current) clearInterval(pollingIntervalRef.current);
+                }
+            } catch (err) {
+                console.error('Polling error:', err);
+            }
+        }, 3000);
+    };
+
+    const handleRecordingComplete = async (recId: string, url: string, dur: number) => {
+        setRecordingId(recId);
         setAudioUrl(url);
         setDuration(dur);
         setStatus('reviewing');
-
-        // NEW: Trigger transcription instead of auto-saving
         setIsTranscribing(true);
+
         try {
-            const response = await fetch('/api/transcribe', {
+            // Trigger transcription (async)
+            fetch('/api/meetings/transcribe', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ audioUrl: url }),
+                body: JSON.stringify({ recordingId: recId }),
             });
 
-            if (!response.ok) throw new Error('Transcription failed');
-
-            const data = await response.json();
-            setTranscription(data.transcription || '');
-            setSummary(data.summary || '');
-            setActionItems(data.actionItems || '');
+            // Start polling for results
+            startPolling(recId);
         } catch (err) {
-            console.error('Transcription error:', err);
-            // Don't alert, just let user fill it manually if AI fails
-            setSummary(summary || 'AI transcription failed. Please summarize manually.');
-        } finally {
+            console.error('Transcription trigger error:', err);
             setIsTranscribing(false);
         }
     };
-
 
     useEffect(() => {
         if (isOpen && workspaceId) {
             loadData();
         }
+        return () => {
+            if (pollingIntervalRef.current) clearInterval(pollingIntervalRef.current);
+        };
     }, [isOpen, workspaceId]);
 
     const loadData = async () => {
@@ -98,11 +123,13 @@ const RecordMeetingModal = ({
         setIsSubmitting(true);
         try {
             const result = await recordMeeting({
+                recordingId: recordingId || undefined,
+                calendarEntryId: calendarEntryId || undefined,
                 matterId: selectedMatterId || undefined,
                 date: new Date(date),
                 participants: participants,
                 summary,
-                transcription,
+                transcriptText,
                 actionItems: actionItems || undefined,
                 followUpDate: followUpDate ? new Date(followUpDate) : undefined,
                 audioUrl: audioUrl || undefined,
@@ -142,6 +169,8 @@ const RecordMeetingModal = ({
                             <AudioRecorder
                                 onRecordingComplete={handleRecordingComplete}
                                 onStatusChange={setStatus}
+                                calendarEntryId={calendarEntryId}
+                                matterId={selectedMatterId}
                             />
                         </div>
 
@@ -196,7 +225,6 @@ const RecordMeetingModal = ({
                                     value={summary}
                                     onChange={(e) => setSummary(e.target.value)}
                                     required
-                                    readOnly={isTranscribing}
                                 />
                                 {isTranscribing && (
                                     <div className="absolute inset-0 flex items-center justify-center bg-white/50 backdrop-blur-[1px] rounded-md">
@@ -217,18 +245,17 @@ const RecordMeetingModal = ({
                                 placeholder={isTranscribing ? "Extracting action items..." : "Points for follow-up..."}
                                 value={actionItems}
                                 onChange={(e) => setActionItems(e.target.value)}
-                                readOnly={isTranscribing}
                             />
                         </div>
 
-                        {transcription && (
+                        {transcriptText && (
                             <div className={styles.formGroup}>
                                 <label className={styles.label}>Full Transcription</label>
                                 <textarea
                                     className={`${styles.textarea} font-mono text-[10px] bg-surface-subtle`}
                                     style={{ height: '80px' }}
-                                    value={transcription}
-                                    readOnly
+                                    value={transcriptText}
+                                    onChange={(e) => setTranscriptText(e.target.value)}
                                 />
                             </div>
                         )}
