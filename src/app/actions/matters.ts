@@ -863,24 +863,32 @@ export async function recordMeeting(data: {
     if (!session?.user) return { success: false, error: 'Unauthorized' };
 
     try {
+        // If summary/actionItems are provided manually (e.g. after review), 
+        // we combine them into the transcriptText field immediately.
+        let transcriptText = data.transcription || 'Transcription in progress...';
+        if (data.summary && data.summary !== 'Processing meeting insights...') {
+            transcriptText = `SUMMARY: ${data.summary}\n\nACTION ITEMS: ${data.actionItems || ''}\n\nTRANSCRIPTION: ${data.transcription || ''}`;
+        }
+
         const record = await prisma.meetingRecording.create({
             data: {
                 matterId: data.matterId || null,
                 calendarEntryId: data.calendarEntryId || null,
                 audioFileUrl: data.audioUrl || null,
-                transcriptText: data.transcription || 'Transcription in progress...',
+                transcriptText: transcriptText,
                 recordingDuration: data.audioDuration || null,
                 createdById: session.user.id,
             }
         });
 
-        // Trigger background transcription if audio is present and placeholders were used
+        // Trigger background transcription ONLY if audio is present and we still have placeholders
         const isPlaceholderSummary = !data.summary || data.summary === 'Processing meeting insights...';
         const isPlaceholderTranscription = !data.transcription || data.transcription === 'Transcription in progress...';
+        
         if (!data.skipTranscription && data.audioUrl && (isPlaceholderSummary || isPlaceholderTranscription)) {
-            // We don't await this so it runs in "background" from the client's perspective
             processMeetingAction(record.id, data.audioUrl).catch(console.error);
         }
+
 
         // revalidate
         revalidatePath('/calendar');

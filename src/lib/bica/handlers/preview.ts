@@ -1,50 +1,47 @@
 import { BicaHandler } from './base';
 import { prisma } from '@/lib/prisma';
+import { getRecordLabel, getRecordSecondaryLabel } from './label-config';
+import { getModelKey } from '../search-config';
 
 export class PreviewHandler extends BicaHandler {
   async handle(payload: any): Promise<any> {
-    const { relationName, id } = payload;
+    const { model, ids } = payload;
 
-    if (!relationName || !id) {
-      throw Object.assign(
-        new Error('preview requires "relationName" and "id".'),
-        { bicaCode: 'VALIDATION_ERROR' }
-      );
+    if (!model || !Array.isArray(ids) || ids.length === 0) {
+      throw Object.assign(new Error('preview requires "model" and "ids" array.'), { bicaCode: 'VALIDATION_ERROR' });
     }
 
-    // Resolve the polymorphic scope (Laravel-style $entity->$relation())
-    const whereScope = await this.resolveScope(relationName);
-    
-    const modelKey = relationName.charAt(0).toLowerCase() + relationName.slice(1);
+    const modelKey = getModelKey(model);
     const delegate = (prisma as any)[modelKey];
-
     if (!delegate) {
-      throw Object.assign(new Error(`Unknown relationName: '${relationName}'.`), { bicaCode: 'VALIDATION_ERROR' });
+      throw Object.assign(new Error(`Unknown model: '${model}'.`), { bicaCode: 'VALIDATION_ERROR' });
     }
 
-    const record = await delegate.findFirst({
-        where: { id, ...whereScope }
+    const whereScope = await this.resolveScope(model);
+    
+    const records = await delegate.findMany({
+      where: { id: { in: ids }, ...whereScope },
     });
 
-    if (!record) {
-      throw Object.assign(new Error(`Entity not found.`), { bicaCode: 'NOT_FOUND' });
+    const cardMap: Record<string, string> = {};
+    for (const r of records) {
+      const label = getRecordLabel(modelKey, r);
+      const secondaryLabel = getRecordSecondaryLabel(modelKey, r);
+      cardMap[r.id] = `<div class="bica-preview-card">
+  <h4 style="margin:0 0 4px;font-size:14px;">${this.escapeHtml(label)}</h4>
+  <p style="margin:0;font-size:12px;color:#666;">${this.escapeHtml(secondaryLabel)}</p>
+  <span style="font-size:11px;color:#999;">${this.escapeHtml(model)} · ${this.escapeHtml(r.id)}</span>
+</div>`;
     }
 
-    return {
-      html: this.renderCard(record, relationName)
-    };
+    return cardMap;
   }
 
-  private renderCard(record: any, scope: string): string {
-    const title = record.name || record.title || record.caseNumber || 'Entity Preview';
-    const subtitle = record.email || record.status || '';
-    
-    return `
-      <div style="font-family: sans-serif; padding: 12px; border: 1px solid #eee; border-radius: 8px;">
-        <h3 style="margin: 0 0 4px 0; font-size: 16px;">${title}</h3>
-        ${subtitle ? `<p style="margin: 0; font-size: 14px; color: #666;">${subtitle}</p>` : ''}
-        <div style="margin-top: 8px; font-size: 12px; color: #999;">Type: ${scope}</div>
-      </div>
-    `;
+  private escapeHtml(str: string): string {
+    return String(str || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
   }
 }

@@ -160,10 +160,53 @@
     color: var(--text-secondary);
 }
 
+.secondaryBtn {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.625rem 1rem;
+    background-color: var(--surface);
+    color: var(--text-primary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    font-size: var(--text-sm);
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.secondaryBtn:hover {
+    background-color: var(--accent);
+}
+
+.rowActions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.iconBtn {
+    padding: 0.4rem;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.iconBtn:hover {
+    background: var(--accent);
+    color: var(--primary);
+    border-color: var(--primary-light);
+}
+
 .loading,
 .empty {
     text-align: center;
     padding: 2rem;
     color: var(--text-secondary);
     font-size: var(--text-sm);
-}
+}

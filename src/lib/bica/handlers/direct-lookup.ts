@@ -1,6 +1,7 @@
 import { BicaHandler } from './base';
 import { prisma } from '@/lib/prisma';
 import { getSearchableFields, getModelKey } from '@/lib/bica/search-config';
+import { getRecordLabel, getRecordSecondaryLabel } from './label-config';
 
 export class DirectLookupHandler extends BicaHandler {
   async handle(payload: any): Promise<any> {
@@ -38,30 +39,20 @@ export class DirectLookupHandler extends BicaHandler {
       AND: [whereScope, { OR: searchConditions }]
     };
 
-    // Execute the query (Laravel: $records = $query->get();)
+    // Execute the query (Laravel: $records = $query->take(20)->get();)
     const records = await delegate.findMany({
       where: finalWhere,
+      take: 20
     });
 
 
     return {
       matches: records.map((r: any) => ({
         id: r.id,
-        label: this.buildLabel(r, relationName),
-        secondaryLabel: this.buildSecondaryLabel(r),
+        label: getRecordLabel(modelKey, r),
+        secondaryLabel: getRecordSecondaryLabel(modelKey, r),
         confidence: 0.9,
       })),
     };
-  }
-
-  private buildLabel(record: any, scope: string): string {
-    return record.name || record.title || record.caseNumber || record.briefNumber || record.id;
-  }
-
-  private buildSecondaryLabel(record: any): string {
-    const parts: string[] = [];
-    if (record.status) parts.push(`[${record.status}]`);
-    if (record.email) parts.push(record.email);
-    return parts.join(' ').slice(0, 255);
   }
 }

@@ -23,9 +23,14 @@ export const RELATION_RESOLVERS: Record<string, EntityResolver> = {
     return map[normalized] || map[normalized + 's'] || (normalized.endsWith('s') ? map[normalized.slice(0, -1)] : null);
   },
 
-  'workspace': async (workspace: any, _relation: string) => {
-    // workspace (Workspace) scoping is simple: everything belongs to this workspaceId
-    return { workspaceId: workspace.id };
+  'firm': async (firm: any, _relation: string) => {
+    // Firm (Workspace) scoping is simple: everything belongs to this workspaceId
+    return { workspaceId: firm.id };
+  },
+
+  'workspace': async (ws: any, relation: string) => {
+    // Alias for 'firm' to match Bica's platform_entity_type
+    return RELATION_RESOLVERS['firm'](ws, relation);
   }
 };
 

@@ -5,12 +5,16 @@ interface OfficeManagerClientProps {
     workspaceId: string;
     initialExpenses: any[];
     initialSummaries: any[];
+    userRole: string;
+    isOwner: boolean;
 }
 
 export default function OfficeManagerClient({
     workspaceId,
     initialExpenses,
-    initialSummaries
+    initialSummaries,
+    userRole,
+    isOwner
 }: OfficeManagerClientProps) {
     return (
         <div className="max-w-[1400px] mx-auto">
@@ -24,8 +28,11 @@ export default function OfficeManagerClient({
                     workspaceId={workspaceId}
                     initialExpenses={initialExpenses}
                     initialSummaries={initialSummaries}
+                    userRole={userRole}
+                    isOwner={isOwner}
                 />
             </div>
         </div>
     );
 }
+

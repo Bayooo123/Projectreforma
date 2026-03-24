@@ -45,34 +45,30 @@ const RecordMeetingModal = ({
         setDuration(dur);
         setStatus('reviewing');
 
-        // AUTOMATION: Immediately save the record and let processing happen in background
-        setIsSubmitting(true);
+        // NEW: Trigger transcription instead of auto-saving
+        setIsTranscribing(true);
         try {
-            const result = await recordMeeting({
-                matterId: selectedMatterId || undefined,
-                date: new Date(date),
-                participants: participants || 'Recorded Session',
-                summary: 'Processing meeting insights...',
-                transcription: 'Transcription in progress...',
-                actionItems: '',
-                followUpDate: followUpDate ? new Date(followUpDate) : undefined,
-                audioUrl: url,
-                audioDuration: dur
+            const response = await fetch('/api/transcribe', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ audioUrl: url }),
             });
 
-            if (result.success) {
-                onSuccess?.();
-                onClose();
-            } else {
-                alert(result.error);
-            }
+            if (!response.ok) throw new Error('Transcription failed');
+
+            const data = await response.json();
+            setTranscription(data.transcription || '');
+            setSummary(data.summary || '');
+            setActionItems(data.actionItems || '');
         } catch (err) {
-            console.error('Auto-save error:', err);
-            alert('Failed to save record automatically.');
+            console.error('Transcription error:', err);
+            // Don't alert, just let user fill it manually if AI fails
+            setSummary(summary || 'AI transcription failed. Please summarize manually.');
         } finally {
-            setIsSubmitting(false);
+            setIsTranscribing(false);
         }
     };
+
 
     useEffect(() => {
         if (isOpen && workspaceId) {
@@ -260,8 +256,9 @@ const RecordMeetingModal = ({
                     <button
                         className={styles.submitBtn}
                         onClick={handleSubmit}
-                        disabled={isSubmitting || !summary}
+                        disabled={isSubmitting || isTranscribing || !summary}
                     >
+
                         {isSubmitting ? (
                             <>
                                 <Loader size={16} className="animate-spin" />

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { TrendingDown, Plus } from 'lucide-react';
+import { TrendingDown, Plus, Edit2, Trash2, ArrowLeft } from 'lucide-react';
 import ExpenseModal from './ExpenseModal';
 import ExpensePeriodFilter, { DateRange } from './ExpensePeriodFilter';
 import styles from './FinancialLog.module.css';
@@ -19,6 +19,8 @@ interface FinancialLogProps {
     workspaceId: string;
     initialExpenses: Expense[];
     initialSummaries: any[];
+    userRole: string;
+    isOwner: boolean;
 }
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -32,14 +34,17 @@ const CATEGORY_LABELS: Record<string, string> = {
     'MISCELLANEOUS': 'Miscellaneous',
 };
 
-const FinancialLog = ({ workspaceId, initialExpenses, initialSummaries }: FinancialLogProps) => {
+const FinancialLog = ({ workspaceId, initialExpenses, initialSummaries, userRole, isOwner }: FinancialLogProps) => {
     const [viewMode, setViewMode] = useState<'summary' | 'detail'>('summary');
     const [selectedDate, setSelectedDate] = useState<string | null>(null);
     const [expenses, setExpenses] = useState<Expense[]>(initialExpenses);
     const [dailySummaries, setDailySummaries] = useState<any[]>(initialSummaries);
     const [isExpenseModalOpen, setIsExpenseModalOpen] = useState(false);
+    const [expenseToEdit, setExpenseToEdit] = useState<Expense | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [activeRange, setActiveRange] = useState<DateRange | null>(null);
+
+    const canManageExpenses = isOwner || ['Managing Partner', 'Partner', 'Practice Manager', 'Head of Chamber'].includes(userRole);
 
     const fetchExpenses = async (rangeOverride?: DateRange) => {
         setIsLoading(true);
@@ -79,6 +84,31 @@ const FinancialLog = ({ workspaceId, initialExpenses, initialSummaries }: Financ
 
     const handleExpenseAdded = () => {
         fetchExpenses();
+        setExpenseToEdit(null);
+    };
+
+    const handleEditExpense = (expense: Expense) => {
+        setExpenseToEdit(expense);
+        setIsExpenseModalOpen(true);
+    };
+
+    const handleDeleteExpense = async (id: string) => {
+        if (!confirm('Are you sure you want to delete this expense? This action cannot be undone.')) return;
+
+        try {
+            const response = await fetch(`/api/expenses?id=${id}&workspaceId=${workspaceId}`, {
+                method: 'DELETE',
+            });
+
+            if (response.ok) {
+                fetchExpenses();
+            } else {
+                alert('Failed to delete expense');
+            }
+        } catch (error) {
+            console.error('Delete error:', error);
+            alert('Error deleting expense');
+        }
     };
 
     const handleRangeChange = (range: DateRange) => {
@@ -125,6 +155,7 @@ const FinancialLog = ({ workspaceId, initialExpenses, initialSummaries }: Financ
         : [];
 
     const totalPeriodExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
+    const totalDayExpenses = displayedExpenses.reduce((sum, e) => sum + e.amount, 0);
 
     return (
         <div className={styles.container}>
@@ -143,29 +174,32 @@ const FinancialLog = ({ workspaceId, initialExpenses, initialSummaries }: Financ
                     )}
                     {viewMode === 'detail' && (
                         <button className={styles.secondaryBtn} onClick={handleBackToSummary}>
-                            ← Back to Summary
+                            <ArrowLeft size={16} />
+                            Back to Summary
                         </button>
                     )}
-                    <button className={styles.addBtn} onClick={() => setIsExpenseModalOpen(true)}>
+                    <button className={styles.addBtn} onClick={() => { setExpenseToEdit(null); setIsExpenseModalOpen(true); }}>
                         <Plus size={16} />
                         <span>Add Expense</span>
                     </button>
                 </div>
             </div>
 
-            {viewMode === 'summary' && (
-                <div className={styles.summary}>
-                    <div className={styles.summaryCard}>
-                        <div className={styles.summaryIcon} style={{ backgroundColor: 'var(--danger-bg)', color: 'var(--danger)' }}>
-                            <TrendingDown size={20} />
-                        </div>
-                        <div>
-                            <p className={styles.summaryLabel}>Total for Period</p>
-                            <p className={styles.summaryValue}>{formatCurrency(totalPeriodExpenses)}</p>
-                        </div>
+            <div className={styles.summary}>
+                <div className={styles.summaryCard}>
+                    <div className={styles.summaryIcon} style={{ backgroundColor: 'var(--danger-bg)', color: 'var(--danger)' }}>
+                        <TrendingDown size={20} />
+                    </div>
+                    <div>
+                        <p className={styles.summaryLabel}>
+                            {viewMode === 'summary' ? 'Total for Period' : 'Total for this Day'}
+                        </p>
+                        <p className={styles.summaryValue}>
+                            {formatCurrency(viewMode === 'summary' ? totalPeriodExpenses : totalDayExpenses)}
+                        </p>
                     </div>
                 </div>
-            )}
+            </div>
 
             <div className={styles.contentArea}>
                 {isLoading ? (
@@ -173,7 +207,7 @@ const FinancialLog = ({ workspaceId, initialExpenses, initialSummaries }: Financ
                 ) : viewMode === 'summary' ? (
                     // Summary View (List of Days)
                     dailySummaries.length === 0 ? (
-                        <div className={styles.empty}>No expenses recorded this month</div>
+                        <div className={styles.empty}>No expenses recorded for this period</div>
                     ) : (
                         <div className={styles.transactions}>
                             {dailySummaries.map((day) => (
@@ -228,10 +262,33 @@ const FinancialLog = ({ workspaceId, initialExpenses, initialSummaries }: Financ
                                         </div>
                                     </div>
                                     <div className={styles.transactionRight}>
-                                        <p className={`${styles.amount} ${styles.expense}`}>
-                                            -{formatCurrency(expense.amount)}
-                                        </p>
-                                        <p className={styles.time}>{formatTime(expense.date)}</p>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                                            <div style={{ textAlign: 'right' }}>
+                                                <p className={`${styles.amount} ${styles.expense}`}>
+                                                    -{formatCurrency(expense.amount)}
+                                                </p>
+                                                <p className={styles.time}>{formatTime(expense.date)}</p>
+                                            </div>
+                                            {canManageExpenses && (
+                                                <div className={styles.rowActions}>
+                                                    <button 
+                                                        className={styles.iconBtn} 
+                                                        onClick={(e) => { e.stopPropagation(); handleEditExpense(expense); }}
+                                                        title="Edit expense"
+                                                    >
+                                                        <Edit2 size={14} />
+                                                    </button>
+                                                    <button 
+                                                        className={styles.iconBtn} 
+                                                        onClick={(e) => { e.stopPropagation(); handleDeleteExpense(expense.id); }}
+                                                        title="Delete expense"
+                                                        style={{ color: 'var(--danger)' }}
+                                                    >
+                                                        <Trash2 size={14} />
+                                                    </button>
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
                             ))
@@ -242,13 +299,15 @@ const FinancialLog = ({ workspaceId, initialExpenses, initialSummaries }: Financ
 
             <ExpenseModal
                 isOpen={isExpenseModalOpen}
-                onClose={() => setIsExpenseModalOpen(false)}
+                onClose={() => { setIsExpenseModalOpen(false); setExpenseToEdit(null); }}
                 onSuccess={handleExpenseAdded}
                 workspaceId={workspaceId}
+                expenseToEdit={expenseToEdit}
             />
         </div>
     );
 };
+
 
 export default FinancialLog;
 

@@ -13,6 +13,22 @@ export default async function OfficeManagementPage() {
     const workspaceId = session.user.workspaceId;
     if (!workspaceId) return redirect('/onboarding');
 
+    // Fetch user membership for role-based permissions
+    const membership = await prisma.workspaceMember.findFirst({
+        where: {
+            workspaceId,
+            userId: session.user.id
+        },
+        include: {
+            workspace: {
+                select: { ownerId: true }
+            }
+        }
+    });
+
+    const userRole = membership?.role || 'Associate';
+    const isOwner = membership?.workspace.ownerId === session.user.id;
+
     // Pre-fetch initial financial data server-side
     const now = new Date();
     const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -61,6 +77,8 @@ export default async function OfficeManagementPage() {
                     workspaceId={workspaceId}
                     initialExpenses={serializedExpenses}
                     initialSummaries={summaries}
+                    userRole={userRole}
+                    isOwner={isOwner}
                 />
             </PinProtection>
         </div>

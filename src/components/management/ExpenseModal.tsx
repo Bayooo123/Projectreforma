@@ -9,6 +9,7 @@ interface ExpenseModalProps {
     onClose: () => void;
     onSuccess?: () => void;
     workspaceId?: string;
+    expenseToEdit?: any;
 }
 
 interface Expense {
@@ -31,8 +32,8 @@ const EXPENSE_CATEGORIES = [
     { label: 'Miscellaneous', value: 'MISCELLANEOUS' },
 ];
 
-const ExpenseModal = ({ isOpen, onClose, onSuccess, workspaceId }: ExpenseModalProps) => {
-    // List of added expenses
+const ExpenseModal = ({ isOpen, onClose, onSuccess, workspaceId, expenseToEdit }: ExpenseModalProps) => {
+    // List of added expenses (for batch mode)
     const [expenseList, setExpenseList] = useState<Expense[]>([]);
 
     // Current form values
@@ -45,18 +46,30 @@ const ExpenseModal = ({ isOpen, onClose, onSuccess, workspaceId }: ExpenseModalP
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState('');
 
+    const isEditMode = !!expenseToEdit;
+
     useEffect(() => {
         if (isOpen) {
-            // Reset state when opening
-            setExpenseList([]);
-            setCategory('');
-            setAmount('');
-            setDescription('');
-            setDate(new Date().toISOString().split('T')[0]);
-            setReference('');
+            if (expenseToEdit) {
+                // Initialize for edit mode
+                setCategory(expenseToEdit.category);
+                setAmount((expenseToEdit.amount / 100).toString());
+                setDescription(expenseToEdit.description || '');
+                setDate(new Date(expenseToEdit.date).toISOString().split('T')[0]);
+                setReference(expenseToEdit.reference || '');
+                setExpenseList([]);
+            } else {
+                // Reset for create mode
+                setCategory('');
+                setAmount('');
+                setDescription('');
+                setDate(new Date().toISOString().split('T')[0]);
+                setReference('');
+                setExpenseList([]);
+            }
             setError('');
         }
-    }, [isOpen]);
+    }, [isOpen, expenseToEdit]);
 
     if (!isOpen) return null;
 
@@ -90,14 +103,9 @@ const ExpenseModal = ({ isOpen, onClose, onSuccess, workspaceId }: ExpenseModalP
         setExpenseList(expenseList.filter(item => item.id !== id));
     };
 
-    const handleSaveAll = async () => {
-        if (expenseList.length === 0) {
-            setError('Please add at least one expense to the list.');
-            return;
-        }
-
+    const handleSave = async () => {
         if (!workspaceId) {
-            setError('System Error: Workspace ID is missing. Please refresh.');
+            setError('System Error: Workspace ID is missing.');
             return;
         }
 
@@ -105,30 +113,87 @@ const ExpenseModal = ({ isOpen, onClose, onSuccess, workspaceId }: ExpenseModalP
         setError('');
 
         try {
-            const response = await fetch('/api/expenses', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    workspaceId,
-                    expenses: expenseList.map(item => ({
-                        category: item.category,
-                        amount: parseFloat(item.amount),
-                        description: item.description || null,
-                        date: item.date,
-                        reference: item.reference || null
-                    }))
-                }),
-            });
+            if (isEditMode) {
+                // Single Update (PATCH)
+                const response = await fetch('/api/expenses', {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        id: expenseToEdit.id,
+                        workspaceId,
+                        category,
+                        amount: parseFloat(amount),
+                        description: description || null,
+                        date,
+                        reference: reference || null
+                    }),
+                });
 
-            const data = await response.json();
-
-            if (data.success) {
-                if (onSuccess) onSuccess();
-                onClose();
+                const data = await response.json();
+                if (data.success) {
+                    if (onSuccess) onSuccess();
+                    onClose();
+                } else {
+                    setError(data.error || 'Failed to update expense');
+                }
             } else {
-                setError(data.error || 'Failed to save expenses');
+                // Batch Create (POST)
+                if (expenseList.length === 0) {
+                    // Try to add the current form item if list is empty
+                    if (category && amount) {
+                        const response = await fetch('/api/expenses', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                workspaceId,
+                                expenses: [{
+                                    category,
+                                    amount: parseFloat(amount),
+                                    description: description || null,
+                                    date,
+                                    reference: reference || null
+                                }]
+                            }),
+                        });
+                        const data = await response.json();
+                        if (data.success) {
+                            if (onSuccess) onSuccess();
+                            onClose();
+                            return;
+                        } else {
+                            setError(data.error || 'Failed to save expense');
+                            setIsSubmitting(false);
+                            return;
+                        }
+                    } else {
+                        setError('Please add at least one expense to the list.');
+                        setIsSubmitting(false);
+                        return;
+                    }
+                }
+
+                const response = await fetch('/api/expenses', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        workspaceId,
+                        expenses: expenseList.map(item => ({
+                            category: item.category,
+                            amount: parseFloat(item.amount),
+                            description: item.description || null,
+                            date: item.date,
+                            reference: item.reference || null
+                        }))
+                    }),
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    if (onSuccess) onSuccess();
+                    onClose();
+                } else {
+                    setError(data.error || 'Failed to save expenses');
+                }
             }
         } catch (err) {
             setError('Failed to save expenses. Please try again.');
@@ -142,7 +207,9 @@ const ExpenseModal = ({ isOpen, onClose, onSuccess, workspaceId }: ExpenseModalP
         return isNaN(num) ? '₦0.00' : `₦${num.toLocaleString()}`;
     };
 
-    const totalAmount = expenseList.reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0);
+    const totalAmount = isEditMode 
+        ? parseFloat(amount) || 0 
+        : expenseList.reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0);
 
     const getCategoryLabel = (value: string) => {
         return EXPENSE_CATEGORIES.find(c => c.value === value)?.label || value;
@@ -152,7 +219,7 @@ const ExpenseModal = ({ isOpen, onClose, onSuccess, workspaceId }: ExpenseModalP
         <div className={styles.overlay}>
             <div className={styles.modal}>
                 <div className={styles.header}>
-                    <h2 className={styles.title}>Record Expenses</h2>
+                    <h2 className={styles.title}>{isEditMode ? 'Edit Expense' : 'Record Expenses'}</h2>
                     <button onClick={onClose} className={styles.closeBtn} disabled={isSubmitting}>
                         <X size={24} />
                     </button>
@@ -163,7 +230,7 @@ const ExpenseModal = ({ isOpen, onClose, onSuccess, workspaceId }: ExpenseModalP
 
                     {/* Input Section */}
                     <div className={styles.inputSection}>
-                        <h3 className={styles.sectionTitle}>New Item</h3>
+                        <h3 className={styles.sectionTitle}>{isEditMode ? 'Update Details' : 'New Item'}</h3>
                         <div className={styles.formGrid}>
                             <div className={styles.formGroup}>
                                 <label className={styles.label}>Category *</label>
@@ -224,63 +291,67 @@ const ExpenseModal = ({ isOpen, onClose, onSuccess, workspaceId }: ExpenseModalP
                                 />
                             </div>
 
-                            <div className={`${styles.formGroup} ${styles.fullWidth}`}>
-                                <button
-                                    className={styles.btnAddItem}
-                                    onClick={handleAddItem}
-                                    type="button"
-                                >
-                                    <Plus size={16} />
-                                    Add to List
-                                </button>
-                            </div>
+                            {!isEditMode && (
+                                <div className={`${styles.formGroup} ${styles.fullWidth}`}>
+                                    <button
+                                        className={styles.btnAddItem}
+                                        onClick={handleAddItem}
+                                        type="button"
+                                    >
+                                        <Plus size={16} />
+                                        Add to List
+                                    </button>
+                                </div>
+                            )}
                         </div>
                     </div>
 
-                    {/* List Section */}
-                    <div className={styles.tableContainer}>
-                        <table className={styles.table}>
-                            <thead>
-                                <tr>
-                                    <th>Description</th>
-                                    <th>Category</th>
-                                    <th>Date</th>
-                                    <th>Amount</th>
-                                    <th className={styles.colAction}></th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {expenseList.length === 0 ? (
+                    {/* List Section - Only show in batch mode */}
+                    {!isEditMode && (
+                        <div className={styles.tableContainer}>
+                            <table className={styles.table}>
+                                <thead>
                                     <tr>
-                                        <td colSpan={5} className={styles.emptyState}>
-                                            No items added yet. Use the form above to add expenses.
-                                        </td>
+                                        <th>Description</th>
+                                        <th>Category</th>
+                                        <th>Date</th>
+                                        <th>Amount</th>
+                                        <th className={styles.colAction}></th>
                                     </tr>
-                                ) : (
-                                    expenseList.map((item) => (
-                                        <tr key={item.id}>
-                                            <td>
-                                                <div>{item.description || <em style={{ color: 'var(--text-secondary)' }}>No description</em>}</div>
-                                                {item.reference && <small style={{ color: 'var(--text-secondary)' }}>{item.reference}</small>}
-                                            </td>
-                                            <td>{getCategoryLabel(item.category)}</td>
-                                            <td>{item.date}</td>
-                                            <td>{formatCurrency(item.amount)}</td>
-                                            <td className={styles.colAction}>
-                                                <button
-                                                    className={styles.btnDelete}
-                                                    onClick={() => handleRemoveItem(item.id)}
-                                                    disabled={isSubmitting}
-                                                >
-                                                    <Trash2 size={16} />
-                                                </button>
+                                </thead>
+                                <tbody>
+                                    {expenseList.length === 0 ? (
+                                        <tr>
+                                            <td colSpan={5} className={styles.emptyState}>
+                                                No items added yet. Use the form above to add expenses.
                                             </td>
                                         </tr>
-                                    ))
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
+                                    ) : (
+                                        expenseList.map((item) => (
+                                            <tr key={item.id}>
+                                                <td>
+                                                    <div>{item.description || <em style={{ color: 'var(--text-secondary)' }}>No description</em>}</div>
+                                                    {item.reference && <small style={{ color: 'var(--text-secondary)' }}>{item.reference}</small>}
+                                                </td>
+                                                <td>{getCategoryLabel(item.category)}</td>
+                                                <td>{item.date}</td>
+                                                <td>{formatCurrency(item.amount)}</td>
+                                                <td className={styles.colAction}>
+                                                    <button
+                                                        className={styles.btnDelete}
+                                                        onClick={() => handleRemoveItem(item.id)}
+                                                        disabled={isSubmitting}
+                                                    >
+                                                        <Trash2 size={16} />
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        ))
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
                 </div>
 
                 <div className={styles.footer}>
@@ -297,8 +368,8 @@ const ExpenseModal = ({ isOpen, onClose, onSuccess, workspaceId }: ExpenseModalP
                         </button>
                         <button
                             className={styles.submitBtn}
-                            onClick={handleSaveAll}
-                            disabled={isSubmitting || expenseList.length === 0}
+                            onClick={handleSave}
+                            disabled={isSubmitting || (!isEditMode && expenseList.length === 0 && (!category || !amount))}
                         >
                             {isSubmitting ? (
                                 <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -306,7 +377,7 @@ const ExpenseModal = ({ isOpen, onClose, onSuccess, workspaceId }: ExpenseModalP
                                 </span>
                             ) : (
                                 <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                    <Save size={16} /> Save Expenses
+                                    <Save size={16} /> {isEditMode ? 'Update Expense' : 'Save Expenses'}
                                 </span>
                             )}
                         </button>
@@ -318,4 +389,3 @@ const ExpenseModal = ({ isOpen, onClose, onSuccess, workspaceId }: ExpenseModalP
 };
 
 export default ExpenseModal;
-
