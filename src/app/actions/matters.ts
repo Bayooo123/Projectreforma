@@ -960,12 +960,12 @@ export async function processMeetingAction(recordId: string, audioUrl: string) {
         const parsedData = JSON.parse(resultText);
 
         // Update the record with AI insights
-        await prisma.meetingRecording.update({
+        await (prisma as any).meetingRecording.update({
             where: { id: recordId },
             data: {
                 summary: parsedData.summary,
                 actionItems: parsedData.actionItems,
-                transcription: parsedData.transcription
+                transcriptText: parsedData.transcription
             },
         });
 
@@ -975,11 +975,11 @@ export async function processMeetingAction(recordId: string, audioUrl: string) {
         console.error('Background processing error:', error);
 
         // Update record with error status so the user sees a meaningful message
-        await prisma.meetingRecording.update({
+        await (prisma as any).meetingRecording.update({
             where: { id: recordId },
             data: {
                 summary: 'AI Processing Failed',
-                transcription: 'Failed to process AI insights automatically. Please try again later. Transcription failed.',
+                transcriptText: 'Failed to process AI insights automatically. Please try again later. Transcription failed.',
             },
         }).catch(console.error);
 
