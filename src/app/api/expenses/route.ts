@@ -250,17 +250,29 @@ export async function PATCH(request: NextRequest) {
         }
 
         // 1. RBAC: Only specific roles can edit expenses
+        // Fetch membership and user synchronously to ensure we have IDs
         const membership = await prisma.workspaceMember.findFirst({
             where: {
                 workspaceId,
                 user: { email: user.email! },
             },
-            include: { workspace: true }
+            include: { 
+                workspace: true,
+                user: true // Get the full user record to ensure we have the internal ID
+            }
         });
 
+        if (!membership) {
+            return NextResponse.json(
+                { success: false, error: 'Unauthorized: You are not a member of this workspace' },
+                { status: 403 }
+            );
+        }
+
+        const dbUserId = membership.userId || membership.user.id;
         const allowedRoles = ['Managing Partner', 'Partner', 'Practice Manager', 'Head of Chamber'];
-        const isOwner = membership?.workspace.ownerId === user.id;
-        const isAuthorized = isOwner || (membership && allowedRoles.includes(membership.role));
+        const isOwner = membership.workspace.ownerId === dbUserId;
+        const isAuthorized = isOwner || allowedRoles.includes(membership.role);
 
         if (!isAuthorized) {
             return NextResponse.json(
@@ -299,7 +311,7 @@ export async function PATCH(request: NextRequest) {
                 data: {
                     expenseId: id,
                     action: 'UPDATE',
-                    changedBy: user.id as string,
+                    changedBy: dbUserId,
                     oldData: JSON.parse(JSON.stringify(existingExpense)),
                     newData: JSON.parse(JSON.stringify(updated)),
                 },
@@ -313,14 +325,19 @@ export async function PATCH(request: NextRequest) {
             data: updatedExpense,
         });
 
-    } catch (error) {
+    } catch (error: any) {
         console.error('Error updating expense:', error);
         return NextResponse.json(
-            { success: false, error: 'Failed to update expense' },
+            { 
+                success: false, 
+                error: 'Failed to update expense',
+                details: error.message 
+            },
             { status: 500 }
         );
     }
 }
+
 
 // DELETE /api/expenses - Delete an expense
 export async function DELETE(request: NextRequest) {
@@ -343,12 +360,23 @@ export async function DELETE(request: NextRequest) {
                 workspaceId,
                 user: { email: user.email! },
             },
-            include: { workspace: true }
+            include: { 
+                workspace: true,
+                user: true 
+            }
         });
 
+        if (!membership) {
+            return NextResponse.json(
+                { success: false, error: 'Unauthorized: You are not a member of this workspace' },
+                { status: 403 }
+            );
+        }
+
+        const dbUserId = membership.userId || membership.user.id;
         const allowedRoles = ['Managing Partner', 'Partner', 'Practice Manager', 'Head of Chamber'];
-        const isOwner = membership?.workspace.ownerId === user.id;
-        const isAuthorized = isOwner || (membership && allowedRoles.includes(membership.role));
+        const isOwner = membership.workspace.ownerId === dbUserId;
+        const isAuthorized = isOwner || allowedRoles.includes(membership.role);
 
         if (!isAuthorized) {
             return NextResponse.json(
@@ -369,26 +397,11 @@ export async function DELETE(request: NextRequest) {
             );
         }
 
-        // 3. Delete expense and log audit trail
-        // Note: onDelete: Cascade handles the audit logs relation if needed, 
-        // but we want to KEEP the audit log even if expense is deleted? 
-        // Our schema says onDelete: Cascade for ExpenseAuditLog. 
-        // If we want to keep audit logs for deleted expenses, we should change onDelete: SetNull or similar.
-        // For now, following requirements: "Maintain an audit trail". 
-        // If they want to see who deleted it, we should probably keep the log.
-        // Let's change the schema onDelete to 'NoAction' or similar if needed.
-        // Actually, the requirement just says "Original entry, who edited it, timestamp of edit."
-        // For deletion, it's enough to know it was deleted.
-
-        await prisma.$transaction(async (tx) => {
-            // We can't keep the relation if the expense is gone. 
-            // We might need to change the schema to make expenseId optional in ExpenseAuditLog.
-            await tx.expense.delete({
-                where: { id },
-            });
-
-            // If we want to record the deletion, we'd need a separate 'DeletedExpense' log 
-            // or an audit log with no relative expense record.
+        // 3. Delete expense
+        // Note: For a true audit trail on deletion, we would ideally keep a record 
+        // after the expense is gone, but the current schema has onDelete: Cascade.
+        await prisma.expense.delete({
+            where: { id },
         });
 
         return NextResponse.json({
@@ -396,11 +409,16 @@ export async function DELETE(request: NextRequest) {
             message: 'Expense deleted successfully'
         });
 
-    } catch (error) {
+    } catch (error: any) {
         console.error('Error deleting expense:', error);
         return NextResponse.json(
-            { success: false, error: 'Failed to delete expense' },
+            { 
+                success: false, 
+                error: 'Failed to delete expense',
+                details: error.message 
+            },
             { status: 500 }
         );
     }
 }
+
