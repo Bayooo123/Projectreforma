@@ -1,4 +1,5 @@
 import { Playbook } from './Playbook';
+import { prisma } from '@/lib/prisma';
 
 export class ClientPlaybook extends Playbook {
   constructor() {
@@ -46,5 +47,20 @@ export class ClientPlaybook extends Playbook {
 
   getSearchableFields(): string[] {
     return ['name', 'email', 'company'];
+  }
+
+  async resolve(id: string) {
+    const rec = await prisma.client.findUnique({ where: { id } });
+    if (!rec) throw Object.assign(new Error(`Client not found: ${id}`), { name: 'MorphEntityNotFoundError' });
+    return rec;
+  }
+
+  getScopeFilter(actor: any, actorType: string) {
+    const t = String((actorType || '')).toLowerCase();
+    if (t === 'user') {
+      return { workspace: { members: { some: { userId: actor.id } } } };
+    }
+    // workspace/firm or other actors default to workspace scoping
+    return { workspaceId: actor.id };
   }
 }

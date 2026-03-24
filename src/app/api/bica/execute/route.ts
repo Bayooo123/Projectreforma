@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { prisma } from '@/lib/prisma';
-import { morphRegistry, UnknownMorphTypeError, MorphEntityNotFoundError } from '@/lib/bica/morph-registry';
+import { getPlaybook } from '@/lib/bica/playbooks';
 import { config } from '@/lib/config';
 import { getHandler, BicaContext } from '@/lib/bica/handlers';
 
@@ -83,14 +83,20 @@ export async function POST(req: NextRequest) {
         const platformEntityType: string = user_context?.platform_entity_type;
         const platformEntityId: string = user_context?.platform_entity_id;
 
-        // if (!platformEntityType || !platformEntityId) {
-        //     return NextResponse.json(
-        //         { status: 'failed', data: null, error: { code: 'UNAUTHORIZED', message: 'Missing user_context.' } },
-        //         { status: 401 }
-        //     );
-        // }
-
-        const platformEntity = await morphRegistry.resolve(platformEntityType, platformEntityId);
+        // Resolve the actor using the Playbook if available, otherwise
+        // fall back to workspace resolution for platform types like
+        // 'workspace'/'firm'. Throw a named error to preserve existing
+        // error handling semantics.
+        let platformEntity: any = null;
+        const playbook = getPlaybook(platformEntityType);
+        if (playbook) {
+            platformEntity = await playbook.resolve(platformEntityId);
+        } else if (String(platformEntityType || '').toLowerCase() === 'workspace' || String(platformEntityType || '').toLowerCase() === 'firm') {
+            platformEntity = await prisma.workspace.findUnique({ where: { id: platformEntityId } });
+            if (!platformEntity) throw Object.assign(new Error(`Workspace not found: ${platformEntityId}`), { name: 'MorphEntityNotFoundError' });
+        } else {
+            throw Object.assign(new Error(`Unknown platform_entity_type: ${platformEntityType}`), { name: 'UnknownMorphTypeError' });
+        }
 
         const context: BicaContext = {
             platformEntity,

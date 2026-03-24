@@ -1,4 +1,4 @@
-import { resolveRelationScope } from './utils';
+import { getPlaybook } from '../playbooks';
 import { BicaContext, BicaResponse } from './types';
 
 export { type BicaContext, type BicaResponse };
@@ -17,6 +17,11 @@ export abstract class BicaHandler {
    */
   protected async resolveScope(relationName: string): Promise<any> {
     const { platformEntity, platformEntityType } = this.context;
-    return resolveRelationScope(platformEntity, platformEntityType, relationName);
+    // Use the target model's Playbook to obtain a scope filter based on
+    // the current actor (platformEntity) and its type. This delegates
+    // tenant/actor scoping to the model-specific Playbook.
+    const playbook = getPlaybook(relationName);
+    if (!playbook) throw new Error(`No playbook for relation: ${relationName}`);
+    return playbook.getScopeFilter(platformEntity, platformEntityType);
   }
 }

@@ -1,4 +1,5 @@
 import { Playbook } from './Playbook';
+import { prisma } from '@/lib/prisma';
 
 export class UserPlaybook extends Playbook {
   constructor() {
@@ -38,5 +39,20 @@ export class UserPlaybook extends Playbook {
 
   getSearchableFields(): string[] {
     return ['name', 'email'];
+  }
+
+  async resolve(id: string) {
+    const rec = await prisma.user.findUnique({ where: { id } });
+    if (!rec) throw Object.assign(new Error(`User not found: ${id}`), { name: 'MorphEntityNotFoundError' });
+    return rec;
+  }
+
+  getScopeFilter(actor: any, actorType: string) {
+    const t = String((actorType || '')).toLowerCase();
+    if (t === 'user') {
+      // A user can see other users in the same workspace via membership
+      return { workspace: { members: { some: { userId: actor.id } } } };
+    }
+    return { workspaceId: actor.id };
   }
 }

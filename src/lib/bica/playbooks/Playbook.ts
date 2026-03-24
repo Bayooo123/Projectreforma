@@ -84,4 +84,23 @@ export abstract class Playbook {
    * Returns the searchable string fields for this model.
    */
   abstract getSearchableFields(): string[];
+
+  /**
+   * Resolve a single record by id. Implementations should return the
+   * Prisma record or throw an error (name='MorphEntityNotFoundError') when
+   * the record does not exist.
+   */
+  abstract resolve(id: string): Promise<any>;
+
+  /**
+   * Return a Prisma `where` fragment that scopes queries for this model
+   * based on an acting platform entity (actor) and its type. This is the
+   * Playbook equivalent of a Laravel local scope and should be used by
+   * handlers to enforce tenant/actor boundaries.
+   *
+   * Example return values:
+   * - `{ workspaceId: actor.id }`
+   * - `{ OR: [{ assignedToId: actor.id }, { assignedById: actor.id }] }`
+   */
+  abstract getScopeFilter(actor: any, actorType: string): any;
 }
