@@ -106,8 +106,10 @@
 | `src/lib/bica/playbooks/index.ts` | Playbook registry + per-model metadata |
 | `src/lib/bica/handlers/utils.ts` | Polymorphic relation scope resolver |
 | `src/lib/bica/handlers/label-config.ts` | Human-readable label/secondaryLabel per model |
-| `src/lib/jeql/compiler.ts` | JEQL → Prisma query compiler |
-| `src/lib/jeql/types.ts` | JEQL type definitions |
+| `src/lib/bica/jeql/compiler.ts` | JEQL → Prisma query compiler |
+| `src/lib/bica/jeql/operators.ts` | Operator translation helpers |
+| `src/lib/bica/jeql/types.ts` | JEQL type definitions |
+| `src/lib/bica/jeql/utils.ts` | Date, pattern, and search utilities |
 | `bica-integration/` | Canonical entity playbook JSON files + manifests |
 
 ---
@@ -217,7 +219,7 @@ Four operation types are supported. The `operation_type` field in the request bo
 
 ## 6. JEQL Query Language
 
-JEQL (JSON Entity Query Language) is Reforma's internal query DSL. It compiles to Prisma `findMany`/`updateMany` arguments.
+JEQL (JSON Entity Query Language) is Reforma's internal query DSL. It compiles to Prisma read-query arguments through the modular implementation under `src/lib/bica/jeql/`.
 
 ### Type Definition
 
@@ -227,8 +229,8 @@ type JEQLQuery = {
   $with?: Record<string, JEQLQuery>;          // eager-load relations
   $whereAll?: JEQLCondition[];                // AND conditions
   $whereAny?: JEQLCondition[];                // OR conditions
-  $whereHas?: [string, JEQLCondition[]][];    // relation EXISTS filter
-  $whereNotHas?: [string, JEQLCondition[]][];
+  $whereHas?: Record<string, JEQLQuery>;      // relation EXISTS filter
+  $whereNotHas?: Record<string, JEQLQuery>;
   $orderBy?: [string, 'asc' | 'desc'][];
   $limit?: number;
   $offset?: number;
@@ -245,6 +247,15 @@ type JEQLOperator =
   | 'in' | 'not in' | 'like' | 'search' | 'json_contains'
   | 'date>' | 'date<' | 'date>=' | 'date<=' | 'date=' | 'date!=' | 'date_between';
 ```
+
+### Current Prisma-Backed Semantics
+
+- `$whereAll` and `$whereAny` compile to nested Prisma `AND` and `OR` clauses.
+- `$whereHas` and `$whereNotHas` compile to relation `some` and `none` filters.
+- `like` is translated to Prisma string filters using `%term%`, `term%`, `%term`, or exact case-insensitive matching.
+- `search` is implemented as broad, case-insensitive candidate matching over the full term plus tokenized words. Prisma does not expose SOUNDEX, so phonetic matching is not part of the current compiler.
+- `date=` and `date_between` are compiled as inclusive UTC date ranges.
+- `$withSemanticMatches` currently throws a validation error until the analytics-backed semantic matching layer is restored.
 
 ### Example: Lookup with JEQL
 
@@ -908,6 +919,8 @@ node scripts/bica-test.mjs
 4. `preview` — HTML card for the newly created client
 5. `write` (delete) — Cleans up the test client
 6. Security — Verifies invalid HMAC returns `401`
+
+Unit coverage for the JEQL compiler lives under `src/lib/bica/jeql/__tests__/compiler.test.ts` and runs with `vitest`.
 
 ---
 
