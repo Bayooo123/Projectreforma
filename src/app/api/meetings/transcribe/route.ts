@@ -2,18 +2,20 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { config } from "@/lib/config";
+import { requireAuth } from '@/lib/auth-utils';
 
 const genAI = new GoogleGenerativeAI(config.GOOGLE_API_KEY || '');
 
 export async function POST(request: Request) {
     try {
+        await requireAuth();
         const { recordingId } = await request.json();
 
         if (!recordingId) {
             return NextResponse.json({ error: 'Recording ID is required' }, { status: 400 });
         }
 
-        const recording = await prisma.meetingRecording.findUnique({
+        const recording = await (prisma as any).meetingRecording.findUnique({
             where: { id: recordingId }
         });
 
@@ -48,7 +50,7 @@ export async function POST(request: Request) {
         const rawTranscript = transcriptResult.response.text().trim();
 
         // 3. Store Raw Transcript Immediately
-        await prisma.meetingRecording.update({
+        await (prisma as any).meetingRecording.update({
             where: { id: recordingId },
             data: { transcriptText: rawTranscript }
         });
@@ -65,7 +67,7 @@ export async function POST(request: Request) {
         const insightsResult = await model.generateContent(insightsPrompt);
         const insightsJson = JSON.parse(insightsResult.response.text().replace(/```json|```/g, ''));
 
-        await prisma.meetingRecording.update({
+        await (prisma as any).meetingRecording.update({
             where: { id: recordingId },
             data: { 
                 summary: insightsJson.summary || 'Summary generated.',

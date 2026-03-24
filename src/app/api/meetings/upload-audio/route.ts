@@ -1,12 +1,11 @@
 import { put } from '@vercel/blob';
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { auth } from '@/auth';
 
 export async function POST(request: Request): Promise<NextResponse> {
     try {
-        const session = await getServerSession(authOptions);
+        const session = await auth();
         if (!session?.user?.id) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
@@ -27,7 +26,7 @@ export async function POST(request: Request): Promise<NextResponse> {
 
         // 2. Create MeetingRecording record
         // Initial state: transcription and summary are empty/pending
-        const recording = await prisma.meetingRecording.create({
+        const recording = await (prisma as any).meetingRecording.create({
             data: {
                 calendarEntryId: calendarEntryId || null,
                 matterId: matterId || null,

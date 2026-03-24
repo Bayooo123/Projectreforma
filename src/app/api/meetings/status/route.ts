@@ -1,8 +1,10 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { requireAuth } from '@/lib/auth-utils';
 
 export async function GET(request: Request) {
     try {
+        await requireAuth();
         const { searchParams } = new URL(request.url);
         const id = searchParams.get('id');
 
@@ -10,7 +12,7 @@ export async function GET(request: Request) {
             return NextResponse.json({ error: 'Missing ID' }, { status: 400 });
         }
 
-        const recording = await prisma.meetingRecording.findUnique({
+        const recording = await (prisma as any).meetingRecording.findUnique({
             where: { id },
             select: {
                 id: true,
