@@ -15,8 +15,7 @@ export async function getCalendarEvents(workspaceId: string) {
         const entries = await prisma.calendarEntry.findMany({
             where: {
                 OR: [
-                    { matter: { workspaceId: workspaceId } },
-                    { matterId: null } // Possible firm-wide events if implemented
+                    { matter: { workspaceId: workspaceId } }
                 ]
             },
             include: {
@@ -30,7 +29,8 @@ export async function getCalendarEvents(workspaceId: string) {
                 },
                 appearances: {
                     select: { id: true, name: true, email: true, image: true }
-                }
+                },
+                meetingRecording: true
             },
             orderBy: { date: 'asc' }
         });

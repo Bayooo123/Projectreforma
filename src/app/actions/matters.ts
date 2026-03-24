@@ -820,8 +820,8 @@ export async function scheduleMeeting(data: {
                 date: data.date,
                 type: data.type,
                 matterId: data.matterId,
-                briefId,
-                clientId,
+                briefId: briefId || "",
+                clientId: clientId || "",
                 location: data.location,
                 agenda: data.agenda,
                 submittingLawyerId: session.user.id,
@@ -847,6 +847,7 @@ export async function scheduleMeeting(data: {
  * Record a meeting
  */
 export async function recordMeeting(data: {
+    recordingId?: string;
     calendarEntryId?: string;
     matterId?: string;
     date: Date;
@@ -855,7 +856,7 @@ export async function recordMeeting(data: {
     actionItems?: string;
     followUpDate?: Date;
     audioUrl?: string;
-    transcription?: string;
+    transcriptText?: string;
     audioDuration?: number;
     skipTranscription?: boolean;
 }) {
@@ -863,29 +864,41 @@ export async function recordMeeting(data: {
     if (!session?.user) return { success: false, error: 'Unauthorized' };
 
     try {
-        // If summary/actionItems are provided manually (e.g. after review), 
-        // we combine them into the transcriptText field immediately.
-        let transcriptText = data.transcription || 'Transcription in progress...';
-        if (data.summary && data.summary !== 'Processing meeting insights...') {
-            transcriptText = `SUMMARY: ${data.summary}\n\nACTION ITEMS: ${data.actionItems || ''}\n\nTRANSCRIPTION: ${data.transcription || ''}`;
+        const recordingData = {
+            matterId: data.matterId || null,
+            calendarEntryId: data.calendarEntryId || null,
+            audioUrl: data.audioUrl || null,
+            summary: data.summary || 'Processing meeting insights...',
+            actionItems: data.actionItems || null,
+            transcriptText: data.transcriptText || 'Transcription in progress...',
+            audioDuration: data.audioDuration || null,
+            followUpDate: data.followUpDate || null,
+            participants: data.participants ? { names: data.participants } : null,
+            createdById: session.user.id,
+            date: data.date,
+        };
+
+        let record;
+        if (data.recordingId) {
+            // Update existing record (already uploaded)
+            record = await (prisma as any).meetingRecording.update({
+                where: { id: data.recordingId },
+                data: recordingData
+            });
+        } else {
+            // Create new record
+            record = await (prisma as any).meetingRecording.create({
+                data: recordingData
+            });
         }
 
-        const record = await prisma.meetingRecording.create({
-            data: {
-                matterId: data.matterId || null,
-                calendarEntryId: data.calendarEntryId || null,
-                audioFileUrl: data.audioUrl || null,
-                transcriptText: transcriptText,
-                recordingDuration: data.audioDuration || null,
-                createdById: session.user.id,
-            }
-        });
-
         // Trigger background transcription ONLY if audio is present and we still have placeholders
-        const isPlaceholderSummary = !data.summary || data.summary === 'Processing meeting insights...';
-        const isPlaceholderTranscription = !data.transcription || data.transcription === 'Transcription in progress...';
+        const isPlaceholderSummary = !data.summary || data.summary.includes('Processing');
+        const isPlaceholderTranscription = !data.transcriptText || data.transcriptText.includes('progress');
         
         if (!data.skipTranscription && data.audioUrl && (isPlaceholderSummary || isPlaceholderTranscription)) {
+            // Note: In the new end-to-end flow, the browser triggers /api/meetings/transcribe
+            // but we keep this as a fallback for manual/legacy calls if needed
             processMeetingAction(record.id, data.audioUrl).catch(console.error);
         }
 
@@ -947,10 +960,12 @@ export async function processMeetingAction(recordId: string, audioUrl: string) {
         const parsedData = JSON.parse(resultText);
 
         // Update the record with AI insights
-        await prisma.meetingRecording.update({
+        await (prisma as any).meetingRecording.update({
             where: { id: recordId },
             data: {
-                transcriptText: `SUMMARY: ${parsedData.summary}\n\nACTION ITEMS: ${parsedData.actionItems}\n\nTRANSCRIPTION: ${parsedData.transcription}`
+                summary: parsedData.summary,
+                actionItems: parsedData.actionItems,
+                transcriptText: parsedData.transcription
             },
         });
 
@@ -960,9 +975,10 @@ export async function processMeetingAction(recordId: string, audioUrl: string) {
         console.error('Background processing error:', error);
 
         // Update record with error status so the user sees a meaningful message
-        await prisma.meetingRecording.update({
+        await (prisma as any).meetingRecording.update({
             where: { id: recordId },
             data: {
+                summary: 'AI Processing Failed',
                 transcriptText: 'Failed to process AI insights automatically. Please try again later. Transcription failed.',
             },
         }).catch(console.error);

@@ -12,25 +12,26 @@ datasource db {
 
 model Workspace {
   id                String                @id @default(cuid())
-  name              String                /// @searchable
-  slug              String                @unique /// @searchable
+  /// @searchable
+  name              String
+  /// @searchable
+  slug              String                @unique
   ownerId           String
   plan              String                @default("free")
   createdAt         DateTime              @default(now())
   updatedAt         DateTime              @updatedAt
-  firmCode          String?               @unique /// @searchable
+  /// @searchable
+  firmCode          String?               @unique
   joinPassword      String?
   letterheadUrl     String?
   revenuePin        String?
-  litigationPin     String?
-  // NEW: Personalization
-  brandColor        String?               @default("#121826")
-  secondaryColor    String?               @default("#1e293b")
-  accentColor       String?               @default("#3182ce")
-  brandingCompleted Boolean               @default(false)
-  // NEW: RBAC Logic
-  adminCode         String?               // Hashed PIN for admin override
   inviteLinkToken   String?               @unique
+  litigationPin     String?
+  adminCode         String?
+  accentColor       String?               @default("#3182ce")
+  brandColor        String?               @default("#121826")
+  brandingCompleted Boolean               @default(false)
+  secondaryColor    String?               @default("#1e293b")
   bankAccounts      BankAccount[]
   briefs            Brief[]
   clients           Client[]
@@ -38,6 +39,7 @@ model Workspace {
   draftingTemplates DraftingTemplate[]
   expenses          Expense[]
   invitations       Invitation[]
+
   matters           Matter[]
   tasks             Task[]
   owner             User                  @relation("WorkspaceOwner", fields: [ownerId], references: [id])
@@ -64,33 +66,28 @@ model WorkspaceMember {
 }
 
 model Invitation {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   workspaceId String
   email       String
   role        String
-  tokenHash   String   @unique // Hashed token for security
+  token       String
   invitedBy   String
-  status      String   @default("pending") // pending, accepted, revoked, expired
+  status      String    @default("pending")
   expiresAt   DateTime
-  createdAt   DateTime @default(now())
+  createdAt   DateTime  @default(now())
   acceptedAt  DateTime?
-  revokedAt   DateTime?
-  
-  // Metadata for audit
-  ipAddress   String?
-  userAgent   String?
-
   inviter     User      @relation(fields: [invitedBy], references: [id])
   workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
-  @@index([tokenHash])
   @@index([email])
 }
 
 model User {
   id                     String                @id @default(cuid())
-  name                   String?               /// @searchable
-  email                  String                @unique /// @searchable
+  /// @searchable
+  name                   String?
+  /// @searchable
+  email                  String                @unique
   password               String?
   createdAt              DateTime              @default(now())
   updatedAt              DateTime              @updatedAt
@@ -100,7 +97,7 @@ model User {
   jobTitle               String?
   lawyerToken            String?               @unique
   isPlatformAdmin        Boolean               @default(false)
-  mfaEnabled             Boolean               @default(false)
+  mfaEnabled             Boolean?              @default(false)
   mfaSecret              String?
   accounts               Account[]
   apiKeys                ApiKey[]
@@ -113,23 +110,18 @@ model User {
   acknowledgedCompliance ComplianceTask[]      @relation("AcknowledgedBy")
   draftingSessions       DraftingSession[]
   draftingTemplates      DraftingTemplate[]
+  expenseAuditLogs       ExpenseAuditLog[]
+  meetingRecordings      MeetingRecording[]
   invitations            Invitation[]
+  mattersInCharge        Matter[]              @relation("MatterLawyerInCharge")
   activityLogs           MatterActivityLog[]
   matterLawyer           MatterLawyer[]
-  mattersInCharge        Matter[]              @relation("MatterLawyerInCharge")
   sessions               Session[]
   createdTasks           Task[]                @relation("CreatedTasks")
   assignedTasks          Task[]                @relation("AssignedTasks")
   ownedWorkspaces        Workspace[]           @relation("WorkspaceOwner")
   workspaces             WorkspaceMember[]
   calendarAppearances    CalendarEntry[]       @relation("CalendarAppearances")
-  
-  // Security & Audit
-  emailVerifications    EmailVerification[]
-  passwordResetRequests PasswordResetRequest[]
-  securityAuditLogs     SecurityAuditLog[]
-  expenseAuditLogs      ExpenseAuditLog[]
-
 
   @@index([email])
   @@index([lawyerToken])
@@ -219,13 +211,11 @@ model Notification {
   metadata                Json?
   relatedInvoiceId        String?
   relatedPaymentId        String?
-  relatedCalendarEntryId   String?
   updatedAt               DateTime        @updatedAt
   brief                   Brief?          @relation(fields: [relatedBriefId], references: [id])
   complianceTask          ComplianceTask? @relation(fields: [relatedComplianceTaskId], references: [id])
   invoice                 Invoice?        @relation(fields: [relatedInvoiceId], references: [id])
   matter                  Matter?         @relation(fields: [relatedMatterId], references: [id])
-  calendarEntry           CalendarEntry?  @relation(fields: [relatedCalendarEntryId], references: [id])
   payment                 Payment?        @relation(fields: [relatedPaymentId], references: [id])
 
   @@index([recipientId, status])
@@ -249,8 +239,10 @@ model NotificationRule {
 
 model Matter {
   id                    String                @id @default(cuid())
-  caseNumber            String?               @unique /// @searchable
-  name                  String                /// @searchable
+  /// @searchable
+  caseNumber            String?               @unique
+  /// @searchable
+  name                  String
   clientId              String?
   clientNameRaw         String?
   workspaceId           String
@@ -265,17 +257,15 @@ model Matter {
   submittingLawyerId    String?
   submittingLawyerToken String?
   submittingLawyerName  String?
-  // NEW: Structured party data
-  opponentName          String?
-  opponentCounsel       String?
-  // NEW: Explicit responsibility tracking
   lawyerInChargeId      String?
-  lawyerInCharge        User?                 @relation("MatterLawyerInCharge", fields: [lawyerInChargeId], references: [id])
+  opponentCounsel       String?
+  opponentName          String?
   briefs                Brief[]
-  clientCommunications  ClientCommunication[]
   calendarEntries       CalendarEntry[]
+  clientCommunications  ClientCommunication[]
   invoices              Invoice[]
   client                Client?               @relation(fields: [clientId], references: [id])
+  lawyerInCharge        User?                 @relation("MatterLawyerInCharge", fields: [lawyerInChargeId], references: [id])
   workspace             Workspace             @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   activityLogs          MatterActivityLog[]
   lawyers               MatterLawyer[]
@@ -304,77 +294,41 @@ model MatterLawyer {
 }
 
 model CalendarEntry {
-  id                     String                  @id @default(cuid())
-  matterId               String?
-  date                   DateTime
-  type                   CalendarEventType       @default(COURT_DATE)
-  title                  String?
+  id                    String   @id(map: "CourtDate_pkey") @default(cuid())
+  matterId              String
+  date                  DateTime
+  title                 String?
+  proceedings           String?
+  outcome               String?
+  adjournedFor          String?
+  submittingLawyerId    String?
+  submittingLawyerToken String?
+  submittingLawyerName  String?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  briefId               String
+  clientId              String
+  externalCounsel       String?
+  judge                 String?
+  type                  String?  @default("COURT_DATE")
+  location              String?
+  agenda                String?
+  description           String?
+  matter                Matter   @relation(fields: [matterId], references: [id], onDelete: Cascade, map: "CourtDate_matterId_fkey")
+  appearances           User[]   @relation("CalendarAppearances")
+  meetingRecording      MeetingRecording?
 
-  // Court Specific
-  proceedings            String?
-  outcome                String?
-  adjournedFor           String?
-  externalCounsel        String?
-  judge                  String?
-
-  // Meeting/Deadline Specific
-  location               String?
-  agenda                 String?
-  description            String?
-
-  submittingLawyerId     String?
-  submittingLawyerToken  String?
-  submittingLawyerName   String?
-  createdAt              DateTime                @default(now())
-  updatedAt              DateTime                @updatedAt
-  briefId                String?
-  clientId               String?
-  brief                  Brief?                   @relation(fields: [briefId], references: [id])
-  client                 Client?                  @relation(fields: [clientId], references: [id])
-  matter                 Matter?                  @relation(fields: [matterId], references: [id], onDelete: Cascade)
-  scheduledNotifications ScheduledNotification[]
-  appearances            User[]                  @relation("CalendarAppearances")
-  notifications          Notification[]
-  meetingRecording       MeetingRecording?
-
-  @@index([matterId])
-  @@index([briefId])
-  @@index([clientId])
-  @@index([date])
-  @@index([submittingLawyerId])
-}
-
-model MeetingRecording {
-  id               String          @id @default(cuid())
-  calendarEntryId  String?         @unique
-  matterId         String?
-  audioFileUrl     String?
-  transcriptText   String?
-  recordingDuration Int?            // Duration in seconds
-  createdById      String?         // NEW: Who created this recording (linked manually below if we choose, or just string)
-  
-  createdAt        DateTime        @default(now())
-  updatedAt        DateTime        @updatedAt
-  calendarEntry    CalendarEntry?  @relation(fields: [calendarEntryId], references: [id])
-  matter           Matter?         @relation(fields: [matterId], references: [id], onDelete: Cascade)
-
-  @@index([matterId])
-  @@index([calendarEntryId])
-}
-
-
-enum CalendarEventType {
-  COURT_DATE
-  FILING_DEADLINE
-  CLIENT_MEETING
-  INTERNAL_MEETING
-  OTHER
+  @@index([briefId], map: "CourtDate_briefId_idx")
+  @@index([clientId], map: "CourtDate_clientId_idx")
+  @@index([date], map: "CourtDate_date_idx")
+  @@index([matterId], map: "CourtDate_matterId_idx")
+  @@index([submittingLawyerId], map: "CourtDate_submittingLawyerId_idx")
 }
 
 model ScheduledNotification {
   id               String          @id @default(cuid())
   matterId         String?
-  calendarEntryId  String?
+  courtDateId      String?
   complianceTaskId String?
   recipientId      String
   notificationType String
@@ -384,11 +338,9 @@ model ScheduledNotification {
   createdAt        DateTime        @default(now())
   updatedAt        DateTime        @updatedAt
   complianceTask   ComplianceTask? @relation(fields: [complianceTaskId], references: [id], onDelete: Cascade)
-  calendarEntry   CalendarEntry?  @relation(fields: [calendarEntryId], references: [id], onDelete: Cascade)
 
   @@index([status, scheduledFor])
   @@index([matterId])
-  @@index([calendarEntryId])
   @@index([complianceTaskId])
   @@index([recipientId])
 }
@@ -425,50 +377,39 @@ model ClientCommunication {
 }
 
 model Brief {
-  id             String    @id @default(cuid())
-  briefNumber    String    @unique /// @searchable
-  name           String    /// @searchable
-  clientId       String?
-  matterId       String?
-  lawyerId       String
-  workspaceId    String
-  category       String
-  status         String    @default("active")
-  dueDate        DateTime?
-  description    String?
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
-  deletedAt      DateTime?
-  inboundEmailId String    @unique @default(uuid())
-  
-  // NEW: Summarization
-  summary           String?
-  lastSummarizedAt  DateTime?
-
-  // NEW: Source tracking
-  isLitigationDerived Boolean @default(false)
-
-  // NEW: Title management (manual override)
-  customTitle String?
-
-  // NEW: Lawyer in Charge (separate from creator)
-  lawyerInChargeId String?
-
-  // NEW: Editable brief number (firm's internal numbering)
-  customBriefNumber String? @unique
-
-  // Relationships
-  client         Client?              @relation(fields: [clientId], references: [id])
-  lawyer         User                 @relation("BriefCreator", fields: [lawyerId], references: [id])
-  lawyerInCharge User?                @relation("LawyerInCharge", fields: [lawyerInChargeId], references: [id])
-  matter         Matter?              @relation(fields: [matterId], references: [id])
-  workspace      Workspace            @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  activityLogs   BriefActivityLog[]
-  calendarEntries   CalendarEntry[]
-  documents      Document[]
-  notifications  Notification[]
-  tasks          Task[]
-  lawyerChanges  BriefLawyerHistory[]
+  id                  String               @id @default(cuid())
+  /// @searchable
+  briefNumber         String               @unique
+  /// @searchable
+  name                String
+  clientId            String?
+  matterId            String?
+  lawyerId            String
+  workspaceId         String
+  category            String
+  status              String               @default("active")
+  dueDate             DateTime?
+  description         String?
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  inboundEmailId      String               @unique @default(uuid())
+  customBriefNumber   String?              @unique
+  customTitle         String?
+  isLitigationDerived Boolean              @default(false)
+  lawyerInChargeId    String?
+  deletedAt           DateTime?
+  lastSummarizedAt    DateTime?
+  summary             String?
+  client              Client?              @relation(fields: [clientId], references: [id])
+  lawyer              User                 @relation("BriefCreator", fields: [lawyerId], references: [id])
+  lawyerInCharge      User?                @relation("LawyerInCharge", fields: [lawyerInChargeId], references: [id])
+  matter              Matter?              @relation(fields: [matterId], references: [id])
+  workspace           Workspace            @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  activityLogs        BriefActivityLog[]
+  lawyerChanges       BriefLawyerHistory[]
+  documents           Document[]
+  notifications       Notification[]
+  tasks               Task[]
 
   @@index([lawyerId])
   @@index([lawyerInChargeId])
@@ -508,10 +449,13 @@ model DocumentChunk {
 
 model Client {
   id                   String                @id @default(cuid())
-  name                 String                /// @searchable
-  email                String                @unique /// @searchable
+  /// @searchable
+  name                 String
+  /// @searchable
+  email                String                @unique
   phone                String?
-  company              String?               /// @searchable
+  /// @searchable
+  company              String?
   industry             String?
   status               String                @default("active")
   workspaceId          String
@@ -520,7 +464,6 @@ model Client {
   briefs               Brief[]
   workspace            Workspace             @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   clientCommunications ClientCommunication[]
-  calendarEntries      CalendarEntry[]
   invoices             Invoice[]
   matters              Matter[]
   payments             Payment[]
@@ -531,7 +474,8 @@ model Client {
 
 model Invoice {
   id                   String         @id @default(cuid())
-  invoiceNumber        String         @unique /// @searchable
+  /// @searchable
+  invoiceNumber        String         @unique
   clientId             String
   matterId             String?
   date                 DateTime       @default(now())
@@ -594,27 +538,18 @@ model Payment {
   @@index([invoiceId])
 }
 
-enum ExpenseCategory {
-  OFFICE_UTILITIES
-  OFFICE_EQUIPMENT_MAINTENANCE
-  COURT_LITIGATION
-  NON_LITIGATION_ADVISORY
-  COMMUNICATION_SUBSCRIPTIONS
-  STAFF_COSTS
-  VEHICLE_LOGISTICS
-  MISCELLANEOUS
-}
-
 model Expense {
   id          String          @id @default(cuid())
   workspaceId String
-  category    ExpenseCategory @default(MISCELLANEOUS) // Default for migration safety, will act as fallback
   amount      Int
-  description String?               /// @searchable
+  /// @searchable
+  description String?
   date        DateTime        @default(now())
-  reference   String?               /// @searchable
+  /// @searchable
+  reference   String?
   createdAt   DateTime        @default(now())
   updatedAt   DateTime        @updatedAt
+  category    ExpenseCategory @default(MISCELLANEOUS)
   workspace   Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   auditLogs   ExpenseAuditLog[]
 
@@ -624,25 +559,25 @@ model Expense {
 
 model ExpenseAuditLog {
   id          String   @id @default(cuid())
-  expenseId   String
-  action      String   // 'UPDATE', 'DELETE'
+  expenseId   String?
+  expense     Expense?  @relation(fields: [expenseId], references: [id], onDelete: SetNull)
+  action      String   // 'UPDATE' | 'DELETE'
   changedBy   String
+  user        User     @relation(fields: [changedBy], references: [id])
   oldData     Json?
   newData     Json?
-  timestamp   DateTime @default(now())
-  
-  expense     Expense  @relation(fields: [expenseId], references: [id], onDelete: Cascade)
-  user        User     @relation(fields: [changedBy], references: [id])
+  createdAt   DateTime @default(now())
 
   @@index([expenseId])
   @@index([changedBy])
 }
 
-
 model Task {
   id           String    @id @default(cuid())
-  title        String    /// @searchable
-  description  String?   /// @searchable
+  /// @searchable
+  title        String
+  /// @searchable
+  description  String?
   assignedToId String?
   assignedById String
   workspaceId  String
@@ -829,11 +764,12 @@ model ComplianceTask {
   createdAt              DateTime                @default(now())
   updatedAt              DateTime                @updatedAt
   history                ComplianceHistory[]
-  notifications          Notification[]
-  scheduledNotifications ScheduledNotification[]
   user                   User?                   @relation("AcknowledgedBy", fields: [acknowledgedBy], references: [id])
   obligation             ComplianceObligation    @relation(fields: [obligationId], references: [id])
   workspace              Workspace               @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  notifications          Notification[]
+  scheduledNotifications ScheduledNotification[]
+  meetingRecording       MeetingRecording?
 
   @@index([workspaceId, status])
   @@index([dueDate])
@@ -853,78 +789,74 @@ model ComplianceHistory {
 }
 
 model BriefLawyerHistory {
-  id      String @id @default(cuid())
-  briefId String
-  brief   Brief  @relation(fields: [briefId], references: [id], onDelete: Cascade)
-
+  id               String   @id @default(cuid())
+  briefId          String
   previousLawyerId String?
   newLawyerId      String?
-
-  changedBy     String
-  changedByUser User   @relation("BriefLawyerChanges", fields: [changedBy], references: [id])
-
-  reason    String?
-  timestamp DateTime @default(now())
+  changedBy        String
+  reason           String?
+  timestamp        DateTime @default(now())
+  brief            Brief    @relation(fields: [briefId], references: [id], onDelete: Cascade)
+  changedByUser    User     @relation("BriefLawyerChanges", fields: [changedBy], references: [id])
 
   @@index([briefId])
   @@index([timestamp])
 }
 
-model RateLimit {
-  id        String   @id @default(cuid())
-  key       String   @unique
-  count     Int      @default(0)
-  expiresAt DateTime
-  updatedAt DateTime @updatedAt
-}
-
-model EmailVerification {
-  id        String   @id @default(cuid())
-  userId    String
-  email     String
-  tokenHash String   @unique
-  expiresAt DateTime
-  createdAt DateTime @default(now())
-  usedAt    DateTime?
-  
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([tokenHash])
-  @@index([userId])
-}
-
-model PasswordResetRequest {
-  id        String   @id @default(cuid())
-  userId    String
-  tokenHash String   @unique
-  expiresAt DateTime
-  createdAt DateTime @default(now())
-  usedAt    DateTime?
-  
-  // Metadata
-  ipAddress String?
-  userAgent String?
-
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([tokenHash])
-  @@index([userId])
-}
-
 model SecurityAuditLog {
   id          String   @id @default(cuid())
   userId      String?
-  event       String   // e.g., "LOGIN_SUCCESS", "PASSWORD_RESET_REQUEST", "EMAIL_VERIFICATION_SUCCESS"
+  event       String
   description String?
   ipAddress   String?
   userAgent   String?
-  metadata    Json?    // Additional context
+  metadata    Json?
   createdAt   DateTime @default(now())
-  
-  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
-
-  @@index([userId])
-  @@index([event])
-  @@index([createdAt])
 }
 
+model MeetingRecording {
+  id              String    @id @default(cuid())
+  calendarEntryId String?   @unique
+  matterId        String?
+  date            DateTime  @default(now())
+  participants    Json?
+  summary         String
+  actionItems     String?
+  followUpDate    DateTime?
+  audioUrl        String?
+  transcriptText   String?
+  audioDuration   Int?
+  createdById     String?
+  complianceTaskId String?   @unique
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  calendarEntry    CalendarEntry? @relation(fields: [calendarEntryId], references: [id])
+  matter           Matter?        @relation(fields: [matterId], references: [id], onDelete: Cascade)
+  creator          User?          @relation(fields: [createdById], references: [id])
+  complianceTask   ComplianceTask? @relation(fields: [complianceTaskId], references: [id])
+
+  @@index([calendarEntryId])
+  @@index([matterId])
+  @@index([createdById])
+  @@index([complianceTaskId])
+}
+
+enum CalendarEventType {
+  COURT_DATE
+  FILING_DEADLINE
+  CLIENT_MEETING
+  INTERNAL_MEETING
+  OTHER
+}
+
+enum ExpenseCategory {
+  OFFICE_UTILITIES
+  OFFICE_EQUIPMENT_MAINTENANCE
+  COURT_LITIGATION
+  NON_LITIGATION_ADVISORY
+  COMMUNICATION_SUBSCRIPTIONS
+  STAFF_COSTS
+  VEHICLE_LOGISTICS
+  MISCELLANEOUS
+}

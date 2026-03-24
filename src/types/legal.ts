@@ -31,6 +31,7 @@ export interface CalendarEvent {
         client?: ClientSummary | null;
     } | null;
     appearances: LawyerSummary[];
+    meetingRecording?: MeetingRecording | null;
 }
 
 export interface LawyerSummary {
@@ -57,16 +58,22 @@ export interface CalendarEntry {
     judge?: string | null;
     externalCounsel?: string | null;
     appearances: LawyerSummary[];
+    meetingRecording?: MeetingRecording | null;
 }
 
 export interface MeetingRecording {
     id: string;
     calendarEntryId: string | null;
     matterId: string | null;
-    audioFileUrl: string | null;
-    transcriptText: string | null;
-    recordingDuration: number | null;
-    createdById: string | null;
+    date: Date;
+    participants?: any;
+    summary: string;
+    actionItems?: string | null;
+    followUpDate?: Date | null;
+    audioUrl?: string | null;
+    transcriptText?: string | null;
+    audioDuration?: number | null;
+    createdById?: string | null;
     createdAt: Date;
     updatedAt: Date;
 }

@@ -134,7 +134,10 @@ const ExpenseModal = ({ isOpen, onClose, onSuccess, workspaceId, expenseToEdit }
                     if (onSuccess) onSuccess();
                     onClose();
                 } else {
-                    setError(data.error || 'Failed to update expense');
+                    const errorMessage = data.details 
+                        ? `${data.error}: ${data.details}` 
+                        : (data.error || 'Failed to update expense');
+                    setError(errorMessage);
                 }
             } else {
                 // Batch Create (POST)

@@ -312,8 +312,8 @@ export async function PATCH(request: NextRequest) {
                     expenseId: id,
                     action: 'UPDATE',
                     changedBy: dbUserId,
-                    oldData: JSON.parse(JSON.stringify(existingExpense)),
-                    newData: JSON.parse(JSON.stringify(updated)),
+                    oldData: existingExpense as any,
+                    newData: updated as any,
                 },
             });
 
@@ -397,11 +397,23 @@ export async function DELETE(request: NextRequest) {
             );
         }
 
-        // 3. Delete expense
-        // Note: For a true audit trail on deletion, we would ideally keep a record 
-        // after the expense is gone, but the current schema has onDelete: Cascade.
-        await prisma.expense.delete({
-            where: { id },
+        // 3. Delete expense and log audit trail in a transaction
+        await prisma.$transaction(async (tx) => {
+            // Create audit log before deleting
+            await tx.expenseAuditLog.create({
+                data: {
+                    expenseId: id,
+                    action: 'DELETE',
+                    changedBy: dbUserId,
+                    oldData: existingExpense as any,
+                    newData: undefined,
+                },
+            });
+
+            // Perform the deletion
+            await tx.expense.delete({
+                where: { id },
+            });
         });
 
         return NextResponse.json({

@@ -86,15 +86,46 @@ const EventList = ({ events }: EventListProps) => {
                             }).format(new Date(event.date));
 
                             return (
-                                <div key={event.id} className={styles.eventCard}>
-                                    <div className={styles.timeBadge}>{eventTime}</div>
-                                    <div className={styles.eventContent}>
-                                        <h5 className={styles.eventTitle}>{event.matter?.name || event.title || 'Event'}</h5>
-                                        <div className={styles.eventMeta}>
-                                            <Icon size={14} />
-                                            <span>{event.title || event.type.replace('_', ' ')}</span>
+                                <div key={event.id} className={`${styles.eventCard} flex flex-col gap-3 h-auto`}>
+                                    <div className="flex items-center gap-3">
+                                        <div className={styles.timeBadge}>{eventTime}</div>
+                                        <div className={styles.eventContent}>
+                                            <h5 className={styles.eventTitle}>{event.matter?.name || event.title || 'Event'}</h5>
+                                            <div className={styles.eventMeta}>
+                                                <Icon size={14} />
+                                                <span>{event.title || event.type.replace('_', ' ')}</span>
+                                            </div>
                                         </div>
                                     </div>
+
+                                    {event.meetingRecording && (
+                                        <div className="mt-2 p-3 bg-slate-800/50 rounded-xl border border-slate-700/50 flex flex-col gap-3">
+                                            {event.meetingRecording.audioUrl && (
+                                                <div className="flex items-center gap-3">
+                                                    <div className="p-2 bg-blue-500/20 rounded-full text-blue-400">
+                                                        <Mic size={14} />
+                                                    </div>
+                                                    <audio 
+                                                        src={event.meetingRecording.audioUrl} 
+                                                        controls 
+                                                        className="h-8 w-full max-w-[200px] opacity-80" 
+                                                    />
+                                                </div>
+                                            )}
+                                            
+                                            {event.meetingRecording.transcriptText && (
+                                                <div className="flex flex-col gap-1">
+                                                    <div className="flex items-center gap-2 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                                                        <FileText size={12} />
+                                                        <span>Verbatim Transcript</span>
+                                                    </div>
+                                                    <div className="text-[11px] text-slate-300 line-clamp-3 italic leading-relaxed bg-slate-900/50 p-2 rounded-lg border border-slate-700/30">
+                                                        "{event.meetingRecording.transcriptText}"
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
                                 </div>
                             );
                         })}

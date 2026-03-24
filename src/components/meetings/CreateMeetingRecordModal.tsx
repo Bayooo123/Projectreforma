@@ -6,7 +6,7 @@ import { AudioRecorder } from './AudioRecorder';
 import { recordMeeting } from '@/app/actions/matters';
 import styles from '../calendar/MatterDetailModal.module.css';
 
-interface CreateMeetingRecordModalProps {
+interface CreateMeetingRecordingModalProps {
     isOpen: boolean;
     onClose: () => void;
     matterId: string;
@@ -14,7 +14,7 @@ interface CreateMeetingRecordModalProps {
     onSuccess: () => void;
 }
 
-export const CreateMeetingRecordModal: React.FC<CreateMeetingRecordModalProps> = ({
+export const CreateMeetingRecordingModal: React.FC<CreateMeetingRecordingModalProps> = ({
     isOpen,
     onClose,
     matterId,
@@ -24,7 +24,7 @@ export const CreateMeetingRecordModal: React.FC<CreateMeetingRecordModalProps> =
     const [status, setStatus] = useState<'idle' | 'recording' | 'processing' | 'reviewing'>('idle');
     const [audioUrl, setAudioUrl] = useState<string | null>(null);
     const [duration, setDuration] = useState(0);
-    const [transcription, setTranscription] = useState('');
+    const [transcriptText, setTranscriptText] = useState('');
     const [summary, setSummary] = useState('');
     const [actionItems, setActionItems] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -43,11 +43,11 @@ export const CreateMeetingRecordModal: React.FC<CreateMeetingRecordModalProps> =
                 date: new Date(),
                 participants: 'Recorded Session',
                 summary: 'Processing meeting insights...',
-                transcription: 'Transcription in progress...',
+                transcriptText: 'Transcription in progress...',
                 actionItems: '',
                 audioUrl: url,
                 audioDuration: dur
-            } as any);
+            });
 
             if (result.success) {
                 onSuccess();
@@ -76,11 +76,11 @@ export const CreateMeetingRecordModal: React.FC<CreateMeetingRecordModalProps> =
                 date: new Date(),
                 participants: 'Recorded Session', // We can add a participants field to the UI later
                 summary,
-                transcription,
+                transcriptText,
                 actionItems,
                 audioUrl: audioUrl || undefined,
                 audioDuration: duration
-            } as any);
+            });
 
             if (result.success) {
                 onSuccess();
@@ -132,7 +132,7 @@ export const CreateMeetingRecordModal: React.FC<CreateMeetingRecordModalProps> =
                                     onClick={() => {
                                         setStatus('idle');
                                         setSummary('');
-                                        setTranscription('');
+                                        setTranscriptText('');
                                         setActionItems('');
                                     }}
                                     className="text-xs text-red-500 hover:underline font-medium"
@@ -169,8 +169,8 @@ export const CreateMeetingRecordModal: React.FC<CreateMeetingRecordModalProps> =
                                     <textarea
                                         className={`${styles.textarea} bg-surface-subtle text-tertiary font-mono text-xs`}
                                         placeholder={isTranscribing ? "Generating transcription..." : "AI Generated transcription will appear here..."}
-                                        value={transcription}
-                                        onChange={(e) => setTranscription(e.target.value)}
+                                        value={transcriptText}
+                                        onChange={(e) => setTranscriptText(e.target.value)}
                                         rows={6}
                                         readOnly={isTranscribing}
                                     />

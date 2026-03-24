@@ -5,7 +5,7 @@ import { X, Calendar, User, Users, MapPin, FileText, AlertCircle, Loader, Buildi
 import { adjournMatter, addMatterNote, updateMatter, deleteMatter, updateCalendarEntry } from '@/app/actions/matters';
 import { getLawyersForWorkspace } from '@/lib/briefs';
 import RecordProceedingModal from './RecordProceedingModal';
-import { CreateMeetingRecordModal } from '../meetings/CreateMeetingRecordModal';
+import { CreateMeetingRecordingModal } from '../meetings/CreateMeetingRecordModal';
 import styles from './MatterDetailModal.module.css';
 
 import { Matter } from '@/types/legal';
@@ -586,7 +586,7 @@ const MatterDetailModal = ({ isOpen, onClose, matter, userId }: MatterDetailModa
                 )}
 
                 {isRecordMeetingOpen && (
-                    <CreateMeetingRecordModal
+                    <CreateMeetingRecordingModal
                         isOpen={isRecordMeetingOpen}
                         onClose={() => setIsRecordMeetingOpen(false)}
                         matterId={matter.id}

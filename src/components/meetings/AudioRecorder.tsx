@@ -5,11 +5,13 @@ import { Button } from '@/components/ui/Button';
 import { Mic, Square, Trash2, Loader2, Play, Pause, Activity } from 'lucide-react';
 
 interface AudioRecorderProps {
-    onRecordingComplete: (audioUrl: string, duration: number) => void;
+    onRecordingComplete: (recordingId: string, audioUrl: string, duration: number) => void;
     onStatusChange?: (status: 'idle' | 'recording' | 'processing') => void;
+    calendarEntryId?: string;
+    matterId?: string;
 }
 
-export const AudioRecorder: React.FC<AudioRecorderProps> = ({ onRecordingComplete, onStatusChange }) => {
+export const AudioRecorder: React.FC<AudioRecorderProps> = ({ onRecordingComplete, onStatusChange, calendarEntryId, matterId }) => {
     const [status, setInternalStatus] = useState<'idle' | 'recording' | 'processing' | 'reviewing'>('idle');
     const [duration, setDuration] = useState(0);
     const [audioUrl, setAudioUrl] = useState<string | null>(null);
@@ -144,7 +146,11 @@ export const AudioRecorder: React.FC<AudioRecorderProps> = ({ onRecordingComplet
         onStatusChange?.('processing');
         try {
             const filename = `recording-${Date.now()}.webm`;
-            const response = await fetch(`/api/upload?filename=${filename}`, {
+            let url = `/api/meetings/upload-audio?filename=${filename}`;
+            if (calendarEntryId) url += `&calendarEntryId=${calendarEntryId}`;
+            if (matterId) url += `&matterId=${matterId}`;
+
+            const response = await fetch(url, {
                 method: 'POST',
                 body: blob,
             });
@@ -152,7 +158,7 @@ export const AudioRecorder: React.FC<AudioRecorderProps> = ({ onRecordingComplet
             if (!response.ok) throw new Error('Failed to upload audio');
 
             const data = await response.json();
-            onRecordingComplete(data.url, finalDuration);
+            onRecordingComplete(data.recordingId, data.audioUrl, finalDuration);
         } catch (err) {
             console.error('Upload failed:', err);
             alert('Failed to upload audio recording.');
