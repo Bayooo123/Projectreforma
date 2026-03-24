@@ -106,10 +106,10 @@
 | `src/lib/bica/playbooks/index.ts` | Playbook registry + per-model metadata |
 | `src/lib/bica/handlers/utils.ts` | Polymorphic relation scope resolver |
 | `src/lib/bica/handlers/label-config.ts` | Human-readable label/secondaryLabel per model |
-| `src/lib/bica/jeql/compiler.ts` | JEQL → Prisma query compiler |
-| `src/lib/bica/jeql/operators.ts` | Operator translation helpers |
-| `src/lib/bica/jeql/types.ts` | JEQL type definitions |
-| `src/lib/bica/jeql/utils.ts` | Date, pattern, and search utilities |
+| `src/lib/bica/lib/jeql/compiler.ts` | JEQL → Prisma query compiler |
+| `src/lib/bica/lib/jeql/operators.ts` | Operator translation helpers |
+| `src/lib/bica/lib/jeql/types.ts` | JEQL type definitions |
+| `src/lib/bica/lib/jeql/utils.ts` | Date, pattern, and search utilities |
 | `bica-integration/` | Canonical entity playbook JSON files + manifests |
 
 ---
@@ -219,7 +219,7 @@ Four operation types are supported. The `operation_type` field in the request bo
 
 ## 6. JEQL Query Language
 
-JEQL (JSON Entity Query Language) is Reforma's internal query DSL. It compiles to Prisma read-query arguments through the modular implementation under `src/lib/bica/jeql/`.
+JEQL (JSON Entity Query Language) is Reforma's internal query DSL. It compiles to Prisma read-query arguments through the modular implementation under `src/lib/bica/lib/jeql/`.
 
 ### Type Definition
 
@@ -920,7 +920,7 @@ node scripts/bica-test.mjs
 5. `write` (delete) — Cleans up the test client
 6. Security — Verifies invalid HMAC returns `401`
 
-Unit coverage for the JEQL compiler lives under `src/lib/bica/jeql/__tests__/compiler.test.ts` and runs with `vitest`.
+Unit coverage for the JEQL compiler lives under `src/lib/bica/lib/jeql/__tests__/compiler.test.ts` and runs with `vitest`.
 
 ---
 

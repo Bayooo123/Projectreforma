@@ -1,7 +1,7 @@
 import { prisma } from '@/lib/prisma';
 import { BicaHandler } from '../handlers/base';
 import { getPlaybook } from '../playbooks';
-import { JeqlCompiledQuery, JeqlCompiler, JeqlQuery, JeqlValidationError, SearchDirective, normalizeText } from '../jeql';
+import { JeqlCompiledQuery, JeqlCompiler, JeqlQuery, JeqlValidationError, SearchDirective, normalizeText } from '../lib/jeql';
 
 export class LookupHandler extends BicaHandler {
 	private readonly compiler = new JeqlCompiler();
