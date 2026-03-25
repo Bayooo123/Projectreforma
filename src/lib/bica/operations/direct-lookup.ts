@@ -15,11 +15,16 @@ export class DirectLookupHandler extends BicaHandler {
    * Handle an incoming direct_lookup payload.
    *
    * Expected payload shape:
-   * { relationName: string, queryText: string }
+   * { relationName: string, queryText: string, with?: string[] }
+   *
+   * The optional `with` array lists child relationship names (as declared in
+   * the playbook's `getReadableChildRelationships()`) to eager-load alongside
+   * each matched record. Unknown or non-readable relationships are rejected
+   * with a VALIDATION_ERROR so callers get actionable feedback.
    */
   async handle(payload: any): Promise<any> {
     // Laravel: $relation = $request->input('relationName'); $term = $request->input('queryText');
-    const { relationName, queryText } = payload;
+    const { relationName, queryText, with: withRelations } = payload;
 
     if (!relationName || typeof queryText !== 'string') {
       throw Object.assign(
@@ -34,6 +39,26 @@ export class DirectLookupHandler extends BicaHandler {
     if (!playbook) {
       throw Object.assign(new Error(`Unknown relationName: '${relationName}'.`), { bicaCode: 'VALIDATION_ERROR' });
     }
+
+    // Validate and normalise the optional `with` parameter.
+    // Only relationships declared as readable by the playbook are permitted.
+    const requestedWith: string[] = Array.isArray(withRelations) ? withRelations : [];
+    if (requestedWith.length > 0) {
+      const readable = new Set(playbook.getReadableChildRelationships());
+      const unknown = requestedWith.filter(r => !readable.has(r));
+      if (unknown.length > 0) {
+        throw Object.assign(
+          new Error(`direct_lookup: unknown or non-readable relation(s) in "with": ${unknown.map(r => `'${r}'`).join(', ')}. Readable relationships for '${relationName}': ${[...readable].join(', ') || '(none)'}.`),
+          { bicaCode: 'VALIDATION_ERROR' }
+        );
+      }
+    }
+
+    // Build the Prisma `include` fragment from the validated `with` list.
+    const includeClause: Record<string, true> | undefined =
+      requestedWith.length > 0
+        ? Object.fromEntries(requestedWith.map(r => [r, true]))
+        : undefined;
 
     // Resolve the polymorphic scope for the platform entity. This returns
     // a Prisma `where` fragment representing the actor's scope (e.g. a
@@ -72,9 +97,11 @@ export class DirectLookupHandler extends BicaHandler {
     // Execute the query (Laravel: $records = $query->take(20)->get();)
     // Execute the database query with a safe try/catch. We cap the results
     // with `take: 20` to avoid returning excessive rows for a single lookup.
+    // When an `include` clause is present (derived from the `with` parameter)
+    // it is passed through so Prisma eager-loads the requested relations.
     let records: any[] = [];
     try {
-      records = await delegate.findMany({ where: finalWhere, take: 20 });
+      records = await delegate.findMany({ where: finalWhere, take: 20, ...(includeClause ? { include: includeClause } : {}) });
     } catch (err: any) {
       // Wrap lower-level errors in a Bica-aware error code so the caller
       // receives a structured `SERVER_ERROR` response rather than a raw stack.
@@ -94,12 +121,24 @@ export class DirectLookupHandler extends BicaHandler {
       .sort((left, right) => right.confidence - left.confidence);
 
     return {
-      matches: scoredRecords.map(({ record, confidence }) => ({
-        id: record.id,
-        label: playbook.getLookupLabel(record),
-        secondaryLabel: playbook.getLookupSecondaryLabel(record),
-        confidence,
-      })),
+      matches: scoredRecords.map(({ record, confidence }) => {
+        const match: Record<string, any> = {
+          id: record.id,
+          label: playbook.getLookupLabel(record),
+          secondaryLabel: playbook.getLookupSecondaryLabel(record),
+          confidence,
+        };
+
+        // Attach eager-loaded relations when `with` was requested so callers
+        // receive sub-model data alongside the primary match.
+        if (requestedWith.length > 0) {
+          match.relations = Object.fromEntries(
+            requestedWith.map(r => [r, record[r] ?? null])
+          );
+        }
+
+        return match;
+      }),
     };
   }
 
