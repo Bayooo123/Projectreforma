@@ -39,7 +39,7 @@
 | **App ID** | `reforma_os` |
 | **App Name** | Reforma Legal OS |
 | **Version** | 1.2.0 (manifest) |
-| **Platform Operator** | Fladov (`fladov.app`) |
+| **Platform Operator** | Fladov (`fladov.com`) |
 | **Bot Name** | Reforma Assistant |
 | **Brand Color** | `#121826` |
 | **Accent Color** | `#3182ce` |
@@ -136,7 +136,7 @@ When a Reforma user opens the Bica embedded iframe:
 2. Reforma backend fetches the user's profile from the database.
 3. Reforma signs a payload and calls Fladov's session API:
    ```
-   POST https://fladov.app/api/v1/platforms/{BICA_PLATFORM_ID}/generate-session
+   POST https://fladov.com/api/v1/platforms/{BICA_PLATFORM_ID}/generate-session
    ```
    Body:
    ```json
@@ -769,7 +769,7 @@ if (existing) return cached response;
 | `BICA_PLATFORM_ID` | `reforma_os` | App slug used in Fladov API URLs |
 | `BICA_SHARED_SECRET` | `dev_secret_keys` | HMAC signing key (change in production!) |
 | `BICA_DISABLE_HMAC` | `false` | Disables signature check for local dev **only** |
-| `FLADOV_BASE_URL` | `https://fladov.app` | Fladov platform base URL |
+| `FLADOV_BASE_URL` | `https://fladov.com` | Fladov platform base URL |
 | `DATABASE_URL` | — | PostgreSQL connection string |
 | `NEXTAUTH_SECRET` | — | NextAuth session encryption key (min 32 chars) |
 | `NEXT_PUBLIC_APP_URL` | `http://localhost:3000` | Public app URL |

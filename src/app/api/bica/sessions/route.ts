@@ -86,7 +86,7 @@ export async function POST(req: NextRequest) {
             .digest('hex');
 
         // 5. Call Fladov's session generation endpoint
-        //    Spec: POST https://fladov.app/api/v1/platforms/{platform_slug}/generate-session
+        //    Spec: POST https://fladov.com/api/v1/platforms/{platform_slug}/generate-session
         const fladovUrl = `${FLADOV_BASE_URL}/api/v1/platforms/${BICA_PLATFORM_ID}/generate-session`;
 
         const response = await fetch(fladovUrl, {

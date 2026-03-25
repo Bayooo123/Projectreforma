@@ -32,7 +32,7 @@ const envSchema = z.object({
     BICA_PLATFORM_ID: z.string().default('reforma_os'),
     BICA_SHARED_SECRET: z.string().default('dev_secret_keys'),
     BICA_DISABLE_HMAC: z.preprocess((val) => val === 'true', z.boolean()).default(false),
-    FLADOV_BASE_URL: z.string().url().default('https://fladov.app'),
+    FLADOV_BASE_URL: z.string().url().default('https://fladov.com'),
     // ⚠️ SECURITY: exposes full error traces in API responses. NEVER enable in production.
     BICA_DEBUG_ERRORS: z.preprocess((val) => val === 'true', z.boolean()).default(false),
 });
