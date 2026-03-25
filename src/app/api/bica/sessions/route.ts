@@ -134,8 +134,21 @@ export async function POST(req: NextRequest) {
 
     } catch (error: any) {
         console.error('[BICA SESSIONS]', error);
+
+        const debugPayload = true // config.BICA_DEBUG_ERRORS
+            ? {
+                  message: error?.message ?? 'An unexpected error occurred.',
+                  // ⚠️ SECURITY: BICA_DEBUG_ERRORS is ON — remove before production
+                  _debug: {
+                      stack: error?.stack ?? null,
+                      cause: error?.cause ? String(error.cause) : null,
+                      name: error?.name ?? null,
+                  },
+              }
+            : { message: error?.message || 'An unexpected error occurred.' };
+
         return NextResponse.json(
-            { status: 'failed', data: null, error: { code: 'SERVER_ERROR', message: error.message || 'An unexpected error occurred.' } },
+            { status: 'failed', data: null, error: { code: 'SERVER_ERROR', ...debugPayload } },
             { status: 500 }
         );
     }

@@ -1,4 +1,7 @@
+- Implement /preview endpoint
+- Implement /insight endpoint
 - Validation in write operation from playbook
 - Add $with fictionality for direct search
 - Create playbooks for all models defined in scehma
-- Create automatic playbook generato
+- Create automatic manifest generato
+- Implement back BICA_DEBUG_ERRORS
