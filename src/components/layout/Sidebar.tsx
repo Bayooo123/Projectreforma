@@ -12,7 +12,8 @@ import {
   ShieldCheck,
   HelpCircle,
   LogOut,
-  ShieldAlert
+  ShieldAlert,
+  MessageSquare
 } from 'lucide-react';
 import styles from './Sidebar.module.css';
 import { signOut } from 'next-auth/react'; // Use client-side signOut
@@ -56,6 +57,7 @@ const Sidebar = ({ user, workspace }: SidebarProps) => {
     { name: 'Office Manager', href: '/management/office', icon: Briefcase },
     { name: 'Compliance', href: '/management/compliance', icon: ShieldCheck },
     { name: 'Analytics', href: '/analytics', icon: BarChart2 },
+    { name: 'Reforma AI', href: '/chat', icon: MessageSquare },
   ];
 
   const isActive = (path: string) => {

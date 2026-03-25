@@ -52,8 +52,12 @@ export default async function RootLayout({
     PUBLIC_ROUTES.includes(pathname) ||
     pathname.startsWith('/join/');
 
+  // Routes that are authenticated but intentionally chrome-free (no sidebar/header shell)
+  const CHROMELESS_ROUTES = ['/chat'];
+  const isChromelessRoute = CHROMELESS_ROUTES.includes(pathname) || CHROMELESS_ROUTES.some(r => pathname.startsWith(r + '/'));
+
   // Determine if we should render the app shell
-  const showShell = !!user && !isPublicRoute;
+  const showShell = !!user && !isPublicRoute && !isChromelessRoute;
 
   // Resolve lightweight workspace data (branding only) ONLY IF necessary for initial theme/colors
   // Note: we don't await the FULL user+workspace object here to avoid blocking

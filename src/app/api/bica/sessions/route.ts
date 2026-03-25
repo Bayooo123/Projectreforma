@@ -28,29 +28,52 @@ export async function POST(req: NextRequest) {
         }
 
         const userId = session.user.id;
+        const workspaceId = session.user.workspaceId;
 
-        // 2. Fetch full user profile (we need email + display name for the handshake)
-        const user = await prisma.user.findUnique({
-            where: { id: userId },
-            select: { id: true, name: true, email: true, image: true },
-        });
+        if (!workspaceId) {
+            return NextResponse.json(
+                { status: 'failed', data: null, error: { code: 'NOT_FOUND', message: 'No active workspace found for this session.' } },
+                { status: 404 }
+            );
+        }
 
-        if (!user || !user.email) {
+        // 2. Fetch the workspace (platform entity) and the user's email for Fladov account linking
+        const [workspace, user] = await Promise.all([
+            prisma.workspace.findUnique({
+                where: { id: workspaceId },
+                select: { id: true, name: true, letterheadUrl: true },
+            }),
+            prisma.user.findUnique({
+                where: { id: userId },
+                select: { email: true },
+            }),
+        ]);
+
+        if (!workspace) {
+            return NextResponse.json(
+                { status: 'failed', data: null, error: { code: 'NOT_FOUND', message: 'Workspace not found.' } },
+                { status: 404 }
+            );
+        }
+
+        if (!user?.email) {
             return NextResponse.json(
                 { status: 'failed', data: null, error: { code: 'NOT_FOUND', message: 'User record not found.' } },
                 { status: 404 }
             );
         }
 
-        // 3. Build the Fladov session generation request body
-        //    Spec: platform_entity_type, platform_entity_id, email, profile
+        // 3. Build the Fladov session generation request body.
+        //    The platform entity is the workspace (firm), not the individual user.
+        //    `email` is the logged-in user's email — Fladov uses it for Shadow Identity account linking.
+        //    `profile` describes the platform entity (workspace), not the user.
         const requestBody = {
-            platform_entity_type: 'App\\Models\\User',  // Morph class identifier per spec
-            platform_entity_id: user.id,
+            platform_entity_type: 'workspace',
+            platform_entity_id: workspace.id,
             email: user.email,
             profile: {
-                name: user.name || user.email,
-                avatar_url: user.image || null,
+                name: workspace.name,
+                avatar_url: workspace.letterheadUrl || null,
             },
         };
 
