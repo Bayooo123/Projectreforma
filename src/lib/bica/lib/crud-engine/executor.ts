@@ -16,6 +16,14 @@ import {
   CrudUpdateEachData,
 } from './types';
 import { assertNonEmptyString, requireDelegate, requirePlaybook } from './utils';
+import { normalizePlaybookKey } from '../playbooks';
+
+type ResolvedParentEntity = {
+  entity: any;
+  playbook: any;
+  entityType: string;
+  entityId: string;
+};
 
 /**
  * Executes a batch of CRUD payloads against Prisma using playbook metadata.
@@ -54,25 +62,23 @@ export class CrudExecutor {
 
     const action = parameterSet.action as CrudAction;
     const data: any = parameterSet.data;
-
-    assertNonEmptyString(parameterSet.parentEntityType, 'parentEntityType');
-    assertNonEmptyString(parameterSet.parentEntityId, 'parentEntityId');
+    const parentContext = await this.resolveParentEntity(parameterSet.parentEntityType, parameterSet.parentEntityId);
 
     switch (action) {
       case 'create':
-        return this.create(data);
+        return this.create(data, parentContext);
       case 'createMany':
-        return this.createMany(data);
+        return this.createMany(data, parentContext);
       case 'read':
-        return this.read(data);
+        return this.read(data, parentContext);
       case 'count':
-        return this.count(data);
+        return this.count(data, parentContext);
       case 'update':
-        return this.update(data);
+        return this.update(data, parentContext);
       case 'updateEach':
-        return this.updateEach(data);
+        return this.updateEach(data, parentContext);
       case 'delete':
-        return this.delete(data);
+        return this.delete(data, parentContext);
       default:
         throw new CrudValidationError(`Unsupported CRUD action '${String(action)}'.`);
     }
@@ -81,21 +87,14 @@ export class CrudExecutor {
   /**
    * Creates one record and compiles any nested create definitions.
    */
-  private async create(data: CrudCreateData): Promise<CrudResult> {
+  private async create(data: CrudCreateData, parentContext: ResolvedParentEntity): Promise<CrudResult> {
     const relationName = assertNonEmptyString(data?.relationName, 'relationName');
     const definition = this.requireDefinition(data?.definition, 'definition');
+    this.assertRelationAllowed(parentContext.playbook, relationName, 'write');
     const playbook = requirePlaybook(relationName, 'relationName');
     const delegate = requireDelegate(prisma, playbook.modelKey, `relationName '${relationName}'`);
 
-    const createScope = playbook.getCreateScope(this.context.platformEntity, this.context.platformEntityType);
-    const compiledDefinition = this.definitions.compile(relationName, definition);
-
-    // Scope fields are merged last so the engine enforces tenancy even if the
-    // caller attempts to smuggle a foreign owner key into the create payload.
-    const payload = {
-      ...compiledDefinition,
-      ...createScope,
-    };
+    const payload = this.definitions.compile(playbook.modelKey, definition, parentContext.entity, parentContext.entityType);
 
     try {
       const record = await delegate.create({ data: payload });
@@ -108,7 +107,7 @@ export class CrudExecutor {
   /**
    * Creates multiple records in one call.
    */
-  private async createMany(data: CrudCreateManyData): Promise<CrudResult> {
+  private async createMany(data: CrudCreateManyData, parentContext: ResolvedParentEntity): Promise<CrudResult> {
     const relationName = assertNonEmptyString(data?.relationName, 'relationName');
     const definitions = Array.isArray(data?.definition) ? data.definition : null;
 
@@ -116,9 +115,9 @@ export class CrudExecutor {
       throw new CrudValidationError('createMany requires a non-empty definition array.');
     }
 
+    this.assertRelationAllowed(parentContext.playbook, relationName, 'write');
     const playbook = requirePlaybook(relationName, 'relationName');
     const delegate = requireDelegate(prisma, playbook.modelKey, `relationName '${relationName}'`);
-    const createScope = playbook.getCreateScope(this.context.platformEntity, this.context.platformEntityType);
 
     try {
       const records = await Promise.all(
@@ -127,12 +126,14 @@ export class CrudExecutor {
             throw new CrudValidationError('Each createMany definition must be an object.');
           }
 
-          const compiledDefinition = this.definitions.compile(relationName, definition as Record<string, unknown>);
+          const compiledDefinition = this.definitions.compile(
+            playbook.modelKey,
+            definition as Record<string, unknown>,
+            parentContext.entity,
+            parentContext.entityType
+          );
           return delegate.create({
-            data: {
-              ...compiledDefinition,
-              ...createScope,
-            },
+            data: compiledDefinition,
           });
         })
       );
@@ -149,8 +150,8 @@ export class CrudExecutor {
   /**
    * Runs a JEQL read query with the current actor scope merged in.
    */
-  private async read(data: CrudReadData): Promise<CrudResult> {
-    const { delegate, baseWhere } = this.resolveScopedDelegate(data?.scope);
+  private async read(data: CrudReadData, parentContext: ResolvedParentEntity): Promise<CrudResult> {
+    const { delegate, baseWhere } = this.resolveScopedDelegate(data?.scope, parentContext, 'read');
     const query = this.requireJeqlQuery(data?.targetOperations, 'targetOperations');
 
     try {
@@ -165,8 +166,8 @@ export class CrudExecutor {
   /**
    * Counts rows that match a JEQL query.
    */
-  private async count(data: CrudCountData): Promise<CrudResult> {
-    const { delegate, baseWhere } = this.resolveScopedDelegate(data?.scope);
+  private async count(data: CrudCountData, parentContext: ResolvedParentEntity): Promise<CrudResult> {
+    const { delegate, baseWhere } = this.resolveScopedDelegate(data?.scope, parentContext, 'read');
     const query = this.requireJeqlQuery(data?.targetOperations ?? {}, 'targetOperations');
 
     try {
@@ -181,8 +182,8 @@ export class CrudExecutor {
   /**
    * Applies the same attribute patch to all matching rows.
    */
-  private async update(data: CrudUpdateData): Promise<CrudResult> {
-    const { delegate, baseWhere } = this.resolveScopedDelegate(data?.scope);
+  private async update(data: CrudUpdateData, parentContext: ResolvedParentEntity): Promise<CrudResult> {
+    const { delegate, baseWhere } = this.resolveScopedDelegate(data?.scope, parentContext, 'write');
     const query = this.requireJeqlQuery(data?.targetOperations, 'targetOperations');
     const attributes = this.requirePlainObject(data?.attributes, 'attributes');
 
@@ -206,8 +207,8 @@ export class CrudExecutor {
   /**
    * Updates each matched record with the corresponding attributes object.
    */
-  private async updateEach(data: CrudUpdateEachData): Promise<CrudResult> {
-    const { delegate, baseWhere } = this.resolveScopedDelegate(data?.scope);
+  private async updateEach(data: CrudUpdateEachData, parentContext: ResolvedParentEntity): Promise<CrudResult> {
+    const { delegate, baseWhere } = this.resolveScopedDelegate(data?.scope, parentContext, 'write');
     const query = this.requireJeqlQuery(data?.targetOperations, 'targetOperations');
     const attributesList = Array.isArray(data?.attributes) ? data.attributes : null;
 
@@ -262,8 +263,8 @@ export class CrudExecutor {
   /**
    * Deletes every row that matches the JEQL filter.
    */
-  private async delete(data: CrudDeleteData): Promise<CrudResult> {
-    const { delegate, baseWhere } = this.resolveScopedDelegate(data?.scope);
+  private async delete(data: CrudDeleteData, parentContext: ResolvedParentEntity): Promise<CrudResult> {
+    const { delegate, baseWhere } = this.resolveScopedDelegate(data?.scope, parentContext, 'write');
     const query = this.requireJeqlQuery(data?.targetOperations, 'targetOperations');
 
     if ('$select' in query) {
@@ -282,11 +283,16 @@ export class CrudExecutor {
   /**
    * Resolves a model delegate and merges the actor scope for query actions.
    */
-  private resolveScopedDelegate(scope: string): { delegate: any; baseWhere: Record<string, unknown> } {
+  private resolveScopedDelegate(
+    scope: string,
+    parentContext: ResolvedParentEntity,
+    relationKind: 'read' | 'write'
+  ): { delegate: any; baseWhere: Record<string, unknown> } {
     const normalizedScope = assertNonEmptyString(scope, 'scope');
+    this.assertRelationAllowed(parentContext.playbook, normalizedScope, relationKind);
     const playbook = requirePlaybook(normalizedScope, 'scope');
     const delegate = requireDelegate(prisma, playbook.modelKey, `scope '${normalizedScope}'`);
-    const baseWhere = playbook.getScopeFilter(this.context.platformEntity, this.context.platformEntityType);
+    const baseWhere = playbook.getScopeFilter(parentContext.entity, parentContext.entityType);
 
     if (!baseWhere || typeof baseWhere !== 'object' || Array.isArray(baseWhere)) {
       throw new CrudValidationError(`Playbook '${normalizedScope}' returned an invalid scope filter.`);
@@ -326,6 +332,37 @@ export class CrudExecutor {
     }
 
     return value as Record<string, unknown>;
+  }
+
+  /**
+   * Resolves the parent entity before any CRUD action is executed.
+   */
+  private async resolveParentEntity(parentEntityType: unknown, parentEntityId: unknown): Promise<ResolvedParentEntity> {
+    const entityType = assertNonEmptyString(parentEntityType, 'parentEntityType');
+    const entityId = assertNonEmptyString(parentEntityId, 'parentEntityId');
+    const playbook = requirePlaybook(entityType, 'parentEntityType');
+    const entity = await playbook.resolve(entityId);
+
+    return { entity, playbook, entityType, entityId };
+  }
+
+  /**
+   * Ensures the requested relation exists on the resolved parent playbook.
+   */
+  private assertRelationAllowed(parentPlaybook: any, relationName: string, relationKind: 'read' | 'write'): void {
+    const allowedRelations = relationKind === 'write'
+      ? parentPlaybook.getMutableChildRelationships()
+      : parentPlaybook.getChildRelationships();
+
+    const normalizedRelation = String(relationName || '').trim().toLowerCase();
+    const isAllowed = Array.isArray(allowedRelations)
+      && allowedRelations.some((relation: string) => normalizePlaybookKey(relation) === normalizePlaybookKey(normalizedRelation));
+
+    if (!isAllowed) {
+      throw new CrudValidationError(
+        `Relation '${relationName}' is not available on parent model '${parentPlaybook.modelKey}'. Allowed relations: ${JSON.stringify(allowedRelations || [])}.`
+      );
+    }
   }
 
   /**

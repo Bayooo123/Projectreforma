@@ -29,7 +29,7 @@ export class UserPlaybook extends Playbook {
     return [];
   }
 
-  getCreateScope(): Record<string, unknown> {
+  getCreateScope(parentEntity: any, parentEntityType: string): Record<string, unknown> {
     return {};
   }
 

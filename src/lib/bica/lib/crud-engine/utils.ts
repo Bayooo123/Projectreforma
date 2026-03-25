@@ -52,6 +52,11 @@ export function requireDelegate(prismaClient: unknown, modelKey: string, label: 
  * Detects whether a relation key should be treated as a nested create payload.
  */
 export function isRelationshipKey(key: string, candidateRelationships: string[]): boolean {
-  const normalizedKey = normalizeKey(key);
-  return candidateRelationships.some(candidate => normalizeKey(candidate) === normalizedKey);
+  const normalizedKey = normalizePlaybookRelation(key);
+  return candidateRelationships.some(candidate => normalizePlaybookRelation(candidate) === normalizedKey);
+}
+
+function normalizePlaybookRelation(value: string): string {
+  const playbook = getPlaybook(String(value || '').trim());
+  return playbook ? playbook.modelKey : normalizeKey(value);
 }

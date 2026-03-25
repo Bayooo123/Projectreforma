@@ -35,8 +35,8 @@ export class TaskPlaybook extends Playbook {
     return [];
   }
 
-  getCreateScope(actor: any): Record<string, unknown> {
-    return { workspaceId: actor.id };
+  getCreateScope(parentEntity: any, parentEntityType: string): Record<string, unknown> {
+    return { workspaceId: parentEntity.id };
   }
 
   getLookupLabel(record: any): string {

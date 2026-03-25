@@ -1,6 +1,7 @@
 import { ClientPlaybook } from './ClientPlaybook';
 import { MatterPlaybook } from './MatterPlaybook';
 import { Playbook } from './Playbook';
+import { WorkspacePlaybook } from './WorkspacePlaybook';
 import { TaskPlaybook } from './TaskPlaybook';
 import { UserPlaybook } from './UserPlaybook';
 
@@ -8,6 +9,7 @@ const PLAYBOOKS: Record<string, Playbook> = {
   client: new ClientPlaybook(),
   matter: new MatterPlaybook(),
   task: new TaskPlaybook(),
+  workspace: new WorkspacePlaybook(),
   user: new UserPlaybook(),
 };
 
@@ -50,4 +52,5 @@ export { Playbook } from './Playbook';
 export { ClientPlaybook } from './ClientPlaybook';
 export { MatterPlaybook } from './MatterPlaybook';
 export { TaskPlaybook } from './TaskPlaybook';
+export { WorkspacePlaybook } from './WorkspacePlaybook';
 export { UserPlaybook } from './UserPlaybook';

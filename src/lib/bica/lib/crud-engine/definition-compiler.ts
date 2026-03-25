@@ -12,22 +12,24 @@ export class DefinitionCompiler {
   /**
    * Compiles a create definition for a specific model.
    */
-  compile(modelName: string, definition: Record<string, unknown>): Record<string, unknown> {
+  compile(modelName: string, definition: Record<string, unknown>, parentEntity: any, parentEntityType: string): Record<string, unknown> {
     const playbook = getPlaybook(modelName);
     if (!playbook) {
       throw new CrudValidationError(`Unknown model '${modelName}' while compiling nested create definitions.`);
     }
 
-    return this.compileForPlaybook(playbook.modelKey, definition);
+    return this.compileForPlaybook(playbook.modelKey, definition, parentEntity, parentEntityType);
   }
 
-  private compileForPlaybook(modelName: string, definition: Record<string, unknown>): Record<string, unknown> {
+  private compileForPlaybook(modelName: string, definition: Record<string, unknown>, parentEntity: any, parentEntityType: string): Record<string, unknown> {
     const playbook = getPlaybook(modelName);
     if (!playbook) {
       throw new CrudValidationError(`Unknown model '${modelName}' while compiling nested create definitions.`);
     }
 
-    const compiled: Record<string, unknown> = {};
+    const compiled: Record<string, unknown> = {
+      ...playbook.getCreateScope(parentEntity, parentEntityType),
+    };
     const nestedRelationships = playbook.getMutableChildRelationships();
 
     for (const [key, value] of Object.entries(definition)) {
@@ -42,8 +44,8 @@ export class DefinitionCompiler {
         // Nested creates are intentionally recursive so the caller can pass a
         // natural tree of data and let the engine emit Prisma's create syntax.
         compiled[key] = Array.isArray(value)
-          ? { create: value.map(item => this.ensureNestedDefinition(item, key)) }
-          : { create: this.ensureNestedDefinition(value, key) };
+          ? { create: value.map(item => this.ensureNestedDefinition(item, key, parentEntity, parentEntityType)) }
+          : { create: this.ensureNestedDefinition(value, key, parentEntity, parentEntityType) };
         continue;
       }
 
@@ -53,11 +55,11 @@ export class DefinitionCompiler {
     return compiled;
   }
 
-  private ensureNestedDefinition(value: unknown, relationName: string): Record<string, unknown> {
+  private ensureNestedDefinition(value: unknown, relationName: string, parentEntity: any, parentEntityType: string): Record<string, unknown> {
     if (!isPlainObject(value)) {
       throw new CrudValidationError(`Nested relation '${relationName}' must be an object or an array of objects.`);
     }
 
-    return this.compileForPlaybook(relationName, value);
+    return this.compileForPlaybook(relationName, value, parentEntity, parentEntityType);
   }
 }

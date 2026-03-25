@@ -41,7 +41,7 @@ maybeDescribe('crud-engine integration', () => {
         [
           {
             action: 'create',
-            parentEntityType: 'biz',
+            parentEntityType: 'workspace',
             parentEntityId: workspace.id,
             data: {
               relationName: 'client',
@@ -55,7 +55,7 @@ maybeDescribe('crud-engine integration', () => {
         ],
         {
           platformEntity: workspace,
-          platformEntityType: 'biz',
+          platformEntityType: 'workspace',
           requestId: randomUUID(),
         }
       );
@@ -92,7 +92,7 @@ maybeDescribe('crud-engine integration', () => {
         [
           {
             action: 'read',
-            parentEntityType: 'biz',
+            parentEntityType: 'workspace',
             parentEntityId: workspace.id,
             data: {
               scope: 'client',
@@ -106,7 +106,7 @@ maybeDescribe('crud-engine integration', () => {
         ],
         {
           platformEntity: workspace,
-          platformEntityType: 'biz',
+          platformEntityType: 'workspace',
           requestId: randomUUID(),
         }
       );

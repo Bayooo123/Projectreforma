@@ -95,10 +95,10 @@ export abstract class Playbook {
   /**
    * Returns the automatic create-time scope for this model.
    *
-   * This keeps ownership and tenant wiring inside the playbook layer so the
-   * CRUD engine can remain generic and policy-free.
+   * The resolved parent entity is the anchor for the relationship being
+   * mutated, so concrete playbooks can derive foreign-key wiring from it.
    */
-  abstract getCreateScope(actor: any, actorType: string): Record<string, unknown>;
+  abstract getCreateScope(parentEntity: any, parentEntityType: string): Record<string, unknown>;
 
   /**
    * Return a Prisma `where` fragment that scopes queries for this model

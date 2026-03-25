@@ -1,6 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const prismaMocks = vi.hoisted(() => ({
+  workspace: {
+    findUnique: vi.fn(),
+  },
   client: {
     create: vi.fn(),
     createMany: vi.fn(),
@@ -47,20 +50,22 @@ import { executeCrudPayload, CrudValidationError } from '../index';
 
 describe('crud-engine', () => {
   const context = {
-    platformEntity: { id: 'ws_123' },
-    platformEntityType: 'biz',
+    platformEntity: { id: 'workspace_123' },
+    platformEntityType: 'workspace',
     requestId: 'req_123',
   };
 
   beforeEach(() => {
+    prismaMocks.workspace.findUnique.mockResolvedValue({ id: 'ws_123', name: 'Workspace 123' });
     for (const delegate of Object.values(prismaMocks)) {
       for (const fn of Object.values(delegate)) {
         fn.mockReset();
       }
     }
+    prismaMocks.workspace.findUnique.mockResolvedValue({ id: 'ws_123', name: 'Workspace 123' });
   });
 
-  it('fails immediately when a scope has no playbook', async () => {
+  it('fails immediately when parentEntityType has no playbook', async () => {
     await expect(
       executeCrudPayload(
         [
@@ -69,7 +74,7 @@ describe('crud-engine', () => {
             parentEntityType: 'biz',
             parentEntityId: 'ws_123',
             data: {
-              scope: 'invoice',
+              scope: 'client',
               targetOperations: {},
             },
           },
@@ -86,7 +91,7 @@ describe('crud-engine', () => {
       [
         {
           action: 'create',
-          parentEntityType: 'biz',
+          parentEntityType: 'workspace',
           parentEntityId: 'ws_123',
           data: {
             relationName: 'client',
@@ -116,7 +121,7 @@ describe('crud-engine', () => {
         [
           {
             action: 'updateEach',
-            parentEntityType: 'biz',
+            parentEntityType: 'workspace',
             parentEntityId: 'ws_123',
             data: {
               scope: 'client',
@@ -139,7 +144,7 @@ describe('crud-engine', () => {
       [
         {
           action: 'create',
-          parentEntityType: 'biz',
+          parentEntityType: 'workspace',
           parentEntityId: 'ws_123',
           data: {
             relationName: 'matter',

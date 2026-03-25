@@ -1,0 +1,62 @@
+import { prisma } from '@/lib/prisma';
+import { Playbook } from './Playbook';
+
+export class WorkspacePlaybook extends Playbook {
+  constructor() {
+    super('workspace');
+  }
+
+  getDescription(): string {
+    return 'Represents a workspace or firm root that owns operational records.';
+  }
+
+  getFieldComments(): Record<string, string> {
+    return {
+      name: 'Display name of the workspace.',
+      slug: 'Unique URL-safe workspace slug.',
+    };
+  }
+
+  getBaseValidationRules(): Record<string, any> {
+    return {
+      id: 'prohibited',
+      name: 'required|string|max:255',
+      slug: 'nullable|string|max:255',
+      ownerId: 'required|string',
+    };
+  }
+
+  getMutableChildRelationships(): string[] {
+    return ['clients', 'matters', 'tasks', 'briefs'];
+  }
+
+  getCreateScope(parentEntity: any, parentEntityType: string): Record<string, unknown> {
+    return {};
+  }
+
+  getLookupLabel(record: any): string {
+    return record?.name || record?.slug || record?.id;
+  }
+
+  getLookupSecondaryLabel(record: any): string {
+    return record?.slug || '';
+  }
+
+  getSearchableFields(): string[] {
+    return ['name', 'slug'];
+  }
+
+  async resolve(id: string) {
+    const rec = await prisma.workspace.findUnique({ where: { id } });
+    if (!rec) throw Object.assign(new Error(`Workspace not found: ${id}`), { name: 'MorphEntityNotFoundError' });
+    return rec;
+  }
+
+  getScopeFilter(actor: any, actorType: string) {
+    const t = String((actorType || '')).toLowerCase();
+    if (t === 'user') {
+      return { members: { some: { userId: actor.id } } };
+    }
+    return { id: actor.id };
+  }
+}
