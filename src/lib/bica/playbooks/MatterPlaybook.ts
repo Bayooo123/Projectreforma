@@ -41,6 +41,10 @@ export class MatterPlaybook extends Playbook {
     return ['Brief', 'CalendarEntry', 'Task', 'MeetingRecording', 'Invoice'];
   }
 
+  getCreateScope(actor: any): Record<string, unknown> {
+    return { workspaceId: actor.id };
+  }
+
   getLookupLabel(record: any): string {
     return record?.name || record?.caseNumber || record?.id;
   }

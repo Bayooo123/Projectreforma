@@ -1,0 +1,356 @@
+import { prisma } from '@/lib/prisma';
+import { JeqlCompiler, JeqlQuery, JeqlValidationError } from '../jeql';
+import { CrudExecutionError, CrudValidationError } from './errors';
+import { DefinitionCompiler } from './definition-compiler';
+import {
+  CrudAction,
+  CrudContext,
+  CrudCountData,
+  CrudCreateData,
+  CrudCreateManyData,
+  CrudDeleteData,
+  CrudParameterSet,
+  CrudReadData,
+  CrudResult,
+  CrudUpdateData,
+  CrudUpdateEachData,
+} from './types';
+import { assertNonEmptyString, requireDelegate, requirePlaybook } from './utils';
+
+/**
+ * Executes a batch of CRUD payloads against Prisma using playbook metadata.
+ */
+export class CrudExecutor {
+  private readonly jeql = new JeqlCompiler();
+
+  private readonly definitions = new DefinitionCompiler();
+
+  constructor(private readonly context: CrudContext) {}
+
+  /**
+   * Executes a batch sequentially so later operations can safely depend on
+   * earlier ones when a payload intentionally chains related writes.
+   */
+  async executeBatch(parameterSets: CrudParameterSet[]): Promise<CrudResult[]> {
+    if (!Array.isArray(parameterSets)) {
+      throw new CrudValidationError('parameterSets must be an array.');
+    }
+
+    const results: CrudResult[] = [];
+    for (const parameterSet of parameterSets) {
+      results.push(await this.execute(parameterSet));
+    }
+
+    return results;
+  }
+
+  /**
+   * Executes a single CRUD parameter set.
+   */
+  async execute(parameterSet: CrudParameterSet): Promise<CrudResult> {
+    if (!parameterSet || typeof parameterSet !== 'object') {
+      throw new CrudValidationError('Each parameterSet must be an object.');
+    }
+
+    const action = parameterSet.action as CrudAction;
+    const data: any = parameterSet.data;
+
+    assertNonEmptyString(parameterSet.parentEntityType, 'parentEntityType');
+    assertNonEmptyString(parameterSet.parentEntityId, 'parentEntityId');
+
+    switch (action) {
+      case 'create':
+        return this.create(data);
+      case 'createMany':
+        return this.createMany(data);
+      case 'read':
+        return this.read(data);
+      case 'count':
+        return this.count(data);
+      case 'update':
+        return this.update(data);
+      case 'updateEach':
+        return this.updateEach(data);
+      case 'delete':
+        return this.delete(data);
+      default:
+        throw new CrudValidationError(`Unsupported CRUD action '${String(action)}'.`);
+    }
+  }
+
+  /**
+   * Creates one record and compiles any nested create definitions.
+   */
+  private async create(data: CrudCreateData): Promise<CrudResult> {
+    const relationName = assertNonEmptyString(data?.relationName, 'relationName');
+    const definition = this.requireDefinition(data?.definition, 'definition');
+    const playbook = requirePlaybook(relationName, 'relationName');
+    const delegate = requireDelegate(prisma, playbook.modelKey, `relationName '${relationName}'`);
+
+    const createScope = playbook.getCreateScope(this.context.platformEntity, this.context.platformEntityType);
+    const compiledDefinition = this.definitions.compile(relationName, definition);
+
+    // Scope fields are merged last so the engine enforces tenancy even if the
+    // caller attempts to smuggle a foreign owner key into the create payload.
+    const payload = {
+      ...compiledDefinition,
+      ...createScope,
+    };
+
+    try {
+      const record = await delegate.create({ data: payload });
+      return { created: true, record, id: record?.id };
+    } catch (error: any) {
+      throw this.wrapExecutionError('create', error);
+    }
+  }
+
+  /**
+   * Creates multiple records in one call.
+   */
+  private async createMany(data: CrudCreateManyData): Promise<CrudResult> {
+    const relationName = assertNonEmptyString(data?.relationName, 'relationName');
+    const definitions = Array.isArray(data?.definition) ? data.definition : null;
+
+    if (!definitions || definitions.length === 0) {
+      throw new CrudValidationError('createMany requires a non-empty definition array.');
+    }
+
+    const playbook = requirePlaybook(relationName, 'relationName');
+    const delegate = requireDelegate(prisma, playbook.modelKey, `relationName '${relationName}'`);
+    const createScope = playbook.getCreateScope(this.context.platformEntity, this.context.platformEntityType);
+
+    try {
+      const records = await Promise.all(
+        definitions.map(definition => {
+          if (!definition || typeof definition !== 'object' || Array.isArray(definition)) {
+            throw new CrudValidationError('Each createMany definition must be an object.');
+          }
+
+          const compiledDefinition = this.definitions.compile(relationName, definition as Record<string, unknown>);
+          return delegate.create({
+            data: {
+              ...compiledDefinition,
+              ...createScope,
+            },
+          });
+        })
+      );
+
+      return { created: true, count: records.length, records };
+    } catch (error: any) {
+      if (error instanceof CrudValidationError) {
+        throw error;
+      }
+      throw this.wrapExecutionError('createMany', error);
+    }
+  }
+
+  /**
+   * Runs a JEQL read query with the current actor scope merged in.
+   */
+  private async read(data: CrudReadData): Promise<CrudResult> {
+    const { delegate, baseWhere } = this.resolveScopedDelegate(data?.scope);
+    const query = this.requireJeqlQuery(data?.targetOperations, 'targetOperations');
+
+    try {
+      const compiled = this.jeql.compile(query, { baseWhere });
+      const records = await delegate.findMany(compiled);
+      return { records };
+    } catch (error: any) {
+      throw this.wrapQueryError('read', error);
+    }
+  }
+
+  /**
+   * Counts rows that match a JEQL query.
+   */
+  private async count(data: CrudCountData): Promise<CrudResult> {
+    const { delegate, baseWhere } = this.resolveScopedDelegate(data?.scope);
+    const query = this.requireJeqlQuery(data?.targetOperations ?? {}, 'targetOperations');
+
+    try {
+      const compiled = this.jeql.compile(query, { baseWhere });
+      const count = await delegate.count({ where: compiled.where });
+      return { count };
+    } catch (error: any) {
+      throw this.wrapQueryError('count', error);
+    }
+  }
+
+  /**
+   * Applies the same attribute patch to all matching rows.
+   */
+  private async update(data: CrudUpdateData): Promise<CrudResult> {
+    const { delegate, baseWhere } = this.resolveScopedDelegate(data?.scope);
+    const query = this.requireJeqlQuery(data?.targetOperations, 'targetOperations');
+    const attributes = this.requirePlainObject(data?.attributes, 'attributes');
+
+    if ('$select' in query) {
+      throw new CrudValidationError('$select is not allowed for update operations.');
+    }
+
+    try {
+      const compiled = this.jeql.compile(query, { baseWhere });
+      const result = await delegate.updateMany({
+        where: compiled.where,
+        data: attributes,
+      });
+
+      return { updated: true, count: result?.count ?? 0 };
+    } catch (error: any) {
+      throw this.wrapQueryError('update', error);
+    }
+  }
+
+  /**
+   * Updates each matched record with the corresponding attributes object.
+   */
+  private async updateEach(data: CrudUpdateEachData): Promise<CrudResult> {
+    const { delegate, baseWhere } = this.resolveScopedDelegate(data?.scope);
+    const query = this.requireJeqlQuery(data?.targetOperations, 'targetOperations');
+    const attributesList = Array.isArray(data?.attributes) ? data.attributes : null;
+
+    if (!query.$orderBy || query.$orderBy.length === 0) {
+      throw new CrudValidationError('updateEach requires $orderBy so row-to-row alignment is deterministic.');
+    }
+
+    if (!attributesList || attributesList.length === 0) {
+      throw new CrudValidationError('updateEach requires a non-empty attributes array.');
+    }
+
+    try {
+      const compiled = this.jeql.compile(query, { baseWhere });
+      const records = await delegate.findMany({
+        where: compiled.where,
+        orderBy: compiled.orderBy,
+        take: compiled.take,
+        skip: compiled.skip,
+        select: { id: true },
+      });
+
+      if (records.length !== attributesList.length) {
+        throw new CrudValidationError(
+          `updateEach expected ${records.length} attribute objects to match the selected rows, but received ${attributesList.length}.`
+        );
+      }
+
+      const updatedRecords = [];
+      for (let index = 0; index < records.length; index += 1) {
+        const row = records[index];
+        const patch = attributesList[index];
+
+        if (!patch || typeof patch !== 'object' || Array.isArray(patch)) {
+          throw new CrudValidationError('Each updateEach attributes entry must be an object.');
+        }
+
+        // Update each record individually so each row can receive its own
+        // payload while preserving the order established by $orderBy.
+        const updated = await delegate.update({
+          where: { id: row.id },
+          data: patch,
+        });
+        updatedRecords.push(updated);
+      }
+
+      return { updated: true, count: updatedRecords.length, records: updatedRecords };
+    } catch (error: any) {
+      throw this.wrapQueryError('updateEach', error);
+    }
+  }
+
+  /**
+   * Deletes every row that matches the JEQL filter.
+   */
+  private async delete(data: CrudDeleteData): Promise<CrudResult> {
+    const { delegate, baseWhere } = this.resolveScopedDelegate(data?.scope);
+    const query = this.requireJeqlQuery(data?.targetOperations, 'targetOperations');
+
+    if ('$select' in query) {
+      throw new CrudValidationError('$select is not allowed for delete operations.');
+    }
+
+    try {
+      const compiled = this.jeql.compile(query, { baseWhere });
+      const result = await delegate.deleteMany({ where: compiled.where });
+      return { deleted: true, count: result?.count ?? 0 };
+    } catch (error: any) {
+      throw this.wrapQueryError('delete', error);
+    }
+  }
+
+  /**
+   * Resolves a model delegate and merges the actor scope for query actions.
+   */
+  private resolveScopedDelegate(scope: string): { delegate: any; baseWhere: Record<string, unknown> } {
+    const normalizedScope = assertNonEmptyString(scope, 'scope');
+    const playbook = requirePlaybook(normalizedScope, 'scope');
+    const delegate = requireDelegate(prisma, playbook.modelKey, `scope '${normalizedScope}'`);
+    const baseWhere = playbook.getScopeFilter(this.context.platformEntity, this.context.platformEntityType);
+
+    if (!baseWhere || typeof baseWhere !== 'object' || Array.isArray(baseWhere)) {
+      throw new CrudValidationError(`Playbook '${normalizedScope}' returned an invalid scope filter.`);
+    }
+
+    return { delegate, baseWhere };
+  }
+
+  /**
+   * Validates that a query object is plain JSON-like data.
+   */
+  private requireJeqlQuery(value: unknown, label: string): JeqlQuery {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) {
+      throw new CrudValidationError(`${label} must be an object.`);
+    }
+
+    return value as JeqlQuery;
+  }
+
+  /**
+   * Ensures an input value is a plain object.
+   */
+  private requirePlainObject(value: unknown, label: string): Record<string, unknown> {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) {
+      throw new CrudValidationError(`${label} must be a plain object.`);
+    }
+
+    return value as Record<string, unknown>;
+  }
+
+  /**
+   * Validates that create payloads are plain objects.
+   */
+  private requireDefinition(value: unknown, label: string): Record<string, unknown> {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) {
+      throw new CrudValidationError(`${label} must be a plain object.`);
+    }
+
+    return value as Record<string, unknown>;
+  }
+
+  /**
+   * Wraps JEQL validation and runtime errors in CRUD-specific failures.
+   */
+  private wrapQueryError(operation: string, error: any): Error {
+    if (error instanceof CrudValidationError) {
+      return error;
+    }
+
+    if (error instanceof JeqlValidationError) {
+      return new CrudValidationError(error.message);
+    }
+
+    return new CrudExecutionError(`Failed to execute CRUD ${operation}: ${error?.message || error}`);
+  }
+
+  /**
+   * Wraps create/update/delete runtime errors in a consistent server error.
+   */
+  private wrapExecutionError(operation: string, error: any): Error {
+    if (error instanceof CrudValidationError) {
+      return error;
+    }
+
+    return new CrudExecutionError(`Failed to execute CRUD ${operation}: ${error?.message || error}`);
+  }
+}

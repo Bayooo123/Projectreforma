@@ -1,5 +1,5 @@
 import { BicaHandler } from '../handlers/base';
-import { executeCrudPayload, CrudParameterSet } from '@/lib/bica/crud-engine';
+import { executeCrudPayload, CrudParameterSet } from '@/lib/bica/lib/crud-engine';
 
 export class WriteHandler extends BicaHandler {
   async handle(payload: any): Promise<any> {
@@ -18,7 +18,7 @@ export class WriteHandler extends BicaHandler {
     // We pass the context (platformEntity/Type) down to the CRUD engine
     // so it can handle polymorphic scoping internally.
     const results = await executeCrudPayload(
-      parameterSets as CrudParameterSet[], 
+      parameterSets as CrudParameterSet[],
       this.context
     );
 

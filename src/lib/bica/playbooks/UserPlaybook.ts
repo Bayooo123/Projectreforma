@@ -29,6 +29,10 @@ export class UserPlaybook extends Playbook {
     return [];
   }
 
+  getCreateScope(): Record<string, unknown> {
+    return {};
+  }
+
   getLookupLabel(record: any): string {
     return record?.name || record?.email || record?.id;
   }

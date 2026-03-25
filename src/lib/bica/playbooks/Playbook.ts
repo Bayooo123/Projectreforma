@@ -93,6 +93,14 @@ export abstract class Playbook {
   abstract resolve(id: string): Promise<any>;
 
   /**
+   * Returns the automatic create-time scope for this model.
+   *
+   * This keeps ownership and tenant wiring inside the playbook layer so the
+   * CRUD engine can remain generic and policy-free.
+   */
+  abstract getCreateScope(actor: any, actorType: string): Record<string, unknown>;
+
+  /**
    * Return a Prisma `where` fragment that scopes queries for this model
    * based on an acting platform entity (actor) and its type. This is the
    * Playbook equivalent of a Laravel local scope and should be used by
