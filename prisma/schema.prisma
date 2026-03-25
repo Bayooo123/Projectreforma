@@ -329,6 +329,7 @@ model CalendarEntry {
   matter                Matter?   @relation(fields: [matterId], references: [id], onDelete: Cascade, map: "CourtDate_matterId_fkey")
   appearances           User[]   @relation("CalendarAppearances")
   meetingRecording      MeetingRecording?
+  scheduledNotifications ScheduledNotification[]
 
   @@index([briefId], map: "CourtDate_briefId_idx")
   @@index([clientId], map: "CourtDate_clientId_idx")
