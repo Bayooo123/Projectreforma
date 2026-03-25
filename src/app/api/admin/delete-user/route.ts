@@ -14,7 +14,6 @@ export async function GET(request: NextRequest) {
 
 
     if (!email) {
-        // @ts-ignore
         return NextResponse.json({ error: 'Email query parameter is required' }, { status: 400 });
     }
 
@@ -26,7 +25,6 @@ export async function GET(request: NextRequest) {
         });
 
         if (!user) {
-            // @ts-ignore
             return NextResponse.json({ message: 'User not found', email });
         }
 
@@ -38,7 +36,6 @@ export async function GET(request: NextRequest) {
             where: { email }
         });
 
-        // @ts-ignore
         return NextResponse.json({
             message: 'User deleted successfully',
             email: user.email,
@@ -46,7 +43,6 @@ export async function GET(request: NextRequest) {
         });
 
     } catch (error: any) {
-        // @ts-ignore
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
 }

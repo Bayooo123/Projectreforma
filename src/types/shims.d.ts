@@ -3,10 +3,12 @@
 // during migration/refactor. Prefer installing proper `@types/*` packages
 // in long-term maintenance.
 
+/*
 declare module 'next/server' {
   export type NextRequest = any;
   export type NextResponse = any;
 }
+*/
 
 declare module 'crypto' {
   const crypto: any;
