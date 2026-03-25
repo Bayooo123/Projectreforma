@@ -453,9 +453,9 @@ const MatterDetailModal = ({ isOpen, onClose, matter, userId }: MatterDetailModa
                                                 </span>
                                             </div>
                                             <div className="flex gap-2">
-                                                {record.audioFileUrl && (
+                                                {record.audioUrl && (
                                                     <a
-                                                        href={record.audioFileUrl}
+                                                        href={record.audioUrl}
                                                         target="_blank"
                                                         rel="noopener noreferrer"
                                                         className="text-[10px] bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full hover:bg-blue-100 flex items-center gap-1"

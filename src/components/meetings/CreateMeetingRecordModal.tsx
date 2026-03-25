@@ -115,7 +115,7 @@ export const CreateMeetingRecordingModal: React.FC<CreateMeetingRecordingModalPr
                     {status === 'idle' || status === 'recording' || status === 'processing' ? (
                         <div className="flex flex-col items-center justify-center py-6">
                             <AudioRecorder
-                                onRecordingComplete={handleRecordingComplete}
+                                onRecordingComplete={(_id, url, dur) => handleRecordingComplete(url, dur)}
                                 onStatusChange={setStatus}
                             />
                         </div>

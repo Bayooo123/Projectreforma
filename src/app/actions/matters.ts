@@ -819,9 +819,9 @@ export async function scheduleMeeting(data: {
                 title: data.title,
                 date: data.date,
                 type: data.type,
-                matterId: data.matterId,
-                briefId: briefId || "",
-                clientId: clientId || "",
+                matterId: data.matterId || null,
+                briefId: briefId || null,
+                clientId: clientId || null,
                 location: data.location,
                 agenda: data.agenda,
                 submittingLawyerId: session.user.id,
@@ -830,7 +830,7 @@ export async function scheduleMeeting(data: {
                 appearances: data.participantIds ? {
                     connect: data.participantIds.map(id => ({ id }))
                 } : undefined
-            }
+            } as any
         });
 
         revalidatePath('/calendar');

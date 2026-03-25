@@ -44,9 +44,9 @@ export async function processScheduledNotifications(): Promise<{
                         obligation: true
                     }
                 }
-            },
+            } as any,
             take: 100
-        });
+        }) as any[];
 
         console.log(`[Notification Processor] Found ${dueNotifications.length} due notifications`);
 

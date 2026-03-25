@@ -1,4 +1,4 @@
-import { MapPin, User, Clock, Gavel, Briefcase, Users, Calendar as CalendarIcon } from 'lucide-react';
+import { Calendar as CalendarIcon, Clock, MapPin, MoreVertical, FileText, ChevronRight, CheckCircle2, AlertCircle, Mic, Gavel, Users, Briefcase } from 'lucide-react';
 import { CalendarEvent, CalendarEventType } from '@/types/legal';
 import styles from './EventList.module.css';
 

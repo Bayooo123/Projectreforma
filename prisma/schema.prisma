@@ -1,4 +1,4 @@
-generator client {
+﻿generator client {
   provider        = "prisma-client-js"
   previewFeatures = ["postgresqlExtensions"]
 }
@@ -70,15 +70,22 @@ model Invitation {
   workspaceId String
   email       String
   role        String
-  token       String
+  tokenHash   String    @unique
   invitedBy   String
   status      String    @default("pending")
   expiresAt   DateTime
   createdAt   DateTime  @default(now())
   acceptedAt  DateTime?
+  revokedAt   DateTime?
+  
+  // Metadata for audit
+  ipAddress   String?
+  userAgent   String?
+
   inviter     User      @relation(fields: [invitedBy], references: [id])
   workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
+  @@index([tokenHash])
   @@index([email])
 }
 
@@ -122,6 +129,11 @@ model User {
   ownedWorkspaces        Workspace[]           @relation("WorkspaceOwner")
   workspaces             WorkspaceMember[]
   calendarAppearances    CalendarEntry[]       @relation("CalendarAppearances")
+
+  // Security & Audit
+  emailVerifications    EmailVerification[]
+  passwordResetRequests PasswordResetRequest[]
+  securityAuditLogs     SecurityAuditLog[]
 
   @@index([email])
   @@index([lawyerToken])
@@ -295,7 +307,7 @@ model MatterLawyer {
 
 model CalendarEntry {
   id                    String   @id(map: "CourtDate_pkey") @default(cuid())
-  matterId              String
+  matterId              String?
   date                  DateTime
   title                 String?
   proceedings           String?
@@ -306,15 +318,15 @@ model CalendarEntry {
   submittingLawyerName  String?
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt
-  briefId               String
-  clientId              String
+  briefId               String?
+  clientId              String?
   externalCounsel       String?
   judge                 String?
-  type                  String?  @default("COURT_DATE")
+  type                  CalendarEventType? @default(COURT_DATE)
   location              String?
   agenda                String?
   description           String?
-  matter                Matter   @relation(fields: [matterId], references: [id], onDelete: Cascade, map: "CourtDate_matterId_fkey")
+  matter                Matter?   @relation(fields: [matterId], references: [id], onDelete: Cascade, map: "CourtDate_matterId_fkey")
   appearances           User[]   @relation("CalendarAppearances")
   meetingRecording      MeetingRecording?
 
@@ -328,7 +340,7 @@ model CalendarEntry {
 model ScheduledNotification {
   id               String          @id @default(cuid())
   matterId         String?
-  courtDateId      String?
+  calendarEntryId  String?
   complianceTaskId String?
   recipientId      String
   notificationType String
@@ -338,9 +350,11 @@ model ScheduledNotification {
   createdAt        DateTime        @default(now())
   updatedAt        DateTime        @updatedAt
   complianceTask   ComplianceTask? @relation(fields: [complianceTaskId], references: [id], onDelete: Cascade)
+  calendarEntry    CalendarEntry?  @relation(fields: [calendarEntryId], references: [id], onDelete: Cascade)
 
   @@index([status, scheduledFor])
   @@index([matterId])
+  @@index([calendarEntryId])
   @@index([complianceTaskId])
   @@index([recipientId])
 }
@@ -812,6 +826,12 @@ model SecurityAuditLog {
   userAgent   String?
   metadata    Json?
   createdAt   DateTime @default(now())
+  
+  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([event])
+  @@index([createdAt])
 }
 
 model MeetingRecording {
@@ -860,3 +880,45 @@ enum ExpenseCategory {
   VEHICLE_LOGISTICS
   MISCELLANEOUS
 }
+
+model RateLimit {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  count     Int      @default(0)
+  expiresAt DateTime
+  updatedAt DateTime @updatedAt
+}
+
+model EmailVerification {
+  id        String   @id @default(cuid())
+  userId    String
+  email     String
+  tokenHash String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  usedAt    DateTime?
+  
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([tokenHash])
+  @@index([userId])
+}
+
+model PasswordResetRequest {
+  id        String   @id @default(cuid())
+  userId    String
+  tokenHash String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  usedAt    DateTime?
+  
+  // Metadata
+  ipAddress String?
+  userAgent String?
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([tokenHash])
+  @@index([userId])
+}
+

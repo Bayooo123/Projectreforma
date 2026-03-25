@@ -26,11 +26,11 @@ export const createEmailVerificationToken = async (userId: string, email: string
     const expiresAt = new Date(Date.now() + 30 * 60 * 1000); // 30 Minutes
 
     // Invalidate any existing verification tokens for this user
-    await prisma.emailVerification.deleteMany({
+    await (prisma as any).emailVerification.deleteMany({
         where: { userId }
     });
 
-    await prisma.emailVerification.create({
+    await (prisma as any).emailVerification.create({
         data: {
             userId,
             email,
@@ -45,7 +45,7 @@ export const createEmailVerificationToken = async (userId: string, email: string
 export const validateEmailVerificationToken = async (token: string) => {
     const tokenHash = hashToken(token);
 
-    const verification = await prisma.emailVerification.findUnique({
+    const verification = await (prisma as any).emailVerification.findUnique({
         where: { tokenHash },
         include: { user: true }
     });
@@ -55,7 +55,7 @@ export const validateEmailVerificationToken = async (token: string) => {
     }
 
     // Mark as used (single-use)
-    await prisma.emailVerification.update({
+    await (prisma as any).emailVerification.update({
         where: { id: verification.id },
         data: { usedAt: new Date() }
     });
@@ -72,11 +72,11 @@ export const createPasswordResetToken = async (userId: string) => {
     const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 Minutes
 
     // Invalidate any existing reset tokens for this user
-    await prisma.passwordResetRequest.deleteMany({
+    await (prisma as any).passwordResetRequest.deleteMany({
         where: { userId }
     });
 
-    await prisma.passwordResetRequest.create({
+    await (prisma as any).passwordResetRequest.create({
         data: {
             userId,
             tokenHash,
@@ -90,7 +90,7 @@ export const createPasswordResetToken = async (userId: string) => {
 export const validatePasswordResetToken = async (token: string) => {
     const tokenHash = hashToken(token);
 
-    const resetRequest = await prisma.passwordResetRequest.findUnique({
+    const resetRequest = await (prisma as any).passwordResetRequest.findUnique({
         where: { tokenHash },
         include: { user: true }
     });
@@ -100,7 +100,7 @@ export const validatePasswordResetToken = async (token: string) => {
     }
 
     // Mark as used (single-use)
-    await prisma.passwordResetRequest.update({
+    await (prisma as any).passwordResetRequest.update({
         where: { id: resetRequest.id },
         data: { usedAt: new Date() }
     });
@@ -116,7 +116,7 @@ export const createInvitationToken = async (workspaceId: string, email: string, 
     const tokenHash = hashToken(token);
     const expiresAt = new Date(Date.now() + 72 * 60 * 60 * 1000); // 72 Hours (3 Days)
 
-    const invitation = await prisma.invitation.create({
+    const invitation = await (prisma.invitation as any).create({
         data: {
             workspaceId,
             email,
@@ -133,7 +133,7 @@ export const createInvitationToken = async (workspaceId: string, email: string, 
 export const validateInvitationToken = async (token: string) => {
     const tokenHash = hashToken(token);
 
-    const invitation = await prisma.invitation.findUnique({
+    const invitation = await (prisma.invitation as any).findUnique({
         where: { tokenHash },
         include: { workspace: true }
     });

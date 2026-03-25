@@ -132,8 +132,8 @@ export async function POST(req: NextRequest) {
         console.error('[BICA EXECUTE ERROR]', err);
 
         const code = err.bicaCode ||
-            (err instanceof UnknownMorphTypeError ? 'VALIDATION_ERROR' : null) ||
-            (err instanceof MorphEntityNotFoundError ? 'NOT_FOUND' : null) ||
+            (err.name === 'UnknownMorphTypeError' ? 'VALIDATION_ERROR' : null) ||
+            (err.name === 'MorphEntityNotFoundError' ? 'NOT_FOUND' : null) ||
             'SERVER_ERROR';
 
         const httpStatus = code === 'UNAUTHORIZED' ? 401 : code === 'NOT_FOUND' ? 404 : code === 'VALIDATION_ERROR' ? 400 : 500;

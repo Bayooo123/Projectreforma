@@ -72,7 +72,7 @@ export default function CalendarClient({
         try {
             const { getCalendarEvents } = await import('@/app/actions/calendar-events');
             const newEvents = await getCalendarEvents(workspaceId);
-            setEvents(newEvents);
+            setEvents(newEvents as CalendarEvent[]);
         } catch (e) {
             console.error(e);
         }

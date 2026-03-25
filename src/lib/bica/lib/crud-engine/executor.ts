@@ -16,7 +16,7 @@ import {
   CrudUpdateEachData,
 } from './types';
 import { assertNonEmptyString, requireDelegate, requirePlaybook } from './utils';
-import { normalizePlaybookKey } from '../playbooks';
+import { normalizePlaybookKey } from '../../playbooks';
 
 type ResolvedParentEntity = {
   entity: any;

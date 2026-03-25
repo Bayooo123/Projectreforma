@@ -14,7 +14,7 @@ export async function scheduleCalendarEntryNotifications(
 ): Promise<{ success: boolean; error?: string; scheduledCount?: number }> {
     try {
         // 1. Cancel any existing pending notifications for this entry
-        await prisma.scheduledNotification.updateMany({
+        await (prisma.scheduledNotification as any).updateMany({
             where: {
                 calendarEntryId,
                 status: 'pending'
@@ -98,7 +98,7 @@ export async function scheduleCalendarEntryNotifications(
 
         // 5. Bulk create all notifications
         if (notificationsToCreate.length > 0) {
-            await prisma.scheduledNotification.createMany({
+            await (prisma.scheduledNotification as any).createMany({
                 data: notificationsToCreate
             });
         }
