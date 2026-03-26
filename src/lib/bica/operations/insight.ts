@@ -63,11 +63,12 @@ export class InsightHandler extends BicaHandler {
     // Step 1 — Validate payload shape.
     const { sql, bindings } = this.validatePayload(payload);
 
-    // Step 2 — Assert the query is read-only. Throws SqlSafetyError on violation.
-    this.validateQuerySafety(sql);
-
-    // Step 3 — Apply tenant scoping (STUB — no-op in V0).
+    
+    // Step 2 — Apply tenant scoping (STUB — no-op in V0).
     const scopedSql = await this.applyTenantScope(sql);
+
+    // Step 3 — Assert the query is read-only. Throws SqlSafetyError on violation.
+    this.validateQuerySafety(scopedSql);
 
     // Step 4 — Inject a row-count cap if the computed limit is non-null.
     const limitedSql = this.injectRowLimit(scopedSql);
