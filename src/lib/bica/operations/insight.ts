@@ -176,8 +176,12 @@ export class InsightHandler extends BicaHandler {
    * TODO(V1): Extend to support custom table name mappings or schema aliasing.
    */
   private resolveTableTemplates(sql: string): string {
+    // Wrap resolved names in double-quotes so PostgreSQL treats them as
+    // case-sensitive quoted identifiers. Without quotes, PostgreSQL silently
+    // folds names to lowercase — but Prisma creates tables with the exact
+    // PascalCase model name (e.g. "Brief", not "brief").
     return sql.replace(/\{\{([a-zA-Z_][a-zA-Z0-9_]*)\}\}/g, (_match, name: string) => {
-      return name;
+      return `"${name}"`;
     });
   }
 
