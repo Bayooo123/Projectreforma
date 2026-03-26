@@ -5,3 +5,7 @@
 - Create playbooks for all models defined in scehma
 - Create automatic manifest generato
 - Implement back BICA_DEBUG_ERRORS
+- Fix the iframe error
+- Fix the overall extremely slow latency at /bica/execute
+- Perfect the scehma for teh manifest file in all teh relevant docs
+- Perfect prompt examples

@@ -70,4 +70,25 @@ export class MatterPlaybook extends Playbook {
     }
     return { workspaceId: actor.id };
   }
+
+  getPreviewIncludes(): Record<string, unknown> {
+    return { client: { select: { name: true } } };
+  }
+
+  getPreviewHtml(record: any): string {
+    return this.buildCard(
+      record.name || record.caseNumber || record.id,
+      'Matter',
+      [
+        ['Case No.',     record.caseNumber],
+        ['Court',        record.court],
+        ['Judge',        record.judge],
+        ['Next Hearing', this.formatDate(record.nextCourtDate)],
+        ['Client',       record.client?.name],
+        ['Opponent',     record.opponentName],
+        ['Opp. Counsel', record.opponentCounsel],
+      ],
+      record.status,
+    );
+  }
 }

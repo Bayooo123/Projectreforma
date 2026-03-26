@@ -67,4 +67,18 @@ export class ClientPlaybook extends Playbook {
     // workspace/firm or other actors default to workspace scoping
     return { workspaceId: actor.id };
   }
+
+  getPreviewHtml(record: any): string {
+    return this.buildCard(
+      record.name || record.company || record.id,
+      'Client',
+      [
+        ['Email',    record.email],
+        ['Phone',    record.phone],
+        ['Company',  record.company],
+        ['Industry', record.industry],
+      ],
+      record.status,
+    );
+  }
 }

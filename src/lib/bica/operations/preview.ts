@@ -2,49 +2,85 @@ import { BicaHandler } from '../handlers/base';
 import { prisma } from '@/lib/prisma';
 import { getPlaybook } from '../playbooks';
 
+/**
+ * PreviewHandler
+ *
+ * Fetches one or more records by ID and delegates HTML card rendering to each
+ * model's Playbook via getPreviewHtml(). Relation data required by the card is
+ * declared by the Playbook in getPreviewIncludes() and loaded in a single query.
+ *
+ * Expected payload shape:
+ * { model: string, ids: string[] }
+ *
+ * Response shape:
+ * { cards: Record<id, htmlString> }
+ *
+ * IDs that are not found (outside scope or deleted) are silently omitted from
+ * the response — the caller should treat a missing key as "not accessible".
+ */
 export class PreviewHandler extends BicaHandler {
   async handle(payload: any): Promise<any> {
-    const { model, ids } = payload;
+    const { model, ids } = payload ?? {};
 
-    if (!model || !Array.isArray(ids) || ids.length === 0) {
-      throw Object.assign(new Error('preview requires "model" and "ids" array.'), { bicaCode: 'VALIDATION_ERROR' });
+    if (!model || typeof model !== 'string') {
+      throw Object.assign(
+        new Error('preview requires a "model" string.'),
+        { bicaCode: 'VALIDATION_ERROR' },
+      );
+    }
+
+    if (!Array.isArray(ids) || ids.length === 0) {
+      throw Object.assign(
+        new Error('preview requires a non-empty "ids" array.'),
+        { bicaCode: 'VALIDATION_ERROR' },
+      );
     }
 
     const playbook = getPlaybook(model);
     if (!playbook) {
-      throw Object.assign(new Error(`Unknown model: '${model}'.`), { bicaCode: 'VALIDATION_ERROR' });
+      throw Object.assign(
+        new Error(`Unknown model: '${model}'.`),
+        { bicaCode: 'VALIDATION_ERROR' },
+      );
+    }
+
+    if (!playbook.isPreviewable()) {
+      throw Object.assign(
+        new Error(`Model '${model}' does not support previews.`),
+        { bicaCode: 'VALIDATION_ERROR' },
+      );
     }
 
     const delegate = (prisma as any)[playbook.modelKey];
     if (!delegate) {
-      throw Object.assign(new Error(`Unknown model: '${model}'.`), { bicaCode: 'VALIDATION_ERROR' });
+      throw Object.assign(
+        new Error(`No Prisma delegate found for model '${model}'.`),
+        { bicaCode: 'SERVER_ERROR' },
+      );
     }
 
     const whereScope = await this.resolveScope(model);
-    
-    const records = await delegate.findMany({
-      where: { id: { in: ids }, ...whereScope },
-    });
+    const includes = playbook.getPreviewIncludes();
+    const includeClause = Object.keys(includes).length > 0 ? { include: includes } : {};
 
-    const cardMap: Record<string, string> = {};
-    for (const r of records) {
-      const label = playbook.getLookupLabel(r);
-      const secondaryLabel = playbook.getLookupSecondaryLabel(r);
-      cardMap[r.id] = `<div class="bica-preview-card">
-  <h4 style="margin:0 0 4px;font-size:14px;">${this.escapeHtml(label)}</h4>
-  <p style="margin:0;font-size:12px;color:#666;">${this.escapeHtml(secondaryLabel)}</p>
-  <span style="font-size:11px;color:#999;">${this.escapeHtml(model)} · ${this.escapeHtml(r.id)}</span>
-</div>`;
+    let records: any[];
+    try {
+      records = await delegate.findMany({
+        where: { id: { in: ids }, ...whereScope },
+        ...includeClause,
+      });
+    } catch (error: any) {
+      throw Object.assign(
+        new Error(`Failed to fetch preview records: ${error.message || error}`),
+        { bicaCode: 'SERVER_ERROR' },
+      );
     }
 
-    return cardMap;
-  }
+    const cards: Record<string, string> = {};
+    for (const record of records) {
+      cards[record.id] = playbook.getPreviewHtml(record);
+    }
 
-  private escapeHtml(str: string): string {
-    return String(str || '')
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;');
+    return { cards };
   }
 }

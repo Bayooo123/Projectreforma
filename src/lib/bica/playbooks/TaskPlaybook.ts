@@ -64,4 +64,17 @@ export class TaskPlaybook extends Playbook {
     }
     return { workspaceId: actor.id };
   }
+
+  getPreviewHtml(record: any): string {
+    return this.buildCard(
+      record.title || record.id,
+      'Task',
+      [
+        ['Priority',    record.priority],
+        ['Due',         this.formatDate(record.dueDate)],
+        ['Description', record.description ? this.truncate(record.description, 120) : undefined],
+      ],
+      record.status,
+    );
+  }
 }

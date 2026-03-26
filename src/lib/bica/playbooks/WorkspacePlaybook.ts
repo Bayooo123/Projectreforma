@@ -59,4 +59,15 @@ export class WorkspacePlaybook extends Playbook {
     }
     return { id: actor.id };
   }
+
+  getPreviewHtml(record: any): string {
+    return this.buildCard(
+      record.name || record.slug || record.id,
+      'Workspace',
+      [
+        ['Slug',    record.slug],
+        ['Created', this.formatDate(record.createdAt)],
+      ],
+    );
+  }
 }
