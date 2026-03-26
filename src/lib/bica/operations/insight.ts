@@ -177,7 +177,7 @@ export class InsightHandler extends BicaHandler {
    */
   private resolveTableTemplates(sql: string): string {
     return sql.replace(/\{\{([a-zA-Z_][a-zA-Z0-9_]*)\}\}/g, (_match, name: string) => {
-      return name.toLowerCase();
+      return name;
     });
   }
 
