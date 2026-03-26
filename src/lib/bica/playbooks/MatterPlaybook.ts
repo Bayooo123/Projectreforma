@@ -23,7 +23,7 @@ export class MatterPlaybook extends Playbook {
     };
   }
 
-  getBaseValidationRules(): Record<string, any> {
+  getBaseValidationRules(operation: string, forRecord?: any, parentEntity?: any): Record<string, any> {
     return {
       id: 'prohibited',
       caseNumber: 'nullable|string|max:255',

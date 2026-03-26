@@ -112,7 +112,12 @@ describe('crud-engine', () => {
         workspaceId: 'ws_123',
       },
     });
-    expect(result[0]).toEqual({ created: true, record: { id: 'client_1', name: 'Acme' }, id: 'client_1' });
+    expect(result[0]).toEqual({
+      created: true,
+      _model: 'Client',
+      record: { id: 'client_1', name: 'Acme', _model: 'Client' },
+      id: 'client_1',
+    });
   });
 
   it('requires orderBy for updateEach', async () => {
@@ -166,5 +171,32 @@ describe('crud-engine', () => {
       },
     });
     expect(result[0].created).toBe(true);
+    expect(result[0]._model).toBe('Matter');
+  });
+
+  it('annotates update results with the model name', async () => {
+    prismaMocks.client.updateMany.mockResolvedValue({ count: 1 });
+
+    const result = await executeCrudPayload(
+      [
+        {
+          action: 'update',
+          parentEntityType: 'workspace',
+          parentEntityId: 'ws_123',
+          data: {
+            scope: 'client',
+            targetOperations: {
+              $whereAll: [['status', '=', 'active']],
+            },
+            attributes: {
+              status: 'inactive',
+            },
+          },
+        },
+      ],
+      context
+    );
+
+    expect(result[0]).toEqual({ updated: true, _model: 'Client', count: 1 });
   });
 });

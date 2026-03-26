@@ -306,11 +306,38 @@ export class InsightHandler extends BicaHandler {
    *   - Internal audit metadata
    *   - Any column matching a configurable deny-list
    *
-   * For V0, rows are returned as-is.
+   * For V0, rows are returned as JSON-safe objects, with bigint values
+   * converted to numbers so the response can be serialized cleanly.
    */
   private sanitizeResults(rows: unknown[]): Record<string, unknown>[] {
     // TODO(V1): column deny-list scrubbing
-    return rows as Record<string, unknown>[];
+    return rows.map(row => this.normalizeJsonValue(row) as Record<string, unknown>);
+  }
+
+  /**
+   * Recursively normalizes query results into JSON-safe values.
+   *
+   * V0 behavior:
+   *   - bigint -> number
+   *   - arrays/objects -> recursively normalized
+   *   - everything else -> returned unchanged
+   */
+  private normalizeJsonValue(value: unknown): unknown {
+    if (typeof value === 'bigint') {
+      return Number(value);
+    }
+
+    if (Array.isArray(value)) {
+      return value.map(item => this.normalizeJsonValue(item));
+    }
+
+    if (value && typeof value === 'object') {
+      return Object.fromEntries(
+        Object.entries(value as Record<string, unknown>).map(([key, entry]) => [key, this.normalizeJsonValue(entry)]),
+      );
+    }
+
+    return value;
   }
 
   // --------------------------------------------------------------------------

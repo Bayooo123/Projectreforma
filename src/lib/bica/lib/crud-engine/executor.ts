@@ -93,12 +93,18 @@ export class CrudExecutor {
     this.assertRelationAllowed(parentContext.playbook, relationName, 'write');
     const playbook = requirePlaybook(relationName, 'relationName');
     const delegate = requireDelegate(prisma, playbook.modelKey, `relationName '${relationName}'`);
+    const modelName = playbook.getModelName();
 
     const payload = this.definitions.compile(playbook.modelKey, definition, parentContext.entity, parentContext.entityType);
 
     try {
       const record = await delegate.create({ data: payload });
-      return { created: true, record, id: record?.id };
+      return {
+        created: true,
+        _model: modelName,
+        record: record ? { ...record, _model: modelName } : record,
+        id: record?.id,
+      };
     } catch (error: any) {
       throw this.wrapExecutionError('create', error);
     }
@@ -118,6 +124,7 @@ export class CrudExecutor {
     this.assertRelationAllowed(parentContext.playbook, relationName, 'write');
     const playbook = requirePlaybook(relationName, 'relationName');
     const delegate = requireDelegate(prisma, playbook.modelKey, `relationName '${relationName}'`);
+    const modelName = playbook.getModelName();
 
     try {
       const records = await Promise.all(
@@ -138,7 +145,12 @@ export class CrudExecutor {
         })
       );
 
-      return { created: true, count: records.length, records };
+      return {
+        created: true,
+        _model: modelName,
+        count: records.length,
+        records: records.map(record => ({ ...record, _model: modelName })),
+      };
     } catch (error: any) {
       if (error instanceof CrudValidationError) {
         throw error;
@@ -183,9 +195,10 @@ export class CrudExecutor {
    * Applies the same attribute patch to all matching rows.
    */
   private async update(data: CrudUpdateData, parentContext: ResolvedParentEntity): Promise<CrudResult> {
-    const { delegate, baseWhere } = this.resolveScopedDelegate(data?.scope, parentContext, 'write');
+    const { delegate, baseWhere, playbook } = this.resolveScopedDelegate(data?.scope, parentContext, 'write');
     const query = this.requireJeqlQuery(data?.targetOperations, 'targetOperations');
     const attributes = this.requirePlainObject(data?.attributes, 'attributes');
+    const modelName = playbook.getModelName();
 
     if ('$select' in query) {
       throw new CrudValidationError('$select is not allowed for update operations.');
@@ -198,7 +211,7 @@ export class CrudExecutor {
         data: attributes,
       });
 
-      return { updated: true, count: result?.count ?? 0 };
+      return { updated: true, _model: modelName, count: result?.count ?? 0 };
     } catch (error: any) {
       throw this.wrapQueryError('update', error);
     }
@@ -208,9 +221,10 @@ export class CrudExecutor {
    * Updates each matched record with the corresponding attributes object.
    */
   private async updateEach(data: CrudUpdateEachData, parentContext: ResolvedParentEntity): Promise<CrudResult> {
-    const { delegate, baseWhere } = this.resolveScopedDelegate(data?.scope, parentContext, 'write');
+    const { delegate, baseWhere, playbook } = this.resolveScopedDelegate(data?.scope, parentContext, 'write');
     const query = this.requireJeqlQuery(data?.targetOperations, 'targetOperations');
     const attributesList = Array.isArray(data?.attributes) ? data.attributes : null;
+    const modelName = playbook.getModelName();
 
     if (!query.$orderBy || query.$orderBy.length === 0) {
       throw new CrudValidationError('updateEach requires $orderBy so row-to-row alignment is deterministic.');
@@ -251,10 +265,10 @@ export class CrudExecutor {
           where: { id: row.id },
           data: patch,
         });
-        updatedRecords.push(updated);
+        updatedRecords.push({ ...updated, _model: modelName });
       }
 
-      return { updated: true, count: updatedRecords.length, records: updatedRecords };
+      return { updated: true, _model: modelName, count: updatedRecords.length, records: updatedRecords };
     } catch (error: any) {
       throw this.wrapQueryError('updateEach', error);
     }
@@ -287,7 +301,7 @@ export class CrudExecutor {
     scope: string,
     parentContext: ResolvedParentEntity,
     relationKind: 'read' | 'write'
-  ): { delegate: any; baseWhere: Record<string, unknown> } {
+  ): { delegate: any; baseWhere: Record<string, unknown>; playbook: any } {
     const normalizedScope = assertNonEmptyString(scope, 'scope');
     this.assertRelationAllowed(parentContext.playbook, normalizedScope, relationKind);
     const playbook = requirePlaybook(normalizedScope, 'scope');
@@ -298,7 +312,7 @@ export class CrudExecutor {
       throw new CrudValidationError(`Playbook '${normalizedScope}' returned an invalid scope filter.`);
     }
 
-    return { delegate, baseWhere };
+    return { delegate, baseWhere, playbook };
   }
 
   /**

@@ -7,6 +7,7 @@
     "build": "echo 'USING WEBPACK' && next build --webpack",
     "start": "next start",
     "lint": "eslint",
+    "bica:generate-manifest": "tsx scripts/bica/generate-manifest.ts",
     "test": "vitest run",
     "postinstall": "prisma generate"
   },
@@ -62,9 +63,11 @@
     "autoprefixer": "^10.4.22",
     "eslint": "^9",
     "eslint-config-next": "16.0.3",
+    "js-yaml": "^4.1.0",
     "postcss": "^8.5.6",
     "prisma": "^5.22.0",
     "tailwindcss": "^4.1.17",
+    "tsx": "^4.20.5",
     "typescript": "^5",
     "vitest": "^3.2.4"
   }

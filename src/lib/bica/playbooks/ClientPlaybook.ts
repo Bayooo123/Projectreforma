@@ -21,7 +21,7 @@ export class ClientPlaybook extends Playbook {
     };
   }
 
-  getBaseValidationRules(): Record<string, any> {
+  getBaseValidationRules(operation: string, forRecord?: any, parentEntity?: any): Record<string, any> {
     return {
       id: 'prohibited',
       name: 'required|string|max:255',
