@@ -147,21 +147,37 @@ export class InsightHandler extends BicaHandler {
   }
 
   // --------------------------------------------------------------------------
-  // Step 3 · Tenant scoping  (V0 STUB)
+  // Step 3 · Tenant scoping & table name resolution
   // --------------------------------------------------------------------------
 
   /**
+   * Resolves table name templates and applies scoping.
+   *
+   * V0 behavior:
+   *   - Resolves `{{EntityName}}` table name templates to actual lowercase table names.
+   *     Bica sends templates like `{{Brief}}`; we resolve to `brief` (matching Prisma schema).
+   *   - No row-level security filters are injected yet.
+   *
    * TODO (V1): Inject row-level security filters so queries are automatically
    * scoped to the current actor's workspace. Options include:
    *   - Prepending a CTE that restricts visible rows per tenant
    *   - Wrapping the query in a subquery with a WHERE workspaceId = $N clause
    *   - Routing to a tenant-isolated read-only schema
-   *
-   * For V0, the query is returned unchanged. The demo runs without scoping.
    */
   private async applyTenantScope(sql: string): Promise<string> {
-    // TODO(V1): tenant scope injection
-    return sql;
+    return this.resolveTableTemplates(sql);
+  }
+
+  /**
+   * Resolves `{{EntityName}}` table name templates to actual table names.
+   * For V0, simply strips `{{}}` and lowercases the name.
+   *
+   * TODO(V1): Extend to support custom table name mappings or schema aliasing.
+   */
+  private resolveTableTemplates(sql: string): string {
+    return sql.replace(/\{\{([a-zA-Z_][a-zA-Z0-9_]*)\}\}/g, (_match, name: string) => {
+      return name.toLowerCase();
+    });
   }
 
   // --------------------------------------------------------------------------
