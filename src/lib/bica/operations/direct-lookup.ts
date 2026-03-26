@@ -124,6 +124,7 @@ export class DirectLookupHandler extends BicaHandler {
       matches: scoredRecords.map(({ record, confidence }) => {
         const match: Record<string, any> = {
           id: record.id,
+          _model: playbook.getModelName(),
           label: playbook.getLookupLabel(record),
           secondaryLabel: playbook.getLookupSecondaryLabel(record),
           confidence,

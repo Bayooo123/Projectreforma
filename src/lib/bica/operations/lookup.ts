@@ -53,6 +53,7 @@ export class LookupHandler extends BicaHandler {
 
 		const matches = records.map(record => ({
 			id: record.id,
+			_model: playbook.getModelName(),
 			label: playbook.getLookupLabel(record),
 			secondaryLabel: playbook.getLookupSecondaryLabel(record),
 			confidence: searchDirectives.length > 0

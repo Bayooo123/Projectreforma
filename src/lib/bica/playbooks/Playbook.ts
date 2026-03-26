@@ -2,6 +2,21 @@ export abstract class Playbook {
   constructor(public readonly modelKey: string) {}
 
   /**
+   * Returns the human-readable model name used in lookup payloads.
+   */
+  getModelName(): string {
+    const constructorName = this.constructor?.name || '';
+    const strippedName = constructorName.replace(/Playbook$/, '');
+    if (strippedName && strippedName !== 'Playbook') {
+      return strippedName;
+    }
+
+    return this.modelKey
+      ? this.modelKey.charAt(0).toUpperCase() + this.modelKey.slice(1)
+      : '';
+  }
+
+  /**
    * Returns the canonical, human-readable description for this model.
    */
   abstract getDescription(): string;
