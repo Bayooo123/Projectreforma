@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { PinProtection } from '@/components/auth/PinProtection';
+import { useCountUp } from '@/hooks/useCountUp';
 
 interface AnalyticsData {
     metrics: any;
@@ -65,6 +66,11 @@ export default function AnalyticsClient({ data, workspaceId, initialFilter }: An
     const pieColors = ['#10B981', '#059669', '#34D399', '#6EE7B7', '#A7F3D0'];
     const totalMatters = (matterDistribution || []).reduce((acc: number, curr: any) => acc + (curr.count || 0), 0) || 1;
     
+    const animatedRevenueTotal = useCountUp(metrics?.revenue?.total || 0, 2000);
+    const animatedActiveMatters = useCountUp(metrics?.matters?.active || 0, 1500);
+    const animatedExpensesTotal = useCountUp(metrics?.expenses?.total || 0, 1800);
+    const animatedTotalCases = useCountUp(totalMatters, 1200);
+
     const matterGradient = matterDistribution.length > 0
         ? `conic-gradient(${matterDistribution.map((d: any, i: number) => {
             const start = matterDistribution.slice(0, i).reduce((sum: number, prev: any) => sum + (prev.count || 0), 0) / totalMatters * 100;
@@ -80,6 +86,39 @@ export default function AnalyticsClient({ data, workspaceId, initialFilter }: An
             variant="analytics"
         >
             <div className="relative min-h-screen bg-slate-50 dark:bg-slate-900 overflow-hidden">
+                <style>{`
+                    @keyframes drawLine {
+                        from { stroke-dashoffset: 600; }
+                        to { stroke-dashoffset: 0; }
+                    }
+                    .animate-draw {
+                        stroke-dasharray: 600;
+                        animation: drawLine 2s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+                    }
+                    @keyframes staggerSlideUp {
+                        from { opacity: 0; transform: translateY(20px) scale(0.98); }
+                        to { opacity: 1; transform: translateY(0) scale(1); }
+                    }
+                    .stagger-1 { animation: staggerSlideUp 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) 0.1s both; }
+                    .stagger-2 { animation: staggerSlideUp 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) 0.2s both; }
+                    .stagger-3 { animation: staggerSlideUp 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) 0.3s both; }
+                    .stagger-4 { animation: staggerSlideUp 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) 0.4s both; }
+                    .stagger-5 { animation: staggerSlideUp 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) 0.5s both; }
+                    
+                    .glass-panel {
+                        box-shadow: 0 8px 32px rgba(0,0,0,0.04), inset 0 1px 1px rgba(255,255,255,0.8), inset 0 -1px 1px rgba(255,255,255,0.3);
+                        transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+                    }
+                    .dark .glass-panel {
+                        box-shadow: 0 8px 32px rgba(0,0,0,0.1), inset 0 1px 1px rgba(255,255,255,0.05), inset 0 -1px 1px rgba(255,255,255,0.02);
+                    }
+                    .glass-panel:hover {
+                        box-shadow: 0 16px 48px rgba(0,0,0,0.06), inset 0 1px 1px rgba(255,255,255,1), inset 0 -1px 1px rgba(255,255,255,0.4);
+                    }
+                    .dark .glass-panel:hover {
+                        box-shadow: 0 16px 48px rgba(0,0,0,0.15), inset 0 1px 1px rgba(255,255,255,0.1), inset 0 -1px 1px rgba(255,255,255,0.05);
+                    }
+                `}</style>
                 {/* Premium Background Effects */}
                 <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-emerald-500/20 rounded-full blur-[120px] mix-blend-multiply dark:mix-blend-screen pointer-events-none" />
                 <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-teal-500/20 rounded-full blur-[120px] mix-blend-multiply dark:mix-blend-screen pointer-events-none" />
@@ -134,32 +173,32 @@ export default function AnalyticsClient({ data, workspaceId, initialFilter }: An
                         </div>
                     )}
 
-                    {/* Main Bento Grid */}
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
-                        
-                        {/* Key Revenue Stat (Large Card) */}
-                        <div className="md:col-span-2 bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl border border-white/50 dark:border-white/10 rounded-[2.5rem] p-10 shadow-[0_8px_32px_rgba(0,0,0,0.04)] hover:shadow-[0_16px_48px_rgba(0,0,0,0.06)] transition-all duration-500 group overflow-hidden relative">
-                            <div className="absolute top-0 right-0 w-[150%] h-[150%] bg-gradient-to-br from-emerald-500/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none" />
+                        {/* Main Bento Grid */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 mb-6">
                             
-                            <div className="flex justify-between items-start relative z-10">
-                                <div>
-                                    <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-[0.2em] mb-3 flex items-center gap-2">
-                                        Total Collections
-                                    </p>
-                                    <h2 className="text-[4rem] leading-none font-black tracking-tighter text-slate-900 dark:text-white mb-6">
-                                        {formatCurrency(metrics?.revenue?.total)}
-                                    </h2>
-                                    <div className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold inline-flex shadow-sm ${
-                                        (metrics?.revenue?.growth || 0) >= 0 ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400' : 'bg-red-50 text-red-600 dark:bg-red-500/10 dark:text-red-400'
-                                    }`}>
-                                        {(metrics?.revenue?.growth || 0) >= 0 ? <ArrowUp size={16} strokeWidth={3} /> : <TrendingDown size={16} strokeWidth={3} />}
-                                        {Math.abs(metrics?.revenue?.growth || 0).toFixed(1)}% vs Last Month
+                            {/* Key Revenue Stat (Large Card) */}
+                            <div className="md:col-span-2 bg-white/70 dark:bg-slate-800/70 backdrop-blur-2xl border border-white/60 dark:border-white/10 rounded-[2.5rem] p-6 lg:p-8 xl:p-10 group overflow-hidden relative min-w-0 glass-panel stagger-1">
+                                <div className="absolute top-0 right-0 w-[150%] h-[150%] bg-gradient-to-br from-emerald-500/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none" />
+                                
+                                <div className="flex justify-between items-start relative z-10 gap-4">
+                                    <div className="min-w-0 flex-1">
+                                        <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-[0.2em] mb-3 flex items-center gap-2 truncate">
+                                            Total Collections
+                                        </p>
+                                        <h2 className="text-4xl md:text-5xl xl:text-[4rem] leading-none font-black tracking-tighter text-slate-900 dark:text-white mb-6 truncate">
+                                            {formatCurrency(animatedRevenueTotal)}
+                                        </h2>
+                                        <div className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold inline-flex shadow-sm whitespace-nowrap ${
+                                            (metrics?.revenue?.growth || 0) >= 0 ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400' : 'bg-red-50 text-red-600 dark:bg-red-500/10 dark:text-red-400'
+                                        }`}>
+                                            {(metrics?.revenue?.growth || 0) >= 0 ? <ArrowUp size={16} strokeWidth={3} className="shrink-0" /> : <TrendingDown size={16} strokeWidth={3} className="shrink-0" />}
+                                            {Math.abs(metrics?.revenue?.growth || 0).toFixed(1)}% vs Last Month
+                                        </div>
+                                    </div>
+                                    <div className="w-16 h-16 shrink-0 bg-gradient-to-br from-emerald-400 to-teal-600 rounded-[1.25rem] shadow-lg shadow-emerald-500/25 flex items-center justify-center text-white transform group-hover:rotate-12 transition-transform duration-500">
+                                        <DollarSign size={32} />
                                     </div>
                                 </div>
-                                <div className="w-16 h-16 bg-gradient-to-br from-emerald-400 to-teal-600 rounded-[1.25rem] shadow-lg shadow-emerald-500/25 flex items-center justify-center text-white transform group-hover:rotate-12 transition-transform duration-500">
-                                    <DollarSign size={32} />
-                                </div>
-                            </div>
 
                             {/* Mini Chart for Visual Context */}
                             <div className="mt-10 h-32 w-full relative">
@@ -187,50 +226,50 @@ export default function AnalyticsClient({ data, workspaceId, initialFilter }: An
                                         vectorEffect="non-scaling-stroke"
                                         points={getChartPoints()}
                                         filter="url(#glow)"
-                                        className="group-hover:stroke-[4px] transition-all duration-500"
+                                        className="group-hover:stroke-[4px] transition-all duration-500 animate-draw"
                                     />
                                  </svg>
                             </div>
                         </div>
 
                         {/* Active Matters Card */}
-                        <div className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl border border-white/50 dark:border-white/10 rounded-[2.5rem] p-8 shadow-[0_8px_32px_rgba(0,0,0,0.04)] hover:shadow-[0_16px_48px_rgba(0,0,0,0.06)] transition-all duration-500 flex flex-col justify-between group relative overflow-hidden">
+                        <div className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-2xl border border-white/60 dark:border-white/10 rounded-[2.5rem] p-6 lg:p-8 flex flex-col justify-between group relative overflow-hidden min-w-0 glass-panel stagger-2">
                             <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 rounded-full blur-2xl group-hover:bg-emerald-500/10 transition-colors pointer-events-none" />
-                            <div className="flex justify-between items-start relative z-10">
-                                <div className="w-14 h-14 bg-slate-100 dark:bg-slate-700/50 rounded-2xl flex items-center justify-center text-slate-700 dark:text-slate-300 group-hover:scale-110 group-hover:bg-emerald-500 group-hover:text-white group-hover:shadow-lg group-hover:shadow-emerald-500/25 transition-all duration-300">
+                            <div className="flex justify-between items-start relative z-10 gap-4">
+                                <div className="w-14 h-14 shrink-0 bg-slate-100 dark:bg-slate-700/50 rounded-2xl flex items-center justify-center text-slate-700 dark:text-slate-300 group-hover:scale-110 group-hover:bg-emerald-500 group-hover:text-white group-hover:shadow-lg group-hover:shadow-emerald-500/25 transition-all duration-300">
                                     <Briefcase size={28} />
                                 </div>
-                                <p className="text-[3.5rem] font-black text-slate-900 dark:text-white tracking-tighter leading-none">{metrics?.matters?.active || 0}</p>
+                                <p className="text-5xl lg:text-[3.5rem] font-black text-slate-900 dark:text-white tracking-tighter leading-none min-w-0 truncate">{animatedActiveMatters}</p>
                             </div>
-                            <div className="relative z-10 mt-8">
-                                <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-[0.2em] mb-2">Active Matters</p>
-                                <p className="text-sm font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
-                                    <Sparkles size={14} /> +{metrics?.matters?.newThisMonth || 0} Registered New
+                            <div className="relative z-10 mt-8 min-w-0">
+                                <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-[0.2em] mb-2 truncate">Active Matters</p>
+                                <p className="text-sm font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1 truncate">
+                                    <Sparkles size={14} className="shrink-0" /> <span className="truncate">+{metrics?.matters?.newThisMonth || 0} Registered New</span>
                                 </p>
                             </div>
                         </div>
 
                         {/* Expenses Card */}
-                        <div className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl border border-white/50 dark:border-white/10 rounded-[2.5rem] p-8 shadow-[0_8px_32px_rgba(0,0,0,0.04)] hover:shadow-[0_16px_48px_rgba(0,0,0,0.06)] transition-all duration-500 flex flex-col justify-between group relative overflow-hidden">
+                        <div className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-2xl border border-white/60 dark:border-white/10 rounded-[2.5rem] p-6 lg:p-8 flex flex-col justify-between group relative overflow-hidden min-w-0 glass-panel stagger-3">
                              <div className="absolute top-0 right-0 w-32 h-32 bg-orange-500/5 rounded-full blur-2xl group-hover:bg-orange-500/10 transition-colors pointer-events-none" />
-                            <div className="flex justify-between items-start relative z-10">
-                                <div className="w-14 h-14 bg-slate-100 dark:bg-slate-700/50 rounded-2xl flex items-center justify-center text-slate-700 dark:text-slate-300 group-hover:scale-110 group-hover:bg-orange-500 group-hover:text-white group-hover:shadow-lg group-hover:shadow-orange-500/25 transition-all duration-300">
+                            <div className="flex justify-between items-start relative z-10 gap-4">
+                                <div className="w-14 h-14 shrink-0 bg-slate-100 dark:bg-slate-700/50 rounded-2xl flex items-center justify-center text-slate-700 dark:text-slate-300 group-hover:scale-110 group-hover:bg-orange-500 group-hover:text-white group-hover:shadow-lg group-hover:shadow-orange-500/25 transition-all duration-300">
                                     <TrendingDown size={28} />
                                 </div>
                             </div>
-                            <div className="relative z-10 mt-8">
-                                <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-[0.2em] mb-2">Operational Burn</p>
-                                <p className="text-3xl font-black text-slate-900 dark:text-white tracking-tight mb-2">{formatCurrency(metrics?.expenses?.total)}</p>
-                                <p className="text-xs font-bold text-orange-600 dark:text-orange-400 uppercase tracking-wider">{metrics?.expenses?.count || 0} Ledger Entries</p>
+                            <div className="relative z-10 mt-8 min-w-0">
+                                <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-[0.2em] mb-2 truncate">Operational Burn</p>
+                                <p className="text-3xl lg:text-3xl font-black text-slate-900 dark:text-white tracking-tight mb-2 truncate">{formatCurrency(animatedExpensesTotal)}</p>
+                                <p className="text-xs font-bold text-orange-600 dark:text-orange-400 uppercase tracking-wider truncate">{metrics?.expenses?.count || 0} Ledger Entries</p>
                             </div>
                         </div>
                     </div>
 
                     {/* Secondary Analytics Row */}
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6 min-w-0">
                         
                         {/* Case Distribution (Donut style) */}
-                        <div className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl border border-white/50 dark:border-white/10 rounded-[2.5rem] p-8 shadow-[0_8px_32px_rgba(0,0,0,0.04)] flex flex-col hover:shadow-[0_16px_48px_rgba(0,0,0,0.06)] transition-all duration-500">
+                        <div className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-2xl border border-white/60 dark:border-white/10 rounded-[2.5rem] p-6 lg:p-8 flex flex-col transition-all duration-500 min-w-0 glass-panel stagger-4">
                             <div className="flex items-center justify-between mb-8">
                                 <h3 className="text-xl font-black text-slate-900 dark:text-white tracking-tight">Case Distribution</h3>
                                 <Target className="text-slate-400" size={24} />
@@ -239,7 +278,7 @@ export default function AnalyticsClient({ data, workspaceId, initialFilter }: An
                             <div className="flex flex-col items-center justify-center flex-1">
                                 <div className="relative w-56 h-56 rounded-full mb-10 shadow-[inset_0_4px_10px_rgba(0,0,0,0.1)] hover:scale-105 transition-transform duration-500" style={{ background: matterGradient }}>
                                     <div className="absolute inset-5 bg-white dark:bg-slate-900 rounded-full flex flex-col items-center justify-center shadow-[0_4px_20px_rgba(0,0,0,0.08)]">
-                                        <span className="text-5xl font-black text-slate-900 dark:text-white leading-tight">{(totalMatters !== 1) ? totalMatters : 0}</span>
+                                        <span className="text-5xl font-black text-slate-900 dark:text-white leading-tight">{(totalMatters !== 1) ? animatedTotalCases : 0}</span>
                                         <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-[0.2em] mt-1">Total Cases</span>
                                     </div>
                                 </div>
@@ -259,8 +298,8 @@ export default function AnalyticsClient({ data, workspaceId, initialFilter }: An
                         </div>
 
                         {/* Top Clients Table Component */}
-                        <div className="lg:col-span-2 bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl border border-white/50 dark:border-white/10 rounded-[2.5rem] overflow-hidden shadow-[0_8px_32px_rgba(0,0,0,0.04)] flex flex-col hover:shadow-[0_16px_48px_rgba(0,0,0,0.06)] transition-all duration-500">
-                            <div className="p-8 pb-6 flex items-center justify-between border-b border-slate-100 dark:border-slate-800">
+                        <div className="lg:col-span-2 bg-white/70 dark:bg-slate-800/70 backdrop-blur-2xl border border-white/60 dark:border-white/10 rounded-[2.5rem] overflow-hidden flex flex-col transition-all duration-500 min-w-0 glass-panel stagger-4">
+                            <div className="p-6 lg:p-8 pb-6 flex items-center justify-between border-b border-slate-100 dark:border-slate-800 gap-4">
                                 <div>
                                     <h3 className="text-xl font-black text-slate-900 dark:text-white tracking-tight">Top Revenue Drivers</h3>
                                     <p className="text-slate-500 dark:text-slate-400 text-sm font-medium mt-1">High-value client relationship matrix</p>
@@ -322,29 +361,29 @@ export default function AnalyticsClient({ data, workspaceId, initialFilter }: An
                     </div>
 
                     {/* Final Performance Row */}
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 min-w-0">
                         
                         {/* Lawyer Performance Card */}
-                        <div className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl border border-white/50 dark:border-white/10 rounded-[2.5rem] p-8 shadow-[0_8px_32px_rgba(0,0,0,0.04)] hover:shadow-[0_16px_48px_rgba(0,0,0,0.06)] transition-all duration-500">
-                            <div className="flex items-center justify-between mb-8 pb-6 border-b border-slate-100 dark:border-slate-800">
-                                <h3 className="text-xl font-black text-slate-900 dark:text-white tracking-tight">Council Performance</h3>
-                                <div className="w-10 h-10 bg-slate-100 dark:bg-slate-700/50 rounded-xl flex items-center justify-center text-slate-500 dark:text-slate-400">
+                        <div className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-2xl border border-white/60 dark:border-white/10 rounded-[2.5rem] p-6 lg:p-8 transition-all duration-500 min-w-0 glass-panel stagger-5">
+                            <div className="flex items-center justify-between mb-8 pb-6 border-b border-slate-100 dark:border-slate-800 gap-4 text-clip">
+                                <h3 className="text-xl font-black text-slate-900 dark:text-white tracking-tight truncate">Council Performance</h3>
+                                <div className="w-10 h-10 shrink-0 bg-slate-100 dark:bg-slate-700/50 rounded-xl flex items-center justify-center text-slate-500 dark:text-slate-400">
                                     <Users size={20} />
                                 </div>
                             </div>
                             <div className="space-y-4">
                                 {lawyerStats.map((lawyer: any, idx: number) => (
-                                    <div key={lawyer.name} className="flex items-center justify-between p-4 rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-800/50 border border-transparent hover:border-slate-100 dark:hover:border-slate-700/50 transition-all group">
-                                        <div className="flex items-center gap-5">
-                                            <span className="text-sm font-black text-slate-300 dark:text-slate-600 group-hover:text-emerald-500 transition-colors w-6 text-right">0{idx + 1}</span>
-                                            <div>
-                                                <p className="text-base font-black text-slate-900 dark:text-white">{lawyer.name}</p>
-                                                <p className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-[0.1em] mt-0.5 flex items-center gap-1">
-                                                    <Target size={10} /> {lawyer.topCourt || 'Federal High Court'}
+                                    <div key={lawyer.name} className="flex items-center justify-between p-4 rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-800/50 border border-transparent hover:border-slate-100 dark:hover:border-slate-700/50 transition-all group min-w-0">
+                                        <div className="flex items-center gap-4 lg:gap-5 min-w-0">
+                                            <span className="text-sm font-black text-slate-300 dark:text-slate-600 group-hover:text-emerald-500 transition-colors w-6 text-right shrink-0">0{idx + 1}</span>
+                                            <div className="min-w-0">
+                                                <p className="text-base font-black text-slate-900 dark:text-white truncate">{lawyer.name}</p>
+                                                <p className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-[0.1em] mt-0.5 flex items-center gap-1 truncate">
+                                                    <Target size={10} className="shrink-0" /> <span className="truncate">{lawyer.topCourt || 'Federal High Court'}</span>
                                                 </p>
                                             </div>
                                         </div>
-                                        <div className="flex flex-col items-end">
+                                        <div className="flex flex-col items-end shrink-0 pl-2">
                                             <span className="text-xl font-black text-slate-900 dark:text-white">{lawyer.appearances}</span>
                                             <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mt-0.5">Appearances</span>
                                         </div>
@@ -354,19 +393,19 @@ export default function AnalyticsClient({ data, workspaceId, initialFilter }: An
                         </div>
 
                         {/* Court Frequency Card */}
-                        <div className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl border border-white/50 dark:border-white/10 rounded-[2.5rem] p-8 shadow-[0_8px_32px_rgba(0,0,0,0.04)] overflow-hidden relative group hover:shadow-[0_16px_48px_rgba(0,0,0,0.06)] transition-all duration-500">
-                            <div className="flex items-center justify-between mb-8 pb-6 border-b border-slate-100 dark:border-slate-800 relative z-10">
-                                <h3 className="text-xl font-black text-slate-900 dark:text-white tracking-tight">Jurisdictional Footprint</h3>
-                                <div className="w-10 h-10 bg-slate-100 dark:bg-slate-700/50 rounded-xl flex items-center justify-center text-slate-500 dark:text-slate-400 group-hover:bg-teal-500 group-hover:text-white transition-all duration-300">
+                        <div className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-2xl border border-white/60 dark:border-white/10 rounded-[2.5rem] p-6 lg:p-8 overflow-hidden relative group transition-all duration-500 min-w-0 glass-panel stagger-5">
+                            <div className="flex items-center justify-between mb-8 pb-6 border-b border-slate-100 dark:border-slate-800 relative z-10 gap-4 text-clip">
+                                <h3 className="text-xl font-black text-slate-900 dark:text-white tracking-tight truncate">Jurisdictional Footprint</h3>
+                                <div className="w-10 h-10 shrink-0 bg-slate-100 dark:bg-slate-700/50 rounded-xl flex items-center justify-center text-slate-500 dark:text-slate-400 group-hover:bg-teal-500 group-hover:text-white transition-all duration-300">
                                     <ChevronRight size={20} />
                                 </div>
                             </div>
-                            <div className="space-y-6 relative z-10 px-2">
+                            <div className="space-y-6 relative z-10 px-2 min-w-0">
                                 {courtVisits.map((cv: any) => (
-                                    <div key={cv.court} className="relative">
-                                        <div className="flex justify-between items-center mb-3">
-                                            <span className="text-sm font-bold text-slate-700 dark:text-slate-200">{cv.court}</span>
-                                            <span className="text-[11px] font-black tracking-wider text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded">{cv.count} VISITS</span>
+                                    <div key={cv.court} className="relative min-w-0">
+                                        <div className="flex justify-between items-center mb-3 min-w-0 gap-2 text-clip w-full">
+                                            <span className="text-sm font-bold text-slate-700 dark:text-slate-200 truncate">{cv.court}</span>
+                                            <span className="text-[11px] shrink-0 font-black tracking-wider text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded">{cv.count} VISITS</span>
                                         </div>
                                         <div className="h-2.5 w-full bg-slate-100 dark:bg-slate-800 box-shadow-inner rounded-full overflow-hidden">
                                             <div 

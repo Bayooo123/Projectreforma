@@ -415,6 +415,7 @@ model Brief {
   deletedAt           DateTime?
   lastSummarizedAt    DateTime?
   summary             String?
+  briefId             String?
   client              Client?              @relation(fields: [clientId], references: [id])
   lawyer              User                 @relation("BriefCreator", fields: [lawyerId], references: [id])
   lawyerInCharge      User?                @relation("LawyerInCharge", fields: [lawyerInChargeId], references: [id])
