@@ -1,5 +1,5 @@
 - Implement /preview endpoint
-- Implement /insight endpoint
+- Perfect Insight system
 - Validation in write operation from playbook
 - Add $with fictionality for direct search
 - Create playbooks for all models defined in scehma
@@ -9,3 +9,4 @@
 - Fix the overall extremely slow latency at /bica/execute
 - Perfect the scehma for teh manifest file in all teh relevant docs
 - Perfect prompt examples
+- 

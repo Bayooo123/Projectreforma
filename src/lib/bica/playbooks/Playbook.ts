@@ -157,20 +157,34 @@ export abstract class Playbook {
     return str.length > maxLength ? `${str.slice(0, maxLength)}\u2026` : str;
   }
 
-  protected statusColor(status: unknown): string {
+  protected statusBadgeClasses(status: unknown): string {
+    const base = 'inline-flex shrink-0 items-center rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] ring-1 ring-inset';
+
     switch (String(status ?? '').toLowerCase()) {
-      case 'active':       return '#3182ce';
-      case 'inactive':     return '#94a3b8';
-      case 'closed':       return '#ef4444';
-      case 'pending':      return '#f59e0b';
-      case 'in_progress':  return '#8b5cf6';
-      case 'completed':    return '#10b981';
-      case 'on_hold':      return '#6b7280';
-      case 'urgent':       return '#ef4444';
-      case 'high':         return '#f97316';
-      case 'medium':       return '#f59e0b';
-      case 'low':          return '#94a3b8';
-      default:             return '#6b7280';
+      case 'active':
+        return `${base} bg-sky-50 text-sky-700 ring-sky-200 dark:bg-sky-500/10 dark:text-sky-300 dark:ring-sky-500/20`;
+      case 'inactive':
+        return `${base} bg-slate-100 text-slate-600 ring-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:ring-slate-700`;
+      case 'closed':
+        return `${base} bg-rose-50 text-rose-700 ring-rose-200 dark:bg-rose-500/10 dark:text-rose-300 dark:ring-rose-500/20`;
+      case 'pending':
+        return `${base} bg-amber-50 text-amber-800 ring-amber-200 dark:bg-amber-500/10 dark:text-amber-300 dark:ring-amber-500/20`;
+      case 'in_progress':
+        return `${base} bg-violet-50 text-violet-700 ring-violet-200 dark:bg-violet-500/10 dark:text-violet-300 dark:ring-violet-500/20`;
+      case 'completed':
+        return `${base} bg-emerald-50 text-emerald-700 ring-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-300 dark:ring-emerald-500/20`;
+      case 'on_hold':
+        return `${base} bg-slate-100 text-slate-600 ring-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:ring-slate-700`;
+      case 'urgent':
+        return `${base} bg-rose-50 text-rose-700 ring-rose-200 dark:bg-rose-500/10 dark:text-rose-300 dark:ring-rose-500/20`;
+      case 'high':
+        return `${base} bg-orange-50 text-orange-700 ring-orange-200 dark:bg-orange-500/10 dark:text-orange-300 dark:ring-orange-500/20`;
+      case 'medium':
+        return `${base} bg-amber-50 text-amber-800 ring-amber-200 dark:bg-amber-500/10 dark:text-amber-300 dark:ring-amber-500/20`;
+      case 'low':
+        return `${base} bg-slate-100 text-slate-600 ring-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:ring-slate-700`;
+      default:
+        return `${base} bg-slate-100 text-slate-600 ring-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:ring-slate-700`;
     }
   }
 
@@ -189,32 +203,31 @@ export abstract class Playbook {
     status?: string,
   ): string {
     const e = (v: unknown) => this.escapeHtml(v);
+    const statusText = status ? status.replace(/_/g, ' ') : '';
     const badge = status
-      ? `<span style="flex-shrink:0;background:${this.statusColor(status)};color:#fff;font-size:10px;font-weight:700;padding:3px 9px;border-radius:20px;text-transform:uppercase;letter-spacing:.3px;">${e(status.replace(/_/g, ' '))}</span>`
+      ? `<span class="${this.statusBadgeClasses(status)}">${e(statusText)}</span>`
       : '';
     const visibleRows = rows.filter(([, v]) => v != null && String(v).trim() !== '');
     const tbody = visibleRows
       .map(
         ([k, v]) =>
-          `<tr><td style="color:#94a3b8;padding:3px 14px 3px 0;white-space:nowrap;font-weight:500;vertical-align:top;font-size:12px;">${e(k)}</td>` +
-          `<td style="color:#1e293b;padding:3px 0;font-size:12px;">${e(v)}</td></tr>`,
+          `<tr class="align-top">` +
+          `<td class="w-32 whitespace-nowrap pr-4 pt-0.5 text-[11px] font-medium uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">${e(k)}</td>` +
+          `<td class="pt-0.5 text-sm leading-6 text-slate-700 dark:text-slate-200">${e(v)}</td></tr>`,
       )
       .join('');
     const body = tbody
-      ? `<div style="padding:12px 16px;"><table style="width:100%;border-collapse:collapse;">${tbody}</table></div>`
+      ? `<div class="px-4 py-4"><table class="w-full border-separate border-spacing-y-2">${tbody}</table></div>`
       : '';
     return (
-      `<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;` +
-      `max-width:400px;border:1px solid #e2e8f0;border-radius:10px;overflow:hidden;` +
-      `background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.06);">` +
-      `<div style="background:#121826;padding:12px 16px;">` +
-      `<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;">` +
-      `<div>` +
-      `<div style="font-size:10px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:#64748b;margin-bottom:3px;">${e(label)}</div>` +
-      `<div style="font-size:15px;font-weight:700;color:#fff;line-height:1.3;">${e(title)}</div>` +
+      `<div class="w-full max-w-md overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm shadow-slate-900/5 ring-1 ring-black/5 dark:border-slate-800 dark:bg-slate-950 dark:shadow-none dark:ring-white/10">` +
+      `<div class="flex items-start justify-between gap-3 border-b border-slate-200/70 bg-slate-50/80 px-4 py-4 dark:border-slate-800 dark:bg-slate-900/60">` +
+      `<div class="min-w-0">` +
+      `<div class="text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400">${e(label)}</div>` +
+      `<div class="mt-1 truncate text-base font-semibold tracking-tight text-slate-900 dark:text-slate-50">${e(title)}</div>` +
       `</div>` +
       badge +
-      `</div></div>` +
+      `</div>` +
       body +
       `</div>`
     );

@@ -2,6 +2,7 @@ import { LookupHandler } from '../operations/lookup';
 import { DirectLookupHandler } from '../operations/direct-lookup';
 import { WriteHandler } from '../operations/write';
 import { PreviewHandler } from '../operations/preview';
+import { InsightHandler } from '../operations/insight';
 import { BicaContext } from './types';
 
 export function getHandler(operationType: string, context: BicaContext) {
@@ -14,6 +15,8 @@ export function getHandler(operationType: string, context: BicaContext) {
       return new WriteHandler(context);
     case 'preview':
       return new PreviewHandler(context);
+    case 'insight':
+      return new InsightHandler(context);
     default:
       return null;
   }
