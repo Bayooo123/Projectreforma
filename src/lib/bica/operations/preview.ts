@@ -81,6 +81,6 @@ export class PreviewHandler extends BicaHandler {
       cards[record.id] = playbook.getPreviewHtml(record);
     }
 
-    return { cards };
+    return cards;
   }
 }
