@@ -112,17 +112,19 @@ export class InsightHandler extends BicaHandler {
       );
     }
 
-    if (bindings !== undefined && (typeof bindings !== 'object' || Array.isArray(bindings) || bindings === null)) {
-      throw Object.assign(
-        new Error('"bindings" must be a plain object mapping param names to values.'),
-        { bicaCode: 'VALIDATION_ERROR' },
-      );
+    // Normalize `bindings`: accept undefined or empty array as {}.
+    let normalizedBindings: Record<string, unknown> = {};
+    if (bindings == null) {
+      normalizedBindings = {};
+    } else if (Array.isArray(bindings)) {
+      if (bindings.length !== 0) throw Object.assign(new Error('"bindings" must be a plain object or an empty array.'), { bicaCode: 'VALIDATION_ERROR' });
+    } else if (typeof bindings === 'object') {
+      normalizedBindings = bindings as Record<string, unknown>;
+    } else {
+      throw Object.assign(new Error('"bindings" must be a plain object mapping param names to values.'), { bicaCode: 'VALIDATION_ERROR' });
     }
 
-    return {
-      sql: sql.trim(),
-      bindings: (bindings as Record<string, unknown>) ?? {},
-    };
+    return { sql: sql.trim(), bindings: normalizedBindings };
   }
 
   // --------------------------------------------------------------------------

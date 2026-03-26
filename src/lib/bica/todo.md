@@ -9,4 +9,4 @@
 - Fix the overall extremely slow latency at /bica/execute
 - Perfect the scehma for teh manifest file in all teh relevant docs
 - Perfect prompt examples
-- 
+- bica chat page logo and loading screen
