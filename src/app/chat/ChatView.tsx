@@ -76,6 +76,7 @@ export default function ChatView() {
             src={state.entryUrl}
             className={styles.iframe}
             allow="microphone; camera"
+            referrerPolicy="origin"
             title="Reforma AI Assistant"
         />
     );

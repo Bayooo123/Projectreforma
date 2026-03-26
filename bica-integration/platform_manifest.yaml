@@ -1,0 +1,49 @@
+identity:
+  platform_id: reforma_os
+  slug: reforma_os
+  name: Reforma Legal OS
+  description: >
+    Reforma is a comprehensive legal practice management platform built for Nigerian law firms,
+    designed to streamline every operational layer of a legal workspace - from matter and brief
+    management, client records, and document storage, to billing, expense tracking, calendar
+    scheduling, and meeting recordings. Each firm operates within an isolated workspace with
+    role-based access control, allowing partners, associates, and office managers to collaborate
+    with appropriately scoped permissions. Reforma exposes a structured AI assistant integration 
+    - Known as Reforma Assistant - that allows you to read and write live firm data on behalf of 
+    authenticated users - you can look up briefs, clients, matters, calendar events, and other records, perform write operations
+    such as creating or updating records, and run analytical insights - all automatically scoped
+    to the authenticated user's workspace, ensuring complete data isolation between firms. Your
+    role is to act as an intelligent assistant embedded within Reforma, capable of understanding
+    natural language requests from firm staff and translating them into precise, permissioned
+    actions against the firm's live operational data.
+  version: 1.0.0
+
+branding:
+  logo_url: https://reforma.ng/icon.png
+  brand_color: '#121826'
+  accent_color: '#3182ce'
+  bot_name: Reforma
+  greeting_message: Good morning. How can Reforma assist your practice and compliance needs today?
+  suggested_prompts:
+    - prompt: Draft a new litigation brief
+      icon: fa-solid fa-file-pen
+    - prompt: Generate an invoice for Client X
+      icon: fa-solid fa-file-invoice-dollar
+    - prompt: Record a payment of ₦50,000
+      icon: fa-solid fa-money-bill-wave
+    - prompt: Check status of a brief
+      icon: fa-solid fa-circle-info
+
+endpoints:
+  base_url: https://reforma.ng/api
+  execute_path: /bica/execute
+  auth:
+    type: hmac_sha256
+    signature_header: X-Custom-Platform-Signature
+  timeout_ms: 30000
+  entry:
+    session_generation_url: https://reforma.ng/api/bica/sessions
+    iframe_origin_url: https://reforma.ng
+
+conversation:
+  max_messages: 30

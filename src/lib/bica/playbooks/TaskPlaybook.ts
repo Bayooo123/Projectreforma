@@ -20,7 +20,7 @@ export class TaskPlaybook extends Playbook {
     };
   }
 
-  getBaseValidationRules(): Record<string, any> {
+  getBaseValidationRules(operation: string, forRecord?: any, parentEntity?: any): Record<string, any> {
     return {
       id: 'prohibited',
       title: 'required|string|max:255',

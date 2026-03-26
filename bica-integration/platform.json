@@ -1,397 +1,243 @@
 {
-    "identity": {
-        "platform_id": "reforma_os",
-        "name": "Reforma Legal OS",
-        "description": "Comprehensive legal practice management. Manage clients, matters, briefs, finances, and compliance with secure RBAC.",
-        "version": "1.2.0"
-    },
-    "branding": {
-        "logo_url": "https://reforma.ng/assets/logo-icon.png",
-        "brand_color": "#121826",
-        "accent_color": "#3182ce",
-        "bot_name": "Reforma Assistant",
-        "greeting_message": "Good morning. How can Reforma assist your practice and compliance needs today?",
-        "suggested_prompts": [
-            "View upcoming court dates",
-            "Summarize meeting recordings",
-            "Check pending compliance tasks",
-            "Generate an invoice for Client X"
+  "identity": {
+    "platform_id": "reforma_os",
+    "slug": "reforma_os",
+    "name": "Reforma Legal OS",
+    "description": "Reforma is a comprehensive legal practice management platform built for Nigerian law firms, designed to streamline every operational layer of a legal workspace - from matter and brief management, client records, and document storage, to billing, expense tracking, calendar scheduling, and meeting recordings. Each firm operates within an isolated workspace with role-based access control, allowing partners, associates, and office managers to collaborate with appropriately scoped permissions. Reforma exposes a structured AI assistant integration  - Known as Reforma Assistant - that allows you to read and write live firm data on behalf of  authenticated users - you can look up briefs, clients, matters, calendar events, and other records, perform write operations such as creating or updating records, and run analytical insights - all automatically scoped to the authenticated user's workspace, ensuring complete data isolation between firms. Your role is to act as an intelligent assistant embedded within Reforma, capable of understanding natural language requests from firm staff and translating them into precise, permissioned actions against the firm's live operational data.\n",
+    "version": "1.0.0"
+  },
+  "branding": {
+    "logo_url": "https://reforma.ng/icon.png",
+    "brand_color": "#121826",
+    "accent_color": "#3182ce",
+    "bot_name": "Reforma",
+    "greeting_message": "Good morning. How can Reforma assist your practice and compliance needs today?",
+    "suggested_prompts": [
+      {
+        "prompt": "Draft a new litigation brief",
+        "icon": "fa-solid fa-file-pen"
+      },
+      {
+        "prompt": "Generate an invoice for Client X",
+        "icon": "fa-solid fa-file-invoice-dollar"
+      },
+      {
+        "prompt": "Record a payment of ₦50,000",
+        "icon": "fa-solid fa-money-bill-wave"
+      },
+      {
+        "prompt": "Check status of a brief",
+        "icon": "fa-solid fa-circle-info"
+      }
+    ]
+  },
+  "knowledge": {
+    "playbooks": {
+      "Client": {
+        "name": "Client",
+        "description": "Represents an individual or organization served by the firm.",
+        "fields": {
+          "id": {
+            "description": "id",
+            "validation_rules": "prohibited"
+          },
+          "name": {
+            "description": "Full legal name of the client or organization.",
+            "validation_rules": "required|string|max:255"
+          },
+          "email": {
+            "description": "Primary contact email.",
+            "validation_rules": "required|email|max:255"
+          },
+          "phone": {
+            "description": "Primary contact phone number.",
+            "validation_rules": "nullable|string|max:20"
+          },
+          "company": {
+            "description": "Company name if the client is an organization.",
+            "validation_rules": "nullable|string|max:255"
+          },
+          "industry": {
+            "description": "Industry sector.",
+            "validation_rules": "nullable|string|max:100"
+          },
+          "status": {
+            "description": "Relationship status.",
+            "validation_rules": "required|in:active,inactive"
+          }
+        },
+        "child_relationships": [
+          "Matter",
+          "Brief",
+          "Invoice",
+          "Payment"
         ]
+      },
+      "Matter": {
+        "name": "Matter",
+        "description": "Represents a specific legal case or matter.",
+        "fields": {
+          "id": {
+            "description": "id",
+            "validation_rules": "prohibited"
+          },
+          "caseNumber": {
+            "description": "Official court reference number.",
+            "validation_rules": "nullable|string|max:255"
+          },
+          "name": {
+            "description": "Internal name of the matter.",
+            "validation_rules": "required|string|max:255"
+          },
+          "court": {
+            "description": "Presiding court jurisdiction.",
+            "validation_rules": "nullable|string|max:255"
+          },
+          "judge": {
+            "description": "Presiding judge.",
+            "validation_rules": "nullable|string|max:255"
+          },
+          "opponentName": {
+            "description": "Opposing party.",
+            "validation_rules": "nullable|string|max:255"
+          },
+          "opponentCounsel": {
+            "description": "Counsel representing the opponent.",
+            "validation_rules": "nullable|string|max:255"
+          },
+          "status": {
+            "description": "Current status of the case.",
+            "validation_rules": "required|in:active,closed,pending"
+          },
+          "nextCourtDate": {
+            "description": "Next hearing or court date.",
+            "validation_rules": "nullable|date"
+          }
+        },
+        "child_relationships": [
+          "Brief",
+          "CalendarEntry",
+          "Task",
+          "MeetingRecording",
+          "Invoice"
+        ]
+      },
+      "Task": {
+        "name": "Task",
+        "description": "Represents a general task or action item within a workspace.",
+        "fields": {
+          "id": {
+            "description": "id",
+            "validation_rules": "prohibited"
+          },
+          "title": {
+            "description": "The task title.",
+            "validation_rules": "required|string|max:255"
+          },
+          "description": {
+            "description": "Detailed task instructions.",
+            "validation_rules": "nullable|string"
+          },
+          "status": {
+            "description": "Current status of the task.",
+            "validation_rules": "required|in:pending,in_progress,completed,on_hold"
+          },
+          "priority": {
+            "description": "Urgency level.",
+            "validation_rules": "required|in:low,medium,high,urgent"
+          },
+          "dueDate": {
+            "description": "Target completion date.",
+            "validation_rules": "nullable|date"
+          }
+        },
+        "child_relationships": []
+      },
+      "User": {
+        "name": "User",
+        "description": "Represents a Reforma user who can act within a workspace.",
+        "fields": {
+          "id": {
+            "description": "id",
+            "validation_rules": "prohibited"
+          },
+          "name": {
+            "description": "Display name of the user.",
+            "validation_rules": "nullable|string|max:255"
+          },
+          "email": {
+            "description": "Primary email address.",
+            "validation_rules": "required|email|max:255"
+          }
+        },
+        "child_relationships": []
+      },
+      "Workspace": {
+        "name": "Workspace",
+        "description": "Represents a workspace or firm root that owns operational records.",
+        "fields": {
+          "id": {
+            "description": "id",
+            "validation_rules": "prohibited"
+          },
+          "name": {
+            "description": "Display name of the workspace.",
+            "validation_rules": "required|string|max:255"
+          },
+          "slug": {
+            "description": "Unique URL-safe workspace slug.",
+            "validation_rules": "nullable|string|max:255"
+          },
+          "ownerId": {
+            "description": "ownerId",
+            "validation_rules": "required|string"
+          }
+        },
+        "child_relationships": [
+          "clients",
+          "matters",
+          "tasks",
+          "briefs"
+        ]
+      }
     },
-    "knowledge": {
-        "playbooks": [
-            {
-                "name": "Client",
-                "description": "Represents an individual or organization served by the firm. Central entity for tracking all work.",
-                "fields": {
-                    "id": {
-                        "description": "Unique identifier (CUID).",
-                        "validation_rules": "prohibited"
-                    },
-                    "name": {
-                        "description": "Full legal name of the client.",
-                        "validation_rules": "required|string|max:255"
-                    },
-                    "email": {
-                        "description": "Primary contact email.",
-                        "validation_rules": "required|email|max:255"
-                    },
-                    "status": {
-                        "description": "Relationship status.",
-                        "validation_rules": "required|in:active,inactive"
-                    }
-                },
-                "child_relationships": [
-                    "Matter",
-                    "Brief",
-                    "Invoice",
-                    "Task",
-                    "CalendarEntry"
-                ],
-                "min_record_count": 0,
-                "max_record_count": 10000,
-                "preview_api_link": "https://app.reforma.ng/management/clients/{entity_id}"
-            },
-            {
-                "name": "Matter",
-                "description": "Represents a specific legal case or matter. Tracks court details and hearing schedules.",
-                "fields": {
-                    "id": {
-                        "description": "Unique identifier (CUID).",
-                        "validation_rules": "prohibited"
-                    },
-                    "caseNumber": {
-                        "description": "Official court reference number.",
-                        "validation_rules": "nullable|string|max:255"
-                    },
-                    "name": {
-                        "description": "Internal name of the matter.",
-                        "validation_rules": "required|string|max:255"
-                    },
-                    "court": {
-                        "description": "Presiding court jurisdiction.",
-                        "validation_rules": "nullable|string|max:255"
-                    },
-                    "status": {
-                        "description": "Current status of the case.",
-                        "validation_rules": "required|in:active,closed,pending"
-                    }
-                },
-                "child_relationships": [
-                    "Brief",
-                    "CalendarEntry",
-                    "Task",
-                    "MeetingRecording",
-                    "Invoice"
-                ],
-                "min_record_count": 0,
-                "max_record_count": 5000,
-                "preview_api_link": "https://app.reforma.ng/matters/{entity_id}"
-            },
-            {
-                "name": "Brief",
-                "description": "Formal legal document, assignment, or court-related task.",
-                "fields": {
-                    "id": {
-                        "description": "Unique identifier (CUID).",
-                        "validation_rules": "prohibited"
-                    },
-                    "briefNumber": {
-                        "description": "System-generated unique identifier.",
-                        "validation_rules": "prohibited"
-                    },
-                    "name": {
-                        "description": "Title or subject of the brief.",
-                        "validation_rules": "required|string|max:255"
-                    },
-                    "category": {
-                        "description": "Legal category (e.g., Litigation, Advisory).",
-                        "validation_rules": "required|string|max:100"
-                    },
-                    "status": {
-                        "description": "Current workflow status.",
-                        "validation_rules": "required|in:active,completed,pending,archived"
-                    },
-                    "dueDate": {
-                        "description": "Deadline for completion.",
-                        "validation_rules": "nullable|date"
-                    }
-                },
-                "child_relationships": [
-                    "Document",
-                    "Task",
-                    "CalendarEntry"
-                ],
-                "min_record_count": 0,
-                "max_record_count": 20000,
-                "preview_api_link": "https://app.reforma.ng/briefs/{entity_id}"
-            },
-            {
-                "name": "CalendarEntry",
-                "description": "An entry in the firm calendar representing hearings, court dates, or meetings.",
-                "fields": {
-                    "id": {
-                        "description": "Unique identifier (CUID).",
-                        "validation_rules": "prohibited"
-                    },
-                    "date": {
-                        "description": "Scheduled date and time.",
-                        "validation_rules": "required|date"
-                    },
-                    "type": {
-                        "description": "Nature of the entry.",
-                        "validation_rules": "required|in:COURT_DATE,FILING_DEADLINE,CLIENT_MEETING,INTERNAL_MEETING,OTHER"
-                    },
-                    "title": {
-                        "description": "Brief title of the event.",
-                        "validation_rules": "required|string|max:255"
-                    },
-                    "proceedings": {
-                        "description": "Notes on what transpired.",
-                        "validation_rules": "nullable|string"
-                    },
-                    "outcome": {
-                        "description": "Visual summary of the result.",
-                        "validation_rules": "nullable|string"
-                    }
-                },
-                "child_relationships": [
-                    "MeetingRecording"
-                ],
-                "min_record_count": 0,
-                "max_record_count": 50000,
-                "preview_api_link": "https://app.reforma.ng/calendar"
-            },
-            {
-                "name": "Task",
-                "description": "A general task or action item within a workspace.",
-                "fields": {
-                    "id": {
-                        "description": "Unique identifier (CUID).",
-                        "validation_rules": "prohibited"
-                    },
-                    "title": {
-                        "description": "The task title.",
-                        "validation_rules": "required|string|max:255"
-                    },
-                    "description": {
-                        "description": "Detailed task instructions.",
-                        "validation_rules": "nullable|string"
-                    },
-                    "status": {
-                        "description": "Current status of the task.",
-                        "validation_rules": "required|in:pending,in_progress,completed,on_hold"
-                    },
-                    "priority": {
-                        "description": "Urgency level.",
-                        "validation_rules": "required|in:low,medium,high,urgent"
-                    },
-                    "dueDate": {
-                        "description": "Target completion date.",
-                        "validation_rules": "nullable|date"
-                    }
-                },
-                "child_relationships": [],
-                "min_record_count": 0,
-                "max_record_count": 100000,
-                "preview_api_link": "https://app.reforma.ng/management/tasks"
-            },
-            {
-                "name": "ComplianceTask",
-                "description": "Monitoring and reporting task for regulatory compliance obligations.",
-                "fields": {
-                    "id": {
-                        "description": "Unique identifier.",
-                        "validation_rules": "prohibited"
-                    },
-                    "status": {
-                        "description": "Compliance status.",
-                        "validation_rules": "required|in:pending,concluded,overdue"
-                    },
-                    "dueDate": {
-                        "description": "Regulatory deadline.",
-                        "validation_rules": "nullable|date"
-                    },
-                    "period": {
-                        "description": "Reporting period (e.g., Q1 2024).",
-                        "validation_rules": "nullable|string"
-                    },
-                    "evidenceUrl": {
-                        "description": "URL to uploaded proof of compliance.",
-                        "validation_rules": "nullable|url"
-                    }
-                },
-                "child_relationships": [],
-                "min_record_count": 0,
-                "max_record_count": 5000,
-                "preview_api_link": "https://app.reforma.ng/management/compliance"
-            },
-            {
-                "name": "MeetingRecording",
-                "description": "Multimedia record and AI transcription of a meeting session.",
-                "fields": {
-                    "id": {
-                        "description": "Unique identifier.",
-                        "validation_rules": "prohibited"
-                    },
-                    "audioFileUrl": {
-                        "description": "Reference to the stored audio file.",
-                        "validation_rules": "nullable|url"
-                    },
-                    "transcriptText": {
-                        "description": "Full AI transcription and summary.",
-                        "validation_rules": "nullable|string"
-                    },
-                    "recordingDuration": {
-                        "description": "Duration in seconds.",
-                        "validation_rules": "nullable|integer|min:0"
-                    }
-                },
-                "child_relationships": [],
-                "min_record_count": 0,
-                "max_record_count": 10000,
-                "preview_api_link": "https://app.reforma.ng/matters/{matterId}"
-            },
-            {
-                "name": "DraftingTemplate",
-                "description": "Automation template for legal drafting and document assembly.",
-                "fields": {
-                    "id": {
-                        "description": "Unique identifier.",
-                        "validation_rules": "prohibited"
-                    },
-                    "name": {
-                        "description": "Template name.",
-                        "validation_rules": "required|string|max:255"
-                    },
-                    "category": {
-                        "description": "Document category.",
-                        "validation_rules": "required|string|max:100"
-                    },
-                    "isPublished": {
-                        "description": "Whether the template is active for use.",
-                        "validation_rules": "required|boolean"
-                    }
-                },
-                "child_relationships": [],
-                "min_record_count": 0,
-                "max_record_count": 1000,
-                "preview_api_link": "https://app.reforma.ng/drafting"
-            },
-            {
-                "name": "Invoice",
-                "description": "Billing record for legal services. Restricted to Admin/Partners.",
-                "fields": {
-                    "id": {
-                        "description": "Unique identifier.",
-                        "validation_rules": "prohibited"
-                    },
-                    "invoiceNumber": {
-                        "description": "Unique reference number.",
-                        "validation_rules": "prohibited"
-                    },
-                    "status": {
-                        "description": "Payment status.",
-                        "validation_rules": "required|in:pending,paid,overdue,cancelled"
-                    },
-                    "totalAmount": {
-                        "description": "Total amount due in kobo.",
-                        "validation_rules": "required|integer|min:0"
-                    }
-                },
-                "child_relationships": [
-                    "Payment"
-                ],
-                "min_record_count": 0,
-                "max_record_count": 10000,
-                "preview_api_link": "https://app.reforma.ng/management/office/invoices/{entity_id}"
-            },
-            {
-                "name": "Payment",
-                "description": "Record of financial transaction received. Restricted to Finance/Admin.",
-                "fields": {
-                    "id": {
-                        "description": "Unique identifier.",
-                        "validation_rules": "prohibited"
-                    },
-                    "amount": {
-                        "description": "Amount received in kobo.",
-                        "validation_rules": "required|integer|min:0"
-                    },
-                    "method": {
-                        "description": "Mode of payment.",
-                        "validation_rules": "required|string|max:50"
-                    },
-                    "date": {
-                        "description": "Date received.",
-                        "validation_rules": "required|date"
-                    }
-                },
-                "child_relationships": [],
-                "min_record_count": 0,
-                "max_record_count": 50000,
-                "preview_api_link": "https://app.reforma.ng/management/office/payments/{entity_id}"
-            }
-        ],
-        "protocols": [
-            {
-                "title": "RBAC Verification",
-                "content": "Before any financial mutation (Invoice/Payment) or sensitive record deletion, Bica must explicitly confirm the user has 'Admin' or 'Finance' role clearance."
-            },
-            {
-                "title": "Conflict of Interest Check",
-                "content": "When creating a new Client, Bica must search for existing records with identical or phonetically similar names and flag potential duplicates to the user."
-            },
-            {
-                "title": "Relationship Integrity",
-                "content": "Every Brief must be strictly linked to a parent Client. Matters should be associated with parent Clients before any court dates or recordings follow."
-            },
-            {
-                "title": "Compliance Monitoring",
-                "content": "When querying for deadlines, Bica should cross-reference ComplianceTasks alongside court dates to provide a unified risk view for the firm."
-            }
-        ],
-        "model_parentage_map": {
-            "Client": [
-                "Matter",
-                "Brief",
-                "Invoice",
-                "Task",
-                "CalendarEntry"
-            ],
-            "Matter": [
-                "Brief",
-                "CalendarEntry",
-                "Task",
-                "MeetingRecording",
-                "Invoice"
-            ],
-            "Brief": [
-                "Task",
-                "CalendarEntry"
-            ],
-            "CalendarEntry": [
-                "MeetingRecording"
-            ],
-            "Invoice": [
-                "Payment"
-            ],
-            "Workspace": [
-                "ComplianceTask",
-                "DraftingTemplate"
-            ]
-        }
+    "model_parentage_map": {
+      "Client": [
+        "Matter",
+        "Brief",
+        "Invoice",
+        "Payment"
+      ],
+      "Matter": [
+        "Brief",
+        "CalendarEntry",
+        "Task",
+        "MeetingRecording",
+        "Invoice"
+      ],
+      "Workspace": [
+        "clients",
+        "matters",
+        "tasks",
+        "briefs"
+      ]
     },
-    "endpoints": {
-        "base_url": "https://api.reforma.ng/api",
-        "execute_path": "/bica/execute",
-        "auth_type": "hmac_sha256",
-        "timeout_ms": 30000,
-        "entry": {
-            "session_generation_url": "https://api.reforma.ng/api/bica/sessions"
-        }
+    "protocols": {}
+  },
+  "endpoints": {
+    "base_url": "https://reforma.ng/api",
+    "execute_path": "/bica/execute",
+    "auth": {
+      "type": "hmac_sha256",
+      "signature_header": "X-Custom-Platform-Signature"
     },
-    "conversation": {
-        "max_messages": 50
+    "timeout_ms": 30000,
+    "entry": {
+      "session_generation_url": "https://reforma.ng/api/bica/sessions",
+      "iframe_origin_url": "https://reforma.ng"
     }
+  },
+  "conversation": {
+    "max_messages": 30
+  }
 }

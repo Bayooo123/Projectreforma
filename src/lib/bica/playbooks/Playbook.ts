@@ -51,6 +51,16 @@ export abstract class Playbook {
   }
 
   /**
+   * Returns whether this playbook should be emitted into the generated Bica manifest.
+   *
+   * Override this for internal-only models that should remain available in code but
+   * should not be published as part of the platform manifest.
+   */
+  isManifestPublic(): boolean {
+    return true;
+  }
+
+  /**
    * Returns the parent model types that can own this model.
    */
   getAllowedParents(): string[] {
