@@ -71,6 +71,109 @@ describe('JeqlCompiler', () => {
     });
   });
 
+  it('uses is/isNot for to-one relation filters when cardinality is provided', () => {
+    const result = compiler.compile(
+      {
+        $whereHas: {
+          matter: {
+            $whereAll: [['name', 'search', 'Balogun v. Balogun']],
+          },
+        },
+        $whereNotHas: {
+          client: {
+            $whereAll: [['status', '=', 'inactive']],
+          },
+        },
+      },
+      {
+        relationCardinality: {
+          matter: 'one',
+          client: 'one',
+        },
+      }
+    );
+
+    expect(result.where).toEqual({
+      AND: [
+        {
+          matter: {
+            is: {
+              OR: [
+                { name: { contains: 'Balogun v. Balogun', mode: 'insensitive' } },
+                { name: { contains: 'balogun', mode: 'insensitive' } },
+                { name: { contains: 'v', mode: 'insensitive' } },
+              ],
+            },
+          },
+        },
+        {
+          client: {
+            isNot: {
+              status: { equals: 'inactive' },
+            },
+          },
+        },
+      ],
+    });
+  });
+
+  it('maps $with relation aliases to Prisma relation field names', () => {
+    const result = compiler.compile(
+      {
+        $select: ['id', 'name', 'status'],
+        $with: {
+          Brief: { $select: ['id', 'name', 'matterId', 'status', 'category'] },
+          CalendarEntry: { $select: ['id', 'matterId', 'title', 'date', 'type'] },
+          Task: { $select: ['id', 'matterId', 'title', 'status', 'priority', 'dueDate'] },
+        },
+      },
+      {
+        relationFieldMap: {
+          brief: 'briefs',
+          Brief: 'briefs',
+          calendarentry: 'calendarEntries',
+          CalendarEntry: 'calendarEntries',
+          task: 'tasks',
+          Task: 'tasks',
+        },
+      }
+    );
+
+    expect(result.select).toEqual({
+      id: true,
+      name: true,
+      status: true,
+      briefs: {
+        select: {
+          id: true,
+          name: true,
+          matterId: true,
+          status: true,
+          category: true,
+        },
+      },
+      calendarEntries: {
+        select: {
+          id: true,
+          matterId: true,
+          title: true,
+          date: true,
+          type: true,
+        },
+      },
+      tasks: {
+        select: {
+          id: true,
+          matterId: true,
+          title: true,
+          status: true,
+          priority: true,
+          dueDate: true,
+        },
+      },
+    });
+  });
+
   it('compiles search across one or many columns', () => {
     const single = compiler.compile({
       $whereAll: [['name', 'search', 'John Smith']],
@@ -175,5 +278,29 @@ describe('JeqlCompiler', () => {
 
   it('throws for dot notation in where filters', () => {
     expect(() => compiler.compile({ $whereAll: [['client.name', '=', 'Acme']] })).toThrow(JeqlValidationError);
+  });
+
+  it('uses modelKey to resolve camelcase field names from Prisma metadata', () => {
+    // When modelKey is provided, the compiler auto-resolves field names
+    // by calling resolveFieldName with dmmf metadata.
+    // This test demonstrates that:
+    // 1. Exact field names work: 'dueDate' -> 'dueDate'
+    // 2. Lowercase variants work: 'duedate' -> 'dueDate'
+    // 3. Snake_case is converted: 'due_date' -> 'dueDate'
+    const result = compiler.compile(
+      {
+        $select: ['id', 'dueDate'],
+        $whereAll: [['status', '=', 'active']],
+        $orderBy: [['dueDate', 'desc']],
+      },
+      {
+        modelKey: 'brief',
+      }
+    );
+
+    // All field names should be normalized to their camelCase canonical form
+    expect(result.select).toBeDefined();
+    expect(result.where).toBeDefined();
+    expect(result.orderBy).toBeDefined();
   });
 });

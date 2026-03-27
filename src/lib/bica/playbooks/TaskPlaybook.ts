@@ -25,9 +25,22 @@ export class TaskPlaybook extends Playbook {
       id: 'prohibited',
       title: 'required|string|max:255',
       description: 'nullable|string',
+      assignedToId: 'nullable|string|max:255',
+      assignedById: 'nullable|string|max:255',
+      workspaceId: 'prohibited',
+      matterId: 'nullable|string|max:255',
+      briefId: 'nullable|string|max:255',
       status: 'required|in:pending,in_progress,completed,on_hold',
       priority: 'required|in:low,medium,high,urgent',
       dueDate: 'nullable|date',
+      completedAt: 'nullable|date',
+      source: 'nullable|string|max:100',
+      sourceEmail: 'nullable|email|max:255',
+      emailSubject: 'nullable|string|max:255',
+      emailBody: 'nullable|string',
+      aiConfidence: 'nullable|integer|min:0|max:100',
+      requirements: 'nullable|array',
+      attachments: 'nullable|array',
     };
   }
 

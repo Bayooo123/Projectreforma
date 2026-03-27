@@ -187,25 +187,25 @@ export abstract class Playbook {
 
     switch (String(status ?? '').toLowerCase()) {
       case 'active':
-        return `${base} bg-sky-50 text-sky-700 ring-sky-200 dark:bg-sky-500/10 dark:text-sky-300 dark:ring-sky-500/20`;
+        return `${base} bg-sky-100 text-sky-700 ring-sky-200 dark:bg-sky-900 dark:text-sky-300 dark:ring-sky-900`;
       case 'inactive':
         return `${base} bg-slate-100 text-slate-600 ring-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:ring-slate-700`;
       case 'closed':
-        return `${base} bg-rose-50 text-rose-700 ring-rose-200 dark:bg-rose-500/10 dark:text-rose-300 dark:ring-rose-500/20`;
+        return `${base} bg-rose-100 text-rose-700 ring-rose-200 dark:bg-rose-900 dark:text-rose-300 dark:ring-rose-900`;
       case 'pending':
-        return `${base} bg-amber-50 text-amber-800 ring-amber-200 dark:bg-amber-500/10 dark:text-amber-300 dark:ring-amber-500/20`;
+        return `${base} bg-amber-100 text-amber-800 ring-amber-200 dark:bg-amber-900 dark:text-amber-300 dark:ring-amber-900`;
       case 'in_progress':
-        return `${base} bg-violet-50 text-violet-700 ring-violet-200 dark:bg-violet-500/10 dark:text-violet-300 dark:ring-violet-500/20`;
+        return `${base} bg-violet-100 text-violet-700 ring-violet-200 dark:bg-violet-900 dark:text-violet-300 dark:ring-violet-900`;
       case 'completed':
-        return `${base} bg-emerald-50 text-emerald-700 ring-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-300 dark:ring-emerald-500/20`;
+        return `${base} bg-emerald-100 text-emerald-700 ring-emerald-200 dark:bg-emerald-900 dark:text-emerald-300 dark:ring-emerald-900`;
       case 'on_hold':
         return `${base} bg-slate-100 text-slate-600 ring-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:ring-slate-700`;
       case 'urgent':
-        return `${base} bg-rose-50 text-rose-700 ring-rose-200 dark:bg-rose-500/10 dark:text-rose-300 dark:ring-rose-500/20`;
+        return `${base} bg-rose-100 text-rose-700 ring-rose-200 dark:bg-rose-900 dark:text-rose-300 dark:ring-rose-900`;
       case 'high':
-        return `${base} bg-orange-50 text-orange-700 ring-orange-200 dark:bg-orange-500/10 dark:text-orange-300 dark:ring-orange-500/20`;
+        return `${base} bg-orange-100 text-orange-700 ring-orange-200 dark:bg-orange-900 dark:text-orange-300 dark:ring-orange-900`;
       case 'medium':
-        return `${base} bg-amber-50 text-amber-800 ring-amber-200 dark:bg-amber-500/10 dark:text-amber-300 dark:ring-amber-500/20`;
+        return `${base} bg-amber-100 text-amber-800 ring-amber-200 dark:bg-amber-900 dark:text-amber-300 dark:ring-amber-900`;
       case 'low':
         return `${base} bg-slate-100 text-slate-600 ring-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:ring-slate-700`;
       default:
@@ -245,7 +245,7 @@ export abstract class Playbook {
       ? `<div class="px-4 py-4"><table class="w-full border-separate border-spacing-y-2">${tbody}</table></div>`
       : '';
     return (
-      `<div class="w-full max-w-md overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm shadow-slate-900/5 ring-1 ring-black/5 dark:border-slate-800 dark:bg-slate-950 dark:shadow-none dark:ring-white/10">` +
+      `<div class="w-full max-w-md overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm shadow-slate-900/5 ring-1 ring-black/5 dark:border-slate-800 dark:bg-slate-900 dark:shadow-none dark:ring-white/10">` +
       `<div class="flex items-start justify-between gap-3 border-b border-slate-200/70 bg-slate-50/80 px-4 py-4 dark:border-slate-800 dark:bg-slate-900/60">` +
       `<div class="min-w-0">` +
       `<div class="text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400">${e(label)}</div>` +

@@ -1,6 +1,14 @@
 import { JeqlValidationError } from './errors';
 import { compileScalarOperator } from './operators';
-import { JeqlCompileOptions, JeqlCompiledQuery, JeqlCondition, JeqlQuery, JeqlRelationQueryMap, JeqlSimpleCondition } from './types';
+import {
+  JeqlCompileOptions,
+  JeqlCompiledQuery,
+  JeqlCondition,
+  JeqlQuery,
+  JeqlRelationCardinality,
+  JeqlRelationQueryMap,
+  JeqlSimpleCondition,
+} from './types';
 import {
   assertFieldName,
   buildSearchFragments,
@@ -11,6 +19,7 @@ import {
   toDateRange,
   toUtcDayRange,
 } from './utils';
+import { resolveFieldName } from './prisma-relation-cardinality';
 
 export class JeqlCompiler {
   compile(query: JeqlQuery, options: JeqlCompileOptions = {}): JeqlCompiledQuery {
@@ -21,9 +30,9 @@ export class JeqlCompiler {
     }
 
     const compiled: JeqlCompiledQuery = {};
-    const where = this.compileWhere(query, options.baseWhere);
-    const projection = this.compileProjection(query);
-    const orderBy = this.compileOrderBy(query.$orderBy);
+    const where = this.compileWhere(query, options.baseWhere, options.relationCardinality, options.relationFieldMap, options.modelKey);
+    const projection = this.compileProjection(query, options.relationFieldMap, options.modelKey);
+    const orderBy = this.compileOrderBy(query.$orderBy, options.modelKey);
     const take = parsePositiveInteger(query.$limit, '$limit');
     const skip = parsePositiveInteger(query.$offset, '$offset');
 
@@ -43,7 +52,13 @@ export class JeqlCompiler {
     }
   }
 
-  private compileWhere(query: JeqlQuery, baseWhere?: Record<string, unknown>): Record<string, unknown> | undefined {
+  private compileWhere(
+    query: JeqlQuery,
+    baseWhere?: Record<string, unknown>,
+    relationCardinality?: Record<string, JeqlRelationCardinality>,
+    relationFieldMap?: Record<string, string>,
+    modelKey?: string
+  ): Record<string, unknown> | undefined {
     const parts: Record<string, unknown>[] = [];
 
     if (hasKeys(baseWhere)) {
@@ -54,16 +69,16 @@ export class JeqlCompiler {
     const anyConditions = ensureArray(query.$whereAny, '$whereAny');
 
     if (allConditions.length > 0) {
-      parts.push(this.compileConditionGroup(allConditions, 'AND'));
+      parts.push(this.compileConditionGroup(allConditions, 'AND', modelKey));
     }
     if (anyConditions.length > 0) {
-      parts.push(this.compileConditionGroup(anyConditions, 'OR'));
+      parts.push(this.compileConditionGroup(anyConditions, 'OR', modelKey));
     }
     if (query.$whereHas) {
-      parts.push(this.compileRelationMap(query.$whereHas, 'some'));
+      parts.push(this.compileRelationMap(query.$whereHas, 'has', relationCardinality, relationFieldMap, modelKey));
     }
     if (query.$whereNotHas) {
-      parts.push(this.compileRelationMap(query.$whereNotHas, 'none'));
+      parts.push(this.compileRelationMap(query.$whereNotHas, 'notHas', relationCardinality, relationFieldMap, modelKey));
     }
 
     if (parts.length === 0) {
@@ -75,28 +90,28 @@ export class JeqlCompiler {
     return { AND: parts };
   }
 
-  private compileConditionGroup(conditions: JeqlCondition[], logic: 'AND' | 'OR'): Record<string, unknown> {
-    const compiled = conditions.map(condition => this.compileCondition(condition));
+  private compileConditionGroup(conditions: JeqlCondition[], logic: 'AND' | 'OR', modelKey?: string): Record<string, unknown> {
+    const compiled = conditions.map(condition => this.compileCondition(condition, modelKey));
     if (compiled.length === 1) {
       return compiled[0];
     }
     return { [logic]: compiled };
   }
 
-  private compileCondition(condition: JeqlCondition): Record<string, unknown> {
+  private compileCondition(condition: JeqlCondition, modelKey?: string): Record<string, unknown> {
     if (Array.isArray(condition)) {
-      return this.compileSimpleCondition(condition);
+      return this.compileSimpleCondition(condition, modelKey);
     }
     if (isPlainObject(condition) && '$whereAll' in condition) {
-      return this.compileConditionGroup(ensureArray(condition.$whereAll, '$whereAll'), 'AND');
+      return this.compileConditionGroup(ensureArray(condition.$whereAll, '$whereAll'), 'AND', modelKey);
     }
     if (isPlainObject(condition) && '$whereAny' in condition) {
-      return this.compileConditionGroup(ensureArray(condition.$whereAny, '$whereAny'), 'OR');
+      return this.compileConditionGroup(ensureArray(condition.$whereAny, '$whereAny'), 'OR', modelKey);
     }
     throw new JeqlValidationError('Invalid JEQL condition structure.');
   }
 
-  private compileSimpleCondition(condition: JeqlSimpleCondition): Record<string, unknown> {
+  private compileSimpleCondition(condition: JeqlSimpleCondition, modelKey?: string): Record<string, unknown> {
     const [fieldSelector, operator, value] = condition;
 
     if (Array.isArray(fieldSelector)) {
@@ -104,13 +119,17 @@ export class JeqlCompiler {
         throw new JeqlValidationError('Only the search operator supports multi-column field selectors.');
       }
 
-      const fields = fieldSelector.map(field => assertFieldName(field));
+      const fields = fieldSelector.map(field => {
+        const normalized = assertFieldName(field);
+        return modelKey ? resolveFieldName(modelKey, normalized) : normalized;
+      });
       return {
         OR: fields.flatMap(field => buildSearchFragments(field, value)),
       };
     }
 
-    const field = assertFieldName(fieldSelector);
+    const rawField = assertFieldName(fieldSelector);
+    const field = modelKey ? resolveFieldName(modelKey, rawField) : rawField;
 
     if (operator === 'search') {
       return {
@@ -141,17 +160,25 @@ export class JeqlCompiler {
     return { [field]: compileScalarOperator(operator, value) };
   }
 
-  private compileRelationMap(relations: JeqlRelationQueryMap, mode: 'some' | 'none'): Record<string, unknown> {
+  private compileRelationMap(
+    relations: JeqlRelationQueryMap,
+    mode: 'has' | 'notHas',
+    relationCardinality?: Record<string, JeqlRelationCardinality>,
+    relationFieldMap?: Record<string, string>,
+    modelKey?: string
+  ): Record<string, unknown> {
     if (!isPlainObject(relations)) {
-      throw new JeqlValidationError(`${mode === 'some' ? '$whereHas' : '$whereNotHas'} must be an object keyed by relation name.`);
+      throw new JeqlValidationError(`${mode === 'has' ? '$whereHas' : '$whereNotHas'} must be an object keyed by relation name.`);
     }
 
     const compiled = Object.entries(relations).map(([relation, subQuery]) => {
-      const relationName = assertFieldName(relation);
-      const where = this.compileWhere(subQuery);
+      const relationName = this.resolveRelationFieldName(relation, relationFieldMap);
+      const where = this.compileWhere(subQuery, undefined, relationCardinality, relationFieldMap, modelKey);
+      const relationOperator = this.resolveRelationOperator(mode, relationName, relationCardinality);
+
       return {
         [relationName]: {
-          [mode]: where ?? {},
+          [relationOperator]: where ?? {},
         },
       };
     });
@@ -163,7 +190,30 @@ export class JeqlCompiler {
     return { AND: compiled };
   }
 
-  private compileProjection(query: JeqlQuery): Pick<JeqlCompiledQuery, 'select' | 'include'> {
+  private resolveRelationOperator(
+    mode: 'has' | 'notHas',
+    relationName: string,
+    relationCardinality?: Record<string, JeqlRelationCardinality>
+  ): 'some' | 'none' | 'is' | 'isNot' {
+    const cardinality = relationCardinality?.[relationName];
+
+    if (cardinality === 'one') {
+      return mode === 'has' ? 'is' : 'isNot';
+    }
+
+    return mode === 'has' ? 'some' : 'none';
+  }
+
+  private resolveRelationFieldName(relation: string, relationFieldMap?: Record<string, string>): string {
+    const relationName = assertFieldName(relation);
+    if (!relationFieldMap) {
+      return relationName;
+    }
+
+    return relationFieldMap[relationName] ?? relationFieldMap[relationName.toLowerCase()] ?? relationName;
+  }
+
+  private compileProjection(query: JeqlQuery, relationFieldMap?: Record<string, string>, modelKey?: string): Pick<JeqlCompiledQuery, 'select' | 'include'> {
     const selectFields = Array.isArray(query.$select) ? query.$select.filter(Boolean) : [];
     const withRelations = query.$with && isPlainObject(query.$with) ? query.$with : undefined;
     const hasScalarSelect = selectFields.length > 0;
@@ -176,18 +226,22 @@ export class JeqlCompiler {
     if (!hasScalarSelect && withRelations) {
       return {
         include: Object.fromEntries(
-          Object.entries(withRelations).map(([relation, subQuery]) => [assertFieldName(relation), this.compileRelationQuery(subQuery)])
+          Object.entries(withRelations).map(([relation, subQuery]) => [this.resolveRelationFieldName(relation, relationFieldMap), this.compileRelationQuery(subQuery)])
         ),
       };
     }
 
     const select: Record<string, unknown> = Object.fromEntries(
-      selectFields.map(field => [assertFieldName(field), true])
+      selectFields.map(field => {
+        const normalized = assertFieldName(field);
+        const resolved = modelKey ? resolveFieldName(modelKey, normalized) : normalized;
+        return [resolved, true];
+      })
     );
 
     if (withRelations) {
       for (const [relation, subQuery] of Object.entries(withRelations)) {
-        select[assertFieldName(relation)] = this.compileRelationQuery(subQuery);
+        select[this.resolveRelationFieldName(relation, relationFieldMap)] = this.compileRelationQuery(subQuery);
       }
     }
 
@@ -212,19 +266,21 @@ export class JeqlCompiler {
     return Object.keys(compiled).length > 0 ? compiled : true;
   }
 
-  private compileOrderBy(orderBy: JeqlQuery['$orderBy']): Array<Record<string, 'asc' | 'desc'>> {
+  private compileOrderBy(orderBy: JeqlQuery['$orderBy'], modelKey?: string): Array<Record<string, 'asc' | 'desc'>> {
     const entries = ensureArray(orderBy, '$orderBy');
     return entries.map(entry => {
       if (!Array.isArray(entry) || entry.length !== 2) {
         throw new JeqlValidationError('$orderBy entries must be [field, direction] tuples.');
       }
 
-      const [field, direction] = entry;
+      const [rawField, direction] = entry;
       if (direction !== 'asc' && direction !== 'desc') {
         throw new JeqlValidationError(`Invalid JEQL order direction: ${direction}.`);
       }
 
-      return { [assertFieldName(field)]: direction };
+      const field = assertFieldName(rawField);
+      const resolved = modelKey ? resolveFieldName(modelKey, field) : field;
+      return { [resolved]: direction };
     });
   }
 }
