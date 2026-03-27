@@ -2,6 +2,7 @@ export { JeqlCompilationError, JeqlValidationError } from './errors';
 export { JeqlCompiler } from './compiler';
 export { getPrismaRelationCardinality } from './prisma-relation-cardinality';
 export { getPrismaRelationMetadata } from './prisma-relation-cardinality';
+export { resolveFieldName } from './prisma-relation-cardinality';
 export type {
   JeqlCompileOptions,
   JeqlCompiledQuery,

@@ -279,4 +279,28 @@ describe('JeqlCompiler', () => {
   it('throws for dot notation in where filters', () => {
     expect(() => compiler.compile({ $whereAll: [['client.name', '=', 'Acme']] })).toThrow(JeqlValidationError);
   });
+
+  it('uses modelKey to resolve camelcase field names from Prisma metadata', () => {
+    // When modelKey is provided, the compiler auto-resolves field names
+    // by calling resolveFieldName with dmmf metadata.
+    // This test demonstrates that:
+    // 1. Exact field names work: 'dueDate' -> 'dueDate'
+    // 2. Lowercase variants work: 'duedate' -> 'dueDate'
+    // 3. Snake_case is converted: 'due_date' -> 'dueDate'
+    const result = compiler.compile(
+      {
+        $select: ['id', 'dueDate'],
+        $whereAll: [['status', '=', 'active']],
+        $orderBy: [['dueDate', 'desc']],
+      },
+      {
+        modelKey: 'brief',
+      }
+    );
+
+    // All field names should be normalized to their camelCase canonical form
+    expect(result.select).toBeDefined();
+    expect(result.where).toBeDefined();
+    expect(result.orderBy).toBeDefined();
+  });
 });

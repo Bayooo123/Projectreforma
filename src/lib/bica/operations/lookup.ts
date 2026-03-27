@@ -49,6 +49,7 @@ export class LookupHandler extends BicaHandler {
 				baseWhere: whereScope,
 				relationCardinality,
 				relationFieldMap,
+				modelKey: playbook.modelKey,
 			});
 		} catch (error: any) {
 			if (error instanceof JeqlValidationError) {

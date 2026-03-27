@@ -168,7 +168,7 @@ export class CrudExecutor {
     const { relationCardinality, relationFieldMap } = getPrismaRelationMetadata(playbook.modelKey);
 
     try {
-      const compiled = this.jeql.compile(query, { baseWhere, relationCardinality, relationFieldMap });
+      const compiled = this.jeql.compile(query, { baseWhere, relationCardinality, relationFieldMap, modelKey: playbook.modelKey });
       const records = await delegate.findMany(compiled);
       return { records };
     } catch (error: any) {
@@ -185,7 +185,7 @@ export class CrudExecutor {
     const { relationCardinality, relationFieldMap } = getPrismaRelationMetadata(playbook.modelKey);
 
     try {
-      const compiled = this.jeql.compile(query, { baseWhere, relationCardinality, relationFieldMap });
+      const compiled = this.jeql.compile(query, { baseWhere, relationCardinality, relationFieldMap, modelKey: playbook.modelKey });
       const count = await delegate.count({ where: compiled.where });
       return { count };
     } catch (error: any) {
@@ -208,7 +208,7 @@ export class CrudExecutor {
     }
 
     try {
-      const compiled = this.jeql.compile(query, { baseWhere, relationCardinality, relationFieldMap });
+      const compiled = this.jeql.compile(query, { baseWhere, relationCardinality, relationFieldMap, modelKey: playbook.modelKey });
       const result = await delegate.updateMany({
         where: compiled.where,
         data: attributes,
@@ -239,7 +239,7 @@ export class CrudExecutor {
     }
 
     try {
-      const compiled = this.jeql.compile(query, { baseWhere, relationCardinality, relationFieldMap });
+      const compiled = this.jeql.compile(query, { baseWhere, relationCardinality, relationFieldMap, modelKey: playbook.modelKey });
       const records = await delegate.findMany({
         where: compiled.where,
         orderBy: compiled.orderBy,
@@ -291,7 +291,7 @@ export class CrudExecutor {
     }
 
     try {
-      const compiled = this.jeql.compile(query, { baseWhere, relationCardinality, relationFieldMap });
+      const compiled = this.jeql.compile(query, { baseWhere, relationCardinality, relationFieldMap, modelKey: playbook.modelKey });
       const result = await delegate.deleteMany({ where: compiled.where });
       return { deleted: true, count: result?.count ?? 0 };
     } catch (error: any) {
