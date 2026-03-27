@@ -85,7 +85,7 @@ export default function AnalyticsClient({ data, workspaceId, initialFilter }: An
             featureId="analytics"
             variant="analytics"
         >
-            <div className="relative min-h-screen bg-slate-50 dark:bg-slate-900 overflow-hidden">
+            <div className="relative min-h-screen bg-slate-50 dark:bg-slate-900 overflow-hidden text-[16px]">
                 <style>{`
                     @keyframes drawLine {
                         from { stroke-dashoffset: 600; }
@@ -123,19 +123,19 @@ export default function AnalyticsClient({ data, workspaceId, initialFilter }: An
                 <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-emerald-500/20 rounded-full blur-[120px] mix-blend-multiply dark:mix-blend-screen pointer-events-none" />
                 <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-teal-500/20 rounded-full blur-[120px] mix-blend-multiply dark:mix-blend-screen pointer-events-none" />
 
-                <div className="p-4 md:p-8 max-w-[1600px] mx-auto min-h-screen animate-fade-in relative z-10 text-slate-900 dark:text-slate-100">
+                <div className="p-6 md:p-10 lg:p-12 max-w-[1600px] mx-auto min-h-screen animate-fade-in relative z-10 text-slate-900 dark:text-slate-100">
                     
-                    {/* Header Cockpit Section */}
-                    <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
+                    {/* Header Section */}
+                    <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 mb-16">
                         <div className="relative">
-                            <div className="flex items-center gap-2 mb-3">
+                            <div className="flex items-center gap-2 mb-4">
                                 <Sparkles size={16} className="text-emerald-500" />
                                 <span className="text-xs font-bold uppercase tracking-[0.2em] text-emerald-600 dark:text-emerald-400">Insights Engine</span>
                             </div>
-                            <h1 className="text-4xl md:text-5xl font-black tracking-tight text-slate-900 dark:text-white mb-2">
+                            <h1 className="text-4xl md:text-5xl lg:text-6xl font-black tracking-tight text-slate-900 dark:text-white mb-2 leading-tight">
                                 Executive <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 to-teal-400">Dashboard</span>
                             </h1>
-                            <p className="text-slate-500 dark:text-slate-400 font-medium text-lg">Firm performance for {new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</p>
+                            <p className="text-slate-500 dark:text-slate-400 font-medium text-lg mt-2">Firm performance for {new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</p>
                         </div>
 
                         <div className="flex items-center gap-2 p-1 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm">
@@ -174,29 +174,29 @@ export default function AnalyticsClient({ data, workspaceId, initialFilter }: An
                     )}
 
                         {/* Main Grid */}
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 mb-12">
                             
                             {/* Key Revenue Stat (Large Card) */}
-                            <div className="md:col-span-2 bg-white/70 dark:bg-slate-800/70 backdrop-blur-2xl border border-white/60 dark:border-white/10 rounded-[2.5rem] p-6 lg:p-8 xl:p-10 group overflow-hidden relative min-w-0 glass-panel stagger-1">
+                            <div className="md:col-span-2 bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl border border-white dark:border-slate-700/50 rounded-[3rem] p-8 lg:p-12 group overflow-hidden relative glass-panel stagger-1">
                                 <div className="absolute top-0 right-0 w-[150%] h-[150%] bg-gradient-to-br from-emerald-500/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none" />
                                 
-                                <div className="flex justify-between items-start relative z-10 gap-4">
+                                <div className="flex justify-between items-start relative z-10 gap-6">
                                     <div className="min-w-0 flex-1">
-                                        <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-[0.2em] mb-3 flex items-center gap-2 truncate">
+                                        <p className="text-[11px] font-bold text-slate-400 uppercase tracking-[0.3em] mb-4">
                                             Total Collections
                                         </p>
-                                        <h2 className="text-4xl lg:text-5xl font-black tracking-tighter text-slate-900 dark:text-white mb-6">
+                                        <h2 className="text-4xl lg:text-6xl font-black tracking-tight text-slate-900 dark:text-white mb-8">
                                             {formatCurrency(animatedRevenueTotal)}
                                         </h2>
-                                        <div className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold inline-flex shadow-sm whitespace-nowrap ${
+                                        <div className={`flex items-center gap-2 px-5 py-2.5 rounded-2xl text-[13px] font-bold inline-flex shadow-sm ${
                                             (metrics?.revenue?.growth || 0) >= 0 ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400' : 'bg-red-50 text-red-600 dark:bg-red-500/10 dark:text-red-400'
                                         }`}>
-                                            {(metrics?.revenue?.growth || 0) >= 0 ? <ArrowUp size={16} strokeWidth={3} className="shrink-0" /> : <TrendingDown size={16} strokeWidth={3} className="shrink-0" />}
+                                            {(metrics?.revenue?.growth || 0) >= 0 ? <ArrowUp size={16} strokeWidth={3} /> : <TrendingDown size={16} strokeWidth={3} />}
                                             {Math.abs(metrics?.revenue?.growth || 0).toFixed(1)}% vs Last Month
                                         </div>
                                     </div>
-                                    <div className="w-16 h-16 shrink-0 bg-gradient-to-br from-emerald-400 to-teal-600 rounded-[1.25rem] shadow-lg shadow-emerald-500/25 flex items-center justify-center text-white transform group-hover:rotate-12 transition-transform duration-500">
-                                        <DollarSign size={32} />
+                                    <div className="w-14 h-14 shrink-0 bg-emerald-500 rounded-2xl flex items-center justify-center text-white shadow-xl shadow-emerald-500/20 group-hover:scale-110 group-hover:rotate-6 transition-all duration-500">
+                                        <DollarSign size={28} strokeWidth={2.5} />
                                     </div>
                                 </div>
 
@@ -258,154 +258,141 @@ export default function AnalyticsClient({ data, workspaceId, initialFilter }: An
                             </div>
                         </div>
 
-                        {/* Active Matters Card */}
-                        <div className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-2xl border border-white/60 dark:border-white/10 rounded-[2rem] p-8 flex flex-col justify-between group relative overflow-hidden min-w-0 glass-panel stagger-2">
+                        {/* Active Matters */}
+                        <div className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl border border-white dark:border-slate-700/50 rounded-[2.5rem] p-10 flex flex-col justify-between group glass-panel stagger-2 relative overflow-hidden">
                             <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 rounded-full blur-2xl group-hover:bg-emerald-500/10 transition-colors pointer-events-none" />
                             <div className="flex justify-between items-start relative z-10 gap-4">
-                                <div className="w-12 h-12 shrink-0 bg-slate-100 dark:bg-slate-700/50 rounded-xl flex items-center justify-center text-slate-700 dark:text-slate-300 group-hover:scale-110 group-hover:bg-emerald-500 group-hover:text-white group-hover:shadow-lg group-hover:shadow-emerald-500/25 transition-all duration-300">
+                                <div className="w-12 h-12 shrink-0 bg-slate-50 dark:bg-slate-900 rounded-2xl flex items-center justify-center text-slate-400 group-hover:text-emerald-500 transition-colors">
                                     <Briefcase size={24} />
                                 </div>
-                                <p className="text-4xl lg:text-5xl font-black text-slate-900 dark:text-white tracking-tighter leading-none">{animatedActiveMatters}</p>
+                                <div className="text-right">
+                                    <p className="text-4xl lg:text-5xl font-black text-slate-900 dark:text-white leading-none tracking-tight">{animatedActiveMatters}</p>
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-2">Active Matters</p>
+                                </div>
                             </div>
-                            <div className="relative z-10 mt-6 md:mt-10 min-w-0">
-                                <p className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-[0.2em] mb-2 truncate">Active Matters</p>
-                                <p className="text-xs font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1 truncate">
-                                    <Sparkles size={12} className="shrink-0" /> <span className="truncate">+{metrics?.matters?.newThisMonth || 0} New Matters</span>
+                            <div className="mt-auto pt-8 border-t border-slate-50 dark:border-slate-700/50 relative z-10">
+                                <p className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-2">
+                                    <Sparkles size={14} /> +{metrics?.matters?.newThisMonth || 0} THIS PERIOD
                                 </p>
                             </div>
                         </div>
 
-                        {/* Expenses Card */}
-                        <div className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-2xl border border-white/60 dark:border-white/10 rounded-[2rem] p-8 flex flex-col justify-between group relative overflow-hidden min-w-0 glass-panel stagger-3">
+                        {/* Operational Burn */}
+                        <div className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl border border-white dark:border-slate-700/50 rounded-[2.5rem] p-10 flex flex-col justify-between group glass-panel stagger-3 relative overflow-hidden">
                              <div className="absolute top-0 right-0 w-32 h-32 bg-orange-500/5 rounded-full blur-2xl group-hover:bg-orange-500/10 transition-colors pointer-events-none" />
-                            <div className="flex justify-between items-start relative z-10 gap-4">
-                                <div className="w-12 h-12 shrink-0 bg-slate-100 dark:bg-slate-700/50 rounded-xl flex items-center justify-center text-slate-700 dark:text-slate-300 group-hover:scale-110 group-hover:bg-orange-500 group-hover:text-white group-hover:shadow-lg group-hover:shadow-orange-500/25 transition-all duration-300">
+                             <div className="flex justify-between items-start relative z-10 gap-4">
+                                <div className="w-12 h-12 shrink-0 bg-slate-50 dark:bg-slate-900 rounded-2xl flex items-center justify-center text-slate-400 group-hover:text-orange-500 transition-colors">
                                     <TrendingDown size={24} />
                                 </div>
                             </div>
-                            <div className="relative z-10 mt-6 md:mt-10 min-w-0">
-                                <p className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-[0.2em] mb-2 truncate">Operational Burn</p>
-                                <p className="text-2xl lg:text-3xl font-black text-slate-900 dark:text-white tracking-tight mb-2 truncate">{formatCurrency(animatedExpensesTotal)}</p>
-                                <p className="text-[10px] font-bold text-orange-600 dark:text-orange-400 uppercase tracking-wider truncate">{metrics?.expenses?.count || 0} Ledger Entries</p>
+                            <div className="relative z-10">
+                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Operational Burn</p>
+                                <p className="text-2xl lg:text-3xl font-black text-slate-900 dark:text-white truncate tracking-tight">{formatCurrency(animatedExpensesTotal)}</p>
+                                <p className="text-[10px] font-bold text-orange-600 dark:text-orange-400 uppercase tracking-wider mt-2">{metrics?.expenses?.count || 0} TRACKED ENTRIES</p>
                             </div>
                         </div>
                     </div>
 
-                        {/* Secondary Row */}
-                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+                    {/* Secondary Row */}
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
                         
                         {/* Case Distribution */}
-                        <div className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-2xl border border-white/60 dark:border-white/10 rounded-[2rem] p-8 lg:p-10 flex flex-col glass-panel stagger-4">
-                            <div className="flex items-center justify-between mb-8">
-                                <h3 className="text-xl font-black text-slate-900 dark:text-white tracking-tight">Case Distribution</h3>
-                                <Target className="text-slate-400" size={24} />
-                            </div>
-                            
-                            <div className="flex flex-col items-center justify-center flex-1">
-                                <div className="relative w-48 h-48 rounded-full mb-8 shadow-inner hover:scale-105 transition-transform duration-500" style={{ background: matterGradient }}>
-                                    <div className="absolute inset-8 bg-white dark:bg-slate-900 rounded-full flex flex-col items-center justify-center shadow-sm">
-                                        <span className="text-3xl font-black text-slate-900 dark:text-white leading-tight">{(totalMatters !== 1) ? animatedTotalCases : 0}</span>
-                                        <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-[0.2em] mt-1 text-center">Total<br/>Cases</span>
+                        <div className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl border border-white dark:border-slate-700/50 rounded-[3rem] p-10 glass-panel stagger-4">
+                            <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-10 tracking-tight">Case Distribution</h3>
+                            <div className="flex flex-col items-center">
+                                <div className="relative w-44 h-44 rounded-full mb-10" style={{ background: matterGradient }}>
+                                    <div className="absolute inset-10 bg-white dark:bg-slate-800 rounded-full flex flex-col items-center justify-center shadow-inner">
+                                        <span className="text-2xl font-black text-slate-900 dark:text-white">{(totalMatters !== 1) ? animatedTotalCases : 0}</span>
+                                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1 text-center leading-tight">Total<br/>Volume</span>
                                     </div>
                                 </div>
-
-                                <div className="w-full grid grid-cols-2 gap-3">
+                                <div className="w-full grid grid-cols-2 gap-4">
                                     {matterDistribution.map((d: any, i: number) => (
-                                        <div key={d.status} className="flex items-center justify-between p-3 rounded-2xl bg-slate-50/50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700 hover:bg-white dark:hover:bg-slate-700 hover:shadow-md hover:border-emerald-500/20 transition-all group">
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-3 h-3 rounded-md" style={{ background: pieColors[i % pieColors.length] }} />
-                                                <span className="text-[10px] font-bold text-slate-600 dark:text-slate-300 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors uppercase tracking-[0.1em]">{d.status}</span>
+                                        <div key={d.status} className="flex flex-col gap-1 p-3 rounded-2xl bg-slate-50 dark:bg-slate-900/50 border border-transparent hover:border-emerald-500/20 transition-all">
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-2.5 h-2.5 rounded-full" style={{ background: pieColors[i % pieColors.length] }} />
+                                                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">{d.status}</span>
                                             </div>
-                                            <span className="text-sm font-black text-slate-900 dark:text-white">{d.count}</span>
+                                            <span className="text-lg font-black text-slate-800 dark:text-white pl-4">{d.count}</span>
                                         </div>
                                     ))}
                                 </div>
                             </div>
                         </div>
 
-                        {/* Top Clients Table */}
-                        <div className="lg:col-span-2 bg-white/70 dark:bg-slate-800/70 backdrop-blur-2xl border border-white/60 dark:border-white/10 rounded-[2rem] overflow-hidden flex flex-col glass-panel stagger-4">
-                            <div className="p-6 lg:p-8 pb-6 flex items-center justify-between border-b border-slate-100 dark:border-slate-800 gap-4">
+                        {/* Top Revenue Drivers Table */}
+                        <div className="lg:col-span-2 bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl border border-white dark:border-slate-700/50 rounded-[3rem] glass-panel stagger-4 overflow-hidden flex flex-col">
+                            <div className="p-10 pb-6 flex items-center justify-between">
                                 <div>
-                                    <h3 className="text-xl font-black text-slate-900 dark:text-white tracking-tight">Top Revenue Drivers</h3>
-                                    <p className="text-slate-500 dark:text-slate-400 text-sm font-medium mt-1">High-value client relationship matrix</p>
+                                    <h3 className="text-xl font-bold text-slate-800 dark:text-white tracking-tight">Top Revenue Drivers</h3>
+                                    <p className="text-slate-400 text-sm font-medium mt-1">High-value client relationship matrix</p>
                                 </div>
-                                <div className="w-12 h-12 bg-emerald-50 dark:bg-emerald-500/10 rounded-2xl flex items-center justify-center text-emerald-600 dark:text-emerald-400">
-                                    <Users size={24} />
-                                </div>
+                                <Users size={24} className="text-slate-300" />
                             </div>
                             
-                            <div className="overflow-x-auto p-4">
-                                <table className="w-full text-left border-collapse">
-                                    <thead>
-                                        <tr className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500 border-b border-slate-100/50 dark:border-slate-800/30">
-                                            <th className="py-4 px-6">Global Client</th>
-                                            <th className="py-4 px-6">Lifecycle Revenue</th>
-                                            <th className="py-4 px-6 text-right">Settlement status</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-slate-50/50 dark:divide-slate-800/50">
-                                        {topClients.map((client: any) => (
-                                            <tr key={client.name} className="group hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
-                                                <td className="py-4 px-4">
-                                                    <div className="flex items-center gap-4">
-                                                        <div className="w-12 h-12 bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-700 dark:to-slate-800 border border-white dark:border-slate-600 shadow-sm rounded-[1rem] flex items-center justify-center text-slate-700 dark:text-slate-300 font-black text-sm group-hover:from-emerald-400 group-hover:to-teal-500 group-hover:text-white group-hover:shadow-md transition-all duration-300">
-                                                            {client.name.substring(0, 2).toUpperCase()}
-                                                        </div>
-                                                        <div>
-                                                            <p className="text-sm font-black text-slate-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">{client.name}</p>
-                                                            <p className="text-[11px] font-bold text-slate-500 dark:text-slate-400 mt-0.5 tracking-wide">{client.activeMatters} Active Briefs</p>
-                                                        </div>
-                                                    </div>
-                                                </td>
-                                                <td className="py-4 px-6 text-sm font-black text-slate-900 dark:text-white">
-                                                    <span className="bg-slate-100/50 dark:bg-slate-800/50 px-3 py-1.5 rounded-lg">{formatCurrency(client.totalRevenue)}</span>
-                                                </td>
-                                                <td className="py-4 px-4 text-right">
-                                                    <span className={`inline-flex items-center justify-center px-4 py-1.5 rounded-full text-[10px] font-black tracking-[0.15em] uppercase border shadow-sm ${
-                                                        client.status === 'PAID' ? 'bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20' : 
-                                                        client.status.includes('PARTLY') ? 'bg-amber-50 text-amber-600 border-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20' : 'bg-red-50 text-red-600 border-red-200 dark:bg-red-500/10 dark:text-red-400 dark:border-red-500/20'
-                                                    }`}>
-                                                        {client.status}
-                                                    </span>
-                                                </td>
+                            <div className="overflow-x-auto">
+                                <div className="min-w-[700px] p-6 lg:p-10 pt-0">
+                                    <table className="w-full text-left border-collapse">
+                                        <thead>
+                                            <tr className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 border-b border-slate-50 dark:border-slate-800">
+                                                <th className="pb-6 pr-6">Client Identity</th>
+                                                <th className="pb-6 px-6">Lifecycle Rev</th>
+                                                <th className="pb-6 pl-6 text-right">Status</th>
                                             </tr>
-                                        ))}
-                                        {topClients.length === 0 && (
-                                            <tr><td colSpan={4} className="py-20 text-center text-slate-500 font-medium">Clear of current lead activity</td></tr>
-                                        )}
-                                    </tbody>
-                                </table>
+                                        </thead>
+                                        <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
+                                            {topClients.map((client: any) => (
+                                                <tr key={client.name} className="group transition-colors">
+                                                    <td className="py-5 pr-6">
+                                                        <div className="flex items-center gap-4">
+                                                            <div className="w-12 h-12 bg-slate-100 dark:bg-slate-900 rounded-2xl flex items-center justify-center text-slate-700 dark:text-slate-200 font-black text-sm group-hover:bg-slate-900 group-hover:text-white dark:group-hover:bg-emerald-500 transition-all">
+                                                                {client.name.substring(0, 2).toUpperCase()}
+                                                            </div>
+                                                            <div>
+                                                                <p className="text-sm font-bold text-slate-800 dark:text-white uppercase tracking-tight">{client.name}</p>
+                                                                <p className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-widest">{client.activeMatters} Briefs</p>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                    <td className="py-5 px-6">
+                                                        <span className="text-sm font-black text-slate-800 dark:text-white">{formatCurrency(client.totalRevenue)}</span>
+                                                    </td>
+                                                    <td className="py-5 pl-6 text-right">
+                                                        <span className={`inline-flex px-4 py-1.5 rounded-full text-[9px] font-bold tracking-widest uppercase border shadow-sm ${
+                                                            client.status === 'PAID' ? 'bg-emerald-50 text-emerald-600 border-emerald-100 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20' : 
+                                                            client.status.includes('PARTLY') ? 'bg-amber-50 text-amber-600 border-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20' : 'bg-red-50 text-red-600 border-red-100 dark:bg-red-500/10 dark:text-red-400 dark:border-red-500/20'
+                                                        }`}>
+                                                            {client.status}
+                                                        </span>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
                             </div>
                         </div>
                     </div>
 
-                    {/* Performance Row */}
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+                    {/* Final Row: Performance */}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
                         
                         {/* Council Performance */}
-                        <div className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-2xl border border-white/60 dark:border-white/10 rounded-[2rem] p-8 lg:p-10 glass-panel stagger-5">
-                            <div className="flex items-center justify-between mb-8 pb-6 border-b border-slate-100 dark:border-slate-800 gap-4 text-clip">
-                                <h3 className="text-xl font-black text-slate-900 dark:text-white tracking-tight truncate">Council Performance</h3>
-                                <div className="w-10 h-10 shrink-0 bg-slate-100 dark:bg-slate-700/50 rounded-xl flex items-center justify-center text-slate-500 dark:text-slate-400">
-                                    <Users size={20} />
-                                </div>
-                            </div>
-                            <div className="space-y-4">
+                        <div className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl border border-white dark:border-slate-700/50 rounded-[2.5rem] p-10 glass-panel stagger-5">
+                            <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-8 tracking-tight">Council Performance</h3>
+                            <div className="space-y-6">
                                 {lawyerStats.map((lawyer: any, idx: number) => (
-                                    <div key={lawyer.name} className="flex items-center justify-between p-4 rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-800/50 border border-transparent hover:border-slate-100 dark:hover:border-slate-700/50 transition-all group min-w-0">
-                                        <div className="flex items-center gap-4 lg:gap-5 min-w-0">
-                                            <span className="text-sm font-black text-slate-300 dark:text-slate-600 group-hover:text-emerald-500 transition-colors w-6 text-right shrink-0">0{idx + 1}</span>
-                                            <div className="min-w-0">
-                                                <p className="text-base font-black text-slate-900 dark:text-white truncate">{lawyer.name}</p>
-                                                <p className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-[0.1em] mt-0.5 flex items-center gap-1 truncate">
-                                                    <Target size={10} className="shrink-0" /> <span className="truncate">{lawyer.topCourt || 'Federal High Court'}</span>
-                                                </p>
+                                    <div key={lawyer.name} className="flex items-center justify-between group">
+                                        <div className="flex items-center gap-6">
+                                            <span className="text-xs font-bold text-slate-300 group-hover:text-emerald-500 transition-colors w-4">0{idx + 1}</span>
+                                            <div>
+                                                <p className="text-sm font-bold text-slate-800 dark:text-white uppercase tracking-tight">{lawyer.name}</p>
+                                                <p className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-widest">{lawyer.topCourt || 'Federal High Court'}</p>
                                             </div>
                                         </div>
-                                        <div className="flex flex-col items-end shrink-0 pl-2">
-                                            <span className="text-xl font-black text-slate-900 dark:text-white">{lawyer.appearances}</span>
-                                            <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mt-0.5">Appearances</span>
+                                        <div className="text-right">
+                                            <p className="text-xl font-black text-slate-800 dark:text-white">{lawyer.appearances}</p>
+                                            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Sittings</p>
                                         </div>
                                     </div>
                                 ))}
@@ -413,34 +400,25 @@ export default function AnalyticsClient({ data, workspaceId, initialFilter }: An
                         </div>
 
                         {/* Jurisdictional Footprint */}
-                        <div className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-2xl border border-white/60 dark:border-white/10 rounded-[2rem] p-8 lg:p-10 glass-panel stagger-5 flex flex-col justify-between">
-                            <div className="flex items-center justify-between mb-8 pb-6 border-b border-slate-100 dark:border-slate-800 relative z-10 gap-4 text-clip">
-                                <h3 className="text-xl font-black text-slate-900 dark:text-white tracking-tight truncate">Jurisdictional Footprint</h3>
-                                <div className="w-10 h-10 shrink-0 bg-slate-100 dark:bg-slate-700/50 rounded-xl flex items-center justify-center text-slate-500 dark:text-slate-400 group-hover:bg-teal-500 group-hover:text-white transition-all duration-300">
-                                    <ChevronRight size={20} />
-                                </div>
-                            </div>
-                            <div className="space-y-6 relative z-10 px-2 min-w-0">
+                        <div className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl border border-white dark:border-slate-700/50 rounded-[2.5rem] p-10 glass-panel stagger-5">
+                            <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-8 tracking-tight">Jurisdictional Activity</h3>
+                            <div className="space-y-8">
                                 {courtVisits.map((cv: any) => (
-                                    <div key={cv.court} className="relative min-w-0">
-                                        <div className="flex justify-between items-center mb-3 min-w-0 gap-2 text-clip w-full">
-                                            <span className="text-sm font-bold text-slate-700 dark:text-slate-200 truncate">{cv.court}</span>
-                                            <span className="text-[11px] shrink-0 font-black tracking-wider text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded">{cv.count} VISITS</span>
+                                    <div key={cv.court}>
+                                        <div className="flex justify-between items-center mb-3">
+                                            <span className="text-xs font-bold text-slate-600 dark:text-slate-300 uppercase tracking-tight">{cv.court}</span>
+                                            <span className="text-[10px] font-black text-slate-400">{cv.count} VISITS</span>
                                         </div>
-                                        <div className="h-2.5 w-full bg-slate-100 dark:bg-slate-800 box-shadow-inner rounded-full overflow-hidden">
+                                        <div className="h-2.5 w-full bg-slate-100 dark:bg-slate-900 rounded-full overflow-hidden">
                                             <div 
-                                                className="h-full bg-gradient-to-r from-emerald-400 to-teal-500 rounded-full group-hover:opacity-90 relative transition-all duration-1000 ease-out"
+                                                className="h-full bg-gradient-to-r from-emerald-400 to-teal-500 rounded-full transition-all duration-1000 ease-out"
                                                 style={{ width: `${Math.min((cv.count / (courtVisits[0]?.count || 1)) * 100, 100)}%` }}
-                                            >
-                                                <div className="absolute top-0 right-0 bottom-0 w-20 bg-gradient-to-r from-transparent to-white/30 animate-pulse" />
-                                            </div>
+                                            />
                                         </div>
                                     </div>
                                 ))}
-                                {courtVisits.length === 0 && <p className="text-center py-12 font-medium text-slate-400">No jurisdictional data recorded</p>}
                             </div>
                         </div>
-
                     </div>
 
                 </div>

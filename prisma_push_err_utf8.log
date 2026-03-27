@@ -1,0 +1,49 @@
+﻿Environment variables loaded from .env
+Prisma schema loaded from prisma\schema.prisma
+Datasource "db": PostgreSQL database "postgres", schema "public" at "aws-1-eu-central-1.pooler.supabase.com:5432"
+node.exe : Error: insert 
+or update on table 
+"SecurityAuditLog" 
+violates foreign key 
+constraint "SecurityAuditL
+og_userId_fkey"
+At line:1 char:1
++ & "C:\Program 
+Files\nodejs/node.exe" 
+"C:\Program 
+Files\nodejs/node_mo ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo        
+      : NotSpecified: (E  
+  rror: insert o...og_u   
+ serId_fkey":String) [    
+], RemoteException
+    + FullyQualifiedError 
+   Id : NativeCommandErr  
+  or
+ 
+   0: sql_schema_connector
+::apply_migration::migrati
+on_step
+           with 
+step=AddForeignKey { 
+foreign_key_id: 
+ForeignKeyId(67) }
+             at schema-eng
+ine\connectors\sql-schema-
+connector\src\apply_migrat
+ion.rs:21
+   1: sql_schema_connector
+::apply_migration::apply_m
+igration
+             at schema-eng
+ine\connectors\sql-schema-
+connector\src\apply_migrat
+ion.rs:10
+   2: schema_core::state::
+SchemaPush
+             at schema-eng
+ine\core\src\state.rs:504
+

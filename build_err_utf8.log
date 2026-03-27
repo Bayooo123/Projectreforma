@@ -1,0 +1,87 @@
+﻿
+> reforma-os@0.1.0 build
+> echo 'USING WEBPACK' && next build --webpack
+
+'USING WEBPACK' 
+node.exe : [baseline-brows
+er-mapping] The data in 
+this module is over two 
+months old.  To ensure 
+accurate Baseline data, 
+please update: `npm i base
+line-browser-mapping@lates
+t -D`
+At line:1 char:1
++ & "C:\Program 
+Files\nodejs/node.exe" 
+"C:\Program 
+Files\nodejs/node_mo ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo        
+      : NotSpecified: ([  
+  baseline-brows...ping   
+ @latest -D`:String) [    
+], RemoteException
+    + FullyQualifiedError 
+   Id : NativeCommandErr  
+  or
+ 
+   Γû▓ Next.js 16.0.7 (webpack)
+   - Environments: .env.local, .env
+
+ ΓÜá The "middleware" 
+file convention is 
+deprecated. Please use 
+"proxy" instead. Learn 
+more: https://nextjs.org/d
+ocs/messages/middleware-to
+-proxy
+   Creating an optimized production build ...
+ Γ£ô Compiled successfully in 105s
+   Running TypeScript ...
+Failed to compile.
+
+.next/dev/types/validator.
+ts:629:39
+Type error: Cannot find 
+module '../../../src/app/a
+pi/v1/jeql/route.js' or 
+its corresponding type 
+declarations.
+
+[0m [90m 627 |[39m {
+ [90m 628 |[39m   type _
+_IsExpected[33m<[39m[33
+mSpecific[39m 
+[36mextends[39m [33mRou
+teHandlerConfig[39m[33m<
+[39m[32m"/api/v1/jeql"[
+39m[33m>>[39m 
+[33m=[39m 
+[33mSpecific[39m
+[31m[1m>[22m[39m[90m 
+629 |[39m   
+[36mconst[39m handler 
+[33m=[39m {} 
+[36mas[39m 
+[36mtypeof[39m [36mimpo
+rt[39m([32m"../../../src
+/app/api/v1/jeql/route.js"
+[39m)
+ [90m     |[39m         
+                          
+    [31m[1m^[22m[39m
+ [90m 630 |[39m   type 
+__Check [33m=[39m __IsEx
+pected[33m<[39m[36mtype
+of[39m handler[33m>[39m
+ [90m 631 |[39m   
+[90m// @ts-ignore[39m
+ [90m 632 |[39m   type 
+__Unused [33m=[39m 
+__Check[0m
+Next.js build worker 
+exited with code: 1 and 
+signal: null
