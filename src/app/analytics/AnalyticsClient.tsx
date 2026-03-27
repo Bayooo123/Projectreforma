@@ -54,11 +54,11 @@ export default function AnalyticsClient({ data, workspaceId, initialFilter }: An
 
     // Dynamic Chart Points with NaN Protection
     const getChartPoints = () => {
-        if (revenueTrend.length < 2) return "";
+        if (!revenueTrend || revenueTrend.length < 2) return "0,100 100,100";
         return revenueTrend.map((d: any, i: number) => {
             const x = (i / (revenueTrend.length - 1)) * 100;
-            const y = 100 - ((d.amount || 0) / maxRevenue) * 80;
-            if (!Number.isFinite(x) || !Number.isFinite(y)) return "0,0";
+            const y = 90 - ((d.amount || 0) / maxRevenue) * 80;
+            if (!Number.isFinite(x) || !Number.isFinite(y)) return "0,90";
             return `${x},${y}`;
         }).join(' ');
     };
@@ -123,7 +123,7 @@ export default function AnalyticsClient({ data, workspaceId, initialFilter }: An
                 <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-emerald-500/20 rounded-full blur-[120px] mix-blend-multiply dark:mix-blend-screen pointer-events-none" />
                 <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-teal-500/20 rounded-full blur-[120px] mix-blend-multiply dark:mix-blend-screen pointer-events-none" />
 
-                <div className="p-8 max-w-[1600px] mx-auto min-h-screen animate-fade-in relative z-10">
+                <div className="p-4 md:p-8 max-w-[1600px] mx-auto min-h-screen animate-fade-in relative z-10 text-slate-900 dark:text-slate-100">
                     
                     {/* Header Cockpit Section */}
                     <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
@@ -132,13 +132,13 @@ export default function AnalyticsClient({ data, workspaceId, initialFilter }: An
                                 <Sparkles size={16} className="text-emerald-500" />
                                 <span className="text-xs font-bold uppercase tracking-[0.2em] text-emerald-600 dark:text-emerald-400">Insights Engine</span>
                             </div>
-                            <h1 className="text-5xl font-black tracking-tight text-slate-900 dark:text-white mb-2">
-                                Executive <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 to-teal-400">Cockpit</span>
+                            <h1 className="text-4xl md:text-5xl font-black tracking-tight text-slate-900 dark:text-white mb-2">
+                                Executive <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 to-teal-400">Dashboard</span>
                             </h1>
                             <p className="text-slate-500 dark:text-slate-400 font-medium text-lg">Firm performance for {new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</p>
                         </div>
 
-                        <div className="flex items-center gap-2 p-1.5 rounded-2xl bg-white/60 dark:bg-slate-800/60 backdrop-blur-xl border border-white/40 dark:border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.04)]">
+                        <div className="flex items-center gap-2 p-1 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm">
                             {['this-month', 'last-month', 'quarterly'].map((f) => (
                                 <button
                                     key={f}
@@ -173,8 +173,8 @@ export default function AnalyticsClient({ data, workspaceId, initialFilter }: An
                         </div>
                     )}
 
-                        {/* Main Bento Grid */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 mb-6">
+                        {/* Main Grid */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
                             
                             {/* Key Revenue Stat (Large Card) */}
                             <div className="md:col-span-2 bg-white/70 dark:bg-slate-800/70 backdrop-blur-2xl border border-white/60 dark:border-white/10 rounded-[2.5rem] p-6 lg:p-8 xl:p-10 group overflow-hidden relative min-w-0 glass-panel stagger-1">
@@ -185,7 +185,7 @@ export default function AnalyticsClient({ data, workspaceId, initialFilter }: An
                                         <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-[0.2em] mb-3 flex items-center gap-2 truncate">
                                             Total Collections
                                         </p>
-                                        <h2 className="text-4xl md:text-5xl xl:text-[4rem] leading-none font-black tracking-tighter text-slate-900 dark:text-white mb-6 truncate">
+                                        <h2 className="text-4xl lg:text-5xl font-black tracking-tighter text-slate-900 dark:text-white mb-6">
                                             {formatCurrency(animatedRevenueTotal)}
                                         </h2>
                                         <div className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold inline-flex shadow-sm whitespace-nowrap ${
@@ -200,19 +200,27 @@ export default function AnalyticsClient({ data, workspaceId, initialFilter }: An
                                     </div>
                                 </div>
 
-                            {/* Mini Chart for Visual Context */}
-                            <div className="mt-10 h-32 w-full relative">
-                                 <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="w-full h-full opacity-60 group-hover:opacity-100 transition-opacity duration-500">
+                            {/* Standard Line Graph Visualization */}
+                            <div className="mt-10 h-40 w-full relative">
+                                 <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="w-full h-full opacity-80 group-hover:opacity-100 transition-opacity duration-500 overflow-visible">
                                     <defs>
                                         <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="0%" stopColor="#10B981" stopOpacity="0.4" />
+                                            <stop offset="0%" stopColor="#10B981" stopOpacity="0.2" />
                                             <stop offset="100%" stopColor="#10B981" stopOpacity="0" />
                                         </linearGradient>
-                                        <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
-                                            <feGaussianBlur stdDeviation="2" result="blur" />
-                                            <feComposite in="SourceGraphic" in2="blur" operator="over" />
-                                        </filter>
                                     </defs>
+                                    
+                                    {/* Horizontal Grid Lines */}
+                                    {[0, 25, 50, 75, 100].map((v) => (
+                                        <line 
+                                            key={v} 
+                                            x1="0" y1={v} x2="100" y2={v} 
+                                            stroke="currentColor" 
+                                            className="text-slate-100 dark:text-slate-700/50" 
+                                            strokeWidth="0.5" 
+                                        />
+                                    ))}
+
                                     <path 
                                         d={`M 0,100 L ${getChartPoints()} L 100,100 Z`}
                                         fill="url(#chartGradient)"
@@ -220,66 +228,84 @@ export default function AnalyticsClient({ data, workspaceId, initialFilter }: An
                                     <polyline
                                         fill="none"
                                         stroke="#10B981"
-                                        strokeWidth="3"
+                                        strokeWidth="2.5"
                                         strokeLinecap="round"
                                         strokeLinejoin="round"
                                         vectorEffect="non-scaling-stroke"
                                         points={getChartPoints()}
-                                        filter="url(#glow)"
-                                        className="group-hover:stroke-[4px] transition-all duration-500 animate-draw"
+                                        className="animate-draw"
                                     />
+
+                                    {/* Data Points */}
+                                    {revenueTrend.map((d: any, i: number) => {
+                                        const x = (i / (revenueTrend.length - 1)) * 100;
+                                        const y = 90 - ((d.amount || 0) / maxRevenue) * 80;
+                                        return (
+                                            <circle 
+                                                key={i}
+                                                cx={x} cy={y} r="1.5"
+                                                fill="#10B981"
+                                                className="opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                                            />
+                                        );
+                                    })}
                                  </svg>
+                                 <div className="flex justify-between mt-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">
+                                    <span>{revenueTrend[0]?.month || 'Start'}</span>
+                                    <span>{revenueTrend[Math.floor(revenueTrend.length/2)]?.month}</span>
+                                    <span>{revenueTrend[revenueTrend.length-1]?.month || 'End'}</span>
+                                 </div>
                             </div>
                         </div>
 
                         {/* Active Matters Card */}
-                        <div className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-2xl border border-white/60 dark:border-white/10 rounded-[2.5rem] p-6 lg:p-8 flex flex-col justify-between group relative overflow-hidden min-w-0 glass-panel stagger-2">
+                        <div className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-2xl border border-white/60 dark:border-white/10 rounded-[2rem] p-8 flex flex-col justify-between group relative overflow-hidden min-w-0 glass-panel stagger-2">
                             <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 rounded-full blur-2xl group-hover:bg-emerald-500/10 transition-colors pointer-events-none" />
                             <div className="flex justify-between items-start relative z-10 gap-4">
-                                <div className="w-14 h-14 shrink-0 bg-slate-100 dark:bg-slate-700/50 rounded-2xl flex items-center justify-center text-slate-700 dark:text-slate-300 group-hover:scale-110 group-hover:bg-emerald-500 group-hover:text-white group-hover:shadow-lg group-hover:shadow-emerald-500/25 transition-all duration-300">
-                                    <Briefcase size={28} />
+                                <div className="w-12 h-12 shrink-0 bg-slate-100 dark:bg-slate-700/50 rounded-xl flex items-center justify-center text-slate-700 dark:text-slate-300 group-hover:scale-110 group-hover:bg-emerald-500 group-hover:text-white group-hover:shadow-lg group-hover:shadow-emerald-500/25 transition-all duration-300">
+                                    <Briefcase size={24} />
                                 </div>
-                                <p className="text-5xl lg:text-[3.5rem] font-black text-slate-900 dark:text-white tracking-tighter leading-none min-w-0 truncate">{animatedActiveMatters}</p>
+                                <p className="text-4xl lg:text-5xl font-black text-slate-900 dark:text-white tracking-tighter leading-none">{animatedActiveMatters}</p>
                             </div>
-                            <div className="relative z-10 mt-8 min-w-0">
-                                <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-[0.2em] mb-2 truncate">Active Matters</p>
-                                <p className="text-sm font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1 truncate">
-                                    <Sparkles size={14} className="shrink-0" /> <span className="truncate">+{metrics?.matters?.newThisMonth || 0} Registered New</span>
+                            <div className="relative z-10 mt-6 md:mt-10 min-w-0">
+                                <p className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-[0.2em] mb-2 truncate">Active Matters</p>
+                                <p className="text-xs font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1 truncate">
+                                    <Sparkles size={12} className="shrink-0" /> <span className="truncate">+{metrics?.matters?.newThisMonth || 0} New Matters</span>
                                 </p>
                             </div>
                         </div>
 
                         {/* Expenses Card */}
-                        <div className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-2xl border border-white/60 dark:border-white/10 rounded-[2.5rem] p-6 lg:p-8 flex flex-col justify-between group relative overflow-hidden min-w-0 glass-panel stagger-3">
+                        <div className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-2xl border border-white/60 dark:border-white/10 rounded-[2rem] p-8 flex flex-col justify-between group relative overflow-hidden min-w-0 glass-panel stagger-3">
                              <div className="absolute top-0 right-0 w-32 h-32 bg-orange-500/5 rounded-full blur-2xl group-hover:bg-orange-500/10 transition-colors pointer-events-none" />
                             <div className="flex justify-between items-start relative z-10 gap-4">
-                                <div className="w-14 h-14 shrink-0 bg-slate-100 dark:bg-slate-700/50 rounded-2xl flex items-center justify-center text-slate-700 dark:text-slate-300 group-hover:scale-110 group-hover:bg-orange-500 group-hover:text-white group-hover:shadow-lg group-hover:shadow-orange-500/25 transition-all duration-300">
-                                    <TrendingDown size={28} />
+                                <div className="w-12 h-12 shrink-0 bg-slate-100 dark:bg-slate-700/50 rounded-xl flex items-center justify-center text-slate-700 dark:text-slate-300 group-hover:scale-110 group-hover:bg-orange-500 group-hover:text-white group-hover:shadow-lg group-hover:shadow-orange-500/25 transition-all duration-300">
+                                    <TrendingDown size={24} />
                                 </div>
                             </div>
-                            <div className="relative z-10 mt-8 min-w-0">
-                                <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-[0.2em] mb-2 truncate">Operational Burn</p>
-                                <p className="text-3xl lg:text-3xl font-black text-slate-900 dark:text-white tracking-tight mb-2 truncate">{formatCurrency(animatedExpensesTotal)}</p>
-                                <p className="text-xs font-bold text-orange-600 dark:text-orange-400 uppercase tracking-wider truncate">{metrics?.expenses?.count || 0} Ledger Entries</p>
+                            <div className="relative z-10 mt-6 md:mt-10 min-w-0">
+                                <p className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-[0.2em] mb-2 truncate">Operational Burn</p>
+                                <p className="text-2xl lg:text-3xl font-black text-slate-900 dark:text-white tracking-tight mb-2 truncate">{formatCurrency(animatedExpensesTotal)}</p>
+                                <p className="text-[10px] font-bold text-orange-600 dark:text-orange-400 uppercase tracking-wider truncate">{metrics?.expenses?.count || 0} Ledger Entries</p>
                             </div>
                         </div>
                     </div>
 
-                    {/* Secondary Analytics Row */}
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6 min-w-0">
+                        {/* Secondary Row */}
+                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
                         
-                        {/* Case Distribution (Donut style) */}
-                        <div className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-2xl border border-white/60 dark:border-white/10 rounded-[2.5rem] p-6 lg:p-8 flex flex-col transition-all duration-500 min-w-0 glass-panel stagger-4">
+                        {/* Case Distribution */}
+                        <div className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-2xl border border-white/60 dark:border-white/10 rounded-[2rem] p-8 lg:p-10 flex flex-col glass-panel stagger-4">
                             <div className="flex items-center justify-between mb-8">
                                 <h3 className="text-xl font-black text-slate-900 dark:text-white tracking-tight">Case Distribution</h3>
                                 <Target className="text-slate-400" size={24} />
                             </div>
                             
                             <div className="flex flex-col items-center justify-center flex-1">
-                                <div className="relative w-56 h-56 rounded-full mb-10 shadow-[inset_0_4px_10px_rgba(0,0,0,0.1)] hover:scale-105 transition-transform duration-500" style={{ background: matterGradient }}>
-                                    <div className="absolute inset-5 bg-white dark:bg-slate-900 rounded-full flex flex-col items-center justify-center shadow-[0_4px_20px_rgba(0,0,0,0.08)]">
-                                        <span className="text-5xl font-black text-slate-900 dark:text-white leading-tight">{(totalMatters !== 1) ? animatedTotalCases : 0}</span>
-                                        <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-[0.2em] mt-1">Total Cases</span>
+                                <div className="relative w-48 h-48 rounded-full mb-8 shadow-inner hover:scale-105 transition-transform duration-500" style={{ background: matterGradient }}>
+                                    <div className="absolute inset-8 bg-white dark:bg-slate-900 rounded-full flex flex-col items-center justify-center shadow-sm">
+                                        <span className="text-3xl font-black text-slate-900 dark:text-white leading-tight">{(totalMatters !== 1) ? animatedTotalCases : 0}</span>
+                                        <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-[0.2em] mt-1 text-center">Total<br/>Cases</span>
                                     </div>
                                 </div>
 
@@ -297,8 +323,8 @@ export default function AnalyticsClient({ data, workspaceId, initialFilter }: An
                             </div>
                         </div>
 
-                        {/* Top Clients Table Component */}
-                        <div className="lg:col-span-2 bg-white/70 dark:bg-slate-800/70 backdrop-blur-2xl border border-white/60 dark:border-white/10 rounded-[2.5rem] overflow-hidden flex flex-col transition-all duration-500 min-w-0 glass-panel stagger-4">
+                        {/* Top Clients Table */}
+                        <div className="lg:col-span-2 bg-white/70 dark:bg-slate-800/70 backdrop-blur-2xl border border-white/60 dark:border-white/10 rounded-[2rem] overflow-hidden flex flex-col glass-panel stagger-4">
                             <div className="p-6 lg:p-8 pb-6 flex items-center justify-between border-b border-slate-100 dark:border-slate-800 gap-4">
                                 <div>
                                     <h3 className="text-xl font-black text-slate-900 dark:text-white tracking-tight">Top Revenue Drivers</h3>
@@ -312,11 +338,10 @@ export default function AnalyticsClient({ data, workspaceId, initialFilter }: An
                             <div className="overflow-x-auto p-4">
                                 <table className="w-full text-left border-collapse">
                                     <thead>
-                                        <tr className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500 border-b border-slate-100 dark:border-slate-800/50">
-                                            <th className="py-5 px-4">Global Client</th>
-                                            <th className="py-5 px-4">Lifecycle Revenue</th>
-                                            <th className="py-5 px-4">Exposure</th>
-                                            <th className="py-5 px-4 text-right">Settlement status</th>
+                                        <tr className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500 border-b border-slate-100/50 dark:border-slate-800/30">
+                                            <th className="py-4 px-6">Global Client</th>
+                                            <th className="py-4 px-6">Lifecycle Revenue</th>
+                                            <th className="py-4 px-6 text-right">Settlement status</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-50/50 dark:divide-slate-800/50">
@@ -333,13 +358,8 @@ export default function AnalyticsClient({ data, workspaceId, initialFilter }: An
                                                         </div>
                                                     </div>
                                                 </td>
-                                                <td className="py-4 px-4 text-sm font-black text-slate-900 dark:text-white">
-                                                    <span className="bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded-lg">{formatCurrency(client.totalRevenue)}</span>
-                                                </td>
-                                                <td className="py-4 px-4">
-                                                    <span className="text-sm font-bold text-red-500 bg-red-50 dark:bg-red-500/10 px-3 py-1.5 rounded-lg">
-                                                        {formatCurrency(client.outstanding)}
-                                                    </span>
+                                                <td className="py-4 px-6 text-sm font-black text-slate-900 dark:text-white">
+                                                    <span className="bg-slate-100/50 dark:bg-slate-800/50 px-3 py-1.5 rounded-lg">{formatCurrency(client.totalRevenue)}</span>
                                                 </td>
                                                 <td className="py-4 px-4 text-right">
                                                     <span className={`inline-flex items-center justify-center px-4 py-1.5 rounded-full text-[10px] font-black tracking-[0.15em] uppercase border shadow-sm ${
@@ -360,11 +380,11 @@ export default function AnalyticsClient({ data, workspaceId, initialFilter }: An
                         </div>
                     </div>
 
-                    {/* Final Performance Row */}
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 min-w-0">
+                    {/* Performance Row */}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
                         
-                        {/* Lawyer Performance Card */}
-                        <div className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-2xl border border-white/60 dark:border-white/10 rounded-[2.5rem] p-6 lg:p-8 transition-all duration-500 min-w-0 glass-panel stagger-5">
+                        {/* Council Performance */}
+                        <div className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-2xl border border-white/60 dark:border-white/10 rounded-[2rem] p-8 lg:p-10 glass-panel stagger-5">
                             <div className="flex items-center justify-between mb-8 pb-6 border-b border-slate-100 dark:border-slate-800 gap-4 text-clip">
                                 <h3 className="text-xl font-black text-slate-900 dark:text-white tracking-tight truncate">Council Performance</h3>
                                 <div className="w-10 h-10 shrink-0 bg-slate-100 dark:bg-slate-700/50 rounded-xl flex items-center justify-center text-slate-500 dark:text-slate-400">
@@ -392,8 +412,8 @@ export default function AnalyticsClient({ data, workspaceId, initialFilter }: An
                             </div>
                         </div>
 
-                        {/* Court Frequency Card */}
-                        <div className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-2xl border border-white/60 dark:border-white/10 rounded-[2.5rem] p-6 lg:p-8 overflow-hidden relative group transition-all duration-500 min-w-0 glass-panel stagger-5">
+                        {/* Jurisdictional Footprint */}
+                        <div className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-2xl border border-white/60 dark:border-white/10 rounded-[2rem] p-8 lg:p-10 glass-panel stagger-5 flex flex-col justify-between">
                             <div className="flex items-center justify-between mb-8 pb-6 border-b border-slate-100 dark:border-slate-800 relative z-10 gap-4 text-clip">
                                 <h3 className="text-xl font-black text-slate-900 dark:text-white tracking-tight truncate">Jurisdictional Footprint</h3>
                                 <div className="w-10 h-10 shrink-0 bg-slate-100 dark:bg-slate-700/50 rounded-xl flex items-center justify-center text-slate-500 dark:text-slate-400 group-hover:bg-teal-500 group-hover:text-white transition-all duration-300">
