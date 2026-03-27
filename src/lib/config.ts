@@ -9,8 +9,8 @@ const envSchema = z.object({
 
     // Authentication
     NEXTAUTH_SECRET: z.string().min(32),
-    NEXTAUTH_URL: z.string().url().optional(),
-    NEXT_PUBLIC_APP_URL: z.string().url().default('http://localhost:3000'),
+    NEXTAUTH_URL: z.string().optional(),
+    NEXT_PUBLIC_APP_URL: z.string().default('http://localhost:3000'),
 
     // External Services
     BLOB_READ_WRITE_TOKEN: z.string().optional(),
@@ -48,7 +48,10 @@ let _config: EnvConfig | null = null;
 export function getConfig(): EnvConfig {
     if (_config) return _config;
 
-    const result = envSchema.safeParse(process.env);
+    const env = Object.fromEntries(
+        Object.entries(process.env).map(([key, value]) => [key, typeof value === 'string' ? value.trim() : value])
+    );
+    const result = envSchema.safeParse(env);
 
     if (!result.success) {
         console.error('❌ Invalid environment variables:', result.error.format());
