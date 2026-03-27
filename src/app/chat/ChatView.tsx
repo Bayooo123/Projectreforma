@@ -71,15 +71,21 @@ export default function ChatView() {
         return <BicaError code={state.code} message={state.message} />;
     }
 
-    return (
-        <iframe
-            src={state.entryUrl}
-            className={styles.iframe}
-            allow="microphone; camera"
-            referrerPolicy="origin"
-            title="Reforma AI Assistant"
-        />
-    );
+    // Redirect to entryUrl instead of using iframe
+    // The iframe doesn't work seamlessly and keeps showing the Fladov login page
+    // A full page redirect provides a better user experience
+    if (state.status === 'ready') {
+        if (typeof window !== 'undefined') {
+            window.location.href = state.entryUrl;
+        }
+        return (
+            <div className={styles.loadingContainer}>
+                <div className={styles.skeleton} />
+            </div>
+        );
+    }
+
+    return null;
 }
 
 // ---------------------------------------------------------------------------
