@@ -1,6 +1,14 @@
 import { JeqlValidationError } from './errors';
 import { compileScalarOperator } from './operators';
-import { JeqlCompileOptions, JeqlCompiledQuery, JeqlCondition, JeqlQuery, JeqlRelationQueryMap, JeqlSimpleCondition } from './types';
+import {
+  JeqlCompileOptions,
+  JeqlCompiledQuery,
+  JeqlCondition,
+  JeqlQuery,
+  JeqlRelationCardinality,
+  JeqlRelationQueryMap,
+  JeqlSimpleCondition,
+} from './types';
 import {
   assertFieldName,
   buildSearchFragments,
@@ -21,7 +29,7 @@ export class JeqlCompiler {
     }
 
     const compiled: JeqlCompiledQuery = {};
-    const where = this.compileWhere(query, options.baseWhere);
+    const where = this.compileWhere(query, options.baseWhere, options.relationCardinality);
     const projection = this.compileProjection(query);
     const orderBy = this.compileOrderBy(query.$orderBy);
     const take = parsePositiveInteger(query.$limit, '$limit');
@@ -43,7 +51,11 @@ export class JeqlCompiler {
     }
   }
 
-  private compileWhere(query: JeqlQuery, baseWhere?: Record<string, unknown>): Record<string, unknown> | undefined {
+  private compileWhere(
+    query: JeqlQuery,
+    baseWhere?: Record<string, unknown>,
+    relationCardinality?: Record<string, JeqlRelationCardinality>
+  ): Record<string, unknown> | undefined {
     const parts: Record<string, unknown>[] = [];
 
     if (hasKeys(baseWhere)) {
@@ -60,10 +72,10 @@ export class JeqlCompiler {
       parts.push(this.compileConditionGroup(anyConditions, 'OR'));
     }
     if (query.$whereHas) {
-      parts.push(this.compileRelationMap(query.$whereHas, 'some'));
+      parts.push(this.compileRelationMap(query.$whereHas, 'has', relationCardinality));
     }
     if (query.$whereNotHas) {
-      parts.push(this.compileRelationMap(query.$whereNotHas, 'none'));
+      parts.push(this.compileRelationMap(query.$whereNotHas, 'notHas', relationCardinality));
     }
 
     if (parts.length === 0) {
@@ -141,17 +153,23 @@ export class JeqlCompiler {
     return { [field]: compileScalarOperator(operator, value) };
   }
 
-  private compileRelationMap(relations: JeqlRelationQueryMap, mode: 'some' | 'none'): Record<string, unknown> {
+  private compileRelationMap(
+    relations: JeqlRelationQueryMap,
+    mode: 'has' | 'notHas',
+    relationCardinality?: Record<string, JeqlRelationCardinality>
+  ): Record<string, unknown> {
     if (!isPlainObject(relations)) {
-      throw new JeqlValidationError(`${mode === 'some' ? '$whereHas' : '$whereNotHas'} must be an object keyed by relation name.`);
+      throw new JeqlValidationError(`${mode === 'has' ? '$whereHas' : '$whereNotHas'} must be an object keyed by relation name.`);
     }
 
     const compiled = Object.entries(relations).map(([relation, subQuery]) => {
       const relationName = assertFieldName(relation);
-      const where = this.compileWhere(subQuery);
+      const where = this.compileWhere(subQuery, undefined, relationCardinality);
+      const relationOperator = this.resolveRelationOperator(mode, relationName, relationCardinality);
+
       return {
         [relationName]: {
-          [mode]: where ?? {},
+          [relationOperator]: where ?? {},
         },
       };
     });
@@ -161,6 +179,20 @@ export class JeqlCompiler {
     }
 
     return { AND: compiled };
+  }
+
+  private resolveRelationOperator(
+    mode: 'has' | 'notHas',
+    relationName: string,
+    relationCardinality?: Record<string, JeqlRelationCardinality>
+  ): 'some' | 'none' | 'is' | 'isNot' {
+    const cardinality = relationCardinality?.[relationName];
+
+    if (cardinality === 'one') {
+      return mode === 'has' ? 'is' : 'isNot';
+    }
+
+    return mode === 'has' ? 'some' : 'none';
   }
 
   private compileProjection(query: JeqlQuery): Pick<JeqlCompiledQuery, 'select' | 'include'> {

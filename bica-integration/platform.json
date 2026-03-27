@@ -33,6 +33,176 @@
   },
   "knowledge": {
     "playbooks": {
+      "Brief": {
+        "name": "Brief",
+        "description": "Represents a legal brief or file opened on behalf of a client within a matter.",
+        "fields": {
+          "id": {
+            "description": "id",
+            "validation_rules": "prohibited"
+          },
+          "briefNumber": {
+            "description": "System-assigned unique brief reference number.",
+            "validation_rules": "prohibited"
+          },
+          "name": {
+            "description": "Internal title or name of the brief.",
+            "validation_rules": "required|string|max:255"
+          },
+          "clientId": {
+            "description": "clientId",
+            "validation_rules": "nullable|string|max:255"
+          },
+          "matterId": {
+            "description": "matterId",
+            "validation_rules": "nullable|string|max:255"
+          },
+          "lawyerId": {
+            "description": "lawyerId",
+            "validation_rules": "nullable|string|max:255"
+          },
+          "workspaceId": {
+            "description": "workspaceId",
+            "validation_rules": "prohibited"
+          },
+          "customBriefNumber": {
+            "description": "Firm-assigned custom reference number.",
+            "validation_rules": "nullable|string|max:100"
+          },
+          "customTitle": {
+            "description": "customTitle",
+            "validation_rules": "nullable|string|max:255"
+          },
+          "category": {
+            "description": "Type or category of the brief.",
+            "validation_rules": "required|string|max:100"
+          },
+          "status": {
+            "description": "Current lifecycle status of the brief.",
+            "validation_rules": "required|in:active,closed,archived"
+          },
+          "dueDate": {
+            "description": "Target completion or filing date.",
+            "validation_rules": "nullable|date"
+          },
+          "description": {
+            "description": "Detailed notes or instructions for the brief.",
+            "validation_rules": "nullable|string"
+          },
+          "inboundEmailId": {
+            "description": "inboundEmailId",
+            "validation_rules": "prohibited"
+          },
+          "isLitigationDerived": {
+            "description": "isLitigationDerived",
+            "validation_rules": "nullable|boolean"
+          },
+          "lawyerInChargeId": {
+            "description": "lawyerInChargeId",
+            "validation_rules": "nullable|string|max:255"
+          },
+          "deletedAt": {
+            "description": "deletedAt",
+            "validation_rules": "nullable|date"
+          },
+          "lastSummarizedAt": {
+            "description": "lastSummarizedAt",
+            "validation_rules": "nullable|date"
+          },
+          "summary": {
+            "description": "summary",
+            "validation_rules": "nullable|string"
+          },
+          "briefId": {
+            "description": "briefId",
+            "validation_rules": "nullable|string|max:255"
+          }
+        },
+        "child_relationships": [
+          "Task"
+        ]
+      },
+      "CalendarEntry": {
+        "name": "CalendarEntry",
+        "description": "Represents a scheduled event for a matter — including court dates, filing deadlines, client meetings, and internal meetings.",
+        "fields": {
+          "id": {
+            "description": "id",
+            "validation_rules": "prohibited"
+          },
+          "matterId": {
+            "description": "matterId",
+            "validation_rules": "nullable|string|max:255"
+          },
+          "title": {
+            "description": "Short description or title of the event.",
+            "validation_rules": "required|string|max:255"
+          },
+          "date": {
+            "description": "The date and time of the event.",
+            "validation_rules": "required|date"
+          },
+          "proceedings": {
+            "description": "What transpired during the event.",
+            "validation_rules": "nullable|string"
+          },
+          "outcome": {
+            "description": "Result or decision from the event.",
+            "validation_rules": "nullable|string"
+          },
+          "adjournedFor": {
+            "description": "Reason for adjournment, if applicable.",
+            "validation_rules": "nullable|string"
+          },
+          "submittingLawyerId": {
+            "description": "submittingLawyerId",
+            "validation_rules": "nullable|string|max:255"
+          },
+          "submittingLawyerToken": {
+            "description": "submittingLawyerToken",
+            "validation_rules": "nullable|string|max:255"
+          },
+          "submittingLawyerName": {
+            "description": "submittingLawyerName",
+            "validation_rules": "nullable|string|max:255"
+          },
+          "briefId": {
+            "description": "briefId",
+            "validation_rules": "nullable|string|max:255"
+          },
+          "clientId": {
+            "description": "clientId",
+            "validation_rules": "nullable|string|max:255"
+          },
+          "externalCounsel": {
+            "description": "externalCounsel",
+            "validation_rules": "nullable|string|max:255"
+          },
+          "type": {
+            "description": "Event type: COURT_DATE, FILING_DEADLINE, CLIENT_MEETING, INTERNAL_MEETING, or OTHER.",
+            "validation_rules": "nullable|in:COURT_DATE,FILING_DEADLINE,CLIENT_MEETING,INTERNAL_MEETING,OTHER"
+          },
+          "location": {
+            "description": "Physical or virtual location of the event.",
+            "validation_rules": "nullable|string|max:255"
+          },
+          "judge": {
+            "description": "Presiding judge (for court dates).",
+            "validation_rules": "nullable|string|max:255"
+          },
+          "agenda": {
+            "description": "Agenda or purpose of the event.",
+            "validation_rules": "nullable|string"
+          },
+          "description": {
+            "description": "description",
+            "validation_rules": "nullable|string"
+          }
+        },
+        "child_relationships": [
+          "MeetingRecording"
+        ]
+      },
       "Client": {
         "name": "Client",
         "description": "Represents an individual or organization served by the firm.",
@@ -64,12 +234,239 @@
           "status": {
             "description": "Relationship status.",
             "validation_rules": "required|in:active,inactive"
+          },
+          "workspaceId": {
+            "description": "workspaceId",
+            "validation_rules": "prohibited"
           }
         },
         "child_relationships": [
           "Matter",
           "Brief",
           "Invoice",
+          "Payment"
+        ]
+      },
+      "ComplianceTask": {
+        "name": "ComplianceTask",
+        "description": "Represents a regulatory compliance obligation assigned to a workspace, tracking its status, due date, and evidence of completion.",
+        "fields": {
+          "id": {
+            "description": "id",
+            "validation_rules": "prohibited"
+          },
+          "obligationId": {
+            "description": "obligationId",
+            "validation_rules": "nullable|string|max:255"
+          },
+          "workspaceId": {
+            "description": "workspaceId",
+            "validation_rules": "prohibited"
+          },
+          "status": {
+            "description": "Completion status of the compliance task.",
+            "validation_rules": "required|in:pending,acknowledged,overdue"
+          },
+          "dueDate": {
+            "description": "Deadline for the compliance action.",
+            "validation_rules": "nullable|date"
+          },
+          "period": {
+            "description": "The compliance reporting period (e.g. Q1 2025, Annual 2024).",
+            "validation_rules": "nullable|string|max:100"
+          },
+          "evidenceUrl": {
+            "description": "URL to supporting evidence or filed document.",
+            "validation_rules": "nullable|string|max:2048"
+          },
+          "acknowledgedAt": {
+            "description": "Timestamp when the task was marked complete.",
+            "validation_rules": "nullable|date"
+          },
+          "acknowledgedBy": {
+            "description": "acknowledgedBy",
+            "validation_rules": "nullable|string|max:255"
+          }
+        },
+        "child_relationships": []
+      },
+      "Expense": {
+        "name": "Expense",
+        "description": "Represents an operational or overhead expense incurred by the firm.",
+        "fields": {
+          "id": {
+            "description": "id",
+            "validation_rules": "prohibited"
+          },
+          "workspaceId": {
+            "description": "workspaceId",
+            "validation_rules": "prohibited"
+          },
+          "amount": {
+            "description": "Expense amount in kobo.",
+            "validation_rules": "required|integer|min:1"
+          },
+          "description": {
+            "description": "What the expense was for.",
+            "validation_rules": "nullable|string"
+          },
+          "date": {
+            "description": "Date the expense was incurred.",
+            "validation_rules": "nullable|date"
+          },
+          "reference": {
+            "description": "Receipt number or external reference.",
+            "validation_rules": "nullable|string|max:255"
+          },
+          "category": {
+            "description": "Expense category (e.g. OFFICE_UTILITIES, COURT_LITIGATION, STAFF_COSTS).",
+            "validation_rules": "required|in:OFFICE_UTILITIES,OFFICE_EQUIPMENT_MAINTENANCE,COURT_LITIGATION,NON_LITIGATION_ADVISORY,COMMUNICATION_SUBSCRIPTIONS,STAFF_COSTS,VEHICLE_LOGISTICS,MISCELLANEOUS"
+          }
+        },
+        "child_relationships": []
+      },
+      "Invitation": {
+        "name": "Invitation",
+        "description": "Represents an invitation sent to a person to join a workspace with a specific role.",
+        "fields": {
+          "id": {
+            "description": "id",
+            "validation_rules": "prohibited"
+          },
+          "workspaceId": {
+            "description": "workspaceId",
+            "validation_rules": "prohibited"
+          },
+          "email": {
+            "description": "Email address of the invited person.",
+            "validation_rules": "required|email|max:255"
+          },
+          "role": {
+            "description": "The role being granted (e.g. admin, member).",
+            "validation_rules": "required|string|max:100"
+          },
+          "tokenHash": {
+            "description": "tokenHash",
+            "validation_rules": "prohibited"
+          },
+          "invitedBy": {
+            "description": "invitedBy",
+            "validation_rules": "nullable|string|max:255"
+          },
+          "status": {
+            "description": "Current state of the invitation.",
+            "validation_rules": "nullable|in:pending,accepted,revoked,expired"
+          },
+          "expiresAt": {
+            "description": "Date the invitation link expires.",
+            "validation_rules": "nullable|date"
+          },
+          "acceptedAt": {
+            "description": "acceptedAt",
+            "validation_rules": "nullable|date"
+          },
+          "revokedAt": {
+            "description": "revokedAt",
+            "validation_rules": "nullable|date"
+          },
+          "ipAddress": {
+            "description": "ipAddress",
+            "validation_rules": "nullable|string|max:255"
+          },
+          "userAgent": {
+            "description": "userAgent",
+            "validation_rules": "nullable|string|max:1000"
+          }
+        },
+        "child_relationships": []
+      },
+      "Invoice": {
+        "name": "Invoice",
+        "description": "Represents a billing invoice issued to a client for legal services rendered.",
+        "fields": {
+          "id": {
+            "description": "id",
+            "validation_rules": "prohibited"
+          },
+          "invoiceNumber": {
+            "description": "Unique invoice reference number.",
+            "validation_rules": "prohibited"
+          },
+          "clientId": {
+            "description": "clientId",
+            "validation_rules": "nullable|string|max:255"
+          },
+          "matterId": {
+            "description": "matterId",
+            "validation_rules": "nullable|string|max:255"
+          },
+          "billToName": {
+            "description": "Name of the billed party.",
+            "validation_rules": "required|string|max:255"
+          },
+          "billToAddress": {
+            "description": "Billing address.",
+            "validation_rules": "nullable|string"
+          },
+          "billToCity": {
+            "description": "billToCity",
+            "validation_rules": "nullable|string|max:255"
+          },
+          "billToState": {
+            "description": "billToState",
+            "validation_rules": "nullable|string|max:255"
+          },
+          "attentionTo": {
+            "description": "attentionTo",
+            "validation_rules": "nullable|string|max:255"
+          },
+          "date": {
+            "description": "Invoice issue date.",
+            "validation_rules": "nullable|date"
+          },
+          "dueDate": {
+            "description": "Payment due date.",
+            "validation_rules": "nullable|date"
+          },
+          "status": {
+            "description": "Payment status of the invoice.",
+            "validation_rules": "required|in:pending,paid,overdue,cancelled"
+          },
+          "notes": {
+            "description": "Additional notes or payment instructions.",
+            "validation_rules": "nullable|string"
+          },
+          "subtotal": {
+            "description": "Pre-tax total in kobo.",
+            "validation_rules": "nullable|integer|min:0"
+          },
+          "vatRate": {
+            "description": "vatRate",
+            "validation_rules": "nullable|numeric|min:0"
+          },
+          "vatAmount": {
+            "description": "VAT component in kobo.",
+            "validation_rules": "nullable|integer|min:0"
+          },
+          "securityChargeRate": {
+            "description": "securityChargeRate",
+            "validation_rules": "nullable|numeric|min:0"
+          },
+          "securityChargeAmount": {
+            "description": "securityChargeAmount",
+            "validation_rules": "nullable|integer|min:0"
+          },
+          "totalAmount": {
+            "description": "Grand total payable in kobo.",
+            "validation_rules": "nullable|integer|min:0"
+          },
+          "followUpSent": {
+            "description": "followUpSent",
+            "validation_rules": "nullable|boolean"
+          }
+        },
+        "child_relationships": [
+          "InvoiceItem",
           "Payment"
         ]
       },
@@ -88,6 +485,18 @@
           "name": {
             "description": "Internal name of the matter.",
             "validation_rules": "required|string|max:255"
+          },
+          "clientId": {
+            "description": "clientId",
+            "validation_rules": "nullable|string"
+          },
+          "clientNameRaw": {
+            "description": "clientNameRaw",
+            "validation_rules": "nullable|string|max:255"
+          },
+          "workspaceId": {
+            "description": "workspaceId",
+            "validation_rules": "prohibited"
           },
           "court": {
             "description": "Presiding court jurisdiction.",
@@ -112,6 +521,30 @@
           "nextCourtDate": {
             "description": "Next hearing or court date.",
             "validation_rules": "nullable|date"
+          },
+          "lastActivityAt": {
+            "description": "lastActivityAt",
+            "validation_rules": "nullable|date"
+          },
+          "lastClientContact": {
+            "description": "lastClientContact",
+            "validation_rules": "nullable|date"
+          },
+          "submittingLawyerId": {
+            "description": "submittingLawyerId",
+            "validation_rules": "nullable|string|max:255"
+          },
+          "submittingLawyerToken": {
+            "description": "submittingLawyerToken",
+            "validation_rules": "nullable|string|max:255"
+          },
+          "submittingLawyerName": {
+            "description": "submittingLawyerName",
+            "validation_rules": "nullable|string|max:255"
+          },
+          "lawyerInChargeId": {
+            "description": "lawyerInChargeId",
+            "validation_rules": "nullable|string|max:255"
           }
         },
         "child_relationships": [
@@ -121,6 +554,100 @@
           "MeetingRecording",
           "Invoice"
         ]
+      },
+      "MeetingRecording": {
+        "name": "MeetingRecording",
+        "description": "Represents an AI-generated summary and action items from a recorded meeting or court session linked to a matter.",
+        "fields": {
+          "id": {
+            "description": "id",
+            "validation_rules": "prohibited"
+          },
+          "calendarEntryId": {
+            "description": "calendarEntryId",
+            "validation_rules": "nullable|string|max:255"
+          },
+          "matterId": {
+            "description": "matterId",
+            "validation_rules": "nullable|string|max:255"
+          },
+          "summary": {
+            "description": "AI-generated or manually written summary of the meeting.",
+            "validation_rules": "required|string"
+          },
+          "actionItems": {
+            "description": "Follow-up actions identified from the meeting.",
+            "validation_rules": "nullable|string"
+          },
+          "date": {
+            "description": "Date the meeting or session took place.",
+            "validation_rules": "nullable|date"
+          },
+          "followUpDate": {
+            "description": "Date by which follow-up actions should be completed.",
+            "validation_rules": "nullable|date"
+          },
+          "participants": {
+            "description": "JSON list of participant names or identifiers.",
+            "validation_rules": "nullable|array"
+          },
+          "audioUrl": {
+            "description": "audioUrl",
+            "validation_rules": "nullable|string|max:2048"
+          },
+          "transcriptText": {
+            "description": "transcriptText",
+            "validation_rules": "nullable|string"
+          },
+          "audioDuration": {
+            "description": "Duration of the audio recording in seconds.",
+            "validation_rules": "nullable|integer|min:0"
+          },
+          "createdById": {
+            "description": "createdById",
+            "validation_rules": "nullable|string|max:255"
+          },
+          "complianceTaskId": {
+            "description": "complianceTaskId",
+            "validation_rules": "nullable|string|max:255"
+          }
+        },
+        "child_relationships": []
+      },
+      "Payment": {
+        "name": "Payment",
+        "description": "Represents a payment received from a client against an invoice or retainer.",
+        "fields": {
+          "id": {
+            "description": "id",
+            "validation_rules": "prohibited"
+          },
+          "clientId": {
+            "description": "clientId",
+            "validation_rules": "nullable|string|max:255"
+          },
+          "invoiceId": {
+            "description": "invoiceId",
+            "validation_rules": "nullable|string|max:255"
+          },
+          "amount": {
+            "description": "Amount paid in kobo.",
+            "validation_rules": "required|integer|min:1"
+          },
+          "date": {
+            "description": "Date the payment was received.",
+            "validation_rules": "nullable|date"
+          },
+          "method": {
+            "description": "Payment method (e.g. bank transfer, cash, cheque).",
+            "validation_rules": "required|string|max:100"
+          },
+          "reference": {
+            "description": "Bank reference or transaction ID.",
+            "validation_rules": "nullable|string|max:255"
+          }
+        },
+        "child_relationships": []
       },
       "Task": {
         "name": "Task",
@@ -138,6 +665,26 @@
             "description": "Detailed task instructions.",
             "validation_rules": "nullable|string"
           },
+          "assignedToId": {
+            "description": "assignedToId",
+            "validation_rules": "nullable|string|max:255"
+          },
+          "assignedById": {
+            "description": "assignedById",
+            "validation_rules": "nullable|string|max:255"
+          },
+          "workspaceId": {
+            "description": "workspaceId",
+            "validation_rules": "prohibited"
+          },
+          "matterId": {
+            "description": "matterId",
+            "validation_rules": "nullable|string|max:255"
+          },
+          "briefId": {
+            "description": "briefId",
+            "validation_rules": "nullable|string|max:255"
+          },
           "status": {
             "description": "Current status of the task.",
             "validation_rules": "required|in:pending,in_progress,completed,on_hold"
@@ -149,6 +696,38 @@
           "dueDate": {
             "description": "Target completion date.",
             "validation_rules": "nullable|date"
+          },
+          "completedAt": {
+            "description": "completedAt",
+            "validation_rules": "nullable|date"
+          },
+          "source": {
+            "description": "source",
+            "validation_rules": "nullable|string|max:100"
+          },
+          "sourceEmail": {
+            "description": "sourceEmail",
+            "validation_rules": "nullable|email|max:255"
+          },
+          "emailSubject": {
+            "description": "emailSubject",
+            "validation_rules": "nullable|string|max:255"
+          },
+          "emailBody": {
+            "description": "emailBody",
+            "validation_rules": "nullable|string"
+          },
+          "aiConfidence": {
+            "description": "aiConfidence",
+            "validation_rules": "nullable|integer|min:0|max:100"
+          },
+          "requirements": {
+            "description": "requirements",
+            "validation_rules": "nullable|array"
+          },
+          "attachments": {
+            "description": "attachments",
+            "validation_rules": "nullable|array"
           }
         },
         "child_relationships": []
@@ -168,6 +747,38 @@
           "email": {
             "description": "Primary email address.",
             "validation_rules": "required|email|max:255"
+          },
+          "password": {
+            "description": "password",
+            "validation_rules": "nullable|string|max:255"
+          },
+          "phone": {
+            "description": "phone",
+            "validation_rules": "nullable|string|max:30"
+          },
+          "image": {
+            "description": "image",
+            "validation_rules": "nullable|string|max:2048"
+          },
+          "jobTitle": {
+            "description": "jobTitle",
+            "validation_rules": "nullable|string|max:255"
+          },
+          "lawyerToken": {
+            "description": "lawyerToken",
+            "validation_rules": "nullable|string|max:255"
+          },
+          "isPlatformAdmin": {
+            "description": "isPlatformAdmin",
+            "validation_rules": "nullable|boolean"
+          },
+          "mfaEnabled": {
+            "description": "mfaEnabled",
+            "validation_rules": "nullable|boolean"
+          },
+          "mfaSecret": {
+            "description": "mfaSecret",
+            "validation_rules": "nullable|string|max:255"
           }
         },
         "child_relationships": []
@@ -191,21 +802,82 @@
           "ownerId": {
             "description": "ownerId",
             "validation_rules": "required|string"
+          },
+          "plan": {
+            "description": "plan",
+            "validation_rules": "nullable|string|max:50"
+          },
+          "firmCode": {
+            "description": "firmCode",
+            "validation_rules": "nullable|string|max:255"
+          },
+          "joinPassword": {
+            "description": "joinPassword",
+            "validation_rules": "nullable|string|max:255"
+          },
+          "letterheadUrl": {
+            "description": "letterheadUrl",
+            "validation_rules": "nullable|string|max:2048"
+          },
+          "revenuePin": {
+            "description": "revenuePin",
+            "validation_rules": "nullable|string|max:255"
+          },
+          "inviteLinkToken": {
+            "description": "inviteLinkToken",
+            "validation_rules": "nullable|string|max:255"
+          },
+          "litigationPin": {
+            "description": "litigationPin",
+            "validation_rules": "nullable|string|max:255"
+          },
+          "adminCode": {
+            "description": "adminCode",
+            "validation_rules": "nullable|string|max:255"
+          },
+          "accentColor": {
+            "description": "accentColor",
+            "validation_rules": "nullable|string|max:20"
+          },
+          "brandColor": {
+            "description": "brandColor",
+            "validation_rules": "nullable|string|max:20"
+          },
+          "secondaryColor": {
+            "description": "secondaryColor",
+            "validation_rules": "nullable|string|max:20"
+          },
+          "brandingCompleted": {
+            "description": "brandingCompleted",
+            "validation_rules": "nullable|boolean"
           }
         },
         "child_relationships": [
           "clients",
           "matters",
           "tasks",
-          "briefs"
+          "briefs",
+          "expenses",
+          "invitations",
+          "complianceTasks"
         ]
       }
     },
     "model_parentage_map": {
+      "Brief": [
+        "Task"
+      ],
+      "CalendarEntry": [
+        "MeetingRecording"
+      ],
       "Client": [
         "Matter",
         "Brief",
         "Invoice",
+        "Payment"
+      ],
+      "Invoice": [
+        "InvoiceItem",
         "Payment"
       ],
       "Matter": [
@@ -219,7 +891,10 @@
         "clients",
         "matters",
         "tasks",
-        "briefs"
+        "briefs",
+        "expenses",
+        "invitations",
+        "complianceTasks"
       ]
     },
     "protocols": {}

@@ -38,6 +38,8 @@ export type JeqlCondition =
 
 export type JeqlRelationQueryMap = Record<string, JeqlQuery>;
 
+export type JeqlRelationCardinality = 'one' | 'many';
+
 export interface JeqlQuery {
   $select?: string[];
   $with?: JeqlRelationQueryMap;
@@ -53,6 +55,7 @@ export interface JeqlQuery {
 
 export interface JeqlCompileOptions {
   baseWhere?: Record<string, unknown>;
+  relationCardinality?: Record<string, JeqlRelationCardinality>;
 }
 
 export interface JeqlCompiledQuery {

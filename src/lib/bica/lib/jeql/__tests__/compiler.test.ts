@@ -71,6 +71,52 @@ describe('JeqlCompiler', () => {
     });
   });
 
+  it('uses is/isNot for to-one relation filters when cardinality is provided', () => {
+    const result = compiler.compile(
+      {
+        $whereHas: {
+          matter: {
+            $whereAll: [['name', 'search', 'Balogun v. Balogun']],
+          },
+        },
+        $whereNotHas: {
+          client: {
+            $whereAll: [['status', '=', 'inactive']],
+          },
+        },
+      },
+      {
+        relationCardinality: {
+          matter: 'one',
+          client: 'one',
+        },
+      }
+    );
+
+    expect(result.where).toEqual({
+      AND: [
+        {
+          matter: {
+            is: {
+              OR: [
+                { name: { contains: 'Balogun v. Balogun', mode: 'insensitive' } },
+                { name: { contains: 'balogun', mode: 'insensitive' } },
+                { name: { contains: 'v', mode: 'insensitive' } },
+              ],
+            },
+          },
+        },
+        {
+          client: {
+            isNot: {
+              status: { equals: 'inactive' },
+            },
+          },
+        },
+      ],
+    });
+  });
+
   it('compiles search across one or many columns', () => {
     const single = compiler.compile({
       $whereAll: [['name', 'search', 'John Smith']],

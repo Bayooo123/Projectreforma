@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/prisma';
-import { JeqlCompiler, JeqlQuery, JeqlValidationError } from '../jeql';
+import { getPrismaRelationCardinality, JeqlCompiler, JeqlQuery, JeqlValidationError } from '../jeql';
 import { CrudExecutionError, CrudValidationError } from './errors';
 import { DefinitionCompiler } from './definition-compiler';
 import {
@@ -163,11 +163,12 @@ export class CrudExecutor {
    * Runs a JEQL read query with the current actor scope merged in.
    */
   private async read(data: CrudReadData, parentContext: ResolvedParentEntity): Promise<CrudResult> {
-    const { delegate, baseWhere } = this.resolveScopedDelegate(data?.scope, parentContext, 'read');
+    const { delegate, baseWhere, playbook } = this.resolveScopedDelegate(data?.scope, parentContext, 'read');
     const query = this.requireJeqlQuery(data?.targetOperations, 'targetOperations');
+    const relationCardinality = getPrismaRelationCardinality(playbook.modelKey);
 
     try {
-      const compiled = this.jeql.compile(query, { baseWhere });
+      const compiled = this.jeql.compile(query, { baseWhere, relationCardinality });
       const records = await delegate.findMany(compiled);
       return { records };
     } catch (error: any) {
@@ -179,11 +180,12 @@ export class CrudExecutor {
    * Counts rows that match a JEQL query.
    */
   private async count(data: CrudCountData, parentContext: ResolvedParentEntity): Promise<CrudResult> {
-    const { delegate, baseWhere } = this.resolveScopedDelegate(data?.scope, parentContext, 'read');
+    const { delegate, baseWhere, playbook } = this.resolveScopedDelegate(data?.scope, parentContext, 'read');
     const query = this.requireJeqlQuery(data?.targetOperations ?? {}, 'targetOperations');
+    const relationCardinality = getPrismaRelationCardinality(playbook.modelKey);
 
     try {
-      const compiled = this.jeql.compile(query, { baseWhere });
+      const compiled = this.jeql.compile(query, { baseWhere, relationCardinality });
       const count = await delegate.count({ where: compiled.where });
       return { count };
     } catch (error: any) {
@@ -199,13 +201,14 @@ export class CrudExecutor {
     const query = this.requireJeqlQuery(data?.targetOperations, 'targetOperations');
     const attributes = this.requirePlainObject(data?.attributes, 'attributes');
     const modelName = playbook.getModelName();
+    const relationCardinality = getPrismaRelationCardinality(playbook.modelKey);
 
     if ('$select' in query) {
       throw new CrudValidationError('$select is not allowed for update operations.');
     }
 
     try {
-      const compiled = this.jeql.compile(query, { baseWhere });
+      const compiled = this.jeql.compile(query, { baseWhere, relationCardinality });
       const result = await delegate.updateMany({
         where: compiled.where,
         data: attributes,
@@ -225,6 +228,7 @@ export class CrudExecutor {
     const query = this.requireJeqlQuery(data?.targetOperations, 'targetOperations');
     const attributesList = Array.isArray(data?.attributes) ? data.attributes : null;
     const modelName = playbook.getModelName();
+    const relationCardinality = getPrismaRelationCardinality(playbook.modelKey);
 
     if (!query.$orderBy || query.$orderBy.length === 0) {
       throw new CrudValidationError('updateEach requires $orderBy so row-to-row alignment is deterministic.');
@@ -235,7 +239,7 @@ export class CrudExecutor {
     }
 
     try {
-      const compiled = this.jeql.compile(query, { baseWhere });
+      const compiled = this.jeql.compile(query, { baseWhere, relationCardinality });
       const records = await delegate.findMany({
         where: compiled.where,
         orderBy: compiled.orderBy,
@@ -278,15 +282,16 @@ export class CrudExecutor {
    * Deletes every row that matches the JEQL filter.
    */
   private async delete(data: CrudDeleteData, parentContext: ResolvedParentEntity): Promise<CrudResult> {
-    const { delegate, baseWhere } = this.resolveScopedDelegate(data?.scope, parentContext, 'write');
+    const { delegate, baseWhere, playbook } = this.resolveScopedDelegate(data?.scope, parentContext, 'write');
     const query = this.requireJeqlQuery(data?.targetOperations, 'targetOperations');
+    const relationCardinality = getPrismaRelationCardinality(playbook.modelKey);
 
     if ('$select' in query) {
       throw new CrudValidationError('$select is not allowed for delete operations.');
     }
 
     try {
-      const compiled = this.jeql.compile(query, { baseWhere });
+      const compiled = this.jeql.compile(query, { baseWhere, relationCardinality });
       const result = await delegate.deleteMany({ where: compiled.where });
       return { deleted: true, count: result?.count ?? 0 };
     } catch (error: any) {

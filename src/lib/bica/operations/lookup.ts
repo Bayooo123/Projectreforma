@@ -1,7 +1,15 @@
 import { prisma } from '@/lib/prisma';
 import { BicaHandler } from '../handlers/base';
 import { getPlaybook } from '../playbooks';
-import { JeqlCompiledQuery, JeqlCompiler, JeqlQuery, JeqlValidationError, SearchDirective, normalizeText } from '../lib/jeql';
+import {
+	JeqlCompiledQuery,
+	JeqlCompiler,
+	JeqlQuery,
+	JeqlValidationError,
+	SearchDirective,
+	getPrismaRelationCardinality,
+	normalizeText,
+} from '../lib/jeql';
 
 export class LookupHandler extends BicaHandler {
 	private readonly compiler = new JeqlCompiler();
@@ -32,11 +40,15 @@ export class LookupHandler extends BicaHandler {
 		}
 
 		const whereScope = await this.resolveScope(scope);
+		const relationCardinality = getPrismaRelationCardinality(playbook.modelKey);
 		const searchDirectives = this.collectSearchDirectives(operations as JeqlQuery);
 
 		let prismaArgs: JeqlCompiledQuery;
 		try {
-			prismaArgs = this.compiler.compile(operations as JeqlQuery, { baseWhere: whereScope });
+			prismaArgs = this.compiler.compile(operations as JeqlQuery, {
+				baseWhere: whereScope,
+				relationCardinality,
+			});
 		} catch (error: any) {
 			if (error instanceof JeqlValidationError) {
 				throw Object.assign(new Error(error.message), { bicaCode: 'VALIDATION_ERROR' });
