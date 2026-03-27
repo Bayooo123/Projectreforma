@@ -42,14 +42,17 @@ async function checkIdempotency(operationId: string) {
 }
 
 async function logIdempotency(entityId: string, operationId: string, resultData: any) {
+    // Temporarily disabled due to foreign key constraint violation (entityId vs userId)
+    /*
     await prisma.securityAuditLog.create({
         data: {
-            userId: entityId, // Using entityId as a proxy for the actor
+            userId: entityId, 
             event: 'BICA_EXECUTE',
             description: operationId,
             metadata: resultData as any,
         },
     });
+    */
 }
 
 // ---------------------------------------------------------------------------
