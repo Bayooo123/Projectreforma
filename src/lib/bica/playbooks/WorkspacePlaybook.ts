@@ -23,11 +23,23 @@ export class WorkspacePlaybook extends Playbook {
       name: 'required|string|max:255',
       slug: 'nullable|string|max:255',
       ownerId: 'required|string',
+      plan: 'nullable|string|max:50',
+      firmCode: 'nullable|string|max:255',
+      joinPassword: 'nullable|string|max:255',
+      letterheadUrl: 'nullable|string|max:2048',
+      revenuePin: 'nullable|string|max:255',
+      inviteLinkToken: 'nullable|string|max:255',
+      litigationPin: 'nullable|string|max:255',
+      adminCode: 'nullable|string|max:255',
+      accentColor: 'nullable|string|max:20',
+      brandColor: 'nullable|string|max:20',
+      secondaryColor: 'nullable|string|max:20',
+      brandingCompleted: 'nullable|boolean',
     };
   }
 
   getMutableChildRelationships(): string[] {
-    return ['clients', 'matters', 'tasks', 'briefs'];
+    return ['clients', 'matters', 'tasks', 'briefs', 'expenses', 'invitations', 'complianceTasks'];
   }
 
   getCreateScope(parentEntity: any, parentEntityType: string): Record<string, unknown> {

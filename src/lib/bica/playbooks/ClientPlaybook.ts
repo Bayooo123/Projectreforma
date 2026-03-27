@@ -30,6 +30,7 @@ export class ClientPlaybook extends Playbook {
       company: 'nullable|string|max:255',
       industry: 'nullable|string|max:100',
       status: 'required|in:active,inactive',
+      workspaceId: 'prohibited',
     };
   }
 

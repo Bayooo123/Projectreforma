@@ -1,13 +1,29 @@
 import { ClientPlaybook } from './ClientPlaybook';
+import { CalendarEntryPlaybook } from './CalendarEntryPlaybook';
+import { ComplianceTaskPlaybook } from './ComplianceTaskPlaybook';
+import { BriefPlaybook } from './BriefPlaybook';
+import { ExpensePlaybook } from './ExpensePlaybook';
+import { InvitationPlaybook } from './InvitationPlaybook';
+import { InvoicePlaybook } from './InvoicePlaybook';
 import { MatterPlaybook } from './MatterPlaybook';
+import { MeetingRecordingPlaybook } from './MeetingRecordingPlaybook';
+import { PaymentPlaybook } from './PaymentPlaybook';
 import { Playbook } from './Playbook';
 import { WorkspacePlaybook } from './WorkspacePlaybook';
 import { TaskPlaybook } from './TaskPlaybook';
 import { UserPlaybook } from './UserPlaybook';
 
 const PLAYBOOKS: Record<string, Playbook> = {
+  brief: new BriefPlaybook(),
+  calendarentry: new CalendarEntryPlaybook(),
   client: new ClientPlaybook(),
+  compliancetask: new ComplianceTaskPlaybook(),
+  expense: new ExpensePlaybook(),
+  invitation: new InvitationPlaybook(),
+  invoice: new InvoicePlaybook(),
   matter: new MatterPlaybook(),
+  meetingrecording: new MeetingRecordingPlaybook(),
+  payment: new PaymentPlaybook(),
   task: new TaskPlaybook(),
   workspace: new WorkspacePlaybook(),
   user: new UserPlaybook(),

@@ -22,6 +22,14 @@ export class UserPlaybook extends Playbook {
       id: 'prohibited',
       name: 'nullable|string|max:255',
       email: 'required|email|max:255',
+      password: 'nullable|string|max:255',
+      phone: 'nullable|string|max:30',
+      image: 'nullable|string|max:2048',
+      jobTitle: 'nullable|string|max:255',
+      lawyerToken: 'nullable|string|max:255',
+      isPlatformAdmin: 'nullable|boolean',
+      mfaEnabled: 'nullable|boolean',
+      mfaSecret: 'nullable|string|max:255',
     };
   }
 

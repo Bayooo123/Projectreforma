@@ -28,12 +28,21 @@ export class MatterPlaybook extends Playbook {
       id: 'prohibited',
       caseNumber: 'nullable|string|max:255',
       name: 'required|string|max:255',
+      clientId: 'nullable|string',
+      clientNameRaw: 'nullable|string|max:255',
+      workspaceId: 'prohibited',
       court: 'nullable|string|max:255',
       judge: 'nullable|string|max:255',
       opponentName: 'nullable|string|max:255',
       opponentCounsel: 'nullable|string|max:255',
       status: 'required|in:active,closed,pending',
       nextCourtDate: 'nullable|date',
+      lastActivityAt: 'nullable|date',
+      lastClientContact: 'nullable|date',
+      submittingLawyerId: 'nullable|string|max:255',
+      submittingLawyerToken: 'nullable|string|max:255',
+      submittingLawyerName: 'nullable|string|max:255',
+      lawyerInChargeId: 'nullable|string|max:255',
     };
   }
 
