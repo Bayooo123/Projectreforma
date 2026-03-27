@@ -85,45 +85,8 @@ export default function AnalyticsClient({ data, workspaceId, initialFilter }: An
             featureId="analytics"
             variant="analytics"
         >
-            <div className="relative min-h-screen bg-slate-50 dark:bg-slate-900 overflow-hidden text-[16px]">
-                <style>{`
-                    @keyframes drawLine {
-                        from { stroke-dashoffset: 600; }
-                        to { stroke-dashoffset: 0; }
-                    }
-                    .animate-draw {
-                        stroke-dasharray: 600;
-                        animation: drawLine 2s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
-                    }
-                    @keyframes staggerSlideUp {
-                        from { opacity: 0; transform: translateY(20px) scale(0.98); }
-                        to { opacity: 1; transform: translateY(0) scale(1); }
-                    }
-                    .stagger-1 { animation: staggerSlideUp 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) 0.1s both; }
-                    .stagger-2 { animation: staggerSlideUp 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) 0.2s both; }
-                    .stagger-3 { animation: staggerSlideUp 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) 0.3s both; }
-                    .stagger-4 { animation: staggerSlideUp 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) 0.4s both; }
-                    .stagger-5 { animation: staggerSlideUp 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) 0.5s both; }
-                    
-                    .glass-panel {
-                        box-shadow: 0 8px 32px rgba(0,0,0,0.04), inset 0 1px 1px rgba(255,255,255,0.8), inset 0 -1px 1px rgba(255,255,255,0.3);
-                        transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-                    }
-                    .dark .glass-panel {
-                        box-shadow: 0 8px 32px rgba(0,0,0,0.1), inset 0 1px 1px rgba(255,255,255,0.05), inset 0 -1px 1px rgba(255,255,255,0.02);
-                    }
-                    .glass-panel:hover {
-                        box-shadow: 0 16px 48px rgba(0,0,0,0.06), inset 0 1px 1px rgba(255,255,255,1), inset 0 -1px 1px rgba(255,255,255,0.4);
-                    }
-                    .dark .glass-panel:hover {
-                        box-shadow: 0 16px 48px rgba(0,0,0,0.15), inset 0 1px 1px rgba(255,255,255,0.1), inset 0 -1px 1px rgba(255,255,255,0.05);
-                    }
-                `}</style>
-                {/* Premium Background Effects */}
-                <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-emerald-500/20 rounded-full blur-[120px] mix-blend-multiply dark:mix-blend-screen pointer-events-none" />
-                <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-teal-500/20 rounded-full blur-[120px] mix-blend-multiply dark:mix-blend-screen pointer-events-none" />
-
-                <div className="p-6 md:p-10 lg:p-12 max-w-[1600px] mx-auto min-h-screen animate-fade-in relative z-10 text-slate-900 dark:text-slate-100">
+            <div className="bg-slate-50 dark:bg-slate-900 min-w-0 flex-1">
+                <div className="p-6 md:p-10 lg:p-12 max-w-[1600px] mx-auto text-slate-900 dark:text-slate-100">
                     
                     {/* Header Section */}
                     <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 mb-16">
@@ -177,7 +140,7 @@ export default function AnalyticsClient({ data, workspaceId, initialFilter }: An
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 mb-12">
                             
                             {/* Key Revenue Stat (Large Card) */}
-                            <div className="md:col-span-2 bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl border border-white dark:border-slate-700/50 rounded-[3rem] p-8 lg:p-12 group overflow-hidden relative glass-panel stagger-1">
+                            <div className="md:col-span-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-[2.5rem] p-8 lg:p-10 shadow-sm relative overflow-hidden group">
                                 <div className="absolute top-0 right-0 w-[150%] h-[150%] bg-gradient-to-br from-emerald-500/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none" />
                                 
                                 <div className="flex justify-between items-start relative z-10 gap-6">
@@ -259,7 +222,7 @@ export default function AnalyticsClient({ data, workspaceId, initialFilter }: An
                         </div>
 
                         {/* Active Matters */}
-                        <div className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl border border-white dark:border-slate-700/50 rounded-[2.5rem] p-10 flex flex-col justify-between group glass-panel stagger-2 relative overflow-hidden">
+                        <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-[2rem] p-8 shadow-sm relative overflow-hidden group">
                             <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 rounded-full blur-2xl group-hover:bg-emerald-500/10 transition-colors pointer-events-none" />
                             <div className="flex justify-between items-start relative z-10 gap-4">
                                 <div className="w-12 h-12 shrink-0 bg-slate-50 dark:bg-slate-900 rounded-2xl flex items-center justify-center text-slate-400 group-hover:text-emerald-500 transition-colors">
@@ -278,7 +241,7 @@ export default function AnalyticsClient({ data, workspaceId, initialFilter }: An
                         </div>
 
                         {/* Operational Burn */}
-                        <div className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl border border-white dark:border-slate-700/50 rounded-[2.5rem] p-10 flex flex-col justify-between group glass-panel stagger-3 relative overflow-hidden">
+                        <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-[2rem] p-8 shadow-sm relative overflow-hidden group">
                              <div className="absolute top-0 right-0 w-32 h-32 bg-orange-500/5 rounded-full blur-2xl group-hover:bg-orange-500/10 transition-colors pointer-events-none" />
                              <div className="flex justify-between items-start relative z-10 gap-4">
                                 <div className="w-12 h-12 shrink-0 bg-slate-50 dark:bg-slate-900 rounded-2xl flex items-center justify-center text-slate-400 group-hover:text-orange-500 transition-colors">
@@ -297,7 +260,7 @@ export default function AnalyticsClient({ data, workspaceId, initialFilter }: An
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
                         
                         {/* Case Distribution */}
-                        <div className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl border border-white dark:border-slate-700/50 rounded-[3rem] p-10 glass-panel stagger-4">
+                        <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-[2.5rem] p-8 shadow-sm">
                             <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-10 tracking-tight">Case Distribution</h3>
                             <div className="flex flex-col items-center">
                                 <div className="relative w-44 h-44 rounded-full mb-10" style={{ background: matterGradient }}>
@@ -321,7 +284,7 @@ export default function AnalyticsClient({ data, workspaceId, initialFilter }: An
                         </div>
 
                         {/* Top Revenue Drivers Table */}
-                        <div className="lg:col-span-2 bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl border border-white dark:border-slate-700/50 rounded-[3rem] glass-panel stagger-4 overflow-hidden flex flex-col">
+                        <div className="lg:col-span-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-[2.5rem] shadow-sm overflow-hidden flex flex-col">
                             <div className="p-10 pb-6 flex items-center justify-between">
                                 <div>
                                     <h3 className="text-xl font-bold text-slate-800 dark:text-white tracking-tight">Top Revenue Drivers</h3>
@@ -377,8 +340,7 @@ export default function AnalyticsClient({ data, workspaceId, initialFilter }: An
                     {/* Final Row: Performance */}
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
                         
-                        {/* Council Performance */}
-                        <div className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl border border-white dark:border-slate-700/50 rounded-[2.5rem] p-10 glass-panel stagger-5">
+                        <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-[2rem] p-8 shadow-sm">
                             <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-8 tracking-tight">Council Performance</h3>
                             <div className="space-y-6">
                                 {lawyerStats.map((lawyer: any, idx: number) => (
@@ -399,8 +361,7 @@ export default function AnalyticsClient({ data, workspaceId, initialFilter }: An
                             </div>
                         </div>
 
-                        {/* Jurisdictional Footprint */}
-                        <div className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl border border-white dark:border-slate-700/50 rounded-[2.5rem] p-10 glass-panel stagger-5">
+                        <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-[2rem] p-8 shadow-sm">
                             <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-8 tracking-tight">Jurisdictional Activity</h3>
                             <div className="space-y-8">
                                 {courtVisits.map((cv: any) => (
@@ -420,10 +381,8 @@ export default function AnalyticsClient({ data, workspaceId, initialFilter }: An
                             </div>
                         </div>
                     </div>
-
                 </div>
             </div>
         </PinProtection>
     );
 }
-
