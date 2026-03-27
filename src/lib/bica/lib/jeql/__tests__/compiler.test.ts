@@ -117,6 +117,63 @@ describe('JeqlCompiler', () => {
     });
   });
 
+  it('maps $with relation aliases to Prisma relation field names', () => {
+    const result = compiler.compile(
+      {
+        $select: ['id', 'name', 'status'],
+        $with: {
+          Brief: { $select: ['id', 'name', 'matterId', 'status', 'category'] },
+          CalendarEntry: { $select: ['id', 'matterId', 'title', 'date', 'type'] },
+          Task: { $select: ['id', 'matterId', 'title', 'status', 'priority', 'dueDate'] },
+        },
+      },
+      {
+        relationFieldMap: {
+          brief: 'briefs',
+          Brief: 'briefs',
+          calendarentry: 'calendarEntries',
+          CalendarEntry: 'calendarEntries',
+          task: 'tasks',
+          Task: 'tasks',
+        },
+      }
+    );
+
+    expect(result.select).toEqual({
+      id: true,
+      name: true,
+      status: true,
+      briefs: {
+        select: {
+          id: true,
+          name: true,
+          matterId: true,
+          status: true,
+          category: true,
+        },
+      },
+      calendarEntries: {
+        select: {
+          id: true,
+          matterId: true,
+          title: true,
+          date: true,
+          type: true,
+        },
+      },
+      tasks: {
+        select: {
+          id: true,
+          matterId: true,
+          title: true,
+          status: true,
+          priority: true,
+          dueDate: true,
+        },
+      },
+    });
+  });
+
   it('compiles search across one or many columns', () => {
     const single = compiler.compile({
       $whereAll: [['name', 'search', 'John Smith']],

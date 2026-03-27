@@ -7,7 +7,7 @@ import {
 	JeqlQuery,
 	JeqlValidationError,
 	SearchDirective,
-	getPrismaRelationCardinality,
+	getPrismaRelationMetadata,
 	normalizeText,
 } from '../lib/jeql';
 
@@ -40,7 +40,7 @@ export class LookupHandler extends BicaHandler {
 		}
 
 		const whereScope = await this.resolveScope(scope);
-		const relationCardinality = getPrismaRelationCardinality(playbook.modelKey);
+		const { relationCardinality, relationFieldMap } = getPrismaRelationMetadata(playbook.modelKey);
 		const searchDirectives = this.collectSearchDirectives(operations as JeqlQuery);
 
 		let prismaArgs: JeqlCompiledQuery;
@@ -48,6 +48,7 @@ export class LookupHandler extends BicaHandler {
 			prismaArgs = this.compiler.compile(operations as JeqlQuery, {
 				baseWhere: whereScope,
 				relationCardinality,
+				relationFieldMap,
 			});
 		} catch (error: any) {
 			if (error instanceof JeqlValidationError) {

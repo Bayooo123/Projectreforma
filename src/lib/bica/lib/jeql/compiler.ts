@@ -29,8 +29,8 @@ export class JeqlCompiler {
     }
 
     const compiled: JeqlCompiledQuery = {};
-    const where = this.compileWhere(query, options.baseWhere, options.relationCardinality);
-    const projection = this.compileProjection(query);
+    const where = this.compileWhere(query, options.baseWhere, options.relationCardinality, options.relationFieldMap);
+    const projection = this.compileProjection(query, options.relationFieldMap);
     const orderBy = this.compileOrderBy(query.$orderBy);
     const take = parsePositiveInteger(query.$limit, '$limit');
     const skip = parsePositiveInteger(query.$offset, '$offset');
@@ -54,7 +54,8 @@ export class JeqlCompiler {
   private compileWhere(
     query: JeqlQuery,
     baseWhere?: Record<string, unknown>,
-    relationCardinality?: Record<string, JeqlRelationCardinality>
+    relationCardinality?: Record<string, JeqlRelationCardinality>,
+    relationFieldMap?: Record<string, string>
   ): Record<string, unknown> | undefined {
     const parts: Record<string, unknown>[] = [];
 
@@ -72,10 +73,10 @@ export class JeqlCompiler {
       parts.push(this.compileConditionGroup(anyConditions, 'OR'));
     }
     if (query.$whereHas) {
-      parts.push(this.compileRelationMap(query.$whereHas, 'has', relationCardinality));
+      parts.push(this.compileRelationMap(query.$whereHas, 'has', relationCardinality, relationFieldMap));
     }
     if (query.$whereNotHas) {
-      parts.push(this.compileRelationMap(query.$whereNotHas, 'notHas', relationCardinality));
+      parts.push(this.compileRelationMap(query.$whereNotHas, 'notHas', relationCardinality, relationFieldMap));
     }
 
     if (parts.length === 0) {
@@ -156,15 +157,16 @@ export class JeqlCompiler {
   private compileRelationMap(
     relations: JeqlRelationQueryMap,
     mode: 'has' | 'notHas',
-    relationCardinality?: Record<string, JeqlRelationCardinality>
+    relationCardinality?: Record<string, JeqlRelationCardinality>,
+    relationFieldMap?: Record<string, string>
   ): Record<string, unknown> {
     if (!isPlainObject(relations)) {
       throw new JeqlValidationError(`${mode === 'has' ? '$whereHas' : '$whereNotHas'} must be an object keyed by relation name.`);
     }
 
     const compiled = Object.entries(relations).map(([relation, subQuery]) => {
-      const relationName = assertFieldName(relation);
-      const where = this.compileWhere(subQuery, undefined, relationCardinality);
+      const relationName = this.resolveRelationFieldName(relation, relationFieldMap);
+      const where = this.compileWhere(subQuery, undefined, relationCardinality, relationFieldMap);
       const relationOperator = this.resolveRelationOperator(mode, relationName, relationCardinality);
 
       return {
@@ -195,7 +197,16 @@ export class JeqlCompiler {
     return mode === 'has' ? 'some' : 'none';
   }
 
-  private compileProjection(query: JeqlQuery): Pick<JeqlCompiledQuery, 'select' | 'include'> {
+  private resolveRelationFieldName(relation: string, relationFieldMap?: Record<string, string>): string {
+    const relationName = assertFieldName(relation);
+    if (!relationFieldMap) {
+      return relationName;
+    }
+
+    return relationFieldMap[relationName] ?? relationFieldMap[relationName.toLowerCase()] ?? relationName;
+  }
+
+  private compileProjection(query: JeqlQuery, relationFieldMap?: Record<string, string>): Pick<JeqlCompiledQuery, 'select' | 'include'> {
     const selectFields = Array.isArray(query.$select) ? query.$select.filter(Boolean) : [];
     const withRelations = query.$with && isPlainObject(query.$with) ? query.$with : undefined;
     const hasScalarSelect = selectFields.length > 0;
@@ -208,7 +219,7 @@ export class JeqlCompiler {
     if (!hasScalarSelect && withRelations) {
       return {
         include: Object.fromEntries(
-          Object.entries(withRelations).map(([relation, subQuery]) => [assertFieldName(relation), this.compileRelationQuery(subQuery)])
+          Object.entries(withRelations).map(([relation, subQuery]) => [this.resolveRelationFieldName(relation, relationFieldMap), this.compileRelationQuery(subQuery)])
         ),
       };
     }
@@ -219,7 +230,7 @@ export class JeqlCompiler {
 
     if (withRelations) {
       for (const [relation, subQuery] of Object.entries(withRelations)) {
-        select[assertFieldName(relation)] = this.compileRelationQuery(subQuery);
+        select[this.resolveRelationFieldName(relation, relationFieldMap)] = this.compileRelationQuery(subQuery);
       }
     }
 

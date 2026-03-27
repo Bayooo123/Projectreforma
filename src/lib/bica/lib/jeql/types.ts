@@ -56,6 +56,7 @@ export interface JeqlQuery {
 export interface JeqlCompileOptions {
   baseWhere?: Record<string, unknown>;
   relationCardinality?: Record<string, JeqlRelationCardinality>;
+  relationFieldMap?: Record<string, string>;
 }
 
 export interface JeqlCompiledQuery {
