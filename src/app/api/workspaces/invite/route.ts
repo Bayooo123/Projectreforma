@@ -34,18 +34,12 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: 'Too many invite attempts. Please try again later.' }, { status: 429 });
         }
 
-        // Check if requester is admin/owner of the workspace
-        const membership = await prisma.workspaceMember.findUnique({
-            where: {
-                workspaceId_userId: {
-                    workspaceId: workspaceId,
-                    userId: session.user.id
-                }
-            }
-        });
-
-        if (!membership || !['owner', 'partner', 'admin'].includes(membership.role.toLowerCase())) {
-            return NextResponse.json({ error: 'Forbidden: Insufficient permissions' }, { status: 403 });
+        // Check if requester has permission to manage users
+        try {
+            const { requirePermission } = await import('@/lib/auth-utils');
+            await requirePermission(workspaceId, 'MANAGE_USERS');
+        } catch (error: any) {
+            return NextResponse.json({ error: error.message }, { status: 403 });
         }
 
         const workspace = await prisma.workspace.findUnique({

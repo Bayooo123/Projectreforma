@@ -13,7 +13,42 @@ export enum UserRole {
     LEGAL_STAFF = 'Legal Staff', // General fallback
 }
 
-export const PERMISSIONS = {
+export type Permission = 
+    | 'DELETE_BRIEF'
+    | 'EDIT_BRIEF'
+    | 'MANAGE_USERS'
+    | 'MANAGE_OFFICE'
+    | 'DELETE_MATTER'
+    | 'VIEW_FINANCIALS'
+    | 'DELETE_CLIENT';
+
+export const ROLE_PERMISSIONS: Record<string, Permission[]> = {
+    'owner': ['DELETE_BRIEF', 'EDIT_BRIEF', 'MANAGE_USERS', 'MANAGE_OFFICE', 'DELETE_MATTER', 'VIEW_FINANCIALS', 'DELETE_CLIENT'],
+    'partner': ['DELETE_BRIEF', 'EDIT_BRIEF', 'MANAGE_USERS', 'MANAGE_OFFICE', 'DELETE_MATTER', 'VIEW_FINANCIALS', 'DELETE_CLIENT'],
+    'admin': ['MANAGE_USERS', 'MANAGE_OFFICE'],
+    'associate': ['EDIT_BRIEF'],
+    'member': [],
+};
+
+// Map formal display roles to system roles to calculate permissions
+const getSystemRole = (role: string): string => {
+    const lowerRole = role.toLowerCase();
+    if (lowerRole.includes('owner')) return 'owner';
+    if (lowerRole.includes('managing partner')) return 'owner';
+    if (lowerRole.includes('head of chambers')) return 'partner';
+    if (lowerRole.includes('partner')) return 'partner';
+    if (lowerRole.includes('manager')) return 'admin';
+    if (lowerRole.includes('admin')) return 'admin';
+    if (lowerRole.includes('associate')) return 'associate';
+    return 'member';
+};
+
+export function getPermissionsForRole(role: string): Permission[] {
+    const systemRole = getSystemRole(role);
+    return ROLE_PERMISSIONS[systemRole] || [];
+}
+
+export const PERMISSIONS_LEGACY = {
     DELETE_BRIEF: [UserRole.MANAGING_PARTNER, UserRole.HEAD_OF_CHAMBERS],
     MANAGE_OFFICE: [UserRole.PRACTICE_MANAGER],
 };
@@ -43,7 +78,7 @@ export function hasRolePermission(userRole: string, allowedRoles: string[]): boo
 }
 
 export const BriefPermissions = {
-    canDelete: (role: string) => hasRolePermission(role, PERMISSIONS.DELETE_BRIEF),
+    canDelete: (role: string) => hasRolePermission(role, PERMISSIONS_LEGACY.DELETE_BRIEF),
     canEditLawyerInCharge: (role: string) => hasRolePermission(role, [UserRole.MANAGING_PARTNER, UserRole.HEAD_OF_CHAMBERS, UserRole.PRACTICE_MANAGER]),
     canEditBriefNumber: (role: string) => hasRolePermission(role, [UserRole.MANAGING_PARTNER, UserRole.HEAD_OF_CHAMBERS, UserRole.PRACTICE_MANAGER]),
 };

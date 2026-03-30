@@ -318,7 +318,7 @@ export async function updateBrief(
         });
         const isReformaSuperAdmin = dbUser?.isPlatformAdmin === true;
 
-        if (data.lawyerInChargeId && !isReformaSuperAdmin && !canEditLawyerInCharge(membership.role)) {
+        if (data.lawyerInChargeId && !isReformaSuperAdmin && !session.isWorkspaceOwner && !canEditLawyerInCharge(membership.role)) {
             return {
                 success: false,
                 error: 'Only Principal Partners, Partners, and Head of Chambers can change Lawyer in Charge'
@@ -326,7 +326,7 @@ export async function updateBrief(
         }
 
         // RBAC Check for Brief Number
-        if (data.customBriefNumber && !BriefPermissions.canEditBriefNumber(membership.role)) {
+        if (data.customBriefNumber && !isReformaSuperAdmin && !session.isWorkspaceOwner && !BriefPermissions.canEditBriefNumber(membership.role)) {
             return {
                 success: false,
                 error: 'Only senior roles can edit brief numbers'
@@ -421,9 +421,9 @@ export async function deleteBrief(id: string) {
             return { success: false, error: 'Brief not found' };
         }
 
-        // 2. Security Check: Only 'partner' or 'owner' can delete
-        const { requireWorkspaceRole } = await import('@/lib/auth-utils');
-        await requireWorkspaceRole(brief.workspaceId, ['partner', 'owner']);
+        // 2. Security Check: Require DELETE_BRIEF permission (or be Workspace Owner)
+        const { requirePermission } = await import('@/lib/auth-utils');
+        await requirePermission(brief.workspaceId, 'DELETE_BRIEF');
 
         // 3. Soft Delete Logic
         await prisma.brief.update({

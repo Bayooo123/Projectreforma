@@ -249,37 +249,19 @@ export async function PATCH(request: NextRequest) {
             );
         }
 
-        // 1. RBAC: Only specific roles can edit expenses
-        // Fetch membership and user synchronously to ensure we have IDs
-        const membership = await prisma.workspaceMember.findFirst({
-            where: {
-                workspaceId,
-                user: { email: user.email! },
-            },
-            include: { 
-                workspace: true,
-                user: true // Get the full user record to ensure we have the internal ID
-            }
-        });
-
-        if (!membership) {
-            return NextResponse.json(
-                { success: false, error: 'Unauthorized: You are not a member of this workspace' },
+        // 1. RBAC: Require MANAGE_OFFICE permission
+        let membership;
+        try {
+            const { requirePermission } = await import('@/lib/auth-utils');
+            membership = await requirePermission(workspaceId, 'MANAGE_OFFICE');
+        } catch (error: any) {
+             return NextResponse.json(
+                { success: false, error: error.message },
                 { status: 403 }
             );
         }
 
-        const dbUserId = membership.userId || membership.user.id;
-        const allowedRoles = ['Managing Partner', 'Partner', 'Practice Manager', 'Head of Chamber'];
-        const isOwner = membership.workspace.ownerId === dbUserId;
-        const isAuthorized = isOwner || allowedRoles.includes(membership.role);
-
-        if (!isAuthorized) {
-            return NextResponse.json(
-                { success: false, error: 'Forbidden: You do not have permission to edit expenses' },
-                { status: 403 }
-            );
-        }
+        const dbUserId = membership.userId;
 
         // 2. Fetch existing expense for audit log
         const existingExpense = await prisma.expense.findUnique({
@@ -354,36 +336,19 @@ export async function DELETE(request: NextRequest) {
             );
         }
 
-        // 1. RBAC: Only specific roles can delete expenses
-        const membership = await prisma.workspaceMember.findFirst({
-            where: {
-                workspaceId,
-                user: { email: user.email! },
-            },
-            include: { 
-                workspace: true,
-                user: true 
-            }
-        });
-
-        if (!membership) {
-            return NextResponse.json(
-                { success: false, error: 'Unauthorized: You are not a member of this workspace' },
+        // 1. RBAC: Require MANAGE_OFFICE permission
+        let membership;
+        try {
+            const { requirePermission } = await import('@/lib/auth-utils');
+            membership = await requirePermission(workspaceId, 'MANAGE_OFFICE');
+        } catch (error: any) {
+             return NextResponse.json(
+                { success: false, error: error.message },
                 { status: 403 }
             );
         }
 
-        const dbUserId = membership.userId || membership.user.id;
-        const allowedRoles = ['Managing Partner', 'Partner', 'Practice Manager', 'Head of Chamber'];
-        const isOwner = membership.workspace.ownerId === dbUserId;
-        const isAuthorized = isOwner || allowedRoles.includes(membership.role);
-
-        if (!isAuthorized) {
-            return NextResponse.json(
-                { success: false, error: 'Forbidden: You do not have permission to delete expenses' },
-                { status: 403 }
-            );
-        }
+        const dbUserId = membership.userId;
 
         // 2. Fetch existing expense for audit log metadata before deletion
         const existingExpense = await prisma.expense.findUnique({

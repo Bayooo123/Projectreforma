@@ -14,6 +14,7 @@ import { config } from "@/lib/config"
 
 // Valid role types for type safety
 import { RoleValue } from "@/lib/roles"
+import { getPermissionsForRole } from "@/lib/rbac"
 
 // Valid role types for type safety
 type RoleType = "owner" | RoleValue;
@@ -68,7 +69,10 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
 
                     const user = await prisma.user.findUnique({
                         where: { email },
-                        include: { workspaces: true }
+                        include: { 
+                            workspaces: true,
+                            ownedWorkspaces: { select: { id: true } }
+                        }
                     });
 
                     if (user) {
@@ -78,7 +82,6 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
                         const membership = user.workspaces.find(ws => ws.workspaceId === workspace.id);
                         const role = membership?.role || 'associate';
 
-                        // Return typed User object
                         const authUser: User = {
                             id: user.id,
                             email: user.email,
@@ -87,6 +90,8 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
                             workspaceId: workspace.id,
                             lawyerToken: user.lawyerToken || '',
                             isPlatformAdmin: user.isPlatformAdmin,
+                            isWorkspaceOwner: user.ownedWorkspaces.some(w => w.id === workspace.id),
+                            permissions: getPermissionsForRole(role),
                         };
                         return authUser;
                     }
@@ -120,7 +125,10 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
                     // Verify User
                     const user = await prisma.user.findUnique({
                         where: { email },
-                        include: { workspaces: true }
+                        include: { 
+                            workspaces: true,
+                            ownedWorkspaces: { select: { id: true } }
+                        }
                     });
 
                     if (!user || !user.password) {
@@ -152,6 +160,8 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
                             workspaceId: workspaceId,
                             lawyerToken: user.lawyerToken || '',
                             isPlatformAdmin: user.isPlatformAdmin,
+                            isWorkspaceOwner: user.ownedWorkspaces.some(w => w.id === workspaceId),
+                            permissions: getPermissionsForRole(membership.role),
                         };
                         return authUser;
                     }
@@ -166,6 +176,10 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
                         workspaceId: firstMembership?.workspaceId || '',
                         lawyerToken: user.lawyerToken || '',
                         isPlatformAdmin: user.isPlatformAdmin,
+                        isWorkspaceOwner: firstMembership 
+                            ? user.ownedWorkspaces.some(w => w.id === firstMembership.workspaceId)
+                            : false,
+                        permissions: getPermissionsForRole(firstMembership?.role || 'Associate'),
                     };
                     return authUser;
                 }
@@ -182,6 +196,8 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
                 token.workspaceId = user.workspaceId;
                 token.lawyerToken = user.lawyerToken;
                 token.isPlatformAdmin = user.isPlatformAdmin;
+                token.isWorkspaceOwner = user.isWorkspaceOwner;
+                token.permissions = user.permissions;
             }
             return token;
         },
@@ -192,6 +208,8 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
                 session.user.workspaceId = token.workspaceId as string;
                 session.user.lawyerToken = token.lawyerToken as string;
                 session.user.isPlatformAdmin = !!token.isPlatformAdmin;
+                session.user.isWorkspaceOwner = !!token.isWorkspaceOwner;
+                session.user.permissions = (token.permissions as string[]) || [];
             }
             return session;
         },
