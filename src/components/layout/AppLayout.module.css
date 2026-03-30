@@ -4,7 +4,8 @@
     max-height: 100vh;
     overflow: hidden;
     background-color: var(--background);
-    contain: layout paint;
+    /* NOTE: contain:layout paint removed — it traps position:fixed children
+       (modal overlays) preventing them from covering the full viewport */
 }
 
 .sidebar {
@@ -19,7 +20,7 @@
     top: 0;
     bottom: 0;
     left: 0;
-    contain: layout paint;
+    /* NOTE: contain:layout paint removed — same reason as .gridContainer */
 }
 
 .mainContent {

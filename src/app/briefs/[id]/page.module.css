@@ -2,7 +2,7 @@
     display: flex;
     flex-direction: column;
     gap: 1.5rem;
-    height: calc(100vh - 2rem);
+    /* Removed fixed height — app shell .contentContainer is the scroll root */
 }
 
 .header {
@@ -216,14 +216,9 @@
 
 .content {
     flex: 1;
-    min-height: 0;
     display: flex;
     flex-direction: column;
-    /* Enable vertical scroll, prevent horizontal overflow */
-    overflow-y: auto;
-    overflow-x: hidden;
-    /* Add padding for scrollbar spacing */
-    padding-right: 0.5rem;
+    /* No overflow here — scroll is handled by the app shell */
 }
 
 .documentsHeader {

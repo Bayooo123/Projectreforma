@@ -261,7 +261,9 @@ html,
 body {
   max-width: 100vw;
   overflow-x: hidden;
-  overflow-y: scroll;
+  /* Single-scroll model: overflow here is hidden so the app shell's
+     .contentContainer is the sole vertical scroll root. */
+  overflow-y: hidden;
   font-size: 14px;
   /* Reverted to 14px per user feedback */
 }
