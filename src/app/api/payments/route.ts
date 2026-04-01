@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { Prisma } from '@prisma/client';
 
 // GET /api/payments - List payments for a client
 export async function GET(request: NextRequest) {
@@ -48,7 +49,7 @@ export async function POST(request: NextRequest) {
             data: {
                 clientId,
                 invoiceId,
-                amount: parseInt(amount),
+                amount: new Prisma.Decimal(amount),
                 method,
                 reference,
             },
@@ -68,10 +69,10 @@ export async function POST(request: NextRequest) {
 
             if (invoice) {
                 const totalPaid = invoice.payments.reduce(
-                    (sum: number, p: { amount: number }) => sum + p.amount,
-                    0
+                    (sum, p) => sum.plus(p.amount),
+                    new Prisma.Decimal(0)
                 );
-                const newStatus = totalPaid >= invoice.totalAmount ? 'paid' : 'pending';
+                const newStatus = totalPaid.greaterThanOrEqualTo(invoice.totalAmount) ? 'paid' : 'pending';
 
                 await prisma.invoice.update({
                     where: { id: invoiceId },

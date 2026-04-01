@@ -420,6 +420,7 @@ model Brief {
   documents           Document[]
   notifications       Notification[]
   tasks               Task[]
+  folders             Folder[]
 
   @@index([lawyerId])
   @@index([lawyerInChargeId])
@@ -436,13 +437,34 @@ model Document {
   type       String
   size       Int
   briefId    String
+  folderId   String?
   uploadedAt DateTime        @default(now())
   ocrStatus  String          @default("pending")
   ocrText    String?
   brief      Brief           @relation(fields: [briefId], references: [id], onDelete: Cascade)
+  folder     Folder?         @relation(fields: [folderId], references: [id], onDelete: Cascade)
   chunks     DocumentChunk[]
 
   @@index([briefId])
+  @@index([folderId])
+}
+
+model Folder {
+  id          String     @id @default(cuid())
+  name        String
+  description String?
+  briefId     String
+  parentId    String?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  brief       Brief      @relation(fields: [briefId], references: [id], onDelete: Cascade)
+  parent      Folder?    @relation("Subfolders", fields: [parentId], references: [id], onDelete: Cascade)
+  children    Folder[]   @relation("Subfolders")
+  documents   Document[]
+
+  @@index([briefId])
+  @@index([parentId])
 }
 
 model DocumentChunk {
@@ -497,12 +519,12 @@ model Invoice {
   billToState          String?
   attentionTo          String?
   notes                String?
-  subtotal             Int            @default(0)
+  subtotal             Decimal        @default(0) @db.Decimal(20, 2)
   vatRate              Float          @default(7.5)
-  vatAmount            Int            @default(0)
+  vatAmount            Decimal        @default(0) @db.Decimal(20, 2)
   securityChargeRate   Float          @default(1.0)
-  securityChargeAmount Int            @default(0)
-  totalAmount          Int            @default(0)
+  securityChargeAmount Decimal        @default(0) @db.Decimal(20, 2)
+  totalAmount          Decimal        @default(0) @db.Decimal(20, 2)
   createdAt            DateTime       @default(now())
   updatedAt            DateTime       @updatedAt
   followUpSent         Boolean        @default(false)
@@ -522,7 +544,7 @@ model InvoiceItem {
   id          String   @id @default(cuid())
   invoiceId   String
   description String
-  amount      Int
+  amount      Decimal  @db.Decimal(20, 2)
   quantity    Int      @default(1)
   order       Int      @default(0)
   createdAt   DateTime @default(now())
@@ -535,7 +557,7 @@ model Payment {
   id            String         @id @default(cuid())
   clientId      String
   invoiceId     String?
-  amount        Int
+  amount        Decimal        @db.Decimal(20, 2)
   date          DateTime       @default(now())
   method        String
   reference     String?
@@ -551,7 +573,7 @@ model Payment {
 model Expense {
   id          String            @id @default(cuid())
   workspaceId String
-  amount      Int
+  amount      Decimal           @db.Decimal(20, 2)
   /// @searchable
   description String?
   date        DateTime          @default(now())

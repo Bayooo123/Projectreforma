@@ -6,10 +6,11 @@ import styles from './DocumentUpload.module.css';
 
 interface DocumentUploadProps {
     briefId: string;
+    folderId?: string | null;
     onUploadComplete: (newDocs?: any[]) => void;
 }
 
-export default function DocumentUpload({ briefId, onUploadComplete }: DocumentUploadProps) {
+export default function DocumentUpload({ briefId, folderId, onUploadComplete }: DocumentUploadProps) {
     const [isUploading, setIsUploading] = useState(false);
     const [dragActive, setDragActive] = useState(false);
 
@@ -64,6 +65,7 @@ export default function DocumentUpload({ briefId, onUploadComplete }: DocumentUp
                     type: docType,
                     size: file.size,
                     briefId: briefId,
+                    folderId: folderId || null,
                 });
 
                 if (result.success) {

@@ -117,6 +117,13 @@ export async function getBriefById(id: string) {
                 },
                 matter: true,
                 documents: true,
+                folders: {
+                    include: {
+                        _count: {
+                            select: { documents: true }
+                        }
+                    }
+                },
                 workspace: {
                     select: {
                         id: true,

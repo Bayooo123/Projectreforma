@@ -95,9 +95,9 @@ const PaymentModal = ({ isOpen, onClose, clientName, clientId, selectedInvoice }
 
 
 
-    const formatCurrency = (amount: number) => {
-        // Amount is in kobo, convert to naira
-        return `₦${(amount / 100).toLocaleString()}`;
+    const formatCurrency = (amount: number | string) => {
+        const num = typeof amount === 'string' ? parseFloat(amount) : amount;
+        return `₦${num.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
     };
 
     const formatDate = (date: Date) => {
@@ -121,7 +121,7 @@ const PaymentModal = ({ isOpen, onClose, clientName, clientId, selectedInvoice }
             let invoiceId = formData.get('invoiceId') as string;
 
             if (selectedInvoice && paymentMode === 'full') {
-                amount = invoiceBalance / 100; // Invoice balance in Naira
+                amount = invoiceBalance; // Invoice balance in Naira (no more / 100)
                 invoiceId = selectedInvoice.id;
             } else if (selectedInvoice && paymentMode === 'vary') {
                 amount = parseFloat(varyAmount);
@@ -143,7 +143,7 @@ const PaymentModal = ({ isOpen, onClose, clientName, clientId, selectedInvoice }
             const result = await createPayment({
                 clientId,
                 invoiceId: invoiceId || undefined,
-                amount: Math.round(amount * 100), // Convert to kobo
+                amount: amount, // Send as direct decimal/number
                 method: method,
                 reference: finalReference,
                 date: finalDate,

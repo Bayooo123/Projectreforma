@@ -3,12 +3,15 @@
 import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
 
-export async function getDocuments(briefId: string) {
+export async function getDocuments(briefId: string, folderId?: string | null) {
     try {
+        const whereClause: any = { briefId };
+        if (folderId !== undefined) {
+            whereClause.folderId = folderId; // Can be null for root documents
+        }
+        
         const documents = await prisma.document.findMany({
-            where: {
-                briefId,
-            },
+            where: whereClause,
             orderBy: {
                 uploadedAt: 'desc',
             },
@@ -26,6 +29,7 @@ export async function createDocument(data: {
     type: string;
     size: number;
     briefId: string;
+    folderId?: string | null;
 }) {
     try {
         const document = await prisma.document.create({
@@ -35,6 +39,7 @@ export async function createDocument(data: {
                 type: data.type,
                 size: data.size,
                 briefId: data.briefId,
+                folderId: data.folderId || null,
             },
         });
         revalidatePath(`/briefs/${data.briefId}`);

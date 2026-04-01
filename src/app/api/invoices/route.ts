@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { Prisma } from '@prisma/client';
 
 // GET /api/invoices - List invoices for a client
 export async function GET(request: NextRequest) {
@@ -62,11 +63,14 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // Calculate amounts
-        const subtotal = items.reduce((sum: number, item: any) => sum + parseInt(item.amount), 0);
-        const vatAmount = Math.round(subtotal * (vatRate / 100));
-        const securityChargeAmount = Math.round(subtotal * (securityChargeRate / 100));
-        const totalAmount = subtotal + vatAmount + securityChargeAmount;
+        // Calculate amounts using Decimal for precision
+        const subtotal = items.reduce(
+            (sum: Prisma.Decimal, item: any) => sum.plus(new Prisma.Decimal(item.amount)), 
+            new Prisma.Decimal(0)
+        );
+        const vatAmount = subtotal.times(new Prisma.Decimal(vatRate).dividedBy(100));
+        const securityChargeAmount = subtotal.times(new Prisma.Decimal(securityChargeRate).dividedBy(100));
+        const totalAmount = subtotal.plus(vatAmount).plus(securityChargeAmount);
 
         // Create invoice with items
         const invoice = await prisma.invoice.create({
@@ -90,7 +94,7 @@ export async function POST(request: NextRequest) {
                 items: {
                     create: items.map((item: any, index: number) => ({
                         description: item.description,
-                        amount: parseInt(item.amount),
+                        amount: new Prisma.Decimal(item.amount),
                         quantity: item.quantity || 1,
                         order: index,
                     })),

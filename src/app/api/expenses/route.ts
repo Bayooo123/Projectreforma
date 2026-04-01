@@ -3,7 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { requireAuth } from '@/lib/auth-utils';
 import { notifyExpenseRecorded } from '@/lib/notifications';
 import { categorizeExpense } from '@/lib/services/expense-classification';
-import { ExpenseCategory } from '@prisma/client';
+import { ExpenseCategory, Prisma } from '@prisma/client';
 
 // GET /api/expenses - Fetch expenses with optional filtering
 export async function GET(request: NextRequest) {
@@ -78,42 +78,50 @@ export async function GET(request: NextRequest) {
         });
 
         // Calculate aggregations
-        const totalAmount = expenses.reduce((sum, expense) => sum + expense.amount, 0);
+        const totalAmount = expenses.reduce((sum, expense) => sum.plus(expense.amount), new Prisma.Decimal(0));
 
         // Group by category
         const byCategory = expenses.reduce((acc, expense) => {
-            if (!acc[expense.category]) {
-                acc[expense.category] = 0;
+            const cat = expense.category;
+            if (!acc[cat]) {
+                acc[cat] = new Prisma.Decimal(0);
             }
-            acc[expense.category] += expense.amount;
+            acc[cat] = acc[cat].plus(expense.amount);
             return acc;
-        }, {} as Record<string, number>);
+        }, {} as Record<string, Prisma.Decimal>);
 
         // Group by date
         const byDate = expenses.reduce((acc, expense) => {
             const dateKey = expense.date.toISOString().split('T')[0];
             if (!acc[dateKey]) {
                 acc[dateKey] = {
-                    total: 0,
+                    total: new Prisma.Decimal(0),
                     count: 0,
                     expenses: [],
                 };
             }
-            acc[dateKey].total += expense.amount;
+            acc[dateKey].total = acc[dateKey].total.plus(expense.amount);
             acc[dateKey].count += 1;
             acc[dateKey].expenses.push(expense);
             return acc;
-        }, {} as Record<string, { total: number; count: number; expenses: any[] }>);
+        }, {} as Record<string, { total: Prisma.Decimal; count: number; expenses: any[] }>);
 
         return NextResponse.json({
             success: true,
             data: {
                 expenses,
                 aggregations: {
-                    total: totalAmount,
+                    total: totalAmount.toString(),
                     count: expenses.length,
-                    byCategory,
-                    byDate,
+                    byCategory: Object.fromEntries(
+                        Object.entries(byCategory).map(([k, v]) => [k, (v as Prisma.Decimal).toString()])
+                    ),
+                    byDate: Object.fromEntries(
+                        Object.entries(byDate).map(([k, v]) => {
+                            const val = v as { total: Prisma.Decimal; count: number; expenses: any[] };
+                            return [k, { ...val, total: val.total.toString() }];
+                        })
+                    ),
                 },
             },
         });
@@ -158,7 +166,7 @@ export async function POST(request: NextRequest) {
                     if (!Object.values(ExpenseCategory).includes(finalCategory)) {
                         finalCategory = categorizeExpense({
                             description: expense.description,
-                            amount: expense.amount
+                            amount: typeof expense.amount === 'string' ? parseFloat(expense.amount) : expense.amount
                         });
                     }
 
@@ -166,7 +174,7 @@ export async function POST(request: NextRequest) {
                         data: {
                             workspaceId,
                             category: finalCategory,
-                            amount: Math.round(expense.amount * 100), // Convert to kobo/cents
+                            amount: new Prisma.Decimal(expense.amount), // Direct Decimal initialization
                             description: expense.description || null,
                             date: expense.date ? new Date(expense.date) : new Date(),
                             reference: expense.reference || null,
@@ -203,7 +211,7 @@ export async function POST(request: NextRequest) {
         if (!category || !Object.values(ExpenseCategory).includes(finalCategory)) {
             finalCategory = categorizeExpense({
                 description,
-                amount
+                amount: typeof amount === 'string' ? parseFloat(amount) : amount
             });
         }
 
@@ -211,7 +219,7 @@ export async function POST(request: NextRequest) {
             data: {
                 workspaceId,
                 category: finalCategory,
-                amount: Math.round(amount * 100), // Convert to kobo/cents
+                amount: new Prisma.Decimal(amount), // Direct Decimal initialization
                 description: description || null,
                 date: date ? new Date(date) : new Date(),
                 reference: reference || null,
@@ -281,7 +289,7 @@ export async function PATCH(request: NextRequest) {
                 where: { id },
                 data: {
                     category: category as ExpenseCategory || undefined,
-                    amount: amount !== undefined ? Math.round(amount * 100) : undefined,
+                    amount: amount !== undefined ? new Prisma.Decimal(amount) : undefined,
                     description: description !== undefined ? description : undefined,
                     date: date ? new Date(date) : undefined,
                     reference: reference !== undefined ? reference : undefined,

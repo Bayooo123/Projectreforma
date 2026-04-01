@@ -53,7 +53,7 @@ const ExpenseModal = ({ isOpen, onClose, onSuccess, workspaceId, expenseToEdit }
             if (expenseToEdit) {
                 // Initialize for edit mode
                 setCategory(expenseToEdit.category);
-                setAmount((expenseToEdit.amount / 100).toString());
+                setAmount(expenseToEdit.amount.toString());
                 setDescription(expenseToEdit.description || '');
                 setDate(new Date(expenseToEdit.date).toISOString().split('T')[0]);
                 setReference(expenseToEdit.reference || '');
@@ -122,7 +122,7 @@ const ExpenseModal = ({ isOpen, onClose, onSuccess, workspaceId, expenseToEdit }
                         id: expenseToEdit.id,
                         workspaceId,
                         category,
-                        amount: parseFloat(amount),
+                        amount,
                         description: description || null,
                         date,
                         reference: reference || null
@@ -151,7 +151,7 @@ const ExpenseModal = ({ isOpen, onClose, onSuccess, workspaceId, expenseToEdit }
                                 workspaceId,
                                 expenses: [{
                                     category,
-                                    amount: parseFloat(amount),
+                                    amount,
                                     description: description || null,
                                     date,
                                     reference: reference || null
@@ -182,7 +182,7 @@ const ExpenseModal = ({ isOpen, onClose, onSuccess, workspaceId, expenseToEdit }
                         workspaceId,
                         expenses: expenseList.map(item => ({
                             category: item.category,
-                            amount: parseFloat(item.amount),
+                            amount: item.amount,
                             description: item.description || null,
                             date: item.date,
                             reference: item.reference || null
@@ -207,7 +207,7 @@ const ExpenseModal = ({ isOpen, onClose, onSuccess, workspaceId, expenseToEdit }
 
     const formatCurrency = (val: string) => {
         const num = parseFloat(val);
-        return isNaN(num) ? '₦0.00' : `₦${num.toLocaleString()}`;
+        return isNaN(num) ? '₦0.00' : `₦${num.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
     };
 
     const totalAmount = isEditMode 

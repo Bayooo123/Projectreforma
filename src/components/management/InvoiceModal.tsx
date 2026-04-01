@@ -106,8 +106,9 @@ const InvoiceModal = ({ isOpen, onClose, clientName, clientId, workspaceId, lett
         return `₦${amount.toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
     };
 
-    const formatCurrencyFromKobo = (amount: number) => {
-        return `₦${(amount / 100).toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    const formatCurrencyFromKobo = (amount: number | string) => {
+        const num = typeof amount === 'string' ? parseFloat(amount) : amount;
+        return `₦${num.toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
     };
 
     // Controlled State for Bill To
@@ -186,9 +187,9 @@ const InvoiceModal = ({ isOpen, onClose, clientName, clientId, workspaceId, lett
                 };
             });
 
-            const vat = Math.round(subtotal * 0.075);
-            const security = Math.round(subtotal * 0.01);
-            const total = subtotal + vat + security; // or invoiceToUse!.totalAmount
+            const vat = subtotal * 0.075;
+            const security = subtotal * 0.01;
+            const total = subtotal + vat + security;
 
             pdfData = {
                 invoiceNumber: invoiceToUse!.invoiceNumber,
@@ -285,8 +286,8 @@ const InvoiceModal = ({ isOpen, onClose, clientName, clientId, workspaceId, lett
                     amount: amount
                 };
             });
-            const vat = Math.round(subtotal * 0.075);
-            const security = Math.round(subtotal * 0.01);
+            const vat = subtotal * 0.075;
+            const security = subtotal * 0.01;
             const total = subtotal + vat + security;
 
             // Ensure bank details are passed if not in invoice object?
@@ -377,7 +378,7 @@ const InvoiceModal = ({ isOpen, onClose, clientName, clientId, workspaceId, lett
                 dueDate: dueDateVal,
                 items: items.map((item, index) => ({
                     description: item.description,
-                    amount: Math.round(Number(item.amount) * 100), // Convert to kobo
+                    amount: Number(item.amount), // Send as direct decimal/number
                     quantity: Number(item.quantity),
                     order: index,
                 })),

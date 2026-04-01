@@ -2,6 +2,7 @@
 
 import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
+import { Prisma } from '@prisma/client';
 
 // ============================================
 // INVOICE CRUD OPERATIONS
@@ -64,11 +65,14 @@ export async function createInvoice(data: CreateInvoiceData) {
         // Generate invoice number
         const invoiceNumber = await generateInvoiceNumber(client.workspaceId);
 
-        // Calculate amounts
-        const subtotal = data.items.reduce((sum, item) => sum + (item.amount * item.quantity), 0);
-        const vatAmount = Math.round(subtotal * (data.vatRate / 100));
-        const securityChargeAmount = Math.round(subtotal * (data.securityChargeRate / 100));
-        const totalAmount = subtotal + vatAmount + securityChargeAmount;
+        // Calculate amounts using Decimal for precision
+        const subtotal = data.items.reduce(
+            (sum, item) => sum.plus(new Prisma.Decimal(item.amount).times(item.quantity)), 
+            new Prisma.Decimal(0)
+        );
+        const vatAmount = subtotal.times(new Prisma.Decimal(data.vatRate).dividedBy(100));
+        const securityChargeAmount = subtotal.times(new Prisma.Decimal(data.securityChargeRate).dividedBy(100));
+        const totalAmount = subtotal.plus(vatAmount).plus(securityChargeAmount);
 
         // Create invoice with line items
         const invoice = await prisma.invoice.create({
@@ -114,7 +118,7 @@ export async function createInvoice(data: CreateInvoiceData) {
             await createNotification({
                 workspaceId: client.workspaceId,
                 title: 'New Invoice Issued',
-                message: `Invoice #${invoiceNumber} for ${client.name} has been created. Total: ₦${(totalAmount / 100).toLocaleString()}`,
+                message: `Invoice #${invoiceNumber} for ${client.name} has been created. Total: ₦${totalAmount.toNumber().toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
                 type: 'info',
                 priority: 'medium',
                 recipients: { role: ['owner', 'partner'] },
@@ -335,8 +339,11 @@ export async function getInvoiceStats(workspaceId: string) {
             },
         });
 
-        const totalBilled = billedData._sum.totalAmount || 0;
-        const totalPaid = paymentData._sum.amount || 0;
+        const totalBilledDecimal = (billedData._sum.totalAmount as any) || new Prisma.Decimal(0);
+        const totalPaidDecimal = (paymentData._sum.amount as any) || new Prisma.Decimal(0);
+        
+        const totalBilled = totalBilledDecimal.toNumber();
+        const totalPaid = totalPaidDecimal.toNumber();
         const totalOutstanding = totalBilled - totalPaid;
 
         return {
@@ -411,10 +418,13 @@ export async function getClientInvoices(clientId: string) {
 
         // Calculate paidAmount for each invoice
         const invoicesWithPaidAmount = invoices.map(invoice => {
-            const paidAmount = invoice.payments.reduce((sum, p) => sum + p.amount, 0);
+            const paidAmountDecimal = invoice.payments.reduce(
+                (sum, p) => sum.plus(new Prisma.Decimal(p.amount as any)), 
+                new Prisma.Decimal(0)
+            );
             return {
                 ...invoice,
-                paidAmount,
+                paidAmount: paidAmountDecimal.toNumber(),
             };
         });
 

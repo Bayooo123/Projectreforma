@@ -126,8 +126,9 @@ const FinancialLog = ({ workspaceId, initialExpenses, initialSummaries, userRole
         setViewMode('summary');
     };
 
-    const formatCurrency = (amount: number) => {
-        return `₦${(amount / 100).toLocaleString()}`;
+    const formatCurrency = (amount: number | string) => {
+        const num = typeof amount === 'string' ? parseFloat(amount) : amount;
+        return `₦${num.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
     };
 
     const formatTime = (dateString: string) => {

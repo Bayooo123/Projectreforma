@@ -1,14 +1,15 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Clock, Tag, User, Building, Calendar, Upload, Loader, FileText, Trash2, Edit, Sparkles } from 'lucide-react';
+import { ArrowLeft, Clock, Tag, User, Building, Calendar, Upload, Loader, FileText, Trash2, Edit, Sparkles, Folder, FolderPlus, FolderInput, CornerUpLeft } from 'lucide-react';
 import { getBriefDisplayTitle, getBriefDisplayNumber } from '@/lib/brief-display';
 import DocumentUpload from '@/components/briefs/DocumentUpload';
 import DocumentPreview from '@/components/briefs/DocumentPreview';
-// import BriefActivityFeed from '@/components/briefs/BriefActivityFeed'; // Removed for UI cleanup per request
 import EditBriefModal from '@/components/briefs/EditBriefModal';
+import CreateFolderModal from '@/components/briefs/CreateFolderModal';
+import MoveDocumentModal from '@/components/briefs/MoveDocumentModal';
 import styles from './page.module.css';
 
 interface Brief {
@@ -52,6 +53,13 @@ interface Brief {
         name: string;
         caseNumber: string | null;
     } | null;
+    folders?: Array<{
+        id: string;
+        name: string;
+        description: string | null;
+        parentId: string | null;
+        _count?: { documents: number };
+    }>;
     documents: Array<{
         id: string;
         name: string;
@@ -60,6 +68,7 @@ interface Brief {
         size: number;
         uploadedAt: Date;
         ocrStatus?: string;
+        folderId?: string | null;
     }>;
     workspace: {
         id: string;
@@ -72,26 +81,34 @@ interface BriefDetailClientProps {
     brief: Brief;
 }
 
-// import { BriefActivityLogInput } from '@/components/briefs/BriefActivityLogInput'; // Removed
 import { getDocuments } from '@/app/actions/documents';
+import { getFolders, deleteFolder } from '@/app/actions/folders';
 import { summarizeBrief } from '@/app/actions/briefs';
 
 export default function BriefDetailClient({ brief }: BriefDetailClientProps) {
     const router = useRouter();
     const [documents, setDocuments] = useState(brief.documents);
+    const [folders, setFolders] = useState(brief.folders || []);
+    const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
     const [previewDocument, setPreviewDocument] = useState<typeof documents[0] | null>(null);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [isCreateFolderModalOpen, setIsCreateFolderModalOpen] = useState(false);
+    const [movingDoc, setMovingDoc] = useState<typeof documents[0] | null>(null);
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [summary, setSummary] = useState<string | null>(brief.summary);
     const [isSummarizing, setIsSummarizing] = useState(false);
 
-    const refreshDocuments = async (silent = false) => {
+    const refreshData = async (silent = false) => {
         if (!silent) setIsRefreshing(true);
         try {
-            const docs = await getDocuments(brief.id);
-            setDocuments(docs as any);
+            const [newDocs, newFolders] = await Promise.all([
+                getDocuments(brief.id),
+                getFolders(brief.id)
+            ]);
+            setDocuments(newDocs as any);
+            setFolders(newFolders as any);
         } catch (error) {
-            console.error('Error refreshing documents:', error);
+            console.error('Error refreshing data:', error);
         } finally {
             if (!silent) setIsRefreshing(false);
         }
@@ -102,8 +119,7 @@ export default function BriefDetailClient({ brief }: BriefDetailClientProps) {
             // Optimistic update: Prepend new docs to current list
             setDocuments(prev => [...newDocs, ...prev]);
         }
-        // Background refresh to ensure everything is in sync
-        refreshDocuments(true);
+        refreshData(true);
     };
 
     const handleSummarize = async () => {
@@ -112,15 +128,32 @@ export default function BriefDetailClient({ brief }: BriefDetailClientProps) {
             const result = await summarizeBrief(brief.id);
             if (result.success && result.summary) {
                 setSummary(result.summary);
-                // toast.success('Summary updated!');
             } else {
                 console.error('Summarization failed:', result.error);
-                // toast.error('Failed to generate summary');
             }
         } catch (err) {
             console.error('Error in summarization:', err);
         } finally {
             setIsSummarizing(false);
+        }
+    };
+
+    const handleDeleteFolder = async (folderId: string, folderName: string) => {
+        if (!confirm(`Are you sure you want to delete the folder "${folderName}"?\nNote: Documents inside will be moved to the main brief.`)) return;
+
+        try {
+            const result = await deleteFolder(folderId, brief.id, true);
+            if (result.success) {
+                if (currentFolderId === folderId) {
+                    setCurrentFolderId(null);
+                }
+                refreshData(true);
+            } else {
+                alert(result.error || 'Failed to delete folder');
+            }
+        } catch (err) {
+            console.error(err);
+            alert('An error occurred');
         }
     };
 
@@ -160,13 +193,13 @@ export default function BriefDetailClient({ brief }: BriefDetailClientProps) {
     const getOCRStatusBadge = (status?: string) => {
         if (!status || status === 'pending') return <span className="text-xs text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">Pending OCR</span>;
 
-        const styles: Record<string, string> = {
+        const badgeStyles: Record<string, string> = {
             processing: 'bg-blue-100 text-blue-700 border-blue-200',
             completed: 'bg-green-100 text-green-700 border-green-200',
             failed: 'bg-red-100 text-red-700 border-red-200'
         };
 
-        const style = styles[status] || 'bg-gray-100 text-gray-500';
+        const style = badgeStyles[status] || 'bg-gray-100 text-gray-500';
 
         return (
             <span className={`text-[10px] px-1.5 py-0.5 rounded border ${style} flex items-center gap-1`}>
@@ -175,6 +208,17 @@ export default function BriefDetailClient({ brief }: BriefDetailClientProps) {
             </span>
         );
     };
+
+    // Filter view data
+    const visibleFolders = useMemo(() => 
+        folders.filter(f => currentFolderId === null ? (f.parentId === null) : (f.parentId === currentFolderId)),
+    [folders, currentFolderId]);
+
+    const visibleDocuments = useMemo(() => 
+        documents.filter(d => (d.folderId || null) === currentFolderId),
+    [documents, currentFolderId]);
+
+    const currentFolder = useMemo(() => folders.find(f => f.id === currentFolderId), [folders, currentFolderId]);
 
     return (
         <div className={styles.page}>
@@ -185,10 +229,6 @@ export default function BriefDetailClient({ brief }: BriefDetailClientProps) {
                         <span>Back to Briefs</span>
                     </Link>
                     <div className={styles.actions}>
-                        {/* <Link href={`/management/drafting/${brief.id}`} className={styles.draftBtn}>
-                            <Hammer size={16} />
-                            Open Drafting Studio
-                        </Link> */}
                         <button 
                             className={styles.summarizeBtn} 
                             onClick={handleSummarize}
@@ -279,17 +319,36 @@ export default function BriefDetailClient({ brief }: BriefDetailClientProps) {
             </div>
 
             <div className={styles.content}>
-                <div className="mb-6">
-                    <DocumentUpload briefId={brief.id} onUploadComplete={handleUploadComplete} />
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
+                    <div style={{ flex: 1, minWidth: '300px' }}>
+                        <DocumentUpload briefId={brief.id} folderId={currentFolderId} onUploadComplete={handleUploadComplete} />
+                    </div>
+                    <button 
+                        onClick={() => setIsCreateFolderModalOpen(true)}
+                        style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem 1rem', backgroundColor: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', color: 'var(--text-primary)', fontWeight: 500, cursor: 'pointer' }}
+                    >
+                        <FolderPlus size={18} />
+                        New Folder
+                    </button>
                 </div>
 
                 <div className={styles.documentsHeader}>
                     <div className="flex items-center gap-2">
-                        <h2 className={styles.documentsTitle}>
-                            Documents ({documents.length})
+                        <h2 className={styles.documentsTitle} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            {currentFolderId !== null && (
+                                <button 
+                                    onClick={() => setCurrentFolderId(currentFolder?.parentId || null)}
+                                    style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: '0.25rem', borderRadius: '4px', backgroundColor: 'var(--surface)', color: 'var(--text-secondary)' }}
+                                    title="Go Back"
+                                >
+                                    <CornerUpLeft size={16} />
+                                </button>
+                            )}
+                            {currentFolderId === null ? 'Main Brief Files' : currentFolder?.name} 
+                            <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', fontWeight: 400 }}>({visibleDocuments.length} docs, {visibleFolders.length} folders)</span>
                         </h2>
                         <button
-                            onClick={() => refreshDocuments()}
+                            onClick={() => refreshData()}
                             disabled={isRefreshing}
                             className="p-1 hover:bg-slate-100 rounded-full text-slate-400 hover:text-slate-600 transition-colors"
                             title="Refresh List"
@@ -299,17 +358,51 @@ export default function BriefDetailClient({ brief }: BriefDetailClientProps) {
                     </div>
                 </div>
 
-                {documents.length === 0 ? (
+                {visibleFolders.length === 0 && visibleDocuments.length === 0 ? (
                     <div className={styles.emptyState}>
                         <FileText size={48} className={styles.emptyIcon} />
-                        <h3 className={styles.emptyTitle}>No Documents Yet</h3>
+                        <h3 className={styles.emptyTitle}>This location is empty</h3>
                         <p className={styles.emptyText}>
-                            Upload documents related to this brief to keep everything organized.
+                            Upload documents or create folders to keep everything organized.
                         </p>
                     </div>
                 ) : (
                     <div className={styles.documentsList}>
-                        {documents.map((doc) => (
+                        {/* Render Folders First */}
+                        {visibleFolders.map((folder) => (
+                            <div key={folder.id} className={styles.documentCard} style={{ backgroundColor: 'var(--surface)', cursor: 'pointer' }} onClick={() => setCurrentFolderId(folder.id)}>
+                                <div className={styles.documentIcon} style={{ backgroundColor: 'transparent', color: '#6b7280' }}>
+                                    <Folder size={24} fill="currentColor" fillOpacity={0.2} />
+                                </div>
+                                <div className={styles.documentInfo}>
+                                    <h4 className={styles.documentName}>{folder.name}</h4>
+                                    <div className={styles.documentMeta}>
+                                        <span>{folder._count?.documents || 0} files</span>
+                                        {folder.description && (
+                                            <>
+                                                <span>•</span>
+                                                <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '150px' }}>{folder.description}</span>
+                                            </>
+                                        )}
+                                    </div>
+                                </div>
+                                <div className={styles.documentActions} onClick={(e) => e.stopPropagation()}>
+                                    <button 
+                                        className={styles.deleteBtn}
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleDeleteFolder(folder.id, folder.name);
+                                        }}
+                                        title="Delete Folder"
+                                    >
+                                        <Trash2 size={16} />
+                                    </button>
+                                </div>
+                            </div>
+                        ))}
+
+                        {/* Render Documents */}
+                        {visibleDocuments.map((doc) => (
                             <div key={doc.id} className={styles.documentCard}>
                                 <div className={styles.documentIcon}>
                                     <FileText size={24} />
@@ -326,6 +419,13 @@ export default function BriefDetailClient({ brief }: BriefDetailClientProps) {
                                     </div>
                                 </div>
                                 <div className={styles.documentActions}>
+                                    <button
+                                        onClick={() => setMovingDoc(doc)}
+                                        className={styles.viewBtn} style={{ color: 'var(--text-secondary)' }}
+                                        title="Move Document"
+                                    >
+                                        <FolderInput size={16} style={{ marginRight: '4px', display: 'inline' }} />
+                                    </button>
                                     <button
                                         onClick={() => setPreviewDocument(doc)}
                                         className={styles.viewBtn}
@@ -352,6 +452,32 @@ export default function BriefDetailClient({ brief }: BriefDetailClientProps) {
                 brief={brief}
                 workspaceId={brief.workspace.id}
             />
+
+            <CreateFolderModal
+                isOpen={isCreateFolderModalOpen}
+                onClose={() => setIsCreateFolderModalOpen(false)}
+                briefId={brief.id}
+                parentId={currentFolderId}
+                onSuccess={() => {
+                    setIsCreateFolderModalOpen(false);
+                    refreshData(true);
+                }}
+            />
+
+            {movingDoc && (
+                <MoveDocumentModal
+                    isOpen={!!movingDoc}
+                    onClose={() => setMovingDoc(null)}
+                    briefId={brief.id}
+                    documentId={movingDoc.id}
+                    documentName={movingDoc.name}
+                    currentFolderId={currentFolderId}
+                    onSuccess={() => {
+                        setMovingDoc(null);
+                        refreshData(true);
+                    }}
+                />
+            )}
 
             <DocumentPreview
                 document={previewDocument}

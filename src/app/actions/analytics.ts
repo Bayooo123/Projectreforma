@@ -2,6 +2,7 @@
 
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { Prisma } from "@prisma/client";
 
 export async function getAnalyticsMetrics(workspaceId: string) {
     if (!workspaceId) return null;
@@ -31,8 +32,17 @@ export async function getAnalyticsMetrics(workspaceId: string) {
         _sum: { amount: true }
     });
 
-    const thisMonthRevenue = thisMonthPayments._sum.amount || 0;
-    const lastMonthRevenue = lastMonthPayments._sum.amount || 0;
+    const thisMonthRevenueDecimal = (thisMonthPayments._sum.amount as any) || new Prisma.Decimal(0);
+    const lastMonthRevenueDecimal = (lastMonthPayments._sum.amount as any) || new Prisma.Decimal(0);
+    
+    const thisMonthRevenue = typeof (thisMonthRevenueDecimal as any).toNumber === 'function' 
+        ? (thisMonthRevenueDecimal as any).toNumber() 
+        : Number(thisMonthRevenueDecimal);
+        
+    const lastMonthRevenue = typeof (lastMonthRevenueDecimal as any).toNumber === 'function' 
+        ? (lastMonthRevenueDecimal as any).toNumber() 
+        : Number(lastMonthRevenueDecimal);
+
     let revenueGrowth = 0;
     if (lastMonthRevenue > 0) {
         revenueGrowth = ((thisMonthRevenue - lastMonthRevenue) / lastMonthRevenue) * 100;
@@ -66,7 +76,10 @@ export async function getAnalyticsMetrics(workspaceId: string) {
         _count: { id: true }
     });
 
-    const thisMonthExpenses = thisMonthExpensesAgg._sum.amount || 0;
+    const thisMonthExpensesRaw = (thisMonthExpensesAgg._sum.amount as any) || new Prisma.Decimal(0);
+    const thisMonthExpenses = typeof (thisMonthExpensesRaw as any).toNumber === 'function' 
+        ? (thisMonthExpensesRaw as any).toNumber() 
+        : Number(thisMonthExpensesRaw);
     const expenseCount = thisMonthExpensesAgg._count.id || 0;
 
     // 4. Pending Court Dates (Next 7 days)
@@ -133,7 +146,8 @@ export async function getRevenueTrend(workspaceId: string) {
     payments.forEach(p => {
         const monthKey = months[p.date.getMonth()];
         if (trendData.has(monthKey)) {
-            trendData.set(monthKey, (trendData.get(monthKey) || 0) + p.amount);
+            const currentAmount = trendData.get(monthKey) || 0;
+            trendData.set(monthKey, currentAmount + (new Prisma.Decimal(p.amount).toNumber()));
         }
     });
 
@@ -165,13 +179,18 @@ export async function getTopClients(workspaceId: string, limit: number = 5) {
 
     // Calculate totals in memory (efficient enough for < 1000 clients, otherwise use raw SQL)
     const clientStats = clients.map(client => {
-        const totalPaid = client.payments.reduce((sum, p) => sum + p.amount, 0);
+        const totalPaid = client.payments.reduce(
+            (sum, p) => sum.plus(new Prisma.Decimal(p.amount as any)), 
+            new Prisma.Decimal(0)
+        ).toNumber();
 
         // Simple outstanding logic: invoice total if not paid (Status based)
-        // A better way would be (Invoice Total - Linked Payments), but this is a good approximation for the list
         const outstanding = client.invoices
             .filter(inv => inv.status !== 'PAID' && inv.status !== 'paid')
-            .reduce((sum, inv) => sum + inv.totalAmount, 0);
+            .reduce(
+                (sum, inv) => sum.plus(new Prisma.Decimal(inv.totalAmount as any)), 
+                new Prisma.Decimal(0)
+            ).toNumber();
 
         return {
             name: client.name || 'Unknown Client',
