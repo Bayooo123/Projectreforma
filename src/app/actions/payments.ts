@@ -2,11 +2,12 @@
 
 import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
+import { Prisma } from '@prisma/client';
 
 interface RecordPaymentData {
     invoiceId?: string;
     clientId: string;
-    amount: number; // in kobo
+    amount: number | string | Prisma.Decimal;
     method: string;
     reference?: string;
     date?: Date;
@@ -26,13 +27,13 @@ export async function createPayment(data: RecordPaymentData) {
                 return { success: false, error: 'Invoice not found' };
             }
 
-            const totalPaidSoFar = invoice.payments.reduce((sum, p) => sum + p.amount, 0);
-            const outstanding = invoice.totalAmount - totalPaidSoFar;
+            const totalPaidSoFar = invoice.payments.reduce(
+                (sum, p) => sum.plus(new Prisma.Decimal(p.amount as any)), 
+                new Prisma.Decimal(0)
+            );
+            const outstanding = new Prisma.Decimal(invoice.totalAmount as any).minus(totalPaidSoFar);
 
-            // Allow 100 Naira buffer for small diffs or strict check? Strict for now.
-            if (data.amount > outstanding + 1000) { // small buffer for weird float issues if any, but Int is safe.
-                // Actually, if they want to overpay, maybe let them? But requirement says "No manual status toggling without payment logic" implying strict accounting.
-                // Let's allow it but warn? No, block it prevents accounting errors.
+            if (new Prisma.Decimal(data.amount).gt(outstanding.plus(10))) { 
                 return { success: false, error: 'Payment amount exceeds outstanding balance' };
             }
         }
@@ -42,7 +43,7 @@ export async function createPayment(data: RecordPaymentData) {
             data: {
                 invoiceId: data.invoiceId,
                 clientId: data.clientId,
-                amount: data.amount,
+                amount: data.amount as any,
                 method: data.method,
                 reference: data.reference,
                 date: data.date || new Date(),
@@ -51,13 +52,16 @@ export async function createPayment(data: RecordPaymentData) {
 
         // 3. Update Invoice Status if linked
         if (invoice && data.invoiceId) {
-            const totalPaidSoFar = invoice.payments.reduce((sum, p) => sum + p.amount, 0);
-            const newTotalPaid = totalPaidSoFar + data.amount;
+            const totalPaidSoFar = invoice.payments.reduce(
+                (sum, p) => sum.plus(new Prisma.Decimal(p.amount as any)), 
+                new Prisma.Decimal(0)
+            );
+            const newTotalPaid = totalPaidSoFar.plus(new Prisma.Decimal(data.amount));
             let newStatus = 'pending';
 
-            if (newTotalPaid >= invoice.totalAmount) {
+            if (newTotalPaid.gte(new Prisma.Decimal(invoice.totalAmount as any))) {
                 newStatus = 'paid';
-            } else if (newTotalPaid > 0) {
+            } else if (newTotalPaid.gt(0)) {
                 newStatus = 'partially_paid';
             }
 
@@ -71,8 +75,8 @@ export async function createPayment(data: RecordPaymentData) {
 
         // Notification: Payment Recorded
         try {
-            // Calculate amount in real currency for display
-            const displayAmount = (data.amount / 100).toLocaleString();
+            // Use Decimal for safe formatting
+            const displayAmount = new Prisma.Decimal(data.amount).toNumber().toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
             const { createNotification } = await import('@/app/actions/notifications');
             await createNotification({

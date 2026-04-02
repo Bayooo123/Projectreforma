@@ -9,7 +9,7 @@ import styles from './FinancialLog.module.css';
 interface Expense {
     id: string;
     category: string;
-    amount: number;
+    amount: number | string;
     description: string | null;
     date: string;
     reference?: string;
@@ -155,8 +155,14 @@ const FinancialLog = ({ workspaceId, initialExpenses, initialSummaries, userRole
         ? expenses.filter(e => e.date.startsWith(selectedDate))
         : [];
 
-    const totalPeriodExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
-    const totalDayExpenses = displayedExpenses.reduce((sum, e) => sum + e.amount, 0);
+    const totalPeriodExpenses = expenses.reduce((sum, e) => {
+        const amt = typeof e.amount === 'string' ? parseFloat(e.amount) : e.amount;
+        return sum + (amt || 0);
+    }, 0);
+    const totalDayExpenses = displayedExpenses.reduce((sum, e) => {
+        const amt = typeof e.amount === 'string' ? parseFloat(e.amount) : e.amount;
+        return sum + (amt || 0);
+    }, 0);
 
     return (
         <div className={styles.container}>

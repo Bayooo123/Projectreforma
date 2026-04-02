@@ -247,5 +247,6 @@ const formatDate = (date: Date) => {
 
 const formatCurrency = (amount: number) => {
     // Input is assumed to be in kobo if passing from backend, but check context.
-    return `N${(amount / 100).toLocaleString('en-NG', { minimumFractionDigits: 2 })}`;
+    const num = typeof amount === 'object' && amount !== null && 'toNumber' in (amount as any) ? (amount as any).toNumber() : Number(amount);
+    return `N${num.toLocaleString('en-NG', { minimumFractionDigits: 2 })}`;
 };

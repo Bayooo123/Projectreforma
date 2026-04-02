@@ -3,6 +3,7 @@
 import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
 import { requireAuth } from '@/lib/auth-utils';
+import { Prisma } from '@prisma/client';
 import { applySentenceCaseToFields } from '@/lib/sentence-case';
 
 // ============================================
@@ -354,7 +355,7 @@ export async function getClientStats(workspaceId: string) {
             },
         });
 
-        const totalRevenue = revenueData._sum.amount || 0;
+        const totalRevenue = revenueData._sum.amount || new Prisma.Decimal(0);
 
         // Calculate outstanding amount (from pending/overdue invoices)
         // Ideally: (Sum of Pending Invoice Totals) - (Sum of Payments on Pending Invoices)
@@ -377,9 +378,12 @@ export async function getClientStats(workspaceId: string) {
         });
 
         const outstandingAmount = outstandingInvoices.reduce((sum, invoice) => {
-            const paid = invoice.payments.reduce((pSum, p) => pSum + p.amount, 0);
-            return sum + (invoice.totalAmount - paid);
-        }, 0);
+            const paid = invoice.payments.reduce(
+                (pSum, p) => pSum.plus(p.amount), 
+                new Prisma.Decimal(0)
+            );
+            return sum.plus(new Prisma.Decimal(invoice.totalAmount as any).minus(paid));
+        }, new Prisma.Decimal(0));
 
         // Check if revenue pin is set
         const workspace = await prisma.workspace.findUnique({
@@ -433,7 +437,7 @@ export async function validateRevenuePin(workspaceId: string, pin: string) {
                     amount: true,
                 },
             });
-            return { success: true, totalRevenue: revenueData._sum.amount || 0 };
+            return { success: true, totalRevenue: revenueData._sum.amount || new Prisma.Decimal(0) };
         } else {
             return { success: false, error: 'Invalid PIN' };
         }

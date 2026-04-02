@@ -49,7 +49,8 @@ export async function generateInvoiceDOCX(data: InvoiceData): Promise<Blob> {
     }
 
     const formatCurrency = (amount: number) => {
-        return `₦${(amount / 100).toLocaleString('en-NG', { minimumFractionDigits: 2 })}`;
+        const num = typeof amount === 'object' && amount !== null && 'toNumber' in (amount as any) ? (amount as any).toNumber() : Number(amount);
+        return `₦${num.toLocaleString('en-NG', { minimumFractionDigits: 2 })}`;
     };
 
     const formatDate = (date: Date) => {

@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma';
+import { Prisma } from '@prisma/client';
 
 export type NotificationType = 'alert' | 'info' | 'success' | 'warning' | 'critical' | 'adjournment_reminder' | 'compliance_reminder';
 export type RecipientType = 'lawyer' | 'client' | 'partner' | 'staff';
@@ -143,7 +144,7 @@ export async function notifyExpenseRecorded(expense: any, workspaceId: string) {
 
     const notifications = partners.map(partner => createNotification({
         title: 'New Expense Recorded',
-        message: `Expense: ${expense.description} - ₦${(expense.amount / 100).toLocaleString()}`,
+        message: `Expense: ${expense.description} - ₦${new Prisma.Decimal(expense.amount as any).toNumber().toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
         recipientId: partner.userId,
         recipientType: 'partner',
         type: 'warning', // Money out is usually a warning/alert

@@ -7,21 +7,21 @@ import styles from './InvoiceModal.module.css';
 
 interface Payment {
     id: string;
-    amount: number;
+    amount: any; // Decimal from Prisma
     date: Date;
     method: string;
     reference: string | null;
     invoice: {
         invoiceNumber: string;
-        totalAmount: number;
+        totalAmount: any;
     } | null;
 }
 
 interface Invoice {
     id: string;
     invoiceNumber: string;
-    totalAmount: number;
-    paidAmount: number; // Ensuring we have this to calc balance
+    totalAmount: any;
+    paidAmount: any; // Ensuring we have this to calc balance
     status: string;
     dueDate: Date | null;
 }
@@ -80,11 +80,11 @@ const PaymentModal = ({ isOpen, onClose, clientName, clientId, selectedInvoice }
             ]);
 
             if (paymentsResult.success && paymentsResult.data) {
-                setPayments(paymentsResult.data);
+                setPayments(paymentsResult.data as any);
             }
 
             if (invoicesResult.success && invoicesResult.data) {
-                setInvoices(invoicesResult.data);
+                setInvoices(invoicesResult.data as any);
             }
         } catch (error) {
             console.error('Error fetching data:', error);

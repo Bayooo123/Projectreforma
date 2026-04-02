@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { withApiAuth, successResponse, errorResponse, notFoundResponse } from '@/lib/api-auth';
+import { Prisma } from '@prisma/client';
 
 export const dynamic = 'force-dynamic';
 
@@ -57,13 +58,18 @@ export async function POST(
             },
         });
 
-        // Calculate new totals
-        const totalPaid = invoice.payments.reduce((sum, p) => sum + p.amount, 0) + amount;
-        const outstanding = invoice.totalAmount - totalPaid;
+        // Calculate new totals using Decimal for precision
+        const totalPaidPrevious = invoice.payments.reduce(
+            (sum, p) => sum.plus(new Prisma.Decimal(p.amount as any)), 
+            new Prisma.Decimal(0)
+        );
+        const currentAmount = new Prisma.Decimal(amount || 0);
+        const totalPaid = totalPaidPrevious.plus(currentAmount);
+        const outstanding = new Prisma.Decimal(invoice.totalAmount as any).minus(totalPaid);
 
         // Update invoice status if fully paid
         let newStatus = invoice.status;
-        if (outstanding <= 0) {
+        if (outstanding.lte(0)) {
             newStatus = 'paid';
             await prisma.invoice.update({
                 where: { id: invoice.id },
@@ -85,8 +91,8 @@ export async function POST(
                 id: invoice.id,
                 invoiceNumber: invoice.invoiceNumber,
                 totalAmount: invoice.totalAmount,
-                paidAmount: totalPaid,
-                outstandingAmount: outstanding,
+                paidAmount: totalPaid.toNumber(),
+                outstandingAmount: outstanding.toNumber(),
                 status: newStatus,
             },
         });
@@ -126,14 +132,17 @@ export async function GET(
             return notFoundResponse('Invoice');
         }
 
-        const totalPaid = invoice.payments.reduce((sum, p) => sum + p.amount, 0);
+        const totalPaid = invoice.payments.reduce(
+            (sum, p) => sum.plus(new Prisma.Decimal(p.amount as any)), 
+            new Prisma.Decimal(0)
+        );
 
         return successResponse({
             invoiceId: invoice.id,
             invoiceNumber: invoice.invoiceNumber,
             totalAmount: invoice.totalAmount,
-            totalPaid,
-            outstanding: invoice.totalAmount - totalPaid,
+            totalPaid: totalPaid.toNumber(),
+            outstanding: new Prisma.Decimal(invoice.totalAmount as any).minus(totalPaid).toNumber(),
             payments: invoice.payments,
         });
 

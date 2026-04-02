@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { withApiAuth, successResponse, errorResponse } from '@/lib/api-auth';
+import { Prisma } from '@prisma/client';
 
 export const dynamic = 'force-dynamic';
 
@@ -100,7 +101,9 @@ export async function GET(request: NextRequest) {
             _sum: { amount: true },
         });
 
-        const outstandingAmount = (outstandingInvoices._sum.totalAmount || 0) - (totalPaid._sum.amount || 0);
+        const totalInvoicedValue = new Prisma.Decimal((outstandingInvoices._sum.totalAmount || 0) as any);
+        const totalPaidValue = new Prisma.Decimal((totalPaid._sum.amount || 0) as any);
+        const outstandingAmount = totalInvoicedValue.minus(totalPaidValue);
 
         return successResponse({
             pendingTasks,
@@ -108,8 +111,8 @@ export async function GET(request: NextRequest) {
             activeBriefs,
             totalClients,
             totalMatters,
-            thisMonthRevenue: monthlyPayments._sum.amount || 0,
-            outstandingAmount: Math.max(0, outstandingAmount),
+            thisMonthRevenue: new Prisma.Decimal((monthlyPayments._sum.amount || 0) as any).toNumber(),
+            outstandingAmount: Math.max(0, outstandingAmount.toNumber()),
             courtDatesThisWeek: Object.entries(courtDatesByDay).map(([date, count]) => ({
                 date,
                 count,

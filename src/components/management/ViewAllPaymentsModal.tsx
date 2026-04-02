@@ -50,8 +50,9 @@ const ViewAllPaymentsModal = ({ isOpen, onClose, workspaceId }: ViewAllPaymentsM
         }
     };
 
-    const formatCurrency = (amount: number) => {
-        return `₦${(amount / 100).toLocaleString()}`;
+    const formatCurrency = (amount: number | string) => {
+        const num = typeof amount === 'string' ? parseFloat(amount) : amount;
+        return `₦${(num || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
     };
 
     const formatDate = (date: Date) => {

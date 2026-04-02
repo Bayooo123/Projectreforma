@@ -212,7 +212,7 @@ const ExpenseModal = ({ isOpen, onClose, onSuccess, workspaceId, expenseToEdit }
 
     const totalAmount = isEditMode 
         ? parseFloat(amount) || 0 
-        : expenseList.reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0);
+        : expenseList.reduce((sum, item) => sum + (parseFloat(item.amount?.toString() || '0') || 0), 0);
 
     const getCategoryLabel = (value: string) => {
         return EXPENSE_CATEGORIES.find(c => c.value === value)?.label || value;

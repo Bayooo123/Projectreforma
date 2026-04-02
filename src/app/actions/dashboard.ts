@@ -4,6 +4,7 @@
 // Build fix: Updated to use status instead of proceduralStatus
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { Prisma } from "@prisma/client";
 
 export async function getMyBriefs(limit: number = 5) {
     const session = await auth();
@@ -293,7 +294,7 @@ export async function getFirmPulse(limit: number = 20, workspaceId?: string) {
         ...paymentLogs.map(p => ({
             id: p.id,
             type: 'payment',
-            description: `Recorded payment of ₦${(p.amount / 100).toLocaleString()}`,
+            description: `Recorded payment of ₦${new Prisma.Decimal(p.amount as any).toNumber().toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
             activityType: 'document_created', // Re-use doc/payment icon
             timestamp: p.date,
             performedBy: 'Billing System',

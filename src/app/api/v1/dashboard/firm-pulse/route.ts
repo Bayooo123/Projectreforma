@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { withApiAuth, successResponse, errorResponse } from '@/lib/api-auth';
+import { Prisma } from '@prisma/client';
 
 export const dynamic = 'force-dynamic';
 
@@ -99,7 +100,7 @@ export async function GET(request: NextRequest) {
                 id: payment.id,
                 type: 'payment_recorded',
                 actor: 'System',
-                action: `recorded payment of ₦${(payment.amount / 100).toLocaleString()}`,
+                action: `recorded payment of ₦${new Prisma.Decimal(payment.amount as any).toNumber().toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
                 target: payment.invoice?.invoiceNumber || 'N/A',
                 caseName: payment.client.name,
                 timestamp: payment.createdAt,

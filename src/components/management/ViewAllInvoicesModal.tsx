@@ -9,7 +9,7 @@ import styles from './ViewAllModal.module.css';
 interface Invoice {
     id: string;
     invoiceNumber: string;
-    totalAmount: number;
+    totalAmount: any; // Decimal from Prisma
     status: string;
     createdAt: Date;
     dueDate?: Date | null;
@@ -59,8 +59,9 @@ const ViewAllInvoicesModal = ({ isOpen, onClose, workspaceId }: ViewAllInvoicesM
         }
     };
 
-    const formatCurrency = (amount: number) => {
-        return `₦${(amount / 100).toLocaleString()}`;
+    const formatCurrency = (amount: number | string) => {
+        const num = typeof amount === 'string' ? parseFloat(amount) : amount;
+        return `₦${num.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
     };
 
     const formatDate = (date: Date | null | undefined) => {
@@ -114,20 +115,24 @@ const ViewAllInvoicesModal = ({ isOpen, onClose, workspaceId }: ViewAllInvoicesM
     const handleSubmitPayment = async (invoice: Invoice) => {
         setIsSubmitting(true);
         try {
-            const paidAmount = invoice.payments?.reduce((sum, p) => sum + p.amount, 0) || 0;
-            const outstanding = invoice.totalAmount - paidAmount;
+            const paidAmount = invoice.payments?.reduce((sum, p) => {
+                const amt = typeof p.amount === 'string' ? parseFloat(p.amount) : p.amount;
+                return sum + (amt || 0);
+            }, 0) || 0;
+            const totalAmt = typeof invoice.totalAmount === 'string' ? parseFloat(invoice.totalAmount) : Number(invoice.totalAmount);
+            const outstanding = totalAmt - paidAmount;
 
             let paymentAmount: number;
             if (paymentMode === 'full') {
                 paymentAmount = outstanding;
             } else {
-                const amountInNaira = parseFloat(customAmount);
-                if (isNaN(amountInNaira) || amountInNaira <= 0) {
+                const amountValue = parseFloat(customAmount);
+                if (isNaN(amountValue) || amountValue <= 0) {
                     alert('Please enter a valid amount');
                     setIsSubmitting(false);
                     return;
                 }
-                paymentAmount = Math.round(amountInNaira * 100); // Convert to kobo
+                paymentAmount = amountValue;
             }
 
             const result = await createPayment({
@@ -155,8 +160,12 @@ const ViewAllInvoicesModal = ({ isOpen, onClose, workspaceId }: ViewAllInvoicesM
     };
 
     const getOutstandingAmount = (invoice: Invoice) => {
-        const paidAmount = invoice.payments?.reduce((sum, p) => sum + p.amount, 0) || 0;
-        return invoice.totalAmount - paidAmount;
+        const paidAmount = invoice.payments?.reduce((sum, p) => {
+            const amt = typeof p.amount === 'string' ? parseFloat(p.amount) : p.amount;
+            return sum + (amt || 0);
+        }, 0) || 0;
+        const totalAmt = typeof invoice.totalAmount === 'string' ? parseFloat(invoice.totalAmount) : Number(invoice.totalAmount);
+        return totalAmt - paidAmount;
     };
 
     if (!isOpen) return null;

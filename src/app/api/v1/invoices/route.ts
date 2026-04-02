@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { withApiAuth, successResponse, errorResponse } from '@/lib/api-auth';
+import { Prisma } from '@prisma/client';
 
 export const dynamic = 'force-dynamic';
 
@@ -41,7 +42,13 @@ export async function GET(request: NextRequest) {
         ]);
 
         const data = invoices.map(invoice => {
-            const paidAmount = invoice.payments.reduce((sum, p) => sum + p.amount, 0);
+            const paidAmount = invoice.payments.reduce(
+                (sum, p) => sum.plus(new Prisma.Decimal(p.amount as any)), 
+                new Prisma.Decimal(0)
+            );
+            const totalAmount = new Prisma.Decimal(invoice.totalAmount as any);
+            const outstandingAmount = totalAmount.minus(paidAmount);
+            
             return {
                 id: invoice.id,
                 invoiceNumber: invoice.invoiceNumber,
@@ -52,8 +59,8 @@ export async function GET(request: NextRequest) {
                 vatAmount: invoice.vatAmount,
                 securityChargeAmount: invoice.securityChargeAmount,
                 totalAmount: invoice.totalAmount,
-                paidAmount,
-                outstandingAmount: invoice.totalAmount - paidAmount,
+                paidAmount: paidAmount.toNumber(),
+                outstandingAmount: outstandingAmount.toNumber(),
                 status: invoice.status,
                 dueDate: invoice.dueDate,
                 createdAt: invoice.createdAt,
@@ -127,11 +134,16 @@ export async function POST(request: NextRequest) {
         });
         const invoiceNumber = `INV-${year}-${String(count + 1).padStart(4, '0')}`;
 
-        // Calculate amounts
-        const subtotal = items.reduce((sum: number, item: any) => sum + (item.amount * item.quantity), 0);
-        const vatAmount = Math.round(subtotal * (vatRate / 100));
-        const securityChargeAmount = Math.round(subtotal * (securityChargeRate / 100));
-        const totalAmount = subtotal + vatAmount + securityChargeAmount;
+        // Calculate amounts using Decimal for precision
+        const subtotalDecimal = items.reduce(
+            (sum: Prisma.Decimal, item: any) => sum.plus(new Prisma.Decimal(item.amount || 0).times(item.quantity || 1)), 
+            new Prisma.Decimal(0)
+        );
+        const vatAmount = subtotalDecimal.times(new Prisma.Decimal(vatRate).dividedBy(100));
+        const securityChargeAmount = subtotalDecimal.times(new Prisma.Decimal(securityChargeRate).dividedBy(100));
+        const totalAmount = subtotalDecimal.plus(vatAmount).plus(securityChargeAmount);
+        
+        const subtotal = subtotalDecimal.toNumber();
 
         const invoice = await prisma.invoice.create({
             data: {
@@ -146,11 +158,11 @@ export async function POST(request: NextRequest) {
                 notes,
                 dueDate: dueDate ? new Date(dueDate) : null,
                 vatRate,
-                vatAmount,
+                vatAmount: vatAmount as any,
                 securityChargeRate,
-                securityChargeAmount,
-                subtotal,
-                totalAmount,
+                securityChargeAmount: securityChargeAmount as any,
+                subtotal: subtotal as any,
+                totalAmount: totalAmount as any,
                 status: 'pending',
                 items: {
                     create: items.map((item: any, index: number) => ({

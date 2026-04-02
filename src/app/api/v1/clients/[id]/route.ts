@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { withApiAuth, successResponse, errorResponse, notFoundResponse } from '@/lib/api-auth';
+import { Prisma } from '@prisma/client';
 
 export const dynamic = 'force-dynamic';
 
@@ -72,12 +73,16 @@ export async function GET(
             }),
         ]);
 
+        const totalBilled = billed._sum.totalAmount || new Prisma.Decimal(0);
+        const totalPaid = payments._sum.amount || new Prisma.Decimal(0);
+        const outstanding = totalBilled.minus(totalPaid);
+
         return successResponse({
             ...client,
             financialSummary: {
-                totalBilled: billed._sum.totalAmount || 0,
-                totalPaid: payments._sum.amount || 0,
-                outstanding: (billed._sum.totalAmount || 0) - (payments._sum.amount || 0),
+                totalBilled: totalBilled.toNumber(),
+                totalPaid: totalPaid.toNumber(),
+                outstanding: outstanding.toNumber(),
             },
         });
 

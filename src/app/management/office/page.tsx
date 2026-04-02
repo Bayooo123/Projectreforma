@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import OfficeManagerClient from "./OfficeManagerClient";
 import { PinProtection } from "@/components/auth/PinProtection";
+import { Prisma } from "@prisma/client";
 
 export const dynamic = 'force-dynamic';
 
@@ -45,16 +46,16 @@ export default async function OfficeManagementPage() {
     const byDate = expenses.reduce((acc, expense) => {
         const dateKey = expense.date.toISOString().split('T')[0];
         if (!acc[dateKey]) {
-            acc[dateKey] = { total: 0, count: 0 };
+            acc[dateKey] = { total: new Prisma.Decimal(0), count: 0 };
         }
-        acc[dateKey].total += expense.amount;
+        acc[dateKey].total = acc[dateKey].total.plus(expense.amount);
         acc[dateKey].count += 1;
         return acc;
-    }, {} as Record<string, { total: number; count: number }>);
+    }, {} as Record<string, { total: Prisma.Decimal; count: number }>);
 
     const summaries = Object.keys(byDate).sort().reverse().map(dateKey => ({
         date: dateKey,
-        total: byDate[dateKey].total,
+        total: byDate[dateKey].total.toNumber(),
         count: byDate[dateKey].count
     }));
 

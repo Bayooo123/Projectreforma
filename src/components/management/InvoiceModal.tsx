@@ -94,12 +94,17 @@ const InvoiceModal = ({ isOpen, onClose, clientName, clientId, workspaceId, lett
     };
 
     const calculateTotals = () => {
-        const subtotal = items.reduce((sum, item) => sum + (Number(item.amount) * Number(item.quantity) || 0), 0);
+        const subtotal = items.reduce((sum, item) => sum + (Number(item.amount || 0) * Number(item.quantity || 1) || 0), 0);
         const vat = subtotal * (vatRate / 100);
         const securityCharge = subtotal * (securityChargeRate / 100);
         const total = subtotal + vat + securityCharge;
 
-        return { subtotal, vat, securityCharge, total };
+        return { 
+            subtotal: Number(subtotal.toFixed(2)), 
+            vat: Number(vat.toFixed(2)), 
+            securityCharge: Number(securityCharge.toFixed(2)), 
+            total: Number(total.toFixed(2)) 
+        };
     };
 
     const formatCurrency = (amount: number) => {

@@ -6,7 +6,7 @@ import styles from './ExpenseBreakdownModal.module.css';
 interface Expense {
     id: string;
     category: string;
-    amount: number;
+    amount: number | string;
     description: string;
     date: string;
     reference?: string;
@@ -22,8 +22,9 @@ interface ExpenseBreakdownModalProps {
 const ExpenseBreakdownModal = ({ isOpen, onClose, date, expenses }: ExpenseBreakdownModalProps) => {
     if (!isOpen) return null;
 
-    const formatCurrency = (amount: number) => {
-        return `₦${(amount / 100).toLocaleString()}`;
+    const formatCurrency = (amount: number | string) => {
+        const num = typeof amount === 'string' ? parseFloat(amount) : amount;
+        return `₦${num.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
     };
 
     const formatDate = (dateString: string) => {
@@ -36,7 +37,10 @@ const ExpenseBreakdownModal = ({ isOpen, onClose, date, expenses }: ExpenseBreak
         });
     };
 
-    const total = expenses.reduce((sum, e) => sum + e.amount, 0);
+    const total = expenses.reduce((sum, e) => {
+        const amt = typeof e.amount === 'string' ? parseFloat(e.amount) : e.amount;
+        return sum + (amt || 0);
+    }, 0);
 
     return (
         <div className={styles.overlay} onClick={onClose}>

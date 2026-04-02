@@ -59,12 +59,14 @@ const StatCard = ({
 export function MetricsRow({ metrics, userRole }: MetricsRowProps) {
     const isPartner = userRole === 'owner' || userRole === 'partner';
 
-    const formatCurrency = (amount: number) => {
+    const formatCurrency = (amount: number | string) => {
+        const num = typeof amount === 'string' ? parseFloat(amount) : amount;
         return new Intl.NumberFormat('en-NG', {
             style: 'currency',
             currency: 'NGN',
             minimumFractionDigits: 0,
-        }).format(amount / 100);
+            maximumFractionDigits: 0,
+        }).format(num || 0);
     };
 
     return (

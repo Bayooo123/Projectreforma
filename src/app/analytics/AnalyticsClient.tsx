@@ -44,7 +44,8 @@ export default function AnalyticsClient({ data, workspaceId, initialFilter }: An
     };
 
     const formatCurrency = (amount: number) => {
-        return `₦${((amount || 0) / 100).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+        const num = typeof amount === 'string' ? parseFloat(amount) : amount;
+        return `₦${(num || 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
     };
 
     const { metrics, revenueTrend, topClients, lawyerStats, matterDistribution, courtVisits } = data;
