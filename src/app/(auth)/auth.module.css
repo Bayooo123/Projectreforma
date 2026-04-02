@@ -188,7 +188,7 @@
     font-size: 1rem;
     transition: all 0.2s;
     background: white;
-    color: var(--text-primary) !important;
+    color: #1e293b !important;
 }
 
 .input:focus,

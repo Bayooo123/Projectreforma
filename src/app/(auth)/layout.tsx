@@ -16,10 +16,7 @@ export default function AuthLayout({
     children: React.ReactNode;
 }) {
     return (
-        <div className="relative min-h-screen bg-surface-subtle dark:bg-slate-900 transition-colors duration-300">
-            <div className="absolute top-4 right-4 z-50">
-                <ThemeToggle />
-            </div>
+        <div className="relative min-h-screen bg-surface-subtle transition-colors duration-300">
             {children}
         </div>
     );
