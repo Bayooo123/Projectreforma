@@ -1,3 +1,5 @@
+/// <reference lib="webworker" />
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { defaultCache } from "@serwist/next/worker";
 import type { PrecacheEntry, SerwistGlobalConfig } from "serwist";
 import { Serwist } from "serwist";
@@ -12,6 +14,7 @@ declare global {
 
 declare const self: ServiceWorkerGlobalScope;
 
+
 const serwist = new Serwist({
     precacheEntries: self.__SW_MANIFEST,
     skipWaiting: true,
@@ -23,7 +26,7 @@ const serwist = new Serwist({
 serwist.addEventListeners();
 
 // Push Notification Listeners
-self.addEventListener('push', (event) => {
+self.addEventListener('push', (event: any) => {
     const data = event.data?.json() ?? {};
     const title = data.title || 'Reforma';
     const body = data.body || 'You have a new notification';
@@ -41,7 +44,7 @@ self.addEventListener('push', (event) => {
     );
 });
 
-self.addEventListener('notificationclick', (event) => {
+self.addEventListener('notificationclick', (event: any) => {
     event.notification.close();
     
     // Default URL to open
@@ -56,7 +59,7 @@ self.addEventListener('notificationclick', (event) => {
     }
 
     event.waitUntil(
-        self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
+        self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients: readonly any[]) => {
             // Check if there is already a window/tab open with the target URL
             for (let i = 0; i < windowClients.length; i++) {
                 const client = windowClients[i];
