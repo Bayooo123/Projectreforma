@@ -8,6 +8,7 @@ import PageTransition from "@/components/layout/PageTransition";
 import NextTopLoader from 'nextjs-toploader';
 import { auth } from "@/auth";
 import { getCurrentUserWithWorkspace, getLightweightWorkspace } from "@/lib/workspace";
+import PWAInstallPrompt from "@/components/layout/PWAInstallPrompt";
 import { SessionProvider } from "next-auth/react";
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
 
@@ -101,10 +102,11 @@ export default async function RootLayout({
               <PageTransition>
                 {children}
               </PageTransition>
-            )}
-          </SessionProvider>
-        </ThemeProvider>
-      </body>
-    </html>
+                )}
+              </SessionProvider>
+            </ThemeProvider>
+            <PWAInstallPrompt />
+          </body>
+        </html>
   );
 }

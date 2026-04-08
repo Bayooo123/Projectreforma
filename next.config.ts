@@ -1,4 +1,10 @@
 import type { NextConfig } from "next";
+import withSerwistInit from "@serwist/next";
+
+const withSerwist = withSerwistInit({
+    swSrc: "src/app/sw.ts",
+    swDest: "public/sw.js",
+});
 
 const securityHeaders = [
     // Enforce HTTPS for 1 year, including subdomains, submit for preloading
@@ -66,4 +72,4 @@ const nextConfig: NextConfig = {
     },
 };
 
-export default nextConfig;
+export default withSerwist(nextConfig);

@@ -8,8 +8,8 @@ import 'react-pdf/dist/Page/TextLayer.css';
 import styles from './DocumentPreview.module.css';
 
 // Configure PDF.js worker
-// Use jsdelivr for more reliable ESM worker resolution
-pdfjs.GlobalWorkerOptions.workerSrc = `https://cdn.jsdelivr.net/npm/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
+// Use local worker for maximum stability and to bypass CDN/CORS issues
+pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
 
 interface DocumentPreviewProps {
     document: {
