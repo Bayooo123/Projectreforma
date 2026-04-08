@@ -29,11 +29,12 @@ export async function getAnalyticsMetrics(workspaceId: string, filter: string = 
 
     const today = new Date();
     const { startDate, endDate } = getDateRange(filter);
+    const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
     const startOfLastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
     const endOfLastMonth = new Date(today.getFullYear(), today.getMonth(), 0);
 
     // 1. Revenue Metrics (Based on Payments)
-    const periodPayments = await prisma.payment.aggregate({
+    const thisMonthPayments = await prisma.payment.aggregate({
         where: {
             client: { workspaceId },
             date: { gte: startDate, lte: endDate }
@@ -87,7 +88,7 @@ export async function getAnalyticsMetrics(workspaceId: string, filter: string = 
     });
 
     // 3. Expenses
-    const periodExpensesAgg = await prisma.expense.aggregate({
+    const thisMonthExpensesAgg = await prisma.expense.aggregate({
         where: {
             workspaceId,
             date: { gte: startDate, lte: endDate }
