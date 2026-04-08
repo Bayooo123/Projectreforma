@@ -3,6 +3,7 @@
 import { ReactNode } from 'react';
 import Sidebar from '@/components/layout/Sidebar';
 import Header from '@/components/layout/Header';
+import BottomNavigation from '@/components/layout/BottomNavigation';
 import styles from './AppLayout.module.css';
 
 interface AppLayoutProps {
@@ -26,6 +27,7 @@ export default function AppLayout({ children, user, workspace }: AppLayoutProps)
                         {children}
                     </div>
                 </main>
+                <BottomNavigation />
             </div>
         </div>
     );

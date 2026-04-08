@@ -584,3 +584,23 @@ html {
   opacity: 1;
   transform: translateY(0);
 }
+
+/* Mobile App Feel Enhancements */
+@media (max-width: 768px) {
+  html, body {
+    /* Prevent text selection on accidental double taps */
+    -webkit-user-select: none;
+    user-select: none;
+    /* Remove blue tap highlight on mobile */
+    -webkit-tap-highlight-color: transparent;
+    /* Add padding for iOS Safe Areas (notches and home bars) */
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-top: env(safe-area-inset-top);
+  }
+
+  /* Specific elements that SHOULD be selectable (inputs, textareas) */
+  input, textarea, [contenteditable="true"] {
+    -webkit-user-select: text;
+    user-select: text;
+  }
+}

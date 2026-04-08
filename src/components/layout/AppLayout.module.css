@@ -40,6 +40,18 @@
     /* Slate 950 */
 }
 
+@media (max-width: 768px) {
+    .sidebar {
+        display: none !important;
+    }
+    
+    .mainContent {
+        margin-left: 0;
+        /* Mobile Bottom Nav pushes content up */
+        padding-bottom: 65px; 
+    }
+}
+
 .headerWrapper {
     position: sticky;
     top: 0;

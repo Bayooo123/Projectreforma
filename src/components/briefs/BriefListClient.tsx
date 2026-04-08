@@ -140,6 +140,7 @@ export default function BriefListClient({ initialBriefs, workspaceId }: Omit<Bri
                     )}
                 </div>
             ) : (
+                <>
                 <div className={styles.tableWrapper}>
                     <table className={styles.table}>
                         <thead>
@@ -225,6 +226,71 @@ export default function BriefListClient({ initialBriefs, workspaceId }: Omit<Bri
                         </tbody>
                     </table>
                 </div>
+
+                {/* Mobile App Card View */}
+                <div className={styles.mobileCardsList}>
+                    {displayedBriefs.map((brief) => (
+                        <div key={brief.id} className={styles.briefCard}>
+                            <div className={styles.cardHeader}>
+                                <div>
+                                    <Link href={`/briefs/${brief.id}`} className={styles.cardTitle}>
+                                        {getBriefDisplayTitle(brief)}
+                                    </Link>
+                                    <div className={styles.cardSubtitle}>{brief.briefNumber} &middot; {brief.ref}</div>
+                                </div>
+                                <div style={{position: 'relative'}}>
+                                    <button
+                                        className={styles.actionBtn}
+                                        onClick={() => toggleActions(brief.id)}
+                                        style={{ width: '44px', height: '44px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                                    >
+                                        <MoreVertical size={20} />
+                                    </button>
+                                    {activeActionId === brief.id && (
+                                        <div className={styles.actionMenu}>
+                                            <Link href={`/briefs/${brief.id}`} className={styles.menuItem}>
+                                                <Eye size={16} /> Open
+                                            </Link>
+                                            <button className={styles.menuItem} onClick={() => { setActivityBrief(brief); setActiveActionId(null); }}>
+                                                <MessageSquare size={16} /> Activity
+                                            </button>
+                                            <button className={styles.menuItem} onClick={() => { setEditingBrief(brief); setActiveActionId(null); }}>
+                                                <Edit size={16} /> Edit
+                                            </button>
+                                            <button className={`${styles.menuItem} ${styles.deleteItem}`} onClick={() => { handleDelete(brief.id); setActiveActionId(null); }}>
+                                                <Trash2 size={16} /> Delete
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                            
+                            <div className={styles.cardBody}>
+                                <div className={styles.cardRow}>
+                                    <span className={styles.cardLabel}>Client</span>
+                                    <span className={styles.cardValue}>{brief.client?.name || 'Unassigned'}</span>
+                                </div>
+                                <div className={styles.cardRow}>
+                                    <span className={styles.cardLabel}>Lawyer</span>
+                                    <span className={styles.cardValue}>{brief.lawyerInCharge?.name || brief.lawyer?.name || 'Unassigned'}</span>
+                                </div>
+                                <div className={styles.cardRow}>
+                                    <span className={styles.cardLabel}>Due Date</span>
+                                    <span className={styles.cardValue}>{brief.dueDate ? new Date(brief.dueDate).toLocaleDateString() : '-'}</span>
+                                </div>
+                            </div>
+
+                            <div className={styles.cardFooter}>
+                                <span className={styles.cardLabel}>{brief.category}</span>
+                                <span className={`${styles.statusBadge} ${styles[brief.status.toLowerCase()]}`}>
+                                    <span className={styles.statusDot}></span>
+                                    {brief.status}
+                                </span>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </>
             )}
 
             <BriefUploadModal
