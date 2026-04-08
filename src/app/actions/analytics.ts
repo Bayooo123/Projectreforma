@@ -4,19 +4,39 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 
-export async function getAnalyticsMetrics(workspaceId: string) {
+function getDateRange(filter: string) {
+    const today = new Date();
+    let startDate = new Date(today.getFullYear(), today.getMonth(), 1);
+    let endDate = new Date(today.getFullYear(), today.getMonth() + 1, 0, 23, 59, 59, 999);
+
+    if (filter === 'this-quarter' || filter === 'last-quarter') {
+        const quarter = Math.floor(today.getMonth() / 3);
+        startDate = new Date(today.getFullYear(), (quarter * 3), 1);
+        endDate = new Date(today.getFullYear(), (quarter * 3) + 3, 0, 23, 59, 59, 999);
+    } else if (filter === 'this-year') {
+        startDate = new Date(today.getFullYear(), 0, 1);
+        endDate = new Date(today.getFullYear(), 11, 31, 23, 59, 59, 999);
+    } else if (filter === 'all-time') {
+        startDate = new Date(2000, 0, 1);
+        endDate = new Date(2100, 11, 31);
+    }
+    
+    return { startDate, endDate };
+}
+
+export async function getAnalyticsMetrics(workspaceId: string, filter: string = 'this-month') {
     if (!workspaceId) return null;
 
     const today = new Date();
-    const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+    const { startDate, endDate } = getDateRange(filter);
     const startOfLastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
     const endOfLastMonth = new Date(today.getFullYear(), today.getMonth(), 0);
 
     // 1. Revenue Metrics (Based on Payments)
-    const thisMonthPayments = await prisma.payment.aggregate({
+    const periodPayments = await prisma.payment.aggregate({
         where: {
             client: { workspaceId },
-            date: { gte: startOfMonth }
+            date: { gte: startDate, lte: endDate }
         },
         _sum: { amount: true }
     });
@@ -67,10 +87,10 @@ export async function getAnalyticsMetrics(workspaceId: string) {
     });
 
     // 3. Expenses
-    const thisMonthExpensesAgg = await prisma.expense.aggregate({
+    const periodExpensesAgg = await prisma.expense.aggregate({
         where: {
             workspaceId,
-            date: { gte: startOfMonth }
+            date: { gte: startDate, lte: endDate }
         },
         _sum: { amount: true },
         _count: { id: true }
@@ -157,7 +177,9 @@ export async function getRevenueTrend(workspaceId: string) {
     }));
 }
 
-export async function getTopClients(workspaceId: string, limit: number = 5) {
+export async function getTopClients(workspaceId: string, filter: string = 'this-month', limit: number = 5) {
+    const { startDate, endDate } = getDateRange(filter);
+
     // Top clients by total revenue (payments)
     const clients = await prisma.client.findMany({
         where: { workspaceId },
@@ -165,6 +187,7 @@ export async function getTopClients(workspaceId: string, limit: number = 5) {
             id: true,
             name: true,
             payments: {
+                where: { date: { gte: startDate, lte: endDate } },
                 select: { amount: true }
             },
             matters: {
@@ -172,6 +195,7 @@ export async function getTopClients(workspaceId: string, limit: number = 5) {
                 where: { status: { not: 'Closed' } } // Active matters
             },
             invoices: {
+                where: { date: { gte: startDate, lte: endDate } },
                 select: { totalAmount: true, status: true } // For simplified outstanding calc
             }
         }
@@ -258,15 +282,14 @@ export async function getMatterDistribution(workspaceId: string) {
     }));
 }
 
-export async function getCourtVisits(workspaceId: string) {
-    const today = new Date();
-    const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+export async function getCourtVisits(workspaceId: string, filter: string = 'this-month') {
+    const { startDate, endDate } = getDateRange(filter);
 
     const visits = await prisma.calendarEntry.groupBy({
         by: ['matterId'], // Group by matter first to get to the court
         where: {
             matter: { workspaceId },
-            date: { gte: startOfMonth }
+            date: { gte: startDate, lte: endDate }
         },
         _count: { id: true } // Just counting dates per matter
     });
@@ -277,7 +300,7 @@ export async function getCourtVisits(workspaceId: string) {
     const courtDates = await prisma.calendarEntry.findMany({
         where: {
             matter: { workspaceId },
-            date: { gte: startOfMonth }
+            date: { gte: startDate, lte: endDate }
         },
         include: {
             matter: { select: { court: true } }

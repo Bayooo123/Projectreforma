@@ -28,12 +28,12 @@ export default async function AnalyticsPage(props: {
 
     try {
         const results = await Promise.all([
-            getAnalyticsMetrics(workspaceId),
+            getAnalyticsMetrics(workspaceId, filter),
             getRevenueTrend(workspaceId),
-            getTopClients(workspaceId),
+            getTopClients(workspaceId, filter),
             getLawyerStats(workspaceId),
             getMatterDistribution(workspaceId),
-            getCourtVisits(workspaceId)
+            getCourtVisits(workspaceId, filter)
         ]);
         
         [metrics, revenueTrend, topClients, lawyerStats, matterDistribution, courtVisits] = results;

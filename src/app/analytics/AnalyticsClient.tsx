@@ -252,7 +252,7 @@ export default function AnalyticsClient({ data, workspaceId, initialFilter }: An
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
                         <div className={styles.filterGroup}>
-                            {[{ key: 'this-month', label: 'This Month' }, { key: 'last-quarter', label: 'Last Quarter' }, { key: 'this-year', label: 'This Year' }].map(f => (
+                            {[{ key: 'this-month', label: 'This Month' }, { key: 'this-quarter', label: 'This Quarter' }, { key: 'this-year', label: 'This Year' }].map(f => (
                                 <button
                                     key={f.key}
                                     className={`${styles.filterBtn} ${filter === f.key ? styles.filterBtnActive : ''}`}
