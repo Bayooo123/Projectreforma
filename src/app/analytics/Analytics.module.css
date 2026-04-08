@@ -1,0 +1,541 @@
+/* Analytics Dashboard — CSS Module */
+
+.page {
+    background: var(--surface, #f8fafc);
+    min-height: 100%;
+    padding: 24px 28px 48px;
+    font-family: var(--font-ibm-plex-sans, 'IBM Plex Sans', sans-serif);
+}
+
+/* ─── Header ─── */
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.headerLeft h1 {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--text-primary, #0f172a);
+    margin: 0 0 4px;
+}
+
+.headerLeft p {
+    font-size: 0.8rem;
+    color: var(--text-secondary, #64748b);
+    margin: 0;
+}
+
+.filterGroup {
+    display: flex;
+    gap: 6px;
+    background: var(--surface-raised, #fff);
+    border: 1px solid var(--border, #e2e8f0);
+    border-radius: 8px;
+    padding: 4px;
+}
+
+.filterBtn {
+    padding: 6px 14px;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    background: transparent;
+    color: var(--text-secondary, #64748b);
+    transition: all 0.15s ease;
+}
+
+.filterBtnActive {
+    background: var(--primary, #0f172a);
+    color: white;
+}
+
+.downloadBtn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    background: #10b981;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.downloadBtn:hover {
+    background: #059669;
+}
+
+/* ─── Alert Banner ─── */
+.alertBanner {
+    background: #fffbeb;
+    border: 1px solid #fcd34d;
+    border-left: 4px solid #f59e0b;
+    border-radius: 8px;
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+:global(.dark) .alertBanner {
+    background: rgba(245, 158, 11, 0.1);
+    border-color: rgba(245, 158, 11, 0.4);
+}
+
+.alertContent {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.alertIcon {
+    color: #f59e0b;
+    flex-shrink: 0;
+}
+
+.alertTitle {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #92400e;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+:global(.dark) .alertTitle { color: #fbbf24; }
+
+.alertText {
+    font-size: 0.8rem;
+    color: #78350f;
+    margin-top: 2px;
+}
+
+:global(.dark) .alertText { color: #fde68a; }
+
+.viewDetailsBtn {
+    padding: 6px 14px;
+    background: #f59e0b;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+/* ─── KPI Cards Row ─── */
+.kpiRow {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 20px;
+}
+
+.kpiCard {
+    background: var(--surface-raised, #fff);
+    border: 1px solid var(--border, #e2e8f0);
+    border-radius: 10px;
+    padding: 18px 20px;
+}
+
+.kpiLabel {
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: var(--text-secondary, #64748b);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 10px;
+}
+
+.kpiValue {
+    font-size: 1.8rem;
+    font-weight: 800;
+    color: var(--text-primary, #0f172a);
+    line-height: 1;
+    margin-bottom: 8px;
+}
+
+.kpiValue.accent { color: #dc2626; }
+.kpiValue.warning { color: #d97706; }
+.kpiValue.danger { color: #ef4444; }
+
+.kpiSubtext {
+    font-size: 0.72rem;
+    color: var(--text-secondary, #64748b);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.kpiGrowthPositive {
+    font-size: 0.72rem;
+    color: #16a34a;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 2px;
+}
+
+.kpiGrowthNegative {
+    font-size: 0.72rem;
+    color: #dc2626;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 2px;
+}
+
+/* ─── Section Panel ─── */
+.panel {
+    background: var(--surface-raised, #fff);
+    border: 1px solid var(--border, #e2e8f0);
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.panelHeader {
+    padding: 16px 20px 12px;
+    border-bottom: 1px solid var(--border, #e2e8f0);
+}
+
+.panelTitle {
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: var(--text-primary, #0f172a);
+    margin: 0;
+}
+
+.panelSubtitle {
+    font-size: 0.75rem;
+    color: var(--text-secondary, #64748b);
+    margin: 2px 0 0;
+}
+
+.panelBody {
+    padding: 16px 20px;
+}
+
+/* ─── Chart Grid ─── */
+.chartRow {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+.chartFullRow {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+/* ─── SVG Line Chart ─── */
+.lineChartWrap {
+    position: relative;
+    height: 200px;
+    width: 100%;
+}
+
+.lineChartWrap svg {
+    width: 100%;
+    height: 100%;
+}
+
+.yAxisLabels {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 20px;
+    width: 56px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 4px 0;
+}
+
+.yLabel {
+    font-size: 0.62rem;
+    color: var(--text-secondary, #94a3b8);
+    font-weight: 500;
+    text-align: right;
+    padding-right: 6px;
+}
+
+.xAxisLabels {
+    display: flex;
+    justify-content: space-between;
+    padding: 6px 4px 0;
+}
+
+.xLabel {
+    font-size: 0.65rem;
+    color: var(--text-secondary, #94a3b8);
+    font-weight: 500;
+    flex: 1;
+    text-align: center;
+}
+
+/* ─── Donut Chart ─── */
+.donutWrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 12px 0;
+    gap: 20px;
+}
+
+.donutLegend {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px 16px;
+    width: 100%;
+}
+
+.legendItem {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.legendDot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.legendLabel {
+    font-size: 0.7rem;
+    color: var(--text-secondary, #64748b);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 90px;
+}
+
+.legendValue {
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: var(--text-primary, #0f172a);
+    margin-left: auto;
+}
+
+/* ─── Horizontal Bar Chart ─── */
+.barChart {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding: 4px 0;
+}
+
+.barRow {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.barLabel {
+    font-size: 0.72rem;
+    color: var(--text-primary, #1e293b);
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    width: 140px;
+    flex-shrink: 0;
+}
+
+.barTrack {
+    flex: 1;
+    height: 10px;
+    background: var(--border, #e2e8f0);
+    border-radius: 99px;
+    overflow: hidden;
+}
+
+.barFill {
+    height: 100%;
+    border-radius: 99px;
+    background: #dc2626;
+    transition: width 0.8s ease;
+}
+
+.barCount {
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: var(--text-secondary, #64748b);
+    width: 28px;
+    text-align: right;
+    flex-shrink: 0;
+}
+
+/* ─── Data Tables ─── */
+.tableWrap {
+    overflow-x: auto;
+}
+
+.dataTable {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.8rem;
+}
+
+.dataTable th {
+    padding: 10px 14px;
+    text-align: left;
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--text-secondary, #64748b);
+    border-bottom: 1px solid var(--border, #e2e8f0);
+    white-space: nowrap;
+    background: var(--surface, #f8fafc);
+}
+
+.dataTable td {
+    padding: 12px 14px;
+    color: var(--text-primary, #0f172a);
+    border-bottom: 1px solid var(--border-subtle, #f1f5f9);
+    vertical-align: middle;
+}
+
+:global(.dark) .dataTable th {
+    background: var(--surface, #020617);
+}
+
+.dataTable tr:last-child td {
+    border-bottom: none;
+}
+
+.dataTable tbody tr:hover {
+    background: var(--hover-bg, rgba(0,0,0,0.02));
+}
+
+.clientName {
+    font-weight: 700;
+    color: var(--text-primary, #0f172a);
+}
+
+.monoValue {
+    font-weight: 700;
+    color: #dc2626;
+}
+
+.statusTag {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 10px;
+    border-radius: 99px;
+    font-size: 0.67rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.statusPaid {
+    background: #dcfce7;
+    color: #15803d;
+}
+
+.statusPartly {
+    background: #fef3c7;
+    color: #b45309;
+}
+
+.statusUnpaid {
+    background: #fee2e2;
+    color: #b91c1c;
+}
+
+/* ─── Expense Row ─── */
+.expenseRow {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border-subtle, #f1f5f9);
+}
+
+.expenseRow:last-child { border-bottom: none; }
+
+.expenseDot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.expenseName {
+    flex: 1;
+    font-size: 0.8rem;
+    color: var(--text-primary, #0f172a);
+    font-weight: 500;
+}
+
+.expenseAmt {
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: var(--text-primary, #0f172a);
+}
+
+.expenseBar {
+    width: 80px;
+    height: 6px;
+    background: var(--border, #e2e8f0);
+    border-radius: 99px;
+    overflow: hidden;
+}
+
+.expenseBarFill {
+    height: 100%;
+    border-radius: 99px;
+}
+
+/* ─── Summary sub-row ─── */
+.summaryRow {
+    display: flex;
+    gap: 16px;
+    margin-top: 12px;
+    flex-wrap: wrap;
+}
+
+.summaryItem {
+    font-size: 0.75rem;
+    color: var(--text-secondary, #64748b);
+}
+
+.summaryItem strong {
+    color: var(--text-primary, #0f172a);
+    font-weight: 700;
+    margin-left: 4px;
+}
+
+/* ─── Responsive ─── */
+@media (max-width: 1100px) {
+    .kpiRow { grid-template-columns: repeat(2, 1fr); }
+    .chartFullRow { grid-template-columns: 1fr; }
+    .chartRow { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 768px) {
+    .page { padding: 16px 16px 80px; }
+    .kpiRow { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+    .header { flex-direction: column; }
+    .filterGroup { flex-wrap: wrap; }
+    .barLabel { width: 90px; font-size: 0.65rem; }
+}
