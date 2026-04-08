@@ -14,6 +14,7 @@ interface AnalyticsData {
     lawyerStats: any[];
     matterDistribution: { status: string; count: number }[];
     courtVisits: { court: string; count: number }[];
+    expenseDistribution: { category: string; amount: number; count: number }[];
 }
 
 interface AnalyticsClientProps {
@@ -205,7 +206,7 @@ export default function AnalyticsClient({ data, workspaceId, initialFilter }: An
         router.push(`/analytics?filter=${f}`);
     };
 
-    const { metrics, revenueTrend, topClients, lawyerStats, matterDistribution, courtVisits } = data;
+    const { metrics, revenueTrend, topClients, lawyerStats, matterDistribution, courtVisits, expenseDistribution } = data;
 
     const totalMatters = (matterDistribution || []).reduce((s: number, d: any) => s + (d.count || 0), 0) || 1;
     const topClientTotal = (topClients || []).reduce((s: number, c: any) => s + (c.totalRevenue || 0), 0) || 1;
@@ -378,53 +379,84 @@ export default function AnalyticsClient({ data, workspaceId, initialFilter }: An
                     </div>
                 </div>
 
-                {/* ── Row 3: Expenses Panel ── */}
+                {/* ── Row 3: Expenses Distribution Pie Chart ── */}
                 <div style={{ marginBottom: 16 }}>
                     <div className={styles.panel}>
                         <div className={styles.panelHeader}>
-                            <div className={styles.panelTitle}>Operational Expenses</div>
-                            <div className={styles.panelSubtitle}>Period operating costs — {expenseCount} total entries recorded</div>
+                            <div className={styles.panelTitle}>Expense Breakdown by Category</div>
+                            <div className={styles.panelSubtitle}>Operating costs distribution across the practice</div>
                         </div>
                         <div className={styles.panelBody}>
-                            {expenseTotal > 0 ? (
-                                <>
-                                    <div className={styles.summaryRow} style={{ marginBottom: 20 }}>
-                                        <div className={styles.summaryItem}>Total Burn: <strong>{formatCurrencyFull(expenseTotal)}</strong></div>
-                                        <div className={styles.summaryItem}>Entries: <strong>{expenseCount}</strong></div>
-                                        <div className={styles.summaryItem}>Avg per Entry: <strong>{formatCurrency(expenseCount > 0 ? expenseTotal / expenseCount : 0)}</strong></div>
-                                        <div className={styles.summaryItem}>
-                                            Revenue Ratio: <strong style={{ color: expenseTotal > (metrics?.revenue?.total || 0) ? '#dc2626' : '#16a34a' }}>
-                                                {metrics?.revenue?.total > 0 ? Math.round((expenseTotal / metrics.revenue.total) * 100) : 0}%
-                                            </strong>
-                                        </div>
+                            {(expenseDistribution || []).length > 0 ? (
+                                <div className={styles.expenseGrid}>
+                                    <div className={styles.expenseChartSide}>
+                                        <DonutChart 
+                                            data={(expenseDistribution || []).map(e => ({ label: e.category, value: e.amount }))} 
+                                            colors={EXPENSE_COLORS} 
+                                        />
                                     </div>
+                                    <div className={styles.expenseStatsSide}>
+                                        <div className={styles.summaryRow} style={{ marginBottom: 20 }}>
+                                            <div className={styles.summaryItem}>Total Burn: <strong>{formatCurrencyFull(expenseTotal)}</strong></div>
+                                            <div className={styles.summaryItem}>Entries: <strong>{expenseCount}</strong></div>
+                                            <div className={styles.summaryItem}>
+                                                Revenue Ratio: <strong style={{ color: expenseTotal > (metrics?.revenue?.total || 0) ? '#dc2626' : '#16a34a' }}>
+                                                    {metrics?.revenue?.total > 0 ? Math.round((expenseTotal / metrics.revenue.total) * 100) : 0}%
+                                                </strong>
+                                            </div>
+                                        </div>
 
-                                    {/* Visual: single aggregate bar showing expense vs revenue */}
-                                    <div>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-                                            <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 600 }}>Expenses vs Revenue</span>
-                                            <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#dc2626' }}>
-                                                {formatCurrencyFull(expenseTotal)} / {formatCurrencyFull(metrics?.revenue?.total || 0)}
-                                            </span>
+                                        {/* Progressive Bar: expense vs revenue */}
+                                        <div style={{ padding: '0 4px' }}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                                                <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600 }}>Budget Utilization (vs Revenue)</span>
+                                                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: expenseTotal > (metrics?.revenue?.total || 0) ? '#dc2626' : '#64748b' }}>
+                                                    {metrics?.revenue?.total > 0 ? Math.round((expenseTotal / metrics.revenue.total) * 100) : 0}%
+                                                </span>
+                                            </div>
+                                            <div style={{ height: 10, background: '#f1f5f9', borderRadius: 99, overflow: 'hidden' }}>
+                                                <div style={{
+                                                    height: '100%',
+                                                    width: `${Math.min((expenseTotal / Math.max(metrics?.revenue?.total || 1, expenseTotal)) * 100, 100)}%`,
+                                                    background: expenseTotal > (metrics?.revenue?.total || 0) ? 'linear-gradient(90deg, #dc2626, #ef4444)' : 'linear-gradient(90deg, #2563eb, #3b82f6)',
+                                                    borderRadius: 99,
+                                                    transition: 'width 1.2s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                                                }} />
+                                            </div>
                                         </div>
-                                        <div style={{ height: 12, background: '#f1f5f9', borderRadius: 99, overflow: 'hidden', position: 'relative' }}>
-                                            <div style={{
-                                                height: '100%',
-                                                width: `${Math.min((expenseTotal / Math.max(metrics?.revenue?.total || 1, expenseTotal)) * 100, 100)}%`,
-                                                background: expenseTotal > (metrics?.revenue?.total || 0) ? '#dc2626' : '#f87171',
-                                                borderRadius: 99,
-                                                transition: 'width 1s ease',
-                                            }} />
-                                        </div>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
-                                            <span style={{ fontSize: '0.65rem', color: '#f87171', fontWeight: 600 }}>■ Expenses</span>
-                                            <span style={{ fontSize: '0.65rem', color: '#94a3b8' }}>Revenue →</span>
+
+                                        <div className={styles.categoryTableWrap} style={{ marginTop: 20 }}>
+                                            <table className={styles.miniTable}>
+                                                <thead>
+                                                    <tr>
+                                                        <th>Category</th>
+                                                        <th>Amount</th>
+                                                        <th>Count</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {(expenseDistribution || []).slice(0, 5).map((e, idx) => (
+                                                        <tr key={idx}>
+                                                            <td>
+                                                                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                                                    <div style={{ width: 8, height: 8, borderRadius: '50%', background: EXPENSE_COLORS[idx % EXPENSE_COLORS.length] }} />
+                                                                    {e.category}
+                                                                </div>
+                                                            </td>
+                                                            <td style={{ fontWeight: 600 }}>{formatCurrencyFull(e.amount)}</td>
+                                                            <td style={{ color: '#94a3b8' }}>{e.count}</td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
                                         </div>
                                     </div>
-                                </>
+                                </div>
                             ) : (
-                                <div style={{ textAlign: 'center', padding: '40px 0', color: '#94a3b8', fontSize: '0.8rem' }}>
-                                    No expense data recorded for this period
+                                <div style={{ textAlign: 'center', padding: '60px 0', color: '#94a3b8' }}>
+                                    <TrendingDown size={40} style={{ marginBottom: 12, opacity: 0.2 }} />
+                                    <p style={{ fontSize: '0.9rem' }}>No expense data recorded for this period</p>
+                                    <p style={{ fontSize: '0.75rem', marginTop: 4 }}>Add expenses in the Office Manager to see distribution</p>
                                 </div>
                             )}
                         </div>

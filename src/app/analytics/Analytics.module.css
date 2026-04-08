@@ -539,3 +539,67 @@
     .filterGroup { flex-wrap: wrap; }
     .barLabel { width: 90px; font-size: 0.65rem; }
 }
+
+/* Expense Distribution */
+.expenseGrid {
+    display: grid;
+    grid-template-columns: 310px 1fr;
+    gap: 40px;
+    align-items: center;
+    padding: 10px 0;
+}
+
+.expenseChartSide {
+    display: flex;
+    justify-content: center;
+    border-right: 1px solid var(--border-subtle, #f1f5f9);
+    padding-right: 20px;
+}
+
+.expenseStatsSide {
+    display: flex;
+    flex-direction: column;
+}
+
+.categoryTableWrap {
+    border-top: 1px solid var(--border-subtle, #f1f5f9);
+    padding-top: 18px;
+}
+
+.miniTable {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.miniTable th {
+    text-align: left;
+    font-size: 0.65rem;
+    color: var(--text-secondary, #94a3b8);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding-bottom: 10px;
+}
+
+.miniTable td {
+    padding: 12px 0;
+    font-size: 0.85rem;
+    color: var(--text-primary, #1e293b);
+    border-bottom: 1px dashed var(--border-subtle, #f1f5f9);
+}
+
+.miniTable tr:last-child td {
+    border-bottom: none;
+}
+
+@media (max-width: 1000px) {
+    .expenseGrid {
+        grid-template-columns: 1fr;
+        gap: 30px;
+    }
+    .expenseChartSide {
+        border-right: none;
+        padding-right: 0;
+        border-bottom: 1px solid var(--border-subtle, #f1f5f9);
+        padding-bottom: 20px;
+    }
+}

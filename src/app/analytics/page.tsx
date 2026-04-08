@@ -6,7 +6,8 @@ import {
     getTopClients,
     getLawyerStats,
     getMatterDistribution,
-    getCourtVisits
+    getCourtVisits,
+    getExpenseDistribution
 } from '@/app/actions/analytics';
 import AnalyticsClient from './AnalyticsClient';
 
@@ -24,7 +25,7 @@ export default async function AnalyticsPage(props: {
 
     const filter = searchParams.filter || 'this-month';
 
-    let metrics, revenueTrend, topClients, lawyerStats, matterDistribution, courtVisits;
+    let metrics, revenueTrend, topClients, lawyerStats, matterDistribution, courtVisits, expenseDistribution;
 
     try {
         const results = await Promise.all([
@@ -33,10 +34,11 @@ export default async function AnalyticsPage(props: {
             getTopClients(workspaceId, filter),
             getLawyerStats(workspaceId),
             getMatterDistribution(workspaceId),
-            getCourtVisits(workspaceId, filter)
+            getCourtVisits(workspaceId, filter),
+            getExpenseDistribution(workspaceId, filter)
         ]);
         
-        [metrics, revenueTrend, topClients, lawyerStats, matterDistribution, courtVisits] = results;
+        [metrics, revenueTrend, topClients, lawyerStats, matterDistribution, courtVisits, expenseDistribution] = results;
     } catch (error) {
         console.error("Critical Analytics Fetch Failure:", error);
     }
@@ -52,7 +54,8 @@ export default async function AnalyticsPage(props: {
         topClients: topClients || [],
         lawyerStats: lawyerStats || [],
         matterDistribution: matterDistribution || [],
-        courtVisits: courtVisits || []
+        courtVisits: courtVisits || [],
+        expenseDistribution: expenseDistribution || []
     };
 
     return (

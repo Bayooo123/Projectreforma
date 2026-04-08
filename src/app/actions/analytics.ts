@@ -319,3 +319,25 @@ export async function getCourtVisits(workspaceId: string, filter: string = 'this
         .sort((a, b) => b.count - a.count)
         .slice(0, 5);
 }
+
+export async function getExpenseDistribution(workspaceId: string, filter: string = 'this-month') {
+    const { startDate, endDate } = getDateRange(filter);
+
+    const expenses = await prisma.expense.groupBy({
+        by: ['category'],
+        where: {
+            workspaceId,
+            date: { gte: startDate, lte: endDate }
+        },
+        _sum: { amount: true },
+        _count: { id: true }
+    });
+
+    return expenses.map(e => ({
+        category: e.category.replace(/_/g, ' '),
+        amount: typeof (e._sum.amount as any)?.toNumber === 'function' 
+            ? (e._sum.amount as any).toNumber() 
+            : Number(e._sum.amount || 0),
+        count: e._count.id
+    })).sort((a, b) => b.amount - a.amount);
+}
