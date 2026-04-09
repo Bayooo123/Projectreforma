@@ -27,6 +27,8 @@ function getDateRange(filter: string) {
 export async function getAnalyticsMetrics(workspaceId: string, filter: string = 'this-month') {
     if (!workspaceId) return null;
 
+    console.log(`[Analytics] Fetching metrics for Workspace: ${workspaceId}, Filter: ${filter}`);
+
     const today = new Date();
     const { startDate, endDate } = getDateRange(filter);
     const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
@@ -34,35 +36,24 @@ export async function getAnalyticsMetrics(workspaceId: string, filter: string = 
     const endOfLastMonth = new Date(today.getFullYear(), today.getMonth(), 0);
 
     // 1. Revenue Metrics (Based on Payments)
-    const thisMonthPayments = await prisma.payment.aggregate({
+    const payments = await prisma.payment.findMany({
         where: {
             client: { workspaceId },
             date: { gte: startDate, lte: endDate }
         },
-        _sum: { amount: true }
+        select: { amount: true }
     });
 
-    const lastMonthPayments = await prisma.payment.aggregate({
+    const lastMonthPayments = await prisma.payment.findMany({
         where: {
             client: { workspaceId },
-            date: {
-                gte: startOfLastMonth,
-                lte: endOfLastMonth
-            }
+            date: { gte: startOfLastMonth, lte: endOfLastMonth }
         },
-        _sum: { amount: true }
+        select: { amount: true }
     });
 
-    const thisMonthRevenueDecimal = (thisMonthPayments._sum.amount as any) || new Prisma.Decimal(0);
-    const lastMonthRevenueDecimal = (lastMonthPayments._sum.amount as any) || new Prisma.Decimal(0);
-    
-    const thisMonthRevenue = typeof (thisMonthRevenueDecimal as any).toNumber === 'function' 
-        ? (thisMonthRevenueDecimal as any).toNumber() 
-        : Number(thisMonthRevenueDecimal);
-        
-    const lastMonthRevenue = typeof (lastMonthRevenueDecimal as any).toNumber === 'function' 
-        ? (lastMonthRevenueDecimal as any).toNumber() 
-        : Number(lastMonthRevenueDecimal);
+    const thisMonthRevenue = payments.reduce((sum, p) => sum + Number(p.amount || 0), 0);
+    const lastMonthRevenue = lastMonthPayments.reduce((sum, p) => sum + Number(p.amount || 0), 0);
 
     let revenueGrowth = 0;
     if (lastMonthRevenue > 0) {
@@ -79,7 +70,6 @@ export async function getAnalyticsMetrics(workspaceId: string, filter: string = 
         }
     });
 
-    // New matters this month
     const newMattersThisMonth = await prisma.matter.count({
         where: {
             workspaceId,
@@ -88,20 +78,16 @@ export async function getAnalyticsMetrics(workspaceId: string, filter: string = 
     });
 
     // 3. Expenses
-    const thisMonthExpensesAgg = await prisma.expense.aggregate({
+    const expenses = await prisma.expense.findMany({
         where: {
             workspaceId,
             date: { gte: startDate, lte: endDate }
         },
-        _sum: { amount: true },
-        _count: { id: true }
+        select: { amount: true }
     });
 
-    const thisMonthExpensesRaw = (thisMonthExpensesAgg._sum.amount as any) || new Prisma.Decimal(0);
-    const thisMonthExpenses = typeof (thisMonthExpensesRaw as any).toNumber === 'function' 
-        ? (thisMonthExpensesRaw as any).toNumber() 
-        : Number(thisMonthExpensesRaw);
-    const expenseCount = thisMonthExpensesAgg._count.id || 0;
+    const totalExpenses = expenses.reduce((sum, e) => sum + Number(e.amount || 0), 0);
+    const expenseCount = expenses.length;
 
     // 4. Pending Court Dates (Next 7 days)
     const nextWeek = new Date();
@@ -117,6 +103,8 @@ export async function getAnalyticsMetrics(workspaceId: string, filter: string = 
         }
     });
 
+    console.log(`[Analytics] Results - Revenue: ${thisMonthRevenue}, Matters: ${activeMattersCount}, Expenses: ${totalExpenses}`);
+
     return {
         revenue: {
             total: thisMonthRevenue || 0,
@@ -128,7 +116,7 @@ export async function getAnalyticsMetrics(workspaceId: string, filter: string = 
             newThisMonth: newMattersThisMonth || 0
         },
         expenses: {
-            total: thisMonthExpenses || 0,
+            total: totalExpenses || 0,
             count: expenseCount || 0
         },
         courtDates: {
@@ -269,17 +257,19 @@ export async function getLawyerStats(workspaceId: string) {
 }
 
 export async function getMatterDistribution(workspaceId: string) {
-    // Status distribution
-    const statusGroups = await prisma.matter.groupBy({
-        by: ['status'],
+    const matters = await prisma.matter.findMany({
         where: { workspaceId },
-        _count: { id: true }
+        select: { status: true }
     });
 
-    // Formatting for Chart
-    return statusGroups.map(g => ({
-        status: g.status,
-        count: g._count.id
+    const counts: Record<string, number> = {};
+    matters.forEach(m => {
+        counts[m.status] = (counts[m.status] || 0) + 1;
+    });
+
+    return Object.entries(counts).map(([status, count]) => ({
+        status,
+        count
     }));
 }
 
@@ -323,21 +313,29 @@ export async function getCourtVisits(workspaceId: string, filter: string = 'this
 export async function getExpenseDistribution(workspaceId: string, filter: string = 'this-month') {
     const { startDate, endDate } = getDateRange(filter);
 
-    const expenses = await prisma.expense.groupBy({
-        by: ['category'],
+    const expenses = await prisma.expense.findMany({
         where: {
             workspaceId,
             date: { gte: startDate, lte: endDate }
         },
-        _sum: { amount: true },
-        _count: { id: true }
+        select: {
+            amount: true,
+            category: true
+        }
     });
 
-    return expenses.map(e => ({
-        category: e.category.replace(/_/g, ' '),
-        amount: typeof (e._sum.amount as any)?.toNumber === 'function' 
-            ? (e._sum.amount as any).toNumber() 
-            : Number(e._sum.amount || 0),
-        count: e._count.id
+    const distribution: Record<string, { amount: number, count: number }> = {};
+
+    expenses.forEach(e => {
+        const cat = e.category || 'Other';
+        if (!distribution[cat]) distribution[cat] = { amount: 0, count: 0 };
+        distribution[cat].amount += Number(e.amount || 0);
+        distribution[cat].count += 1;
+    });
+
+    return Object.entries(distribution).map(([category, stats]) => ({
+        category: category.replace(/_/g, ' '),
+        amount: stats.amount,
+        count: stats.count
     })).sort((a, b) => b.amount - a.amount);
 }
