@@ -423,6 +423,9 @@ model Brief {
   lastSummarizedAt    DateTime?
   summary             String?
   briefId             String?
+  parentBriefId       String?
+  parentBrief         Brief?               @relation("BriefHierarchy", fields: [parentBriefId], references: [id])
+  subBriefs           Brief[]              @relation("BriefHierarchy")
   client              Client?              @relation(fields: [clientId], references: [id])
   lawyer              User                 @relation("BriefCreator", fields: [lawyerId], references: [id])
   lawyerInCharge      User?                @relation("LawyerInCharge", fields: [lawyerInChargeId], references: [id])

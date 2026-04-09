@@ -58,6 +58,7 @@ const LitigationForm = ({
     const [clients, setClients] = useState<Client[]>([]);
     const [lawyers, setLawyers] = useState<Lawyer[]>([]);
     const [matters, setMatters] = useState<any[]>([]);
+    const [allBriefs, setAllBriefs] = useState<any[]>([]);
     const [isLoadingData, setIsLoadingData] = useState(false);
 
     // Form Selection State
@@ -82,6 +83,7 @@ const LitigationForm = ({
     const [externalCounselName, setExternalCounselName] = useState('');
     const [nextCourtDate, setNextCourtDate] = useState('');
     const [courtSummary, setCourtSummary] = useState('');
+    const [parentBriefId, setParentBriefId] = useState<string | null>(null);
     const [pin, setPin] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -116,8 +118,10 @@ const LitigationForm = ({
             setLawyers(lawyersData);
             setClients(clientsData);
 
+            const briefsData = await getBriefs(workspaceId);
+            setAllBriefs(briefsData);
+
             if (mode === 'update') {
-                const briefsData = await getBriefs(workspaceId);
                 // Extract unique matters from briefs
                 const uniqueMatters = briefsData
                     .filter(b => b.matter)
@@ -150,6 +154,7 @@ const LitigationForm = ({
         setExternalCounselName('');
         setNextCourtDate('');
         setCourtSummary('');
+        setParentBriefId(null);
         setPin('');
     };
 
@@ -229,7 +234,8 @@ const LitigationForm = ({
                         isAppearing: true
                     })),
                     createdById: userId,
-                    externalCounselName: isExternalCounsel ? externalCounselName : undefined
+                    externalCounselName: isExternalCounsel ? externalCounselName : undefined,
+                    parentBriefId: parentBriefId
                 });
 
                 if (!result.success) {
@@ -430,6 +436,23 @@ const LitigationForm = ({
                                                 <option key={l.id} value={l.id}>{l.name}</option>
                                             ))}
                                         </select>
+                                    </div>
+
+                                    <div className={styles.formGroup}>
+                                        <label className={styles.label}>Attach to Existing Brief (Optional)</label>
+                                        <select
+                                            className={styles.select}
+                                            value={parentBriefId || ''}
+                                            onChange={(e) => setParentBriefId(e.target.value || null)}
+                                        >
+                                            <option value="">Create as Standalone Brief</option>
+                                            {allBriefs.map(b => (
+                                                <option key={b.id} value={b.id}>
+                                                    {b.name} ({b.briefNumber})
+                                                </option>
+                                            ))}
+                                        </select>
+                                        <p className="text-[10px] text-slate-400 italic">Select a parent brief if this is a sub-proceeding or related suit.</p>
                                     </div>
                                 </>
                             )}

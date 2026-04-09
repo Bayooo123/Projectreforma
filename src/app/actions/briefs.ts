@@ -150,6 +150,7 @@ export async function createBrief(data: {
     status: string;
     dueDate?: Date;
     description?: string;
+    parentBriefId?: string;
 }) {
     await requireAuth();
     // Normalise user-supplied text to sentence case before any validation or storage
@@ -195,6 +196,7 @@ export async function createBrief(data: {
                     // Standalone briefs are not litigation-derived
                     isLitigationDerived: false,
                     customTitle: null,
+                    parentBriefId: data.parentBriefId || null,
                 },
                 include: {
                     client: true,
@@ -509,5 +511,88 @@ export async function summarizeBrief(briefId: string) {
     } catch (error: any) {
         console.error('[summarizeBrief] Action Error:', error);
         return { success: false, error: error.message || 'Summarization failed' };
+    }
+}
+export async function reassignBriefHierarchy(briefId: string, parentBriefId: string | null) {
+    const session = await requireAuth();
+    
+    try {
+        const brief = await prisma.brief.findUnique({
+            where: { id: briefId },
+            select: { workspaceId: true, parentBriefId: true }
+        });
+
+        if (!brief) return { success: false, error: 'Brief not found' };
+
+        // RBAC Check: Ensure session user has permissions in this workspace
+        const membership = await prisma.workspaceMember.findFirst({
+            where: { userId: session.id, workspaceId: brief.workspaceId }
+        });
+
+        if (!membership) return { success: false, error: 'Not a member of this workspace' };
+
+        const { BriefPermissions } = await import('@/lib/rbac');
+        
+        // Reforma platform admins bypass workspace role restrictions
+        const dbUser = await prisma.user.findUnique({
+            where: { email: session.email! },
+            select: { isPlatformAdmin: true },
+        });
+        const isReformaSuperAdmin = dbUser?.isPlatformAdmin === true;
+
+        if (!isReformaSuperAdmin && !session.isWorkspaceOwner && !BriefPermissions.canReassignHierarchy(membership.role)) {
+            return { 
+                success: false, 
+                error: 'Permission denied: Only Principal Partners, Partners, and Head of Chambers can reassign brief hierarchy' 
+            };
+        }
+
+        // Circularity and self-assignment checks
+        if (parentBriefId) {
+            if (parentBriefId === briefId) {
+                return { success: false, error: 'A brief cannot be its own parent' };
+            }
+
+            const parent = await prisma.brief.findUnique({
+                where: { id: parentBriefId },
+                select: { workspaceId: true }
+            });
+
+            if (!parent || parent.workspaceId !== brief.workspaceId) {
+                return { success: false, error: 'Parent brief not found in this workspace' };
+            }
+
+            // Simple circularity check: is the intended parent currently a child of this brief?
+            const isChild = await prisma.brief.findFirst({
+                where: { id: parentBriefId, parentBriefId: briefId }
+            });
+            if (isChild) {
+                return { success: false, error: 'Circular hierarchy detected: cannot move a parent under its own child' };
+            }
+        }
+
+        await prisma.brief.update({
+            where: { id: briefId },
+            data: { parentBriefId }
+        });
+
+        // Log hierarchy activity
+        await prisma.briefActivityLog.create({
+            data: {
+                briefId,
+                activityType: 'hierarchy_updated',
+                description: parentBriefId 
+                    ? `Brief reassigned to parent brief.` 
+                    : `Brief moved to top-level organization.`,
+                performedBy: session.id
+            }
+        });
+
+        revalidatePath('/briefs');
+        revalidatePath(`/briefs/${briefId}`);
+        return { success: true };
+    } catch (error) {
+        console.error('[reassignBriefHierarchy] Error:', error);
+        return { success: false, error: 'Internal server error during hierarchy reassignment' };
     }
 }

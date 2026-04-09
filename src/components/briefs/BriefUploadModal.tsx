@@ -1,9 +1,9 @@
-﻿"use client";
+"use client";
 
 import { X, UploadCloud, Loader, Plus } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import styles from './BriefUploadModal.module.css';
-import { createBrief } from '@/app/actions/briefs';
+import { createBrief, getBriefs } from '@/app/actions/briefs';
 import { getClientsForWorkspace, getLawyersForWorkspace, generateBriefNumber, createClientQuick } from '@/lib/briefs';
 
 interface BriefUploadModalProps {
@@ -36,10 +36,12 @@ const BriefUploadModal = ({ isOpen, onClose, onSuccess, workspaceId }: BriefUplo
     const [category, setCategory] = useState('');
     const [status, setStatus] = useState('active');
     const [description, setDescription] = useState('');
+    const [selectedParentBriefId, setSelectedParentBriefId] = useState('');
 
     // Data state
     const [clients, setClients] = useState<Client[]>([]);
     const [lawyers, setLawyers] = useState<Lawyer[]>([]);
+    const [briefs, setBriefs] = useState<any[]>([]);
     const [isLoadingData, setIsLoadingData] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -58,13 +60,15 @@ const BriefUploadModal = ({ isOpen, onClose, onSuccess, workspaceId }: BriefUplo
     const loadData = async () => {
         setIsLoadingData(true);
         try {
-            const [clientsData, lawyersData] = await Promise.all([
+            const [clientsData, lawyersData, briefsData] = await Promise.all([
                 getClientsForWorkspace(workspaceId),
                 getLawyersForWorkspace(workspaceId),
+                getBriefs(workspaceId)
             ]);
 
             setClients(clientsData);
             setLawyers(lawyersData);
+            setBriefs(briefsData);
         } catch (error) {
             console.error('Error loading data:', error);
             alert('Failed to load clients and lawyers');
@@ -121,6 +125,7 @@ const BriefUploadModal = ({ isOpen, onClose, onSuccess, workspaceId }: BriefUplo
                 category,
                 status,
                 description: description || undefined,
+                parentBriefId: selectedParentBriefId || undefined,
             });
 
             if (result.success) {
@@ -132,6 +137,7 @@ const BriefUploadModal = ({ isOpen, onClose, onSuccess, workspaceId }: BriefUplo
                 setCategory('');
                 setStatus('active');
                 setDescription('');
+                setSelectedParentBriefId('');
 
                 // Show success message
                 alert('Brief created successfully!');
@@ -306,6 +312,26 @@ const BriefUploadModal = ({ isOpen, onClose, onSuccess, workspaceId }: BriefUplo
                                         <option value="finalized">Finalized</option>
                                     </select>
                                 </div>
+                            </div>
+
+                            {/* Row 5: Parent Brief Selection */}
+                            <div className={styles.formGroup}>
+                                <label className={styles.label}>Parent Brief (Optional)</label>
+                                <select
+                                    className={styles.select}
+                                    value={selectedParentBriefId}
+                                    onChange={e => setSelectedParentBriefId(e.target.value)}
+                                >
+                                    <option value="">No Parent (Standalone)</option>
+                                    {briefs.map(brief => (
+                                        <option key={brief.id} value={brief.id}>
+                                            {brief.name} ({brief.briefNumber})
+                                        </option>
+                                    ))}
+                                </select>
+                                <p style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                                    Group this brief under another existing brief.
+                                </p>
                             </div>
                         </div>
 

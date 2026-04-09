@@ -2,11 +2,12 @@
 
 import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
-import { Search, Filter, MoreVertical, Plus, Trash2, Eye, Briefcase, MessageSquare, Edit } from 'lucide-react';
+import { Search, Filter, MoreVertical, Plus, Trash2, Eye, Briefcase, MessageSquare, Edit, FolderTree, ChevronDown, ChevronRight, Share2 } from 'lucide-react';
 import styles from './BriefList.module.css';
-import { deleteBrief } from '@/app/actions/briefs'; // Only import actions needed
+import { deleteBrief, getBriefs } from '@/app/actions/briefs'; // Only import actions needed
 import EditBriefModal from './EditBriefModal';
 import BriefActivityModal from './BriefActivityModal';
+import MoveBriefModal from './MoveBriefModal';
 import { useRouter } from 'next/navigation';
 import BriefUploadModal from './BriefUploadModal';
 import { getBriefDisplayTitle } from '@/lib/brief-display';
@@ -22,6 +23,8 @@ export default function BriefListClient({ initialBriefs, workspaceId }: Omit<Bri
     const [activeActionId, setActiveActionId] = useState<string | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState<string>('all');
+    const [expandedBriefIds, setExpandedBriefIds] = useState<Set<string>>(new Set());
+    const [movingBrief, setMovingBrief] = useState<any | null>(null);
 
     // AUTOMATION: Background Polling (30 seconds)
     useEffect(() => {
@@ -72,6 +75,16 @@ export default function BriefListClient({ initialBriefs, workspaceId }: Omit<Bri
         setActiveActionId(activeActionId === id ? null : id);
     };
 
+    const toggleExpand = (id: string, e: React.MouseEvent) => {
+        e.stopPropagation();
+        setExpandedBriefIds(prev => {
+            const next = new Set(prev);
+            if (next.has(id)) next.delete(id);
+            else next.add(id);
+            return next;
+        });
+    };
+
     // Client-side filtering for immediate feedback on search input
     const displayedBriefs = briefs.filter(brief => {
         if (searchQuery) {
@@ -88,6 +101,34 @@ export default function BriefListClient({ initialBriefs, workspaceId }: Omit<Bri
         }
         return true;
     });
+
+    // --- HIERARCHY LOGIC ---
+    // 1. Identify which briefs have children
+    const parentIds = new Set(briefs.map(b => b.parentBriefId).filter(Boolean));
+    
+    // 2. Build the tree (Top-level briefs)
+    const rootBriefs = displayedBriefs.filter(b => !b.parentBriefId);
+    
+    // 3. Helper to get children for a brief
+    const getChildren = (parentId: string) => displayedBriefs.filter(b => b.parentBriefId === parentId);
+
+    // 4. Flatten the tree for rendering (only if parent is expanded OR if searching)
+    // If searching, we show everything flat mostly, but here we'll try to keep hierarchy if possible.
+    const renderRows: any[] = [];
+    
+    const flatten = (items: any[], depth = 0) => {
+        items.forEach(brief => {
+            renderRows.push({ ...brief, depth });
+            const hasChildren = parentIds.has(brief.id);
+            const isExpanded = expandedBriefIds.has(brief.id) || searchQuery; // Auto-expand when searching
+            
+            if (hasChildren && isExpanded) {
+                flatten(getChildren(brief.id), depth + 1);
+            }
+        });
+    };
+
+    flatten(rootBriefs);
 
     return (
         <div className={styles.container}>
@@ -157,10 +198,25 @@ export default function BriefListClient({ initialBriefs, workspaceId }: Omit<Bri
                             </tr>
                         </thead>
                         <tbody>
-                            {displayedBriefs.map((brief) => (
-                                <tr key={brief.id}>
+                            {renderRows.map((brief) => (
+                                <tr key={brief.id} className={brief.depth > 0 ? styles.childRow : ''}>
                                     <td className={styles.checkboxCell}><input type="checkbox" /></td>
-                                    <td className={styles.briefNumber}>{brief.briefNumber}</td>
+                                    <td className={styles.briefNumber}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                            {brief.depth > 0 && <span style={{ width: `${brief.depth * 20}px` }} />}
+                                            {parentIds.has(brief.id) ? (
+                                                <button 
+                                                    onClick={(e) => toggleExpand(brief.id, e)}
+                                                    className={styles.expandBtn}
+                                                >
+                                                    {expandedBriefIds.has(brief.id) || searchQuery ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                                                </button>
+                                            ) : (
+                                                <span style={{ width: '18px' }} />
+                                            )}
+                                            {brief.briefNumber}
+                                        </div>
+                                    </td>
                                     <td>
                                         <div className={styles.briefInfo}>
                                             <Link href={`/briefs/${brief.id}`} className={styles.briefName}>
@@ -191,6 +247,15 @@ export default function BriefListClient({ initialBriefs, workspaceId }: Omit<Bri
                                                 <Link href={`/briefs/${brief.id}`} className={styles.menuItem}>
                                                     <Eye size={14} /> Open Brief
                                                 </Link>
+                                                <button
+                                                    className={styles.menuItem}
+                                                    onClick={() => {
+                                                        setMovingBrief(brief);
+                                                        setActiveActionId(null);
+                                                    }}
+                                                >
+                                                    <Share2 size={14} /> Move to Parent Brief
+                                                </button>
                                                 <button
                                                     className={styles.menuItem}
                                                     onClick={() => {
@@ -312,6 +377,21 @@ export default function BriefListClient({ initialBriefs, workspaceId }: Omit<Bri
                 isOpen={!!activityBrief}
                 onClose={() => setActivityBrief(null)}
                 brief={activityBrief}
+            />
+
+            <MoveBriefModal
+                isOpen={!!movingBrief}
+                onClose={() => setMovingBrief(null)}
+                workspaceId={workspaceId}
+                briefId={movingBrief?.id}
+                briefName={movingBrief?.name}
+                currentParentId={movingBrief?.parentBriefId}
+                onSuccess={() => {
+                    setMovingBrief(null);
+                    router.refresh();
+                    // Refetch briefs to update UI
+                    getBriefs(workspaceId).then(setBriefs);
+                }}
             />
         </div>
     );

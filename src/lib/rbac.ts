@@ -81,6 +81,7 @@ export const BriefPermissions = {
     canDelete: (role: string) => hasRolePermission(role, PERMISSIONS_LEGACY.DELETE_BRIEF),
     canEditLawyerInCharge: (role: string) => hasRolePermission(role, [UserRole.MANAGING_PARTNER, UserRole.HEAD_OF_CHAMBERS, UserRole.PRACTICE_MANAGER]),
     canEditBriefNumber: (role: string) => hasRolePermission(role, [UserRole.MANAGING_PARTNER, UserRole.HEAD_OF_CHAMBERS, UserRole.PRACTICE_MANAGER]),
+    canReassignHierarchy: (role: string) => hasRolePermission(role, [UserRole.MANAGING_PARTNER, UserRole.HEAD_OF_CHAMBERS]),
 };
 
 export function canEditLawyerInCharge(role: string) {

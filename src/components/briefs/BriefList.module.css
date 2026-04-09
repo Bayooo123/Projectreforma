@@ -375,3 +375,29 @@
         height: 44px;
     }
 }
+
+/* Hierarchy Styles */
+.childRow {
+    background-color: var(--surface-subtle);
+}
+
+.childRow td {
+    border-bottom: 1px solid var(--border-subtle);
+}
+
+.expandBtn {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2px;
+    border-radius: 4px;
+}
+
+.expandBtn:hover {
+    background-color: var(--accent);
+    color: var(--primary);
+}

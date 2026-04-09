@@ -147,6 +147,7 @@ export async function createMatter(data: {
     proceedingDate?: Date;
     createdById?: string;
     externalCounselName?: string;
+    parentBriefId?: string | null;
 }) {
     const session = await auth();
     if (!session?.user) return { success: false, error: 'Unauthorized' };
@@ -239,6 +240,7 @@ export async function createMatter(data: {
                         // NEW: Mark as litigation-derived
                         isLitigationDerived: true,
                         customTitle: null, // No override initially
+                        parentBriefId: data.parentBriefId || null,
                     }
                 }
             },
