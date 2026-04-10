@@ -95,7 +95,7 @@ export class CrudExecutor {
     const delegate = requireDelegate(prisma, playbook.modelKey, `relationName '${relationName}'`);
     const modelName = playbook.getModelName();
 
-    const payload = this.definitions.compile(playbook.modelKey, definition, parentContext.entity, parentContext.entityType);
+    const payload = await this.definitions.compile(playbook.modelKey, definition, parentContext.entity, parentContext.entityType);
 
     try {
       const record = await delegate.create({ data: payload });
@@ -128,12 +128,12 @@ export class CrudExecutor {
 
     try {
       const records = await Promise.all(
-        definitions.map(definition => {
+        definitions.map(async definition => {
           if (!definition || typeof definition !== 'object' || Array.isArray(definition)) {
             throw new CrudValidationError('Each createMany definition must be an object.');
           }
 
-          const compiledDefinition = this.definitions.compile(
+          const compiledDefinition = await this.definitions.compile(
             playbook.modelKey,
             definition as Record<string, unknown>,
             parentContext.entity,

@@ -166,7 +166,19 @@ export class InsightHandler extends BicaHandler {
    *   - Routing to a tenant-isolated read-only schema
    */
   private async applyTenantScope(sql: string): Promise<string> {
-    return this.resolveTableTemplates(sql);
+    const workspaceId = this.context.platformEntity?.id;
+    if (!workspaceId) {
+      throw Object.assign(new Error('Workspace context and workspaceId are required for insight operations.'), { bicaCode: 'SERVER_ERROR' });
+    }
+
+    // Wrap resolved names in double-quotes and apply a subquery scope.
+    // {{Brief}} -> (SELECT * FROM "Brief" WHERE "workspaceId" = '...') as "Brief"
+    // This ensures that any query constructed by Bica is automatically isolated to the workspace.
+    return sql.replace(/\{\{([a-zA-Z_][a-zA-Z0-9_]*)\}\}/g, (_match, name: string) => {
+      // The "Workspace" entity itself is scoped by its own ID.
+      const scopeField = name === 'Workspace' ? 'id' : 'workspaceId';
+      return `(SELECT * FROM "${name}" WHERE "${scopeField}" = '${workspaceId}') AS "${name}"`;
+    });
   }
 
   /**
@@ -175,15 +187,7 @@ export class InsightHandler extends BicaHandler {
    *
    * TODO(V1): Extend to support custom table name mappings or schema aliasing.
    */
-  private resolveTableTemplates(sql: string): string {
-    // Wrap resolved names in double-quotes so PostgreSQL treats them as
-    // case-sensitive quoted identifiers. Without quotes, PostgreSQL silently
-    // folds names to lowercase — but Prisma creates tables with the exact
-    // PascalCase model name (e.g. "Brief", not "brief").
-    return sql.replace(/\{\{([a-zA-Z_][a-zA-Z0-9_]*)\}\}/g, (_match, name: string) => {
-      return `"${name}"`;
-    });
-  }
+  // resolvedTableTemplates is now absorbed into applyTenantScope for atomicity.
 
   // --------------------------------------------------------------------------
   // Step 4 · Row limit injection
@@ -325,6 +329,13 @@ export class InsightHandler extends BicaHandler {
   private normalizeJsonValue(value: unknown): unknown {
     if (typeof value === 'bigint') {
       return Number(value);
+    }
+
+    // Handle Prisma Decimal (Decimal.js)
+    if (value && typeof value === 'object' && ('d' in value || (value as any).constructor?.name === 'Decimal')) {
+      // If it looks like a Decimal object, convert to number or string.
+      // To preserve precision for things like NGN kobo, we can use number if safe.
+      return Number(value.toString());
     }
 
     if (Array.isArray(value)) {

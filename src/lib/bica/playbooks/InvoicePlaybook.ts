@@ -54,10 +54,13 @@ export class InvoicePlaybook extends Playbook {
     return ['InvoiceItem', 'Payment'];
   }
 
-  getCreateScope(parentEntity: any, parentEntityType: string): Record<string, unknown> {
+  async getCreateScope(parentEntity: any, parentEntityType: string): Promise<Record<string, unknown>> {
+    const { generateInvoiceNumber } = await import('@/app/actions/invoices');
+    const invoiceNumber = await generateInvoiceNumber(parentEntity.id);
+
     const t = String((parentEntityType || '')).toLowerCase();
-    if (t === 'matter') return { matterId: parentEntity.id, clientId: parentEntity.clientId };
-    return { clientId: parentEntity.id };
+    if (t === 'matter') return { matterId: parentEntity.id, clientId: parentEntity.clientId, invoiceNumber };
+    return { clientId: parentEntity.id, invoiceNumber };
   }
 
   getLookupLabel(record: any): string {

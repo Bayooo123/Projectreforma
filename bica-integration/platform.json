@@ -78,8 +78,8 @@
             "validation_rules": "required|string|max:100"
           },
           "status": {
-            "description": "Current lifecycle status of the brief.",
-            "validation_rules": "required|in:active,closed,archived"
+            "description": "Current status of the brief (active, closed, archived).",
+            "validation_rules": "required|string|max:20"
           },
           "dueDate": {
             "description": "Target completion or filing date.",
@@ -304,7 +304,7 @@
           },
           "amount": {
             "description": "Expense amount in kobo.",
-            "validation_rules": "required|integer|min:1"
+            "validation_rules": "required|numeric|min:0"
           },
           "description": {
             "description": "What the expense was for.",
@@ -438,7 +438,7 @@
           },
           "subtotal": {
             "description": "Pre-tax total in kobo.",
-            "validation_rules": "nullable|integer|min:0"
+            "validation_rules": "nullable|numeric|min:0"
           },
           "vatRate": {
             "description": "vatRate",
@@ -446,19 +446,19 @@
           },
           "vatAmount": {
             "description": "VAT component in kobo.",
-            "validation_rules": "nullable|integer|min:0"
+            "validation_rules": "nullable|numeric|min:0"
           },
           "securityChargeRate": {
             "description": "securityChargeRate",
             "validation_rules": "nullable|numeric|min:0"
           },
           "securityChargeAmount": {
-            "description": "securityChargeAmount",
-            "validation_rules": "nullable|integer|min:0"
+            "description": "securityChargeAmount in kobo.",
+            "validation_rules": "nullable|numeric|min:0"
           },
           "totalAmount": {
             "description": "Grand total payable in kobo.",
-            "validation_rules": "nullable|integer|min:0"
+            "validation_rules": "nullable|numeric|min:0"
           },
           "followUpSent": {
             "description": "followUpSent",
@@ -632,7 +632,7 @@
           },
           "amount": {
             "description": "Amount paid in kobo.",
-            "validation_rules": "required|integer|min:1"
+            "validation_rules": "required|numeric|min:0"
           },
           "date": {
             "description": "Date the payment was received.",

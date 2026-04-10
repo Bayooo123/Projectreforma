@@ -51,8 +51,17 @@ export class BriefPlaybook extends Playbook {
     return ['Task'];
   }
 
-  getCreateScope(parentEntity: any, parentEntityType: string): Record<string, unknown> {
-    return { workspaceId: parentEntity.id };
+  async getCreateScope(parentEntity: any, parentEntityType: string): Promise<Record<string, unknown>> {
+    const { generateBriefNumber } = await import('@/lib/briefs');
+    const briefNumber = await generateBriefNumber(parentEntity.id);
+    
+    return { 
+      workspaceId: parentEntity.id,
+      briefNumber,
+      // Default lawyerId to the workspace owner if not provided by Bica
+      lawyerId: parentEntity.ownerId,
+      lawyerInChargeId: parentEntity.ownerId
+    };
   }
 
   getLookupLabel(record: any): string {

@@ -140,7 +140,7 @@ export abstract class Playbook {
    * The resolved parent entity is the anchor for the relationship being
    * mutated, so concrete playbooks can derive foreign-key wiring from it.
    */
-  abstract getCreateScope(parentEntity: any, parentEntityType: string): Record<string, unknown>;
+  abstract getCreateScope(parentEntity: any, parentEntityType: string): Promise<Record<string, unknown>> | Record<string, unknown>;
 
   /**
    * Return a Prisma `where` fragment that scopes queries for this model

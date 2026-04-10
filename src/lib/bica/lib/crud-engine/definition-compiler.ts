@@ -12,7 +12,7 @@ export class DefinitionCompiler {
   /**
    * Compiles a create definition for a specific model.
    */
-  compile(modelName: string, definition: Record<string, unknown>, parentEntity: any, parentEntityType: string): Record<string, unknown> {
+  async compile(modelName: string, definition: Record<string, unknown>, parentEntity: any, parentEntityType: string): Promise<Record<string, unknown>> {
     const playbook = getPlaybook(modelName);
     if (!playbook) {
       throw new CrudValidationError(`Unknown model '${modelName}' while compiling nested create definitions.`);
@@ -21,14 +21,14 @@ export class DefinitionCompiler {
     return this.compileForPlaybook(playbook.modelKey, definition, parentEntity, parentEntityType);
   }
 
-  private compileForPlaybook(modelName: string, definition: Record<string, unknown>, parentEntity: any, parentEntityType: string): Record<string, unknown> {
+  private async compileForPlaybook(modelName: string, definition: Record<string, unknown>, parentEntity: any, parentEntityType: string): Promise<Record<string, unknown>> {
     const playbook = getPlaybook(modelName);
     if (!playbook) {
       throw new CrudValidationError(`Unknown model '${modelName}' while compiling nested create definitions.`);
     }
 
     const compiled: Record<string, unknown> = {
-      ...playbook.getCreateScope(parentEntity, parentEntityType),
+      ...(await playbook.getCreateScope(parentEntity, parentEntityType)),
     };
     const nestedRelationships = playbook.getMutableChildRelationships();
 
@@ -44,8 +44,8 @@ export class DefinitionCompiler {
         // Nested creates are intentionally recursive so the caller can pass a
         // natural tree of data and let the engine emit Prisma's create syntax.
         compiled[key] = Array.isArray(value)
-          ? { create: value.map(item => this.ensureNestedDefinition(item, key, parentEntity, parentEntityType)) }
-          : { create: this.ensureNestedDefinition(value, key, parentEntity, parentEntityType) };
+          ? { create: await Promise.all(value.map(item => this.ensureNestedDefinition(item, key, parentEntity, parentEntityType))) }
+          : { create: await this.ensureNestedDefinition(value, key, parentEntity, parentEntityType) };
         continue;
       }
 
@@ -55,7 +55,7 @@ export class DefinitionCompiler {
     return compiled;
   }
 
-  private ensureNestedDefinition(value: unknown, relationName: string, parentEntity: any, parentEntityType: string): Record<string, unknown> {
+  private async ensureNestedDefinition(value: unknown, relationName: string, parentEntity: any, parentEntityType: string): Promise<Record<string, unknown>> {
     if (!isPlainObject(value)) {
       throw new CrudValidationError(`Nested relation '${relationName}' must be an object or an array of objects.`);
     }
