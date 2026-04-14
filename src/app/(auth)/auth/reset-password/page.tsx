@@ -1,15 +1,14 @@
 'use client';
 
-import { useActionState, useEffect, useState } from 'react';
+import { useActionState, useEffect, useState, Suspense } from 'react';
 import Link from 'next/link';
-import { useSearchParams, useRouter } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { Lock, Check, Loader, AlertTriangle } from 'lucide-react';
 import { updatePassword } from '@/app/actions/reset-password';
 
-export default function ResetPasswordPage() {
+function ResetPasswordForm() {
     const searchParams = useSearchParams();
     const token = searchParams.get('token');
-    const router = useRouter();
 
     const [state, action, isPending] = useActionState(updatePassword, {});
     const [missingToken, setMissingToken] = useState(false);
@@ -79,12 +78,12 @@ export default function ResetPasswordPage() {
 
                         <div className="space-y-4">
                             <div>
-                                <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-slate-300">
+                                <label htmlFor="password" title="New Password" className="block text-sm font-medium text-gray-700 dark:text-slate-300">
                                     New Password
                                 </label>
                                 <div className="mt-1 relative rounded-md shadow-sm">
                                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                        <Lock className="h-5 w-5 text-gray-400" />
+                                        <Lock size={18} className="text-gray-400" />
                                     </div>
                                     <input
                                         id="password"
@@ -99,12 +98,12 @@ export default function ResetPasswordPage() {
                             </div>
 
                             <div>
-                                <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 dark:text-slate-300">
+                                <label htmlFor="confirmPassword" title="Confirm Password" className="block text-sm font-medium text-gray-700 dark:text-slate-300">
                                     Confirm Password
                                 </label>
                                 <div className="mt-1 relative rounded-md shadow-sm">
                                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                        <Lock className="h-5 w-5 text-gray-400" />
+                                        <Lock size={18} className="text-gray-400" />
                                     </div>
                                     <input
                                         id="confirmPassword"
@@ -146,5 +145,17 @@ export default function ResetPasswordPage() {
                 )}
             </div>
         </div>
+    );
+}
+
+export default function ResetPasswordPage() {
+    return (
+        <Suspense fallback={
+            <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-slate-900 px-4">
+                <Loader className="animate-spin h-8 w-8 text-primary" />
+            </div>
+        }>
+            <ResetPasswordForm />
+        </Suspense>
     );
 }

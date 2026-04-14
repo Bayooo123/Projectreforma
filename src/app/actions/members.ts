@@ -8,6 +8,7 @@ export async function getWorkspaceMembers(workspaceId: string) {
     try {
         const members = await prisma.workspaceMember.findMany({
             where: { workspaceId },
+            orderBy: { joinedAt: 'asc' },
             include: {
                 user: {
                     select: {

@@ -1,13 +1,13 @@
 "use client";
 
 import { X, DollarSign, Calendar, Loader, FileText, CheckCircle, AlertCircle } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { createPayment, getPaymentsByClient, getClientInvoices } from '@/app/actions/payments';
 import styles from './InvoiceModal.module.css';
 
 interface Payment {
     id: string;
-    amount: any; // Decimal from Prisma
+    amount: any;
     date: Date;
     method: string;
     reference: string | null;
@@ -21,7 +21,7 @@ interface Invoice {
     id: string;
     invoiceNumber: string;
     totalAmount: any;
-    paidAmount: any; // Ensuring we have this to calc balance
+    paidAmount: any;
     status: string;
     dueDate: Date | null;
 }
@@ -31,7 +31,7 @@ interface PaymentModalProps {
     onClose: () => void;
     clientName: string;
     clientId: string;
-    selectedInvoice?: Invoice | null; // Passed when opening from invoice list to pay specific invoice
+    selectedInvoice?: Invoice | null;
 }
 
 const PAYMENT_METHODS = [
@@ -50,8 +50,7 @@ const PaymentModal = ({ isOpen, onClose, clientName, clientId, selectedInvoice }
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
 
-    // Variation State
-    const [paymentMode, setPaymentMode] = useState<'full' | 'vary'>('full'); // 'full' | 'vary'
+    const [paymentMode, setPaymentMode] = useState<'full' | 'vary'>('full');
     const [varyAmount, setVaryAmount] = useState<string>('');
     const [markAsFullyPaid, setMarkAsFullyPaid] = useState(false);
 
@@ -62,8 +61,7 @@ const PaymentModal = ({ isOpen, onClose, clientName, clientId, selectedInvoice }
     }, [isOpen, clientId]);
 
     useEffect(() => {
-        // Reset state when modal opens or invoice changes
-        if (selectedInvoice) {
+        if (selectedInvoice && isOpen) {
             setActiveTab('create');
             setPaymentMode('full');
             setVaryAmount('');
@@ -93,11 +91,20 @@ const PaymentModal = ({ isOpen, onClose, clientName, clientId, selectedInvoice }
         }
     };
 
+    const parseNum = (val: any): number => {
+        if (val === null || val === undefined) return 0;
+        if (typeof val === 'number') return val;
+        const parsed = parseFloat(String(val));
+        return isNaN(parsed) ? 0 : parsed;
+    };
 
-
-    const formatCurrency = (amount: number | string) => {
-        const num = typeof amount === 'string' ? parseFloat(amount) : amount;
-        return `₦${num.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    const formatCurrency = (amount: any) => {
+        const num = parseNum(amount);
+        return new Intl.NumberFormat('en-NG', {
+            style: 'currency',
+            currency: 'NGN',
+            minimumFractionDigits: 2,
+        }).format(num).replace('NGN', '₦');
     };
 
     const formatDate = (date: Date) => {
@@ -108,8 +115,12 @@ const PaymentModal = ({ isOpen, onClose, clientName, clientId, selectedInvoice }
         });
     };
 
-    // Calculate balance
-    const invoiceBalance = selectedInvoice ? selectedInvoice.totalAmount - (selectedInvoice.paidAmount || 0) : 0;
+    const { total, paid, balance } = useMemo(() => {
+        if (!selectedInvoice) return { total: 0, paid: 0, balance: 0 };
+        const t = parseNum(selectedInvoice.totalAmount);
+        const p = parseNum(selectedInvoice.paidAmount);
+        return { total: t, paid: p, balance: Math.max(0, t - p) };
+    }, [selectedInvoice]);
 
     const handleCreatePayment = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
@@ -121,20 +132,22 @@ const PaymentModal = ({ isOpen, onClose, clientName, clientId, selectedInvoice }
             let invoiceId = formData.get('invoiceId') as string;
 
             if (selectedInvoice && paymentMode === 'full') {
-                amount = invoiceBalance; // Invoice balance in Naira (no more / 100)
+                amount = balance;
                 invoiceId = selectedInvoice.id;
             } else if (selectedInvoice && paymentMode === 'vary') {
-                amount = parseFloat(varyAmount);
+                amount = parseNum(varyAmount);
                 invoiceId = selectedInvoice.id;
             } else {
-                // Standard manual entry
-                amount = parseFloat(formData.get('amount') as string);
+                amount = parseNum(formData.get('amount'));
+            }
+
+            if (amount <= 0) {
+                throw new Error('Payment amount must be greater than zero');
             }
 
             const method = formData.get('method') as string;
             const reference = formData.get('reference') as string;
-            // Append note if full settlement
-            const finalReference = markAsFullyPaid ? `${reference} [FULL SETTLEMENT]` : reference;
+            const finalReference = markAsFullyPaid ? `${reference} [FULL SETTLEMENT]`.trim() : reference;
 
             const dateVal = formData.get('date') as string;
             const parsedDate = dateVal ? new Date(dateVal) : undefined;
@@ -143,24 +156,23 @@ const PaymentModal = ({ isOpen, onClose, clientName, clientId, selectedInvoice }
             const result = await createPayment({
                 clientId,
                 invoiceId: invoiceId || undefined,
-                amount: amount, // Send as direct decimal/number
+                amount: amount,
                 method: method,
                 reference: finalReference,
                 date: finalDate,
             });
 
             if (result.success) {
-                alert('Payment recorded successfully!');
                 e.currentTarget.reset();
-                await fetchData(); // Refresh data
+                await fetchData();
                 setActiveTab('list');
-                if (selectedInvoice) onClose(); // Close if we were paying specific invoice
+                if (selectedInvoice) onClose();
             } else {
                 alert(`Error: ${result.error}`);
             }
-        } catch (error) {
+        } catch (error: any) {
             console.error('Error recording payment:', error);
-            alert('Failed to record payment');
+            alert(error.message || 'Failed to record payment');
         } finally {
             setIsSubmitting(false);
         }
@@ -197,7 +209,7 @@ const PaymentModal = ({ isOpen, onClose, clientName, clientId, selectedInvoice }
                             disabled={isSubmitting}
                         >
                             <FileText size={16} />
-                            Payment History ({payments.length})
+                            History ({payments.length})
                         </button>
                     </div>
                 )}
@@ -205,22 +217,20 @@ const PaymentModal = ({ isOpen, onClose, clientName, clientId, selectedInvoice }
                 <div className={styles.content}>
                     {activeTab === 'create' && (
                         <form className={styles.createForm} onSubmit={handleCreatePayment}>
-
                             {selectedInvoice ? (
-                                // INVOICE SPECIFIC PAYMENT FLOW
                                 <div style={{ marginBottom: '1.5rem' }}>
                                     <div className={styles.totalsBox} style={{ marginBottom: '1.5rem' }}>
                                         <div className={styles.totalRow}>
                                             <span>Invoice Total:</span>
-                                            <span>{formatCurrency(selectedInvoice.totalAmount)}</span>
+                                            <span>{formatCurrency(total)}</span>
                                         </div>
                                         <div className={styles.totalRow}>
                                             <span>Already Paid:</span>
-                                            <span>{formatCurrency(selectedInvoice.paidAmount || 0)}</span>
+                                            <span>{formatCurrency(paid)}</span>
                                         </div>
                                         <div className={`${styles.totalRow} ${styles.grandTotal}`} style={{ color: 'var(--danger)' }}>
-                                            <span>Outstanding Balance:</span>
-                                            <span>{formatCurrency(invoiceBalance)}</span>
+                                            <span>Outstanding:</span>
+                                            <span>{formatCurrency(balance)}</span>
                                         </div>
                                     </div>
 
@@ -231,7 +241,7 @@ const PaymentModal = ({ isOpen, onClose, clientName, clientId, selectedInvoice }
                                             onClick={() => setPaymentMode('full')}
                                             style={{ flex: 1, justifyContent: 'center' }}
                                         >
-                                            <CheckCircle size={16} /> Confirm Full Payment
+                                            <CheckCircle size={16} /> Pay Balance
                                         </button>
                                         <button
                                             type="button"
@@ -239,14 +249,14 @@ const PaymentModal = ({ isOpen, onClose, clientName, clientId, selectedInvoice }
                                             onClick={() => setPaymentMode('vary')}
                                             style={{ flex: 1, justifyContent: 'center' }}
                                         >
-                                            <AlertCircle size={16} /> Vary / Discount
+                                            <AlertCircle size={16} /> Partial / Vary
                                         </button>
                                     </div>
 
                                     {paymentMode === 'full' && (
-                                        <div style={{ padding: '1rem', background: 'var(--surface)', borderRadius: 'var(--radius-md)', marginBottom: '1rem' }}>
-                                            <p style={{ textAlign: 'center', fontWeight: 600 }}>
-                                                Recording payment of {formatCurrency(invoiceBalance)}
+                                        <div style={{ padding: '0.75rem', background: 'var(--surface)', borderRadius: 'var(--radius-md)', marginBottom: '1rem', border: '1px solid var(--border)' }}>
+                                            <p style={{ textAlign: 'center', fontWeight: 600, fontSize: '0.9rem' }}>
+                                                Recording full settlement of {formatCurrency(balance)}
                                             </p>
                                         </div>
                                     )}
@@ -260,7 +270,7 @@ const PaymentModal = ({ isOpen, onClose, clientName, clientId, selectedInvoice }
                                                     className={styles.input}
                                                     value={varyAmount}
                                                     onChange={(e) => setVaryAmount(e.target.value)}
-                                                    placeholder="Enter amount..."
+                                                    placeholder="0.00"
                                                     step="0.01"
                                                     required
                                                 />
@@ -272,22 +282,21 @@ const PaymentModal = ({ isOpen, onClose, clientName, clientId, selectedInvoice }
                                                     checked={markAsFullyPaid}
                                                     onChange={(e) => setMarkAsFullyPaid(e.target.checked)}
                                                 />
-                                                <label htmlFor="markPaid" style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
-                                                    Mark invoice as fully paid (Discount remaining balance)
+                                                <label htmlFor="markPaid" style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                                                    Mark as fully paid (Apply discount to remaining)
                                                 </label>
                                             </div>
                                         </div>
                                     )}
                                 </div>
                             ) : (
-                                // STANDARD GENERIC PAYMENT FLOW
                                 <div className={styles.formGroup}>
                                     <label className={styles.formLabel}>Amount (₦) *</label>
                                     <input
                                         name="amount"
                                         type="number"
                                         className={styles.input}
-                                        placeholder="500000.00"
+                                        placeholder="0.00"
                                         required
                                         step="0.01"
                                         disabled={isSubmitting}
@@ -297,33 +306,20 @@ const PaymentModal = ({ isOpen, onClose, clientName, clientId, selectedInvoice }
 
                             <div className={styles.formGroup}>
                                 <label className={styles.formLabel}>Payment Method *</label>
-                                <select
-                                    name="method"
-                                    className={styles.input}
-                                    required
-                                    disabled={isSubmitting}
-                                >
+                                <select name="method" className={styles.input} required disabled={isSubmitting}>
                                     <option value="">Select method...</option>
-                                    {PAYMENT_METHODS.map(method => (
-                                        <option key={method} value={method}>
-                                            {method}
-                                        </option>
-                                    ))}
+                                    {PAYMENT_METHODS.map(m => <option key={m} value={m}>{m}</option>)}
                                 </select>
                             </div>
 
                             {!selectedInvoice && invoices.length > 0 && (
                                 <div className={styles.formGroup}>
                                     <label className={styles.formLabel}>Link to Invoice (Optional)</label>
-                                    <select
-                                        name="invoiceId"
-                                        className={styles.input}
-                                        disabled={isSubmitting}
-                                    >
+                                    <select name="invoiceId" className={styles.input} disabled={isSubmitting}>
                                         <option value="">No invoice selected</option>
-                                        {invoices.map(invoice => (
-                                            <option key={invoice.id} value={invoice.id}>
-                                                {invoice.invoiceNumber} - {formatCurrency(invoice.totalAmount)} ({invoice.status})
+                                        {invoices.map(inv => (
+                                            <option key={inv.id} value={inv.id}>
+                                                {inv.invoiceNumber} - {formatCurrency(inv.totalAmount)}
                                             </option>
                                         ))}
                                     </select>
@@ -331,14 +327,8 @@ const PaymentModal = ({ isOpen, onClose, clientName, clientId, selectedInvoice }
                             )}
 
                             <div className={styles.formGroup}>
-                                <label className={styles.formLabel}>Payment Reference</label>
-                                <input
-                                    name="reference"
-                                    type="text"
-                                    className={styles.input}
-                                    placeholder="TRF/2025/10001"
-                                    disabled={isSubmitting}
-                                />
+                                <label className={styles.formLabel}>Reference / Receipt #</label>
+                                <input name="reference" type="text" className={styles.input} placeholder="e.g. TRF-123" disabled={isSubmitting} />
                             </div>
 
                             <div className={styles.formGroup}>
@@ -353,29 +343,14 @@ const PaymentModal = ({ isOpen, onClose, clientName, clientId, selectedInvoice }
                             </div>
 
                             <div className={styles.formActions}>
-                                <button
-                                    type="button"
-                                    onClick={onClose}
-                                    className={styles.cancelBtn}
-                                    disabled={isSubmitting}
-                                >
+                                <button type="button" onClick={onClose} className={styles.cancelBtn} disabled={isSubmitting}>
                                     Cancel
                                 </button>
-                                <button
-                                    type="submit"
-                                    className={styles.submitBtn}
-                                    disabled={isSubmitting}
-                                >
+                                <button type="submit" className={styles.submitBtn} disabled={isSubmitting}>
                                     {isSubmitting ? (
-                                        <>
-                                            <Loader size={16} className="spin" />
-                                            Recording...
-                                        </>
+                                        <><Loader size={16} className="spin" /> Recording...</>
                                     ) : (
-                                        <>
-                                            <DollarSign size={16} />
-                                            Record Payment
-                                        </>
+                                        <><DollarSign size={16} /> Record Payment</>
                                     )}
                                 </button>
                             </div>
@@ -385,51 +360,28 @@ const PaymentModal = ({ isOpen, onClose, clientName, clientId, selectedInvoice }
                     {activeTab === 'list' && (
                         <div className={styles.invoiceList}>
                             {isLoading ? (
-                                <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>
-                                    <Loader size={32} className="spin" />
-                                    <p>Loading payments...</p>
-                                </div>
+                                <div style={{ textAlign: 'center', padding: '2rem' }}><Loader size={32} className="spin" /><p>Loading...</p></div>
                             ) : payments.length === 0 ? (
-                                <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>
-                                    <p>No payments recorded yet</p>
-                                </div>
+                                <div style={{ textAlign: 'center', padding: '2rem' }}><p>No history found</p></div>
                             ) : (
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                                    {payments.map(payment => (
-                                        <div
-                                            key={payment.id}
-                                            style={{
-                                                padding: '1rem',
-                                                border: '1px solid var(--border)',
-                                                borderRadius: 'var(--radius-md)',
-                                                backgroundColor: 'var(--background)',
-                                            }}
-                                        >
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                                    {payments.map(p => (
+                                        <div key={p.id} className="p-4 border rounded-xl bg-white shadow-sm">
+                                            <div className="flex justify-between items-start mb-2">
                                                 <div>
-                                                    <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--primary)', marginBottom: '0.25rem' }}>
-                                                        {formatCurrency(payment.amount)}
-                                                    </h3>
-                                                    <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
-                                                        {payment.method}
-                                                    </p>
+                                                    <h3 className="font-bold text-lg text-primary">{formatCurrency(p.amount)}</h3>
+                                                    <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">{p.method}</p>
                                                 </div>
-                                                <div style={{ textAlign: 'right' }}>
-                                                    <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                                                        <Calendar size={14} />
-                                                        {formatDate(payment.date)}
+                                                <div className="text-right">
+                                                    <p className="text-xs text-slate-400 flex items-center justify-end gap-1">
+                                                        <Calendar size={12} /> {formatDate(p.date)}
                                                     </p>
                                                 </div>
                                             </div>
-                                            {payment.reference && (
-                                                <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>
-                                                    Ref: {payment.reference}
-                                                </p>
-                                            )}
-                                            {payment.invoice && (
-                                                <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                                                    <FileText size={14} />
-                                                    Linked to {payment.invoice.invoiceNumber}
+                                            {p.reference && <p className="text-xs text-slate-500 italic">Ref: {p.reference}</p>}
+                                            {p.invoice && (
+                                                <p className="text-[10px] text-blue-600 font-bold mt-2 uppercase flex items-center gap-1">
+                                                    <FileText size={10} /> Linked to {p.invoice.invoiceNumber}
                                                 </p>
                                             )}
                                         </div>
@@ -440,7 +392,6 @@ const PaymentModal = ({ isOpen, onClose, clientName, clientId, selectedInvoice }
                     )}
                 </div>
             </div>
-
         </div>
     );
 };

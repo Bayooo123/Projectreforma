@@ -6,8 +6,6 @@ import { createNotification, RecipientType } from '@/lib/notifications';
 import { scheduleCalendarEntryNotifications } from '@/lib/scheduleAdjournmentNotifications';
 import { auth } from '@/auth';
 import { applySentenceCaseToFields, toSentenceCase } from '@/lib/sentence-case';
-import { GoogleGenerativeAI } from '@google/generative-ai';
-import { config } from '@/lib/config';
 
 /**
  * Get all matters for a workspace
@@ -113,9 +111,6 @@ export async function getMatterById(id: string) {
                             }
                         }
                     }
-                },
-                meetingRecordings: {
-                    orderBy: { createdAt: 'desc' }
                 }
             },
         });
@@ -295,7 +290,7 @@ export async function createMatter(data: {
                     briefId: matter.briefs[0].id,
                     clientId: finalClientId,
                     date: entryDate,
-                    type: 'COURT_DATE',
+                    type: 'COURT',
                     title: 'Initial Appearance',
                     proceedings: data.proceedings,
                     submittingLawyerId: session.user.id,
@@ -316,7 +311,7 @@ export async function createMatter(data: {
                     briefId: matter.briefs[0].id,
                     clientId: finalClientId,
                     date: data.nextCourtDate,
-                    type: 'COURT_DATE',
+                    type: 'COURT',
                     title: 'Upcoming Hearing',
                 }
             });
@@ -433,7 +428,7 @@ export async function updateMatter(
                         briefId: existingMatter.briefs[0].id,
                         clientId: existingMatter.clientId as string,
                         date: data.nextCourtDate,
-                        type: 'COURT_DATE',
+                        type: 'COURT',
                         title: 'Upcoming Hearing',
                     }
                 });
@@ -549,7 +544,7 @@ export async function adjournMatter(
                 briefId,
                 clientId,
                 date: dateOfEvent,
-                type: 'COURT_DATE',
+                type: 'COURT',
                 proceedings,
                 adjournedFor: adjournedFor || null,
                 externalCounsel: externalCounselName || null,
@@ -582,8 +577,9 @@ export async function adjournMatter(
                     briefId,
                     clientId,
                     date: newDate,
-                    type: 'COURT_DATE',
-                    title: nextTitle
+                    type: 'COURT',
+                    title: nextTitle,
+                    adjournedTo: newDate // Syncing explicitly to new field too
                 }
             });
 
@@ -734,7 +730,7 @@ export async function updateCalendarEntry(
         location?: string;
         agenda?: string;
         description?: string;
-        type?: 'COURT_DATE' | 'FILING_DEADLINE' | 'CLIENT_MEETING' | 'INTERNAL_MEETING' | 'OTHER';
+        type?: 'COURT' | 'MEETING';
     },
     performedBy: string
 ) {
@@ -793,7 +789,7 @@ export async function updateCalendarEntry(
 export async function scheduleMeeting(data: {
     title: string;
     date: Date;
-    type: 'CLIENT_MEETING' | 'INTERNAL_MEETING';
+    type: 'MEETING';
     matterId?: string;
     location?: string;
     agenda?: string;
@@ -845,146 +841,4 @@ export async function scheduleMeeting(data: {
     }
 }
 
-/**
- * Record a meeting
- */
-export async function recordMeeting(data: {
-    recordingId?: string;
-    calendarEntryId?: string;
-    matterId?: string;
-    date: Date;
-    participants: any;
-    summary: string;
-    actionItems?: string;
-    followUpDate?: Date;
-    audioUrl?: string;
-    transcriptText?: string;
-    audioDuration?: number;
-    skipTranscription?: boolean;
-}) {
-    const session = await auth();
-    if (!session?.user) return { success: false, error: 'Unauthorized' };
-
-    try {
-        const recordingData = {
-            matterId: data.matterId || null,
-            calendarEntryId: data.calendarEntryId || null,
-            audioUrl: data.audioUrl || null,
-            summary: data.summary || 'Processing meeting insights...',
-            actionItems: data.actionItems || null,
-            transcriptText: data.transcriptText || 'Transcription in progress...',
-            audioDuration: data.audioDuration || null,
-            followUpDate: data.followUpDate || null,
-            participants: data.participants ? { names: data.participants } : null,
-            createdById: session.user.id,
-            date: data.date,
-        };
-
-        let record;
-        if (data.recordingId) {
-            // Update existing record (already uploaded)
-            record = await (prisma as any).meetingRecording.update({
-                where: { id: data.recordingId },
-                data: recordingData
-            });
-        } else {
-            // Create new record
-            record = await (prisma as any).meetingRecording.create({
-                data: recordingData
-            });
-        }
-
-        // Trigger background transcription ONLY if audio is present and we still have placeholders
-        const isPlaceholderSummary = !data.summary || data.summary.includes('Processing');
-        const isPlaceholderTranscription = !data.transcriptText || data.transcriptText.includes('progress');
-        
-        if (!data.skipTranscription && data.audioUrl && (isPlaceholderSummary || isPlaceholderTranscription)) {
-            // Note: In the new end-to-end flow, the browser triggers /api/meetings/transcribe
-            // but we keep this as a fallback for manual/legacy calls if needed
-            processMeetingAction(record.id, data.audioUrl).catch(console.error);
-        }
-
-
-        // revalidate
-        revalidatePath('/calendar');
-        if (data.matterId) revalidatePath(`/calendar/${data.matterId}`);
-
-        return { success: true, record };
-    } catch (error) {
-        console.error('Error recording meeting:', error);
-        return { success: false, error: 'Failed to record meeting' };
-    }
-}
-
-/**
- * Background action to process meeting audio
- * This updates the record once transcription is complete
- */
-export async function processMeetingAction(recordId: string, audioUrl: string) {
-    try {
-        // Fetch the audio file from storage
-        const audioResponse = await fetch(audioUrl);
-        if (!audioResponse.ok) throw new Error(`Failed to fetch audio from storage: ${audioResponse.status}`);
-        const audioBuffer = await audioResponse.arrayBuffer();
-
-        // Call Gemini SDK directly — no self-HTTP call needed, avoids auth issues
-        const genAI = new GoogleGenerativeAI(config.GOOGLE_API_KEY || '');
-        const model = genAI.getGenerativeModel({
-            model: 'gemini-1.5-flash',
-            generationConfig: {
-                responseMimeType: 'application/json',
-            },
-        });
-
-        const prompt = `
-            Please provide a verbatim transcription of this audio.
-            Also, provide a concise summary of the meeting and a list of key action items.
-            Format the response as a JSON object with the following structure:
-            {
-                "transcription": "Verbatim text here...",
-                "summary": "Concise summary here...",
-                "actionItems": "List of action items as a string or markdown list..."
-            }
-            If there are multiple speakers, try to distinguish them in the transcription.
-        `;
-
-        const result = await model.generateContent([
-            {
-                inlineData: {
-                    mimeType: 'audio/webm',
-                    data: Buffer.from(audioBuffer).toString('base64'),
-                },
-            },
-            { text: prompt },
-        ]);
-
-        const resultText = result.response.text();
-        const parsedData = JSON.parse(resultText);
-
-        // Update the record with AI insights
-        await (prisma as any).meetingRecording.update({
-            where: { id: recordId },
-            data: {
-                summary: parsedData.summary,
-                actionItems: parsedData.actionItems,
-                transcriptText: parsedData.transcription
-            },
-        });
-
-        revalidatePath('/calendar');
-        return { success: true };
-    } catch (error) {
-        console.error('Background processing error:', error);
-
-        // Update record with error status so the user sees a meaningful message
-        await (prisma as any).meetingRecording.update({
-            where: { id: recordId },
-            data: {
-                summary: 'AI Processing Failed',
-                transcriptText: 'Failed to process AI insights automatically. Please try again later. Transcription failed.',
-            },
-        }).catch(console.error);
-
-        return { success: false, error: 'Processing failed' };
-    }
 }

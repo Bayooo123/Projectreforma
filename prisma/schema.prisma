@@ -119,7 +119,7 @@ model User {
   mattersInCharge        Matter[]               @relation("MatterLawyerInCharge")
   activityLogs           MatterActivityLog[]
   matterLawyer           MatterLawyer[]
-  meetingRecordings      MeetingRecording[]
+
   passwordResetRequests  PasswordResetRequest[]
   securityAuditLogs      SecurityAuditLog[]
   sessions               Session[]
@@ -288,7 +288,7 @@ model Matter {
   workspace             Workspace             @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   activityLogs          MatterActivityLog[]
   lawyers               MatterLawyer[]
-  meetingRecordings     MeetingRecording[]
+
   notifications         Notification[]
   tasks                 Task[]
 
@@ -320,6 +320,7 @@ model CalendarEntry {
   proceedings            String?
   outcome                String?
   adjournedFor           String?
+  adjournedTo            DateTime?
   submittingLawyerId     String?
   submittingLawyerToken  String?
   submittingLawyerName   String?
@@ -329,12 +330,12 @@ model CalendarEntry {
   clientId               String?
   externalCounsel        String?
   judge                  String?
+  court                  String?
   location               String?
   agenda                 String?
   description            String?
-  type                   CalendarEventType?      @default(COURT_DATE)
+  type                   CalendarEventType?      @default(COURT)
   matter                 Matter?                 @relation(fields: [matterId], references: [id], onDelete: Cascade, map: "CourtDate_matterId_fkey")
-  meetingRecording       MeetingRecording?
   scheduledNotifications ScheduledNotification[]
   appearances            User[]                  @relation("CalendarAppearances")
 
@@ -815,7 +816,7 @@ model ComplianceTask {
   user                   User?                   @relation("AcknowledgedBy", fields: [acknowledgedBy], references: [id])
   obligation             ComplianceObligation    @relation(fields: [obligationId], references: [id])
   workspace              Workspace               @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  meetingRecording       MeetingRecording?
+
   notifications          Notification[]
   scheduledNotifications ScheduledNotification[]
 
@@ -867,32 +868,7 @@ model SecurityAuditLog {
   @@index([createdAt])
 }
 
-model MeetingRecording {
-  id               String          @id @default(cuid())
-  calendarEntryId  String?         @unique
-  matterId         String?
-  date             DateTime        @default(now())
-  participants     Json?
-  summary          String
-  actionItems      String?
-  followUpDate     DateTime?
-  audioUrl         String?
-  audioDuration    Int?
-  createdById      String?
-  complianceTaskId String?         @unique
-  createdAt        DateTime        @default(now())
-  updatedAt        DateTime        @updatedAt
-  transcriptText   String?
-  calendarEntry    CalendarEntry?  @relation(fields: [calendarEntryId], references: [id])
-  complianceTask   ComplianceTask? @relation(fields: [complianceTaskId], references: [id])
-  creator          User?           @relation(fields: [createdById], references: [id])
-  matter           Matter?         @relation(fields: [matterId], references: [id], onDelete: Cascade)
 
-  @@index([calendarEntryId])
-  @@index([matterId])
-  @@index([createdById])
-  @@index([complianceTaskId])
-}
 
 model RateLimit {
   id        String   @id @default(cuid())
@@ -930,13 +906,9 @@ model PasswordResetRequest {
   @@index([tokenHash])
   @@index([userId])
 }
-
 enum CalendarEventType {
-  COURT_DATE
-  FILING_DEADLINE
-  CLIENT_MEETING
-  INTERNAL_MEETING
-  OTHER
+  COURT
+  MEETING
 }
 
 enum ExpenseCategory {

@@ -21,6 +21,7 @@ export default function SettingsPage() {
 
     // Firm Settings
     const [firmCode, setFirmCode] = useState('');
+    const [joinPassword, setJoinPassword] = useState('');
     const [letterheadUrl, setLetterheadUrl] = useState('');
     const [brandColor, setBrandColor] = useState('#121826');
     // Temp state for editing
@@ -169,9 +170,11 @@ export default function SettingsPage() {
         const result = await updateWorkspaceSettings(session.user.workspaceId, {
             letterheadUrl: editLetterheadUrl,
             firmCode: firmCode || null,
+            joinPassword: joinPassword || undefined,
             brandColor: editBrandColor
         });
         if (result.success) {
+            setJoinPassword(''); // Clear password field after save for security
             setLetterheadUrl(editLetterheadUrl);
             setBrandColor(editBrandColor);
             alert('Firm settings saved!');
@@ -301,7 +304,25 @@ export default function SettingsPage() {
                             </div>
                             <div className={styles.formGroup}>
                                 <label>Firm Code</label>
-                                <input type="text" className={styles.input} value={firmCode} onChange={e => setFirmCode(e.target.value)} />
+                                <input 
+                                    type="text" 
+                                    className={styles.input} 
+                                    value={firmCode} 
+                                    onChange={e => setFirmCode(e.target.value)} 
+                                    placeholder="e.g. ASCOLP"
+                                />
+                                <p className={styles.hint}>Used by team members to find your practice during registration.</p>
+                            </div>
+                            <div className={styles.formGroup}>
+                                <label>Join Password (Optional)</label>
+                                <input 
+                                    type="password" 
+                                    className={styles.input} 
+                                    value={joinPassword} 
+                                    onChange={e => setJoinPassword(e.target.value)} 
+                                    placeholder="Leave blank to keep current"
+                                />
+                                <p className={styles.hint}>Password required for new members to join using the firm code above.</p>
                             </div>
                             <div className={styles.formGroup}>
                                 <label>Letterhead / Branding File</label>

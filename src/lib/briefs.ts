@@ -83,6 +83,7 @@ export async function getLawyersForWorkspace(workspaceId: string) {
                     { user: { email: { in: ['henrietta@abiolasanniandco.com', 'deji@abiolasanniandco.com'] } } }
                 ]
             },
+            orderBy: { joinedAt: 'asc' },
             include: {
                 user: {
                     select: {

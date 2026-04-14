@@ -24,7 +24,7 @@ const ScheduleMeetingModal = ({
     const [title, setTitle] = useState('');
     const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
     const [time, setTime] = useState('10:00');
-    const [type, setType] = useState<'CLIENT_MEETING' | 'INTERNAL_MEETING'>('CLIENT_MEETING');
+    // NOTE: Backend now unified to 'MEETING'
     const [location, setLocation] = useState('');
     const [agenda, setAgenda] = useState('');
     const [selectedMatterId, setSelectedMatterId] = useState('');
@@ -73,7 +73,7 @@ const ScheduleMeetingModal = ({
             const result = await scheduleMeeting({
                 title,
                 date: meetingDateTime,
-                type,
+                type: 'MEETING', // Standardized
                 matterId: selectedMatterId || undefined,
                 location: location || undefined,
                 agenda: agenda || undefined,
@@ -89,7 +89,6 @@ const ScheduleMeetingModal = ({
             }
         } catch (error) {
             console.error('Error scheduling meeting:', error);
-            alert('Failed to schedule meeting');
         } finally {
             setIsSubmitting(false);
         }
@@ -99,7 +98,7 @@ const ScheduleMeetingModal = ({
 
     return (
         <div className={styles.overlay}>
-            <div className={styles.modal}>
+            <div className={styles.modal} style={{ maxWidth: '500px' }}>
                 <div className={styles.header}>
                     <h2 className={styles.title}>Schedule Meeting</h2>
                     <button onClick={onClose} className={styles.closeBtn} disabled={isSubmitting}>
@@ -141,18 +140,6 @@ const ScheduleMeetingModal = ({
                                 required
                             />
                         </div>
-                    </div>
-
-                    <div className={styles.formGroup}>
-                        <label className={styles.label}>Meeting Type</label>
-                        <select
-                            className={styles.select}
-                            value={type}
-                            onChange={(e) => setType(e.target.value as any)}
-                        >
-                            <option value="CLIENT_MEETING">Client Meeting</option>
-                            <option value="INTERNAL_MEETING">Internal Meeting</option>
-                        </select>
                     </div>
 
                     <div className={styles.formGroup}>
@@ -204,7 +191,8 @@ const ScheduleMeetingModal = ({
                         <label className={styles.label}>Agenda / Objectives</label>
                         <textarea
                             className={styles.textarea}
-                            placeholder="Points to discuss..."
+                            placeholder="Briefly describe meeting agenda..."
+                            style={{ height: '100px' }}
                             value={agenda}
                             onChange={(e) => setAgenda(e.target.value)}
                         />
@@ -221,10 +209,7 @@ const ScheduleMeetingModal = ({
                         disabled={isSubmitting || !title}
                     >
                         {isSubmitting ? (
-                            <>
-                                <Loader size={16} className="animate-spin" />
-                                <span>Scheduling...</span>
-                            </>
+                            <Loader size={16} className="animate-spin" />
                         ) : (
                             <>
                                 <Calendar size={16} />

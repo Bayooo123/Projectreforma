@@ -1,230 +1,154 @@
-.page {
+.container {
     display: flex;
     flex-direction: column;
-    gap: 1.5rem;
-    height: 100%;
-    /* fill the contentContainer */
-    max-height: 100%;
-    min-height: 0;
-    /* allow flex-shrink to propagate inward */
+    height: 100vh;
+    width: 100%;
     overflow: hidden;
-    /* never let content bust the frame */
-    overflow: hidden;
+    background-color: #fff;
+    /* Position relative to handle full height in layout */
+    position: relative;
+    margin: -2rem -2rem 0 -2rem; /* Hack to bleed out of parent padding if any */
+    padding-bottom: 2rem;
 }
 
-/* Scrollable zone: wraps CalendarGrid, grows to fill remaining height */
-.calendarSection {
-    flex: 1;
-    min-height: 0;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
+@media (min-width: 1024px) {
+    .container {
+        margin: -1.5rem -2rem 0 -2rem;
+        height: calc(100vh - 4rem); /* Adjust for sidebar header */
+    }
 }
 
-.header {
+.topToolbar {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    padding: 1.5rem 2rem;
+    background-color: #fff;
+    border-bottom: 1px solid var(--border);
+}
+
+.brand {
+    display: flex;
+    align-items: center;
+    gap: 2rem;
 }
 
 .title {
-    font-size: var(--text-2xl);
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: var(--text-primary);
+    letter-spacing: -0.02em;
+}
+
+.stats {
+    display: flex;
+    gap: 1.5rem;
+    border-left: 1px solid var(--border);
+    padding-left: 2rem;
+}
+
+.statItem {
+    display: flex;
+    flex-direction: column;
+}
+
+.statItem strong {
+    font-size: 1.125rem;
     font-weight: 700;
     color: var(--text-primary);
-    margin-bottom: 0.25rem;
 }
 
-.subtitle {
-    font-size: var(--text-sm);
-    color: var(--text-secondary);
-}
-
-.headerActions {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-}
-
-.searchWrapper {
-    position: relative;
-}
-
-.searchInput {
-    padding: 0.625rem 1rem;
-    border: 1px solid var(--border);
-    border-radius: var(--radius-md);
-    background-color: var(--surface);
-    color: var(--text-primary);
-    font-size: var(--text-sm);
-    width: 250px;
-    outline: none;
-    transition: border-color 0.2s;
-}
-
-.searchInput:focus {
-    border-color: var(--primary);
-}
-
-.searchInput::placeholder {
-    color: var(--text-secondary);
-}
-
-.filterSelect {
-    padding: 0.625rem 1rem;
-    border: 1px solid var(--border);
-    border-radius: var(--radius-md);
-    background-color: var(--surface);
-    color: var(--text-primary);
-    font-size: var(--text-sm);
-    cursor: pointer;
-    outline: none;
-    transition: border-color 0.2s;
-}
-
-.filterSelect:focus {
-    border-color: var(--primary);
-}
-
-.addBtn {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    background-color: var(--primary);
-    color: white;
-    border: none;
-    padding: 0.625rem 1.125rem;
-    border-radius: var(--radius-md);
+.statItem span {
+    font-size: 0.75rem;
+    color: var(--text-tertiary);
+    text-transform: uppercase;
     font-weight: 600;
-    font-size: var(--text-sm);
-    cursor: pointer;
-    transition: background-color 0.2s;
+    letter-spacing: 0.05em;
 }
 
-.addBtn:hover {
-    background-color: var(--primary-dark);
-}
-
-/* Action Buttons */
-.actionButtons {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-}
-
-.btnSecondary {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    background-color: var(--surface);
-    color: var(--text-primary);
-    border: 1px solid var(--border);
-    padding: 0.625rem 1.125rem;
-    border-radius: var(--radius-md);
-    font-weight: 600;
-    font-size: var(--text-sm);
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.btnSecondary:hover {
-    background-color: var(--surface-subtle);
-    border-color: var(--primary);
-    transform: translateY(-1px);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-}
-
-.btnPrimary {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    background-color: var(--primary);
-    color: white;
-    border: none;
-    padding: 0.625rem 1.125rem;
-    border-radius: var(--radius-md);
-    font-weight: 600;
-    font-size: var(--text-sm);
-    cursor: pointer;
-    transition: all 0.2s ease;
-    box-shadow: 0 2px 6px rgba(20, 184, 166, 0.2);
-}
-
-.btnPrimary:hover {
-    background-color: var(--primary-hover);
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(20, 184, 166, 0.3);
-}
-
-.toolBar {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    background: var(--surface);
-    padding: 0.75rem 1.5rem;
-    border-bottom: 1px solid var(--border);
-    margin: 1rem -1.5rem;
-}
-
-.tabs {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-}
-
-.tab {
-    padding: 0.5rem 1rem;
-    font-size: var(--text-sm);
-    font-weight: 500;
-    color: var(--text-secondary);
-    border-radius: var(--radius-md);
-    cursor: pointer;
-    transition: all 0.2s;
-    background: transparent;
-    border: none;
-}
-
-.tab:hover {
-    background: var(--surface-subtle);
-    color: var(--text-primary);
-}
-
-.activeTab {
-    background: var(--surface-subtle) !important;
-    color: var(--primary) !important;
-    font-weight: 600;
-}
-
-.tabDivider {
-    width: 1px;
-    height: 1.5rem;
-    background: var(--border);
-    margin: 0 0.5rem;
-}
-
-.filtersWrapper {
+.toolbarActions {
     display: flex;
     align-items: center;
     gap: 1.5rem;
 }
 
-.filterGroup {
+.searchBox {
+    position: relative;
     display: flex;
     align-items: center;
-    gap: 0.5rem;
-    font-size: var(--text-xs);
-    color: var(--text-secondary);
 }
 
-.dateInput {
-    padding: 0.4rem 0.6rem;
+.searchBox svg {
+    position: absolute;
+    left: 1rem;
+    color: var(--text-tertiary);
+}
+
+.searchBox input {
+    padding: 0.75rem 1rem 0.75rem 2.75rem;
     border: 1px solid var(--border);
-    border-radius: var(--radius-md);
-    background: var(--surface-subtle);
-    font-size: var(--text-xs);
-    color: var(--text-primary);
-    outline: none;
+    border-radius: 10px;
+    background-color: var(--surface-subtle);
+    font-size: 0.875rem;
+    width: 320px;
+    transition: all 0.2s;
 }
 
-.dateInput:focus {
-    border-color: var(--primary);
+.searchBox input:focus {
+    width: 400px;
+    border-color: var(--text-primary);
+    background-color: #fff;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
 }
+
+.buttonGroup {
+    display: flex;
+    gap: 0.75rem;
+}
+
+.primaryBtn {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    padding: 0.75rem 1.25rem;
+    background-color: var(--maroon-600);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.primaryBtn:hover {
+    background-color: var(--maroon-700);
+    transform: translateY(-1px);
+}
+
+.secondaryBtn {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    padding: 0.75rem 1.25rem;
+    background-color: #fff;
+    color: var(--text-primary);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.secondaryBtn:hover {
+    background-color: var(--surface-subtle);
+    border-color: var(--slate-400);
+    transform: translateY(-1px);
+}
+
+.calendarGrid {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+}

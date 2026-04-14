@@ -1,8 +1,7 @@
-'use server';
-
 import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
 import { head } from '@vercel/blob';
+import bcrypt from 'bcryptjs';
 
 
 export async function completeBranding(
@@ -47,11 +46,16 @@ export async function updateWorkspaceSettings(
     }
 ) {
     try {
+        const updateData: any = { ...data };
+        
+        // Hash the join password if it's being updated
+        if (data.joinPassword) {
+            updateData.joinPassword = await bcrypt.hash(data.joinPassword, 10);
+        }
+
         const workspace = await prisma.workspace.update({
             where: { id: workspaceId },
-            data: {
-                ...data,
-            },
+            data: updateData,
         });
 
         revalidatePath('/management/office');
@@ -66,7 +70,16 @@ export async function getWorkspaceSettings(workspaceId: string) {
     try {
         const workspace = await prisma.workspace.findUnique({
             where: { id: workspaceId },
-            select: { id: true, name: true, firmCode: true, letterheadUrl: true, revenuePin: true, litigationPin: true, brandColor: true }
+            select: { 
+                id: true, 
+                name: true, 
+                firmCode: true, 
+                letterheadUrl: true, 
+                revenuePin: true, 
+                litigationPin: true, 
+                brandColor: true 
+                // joinPassword is EXCLUDED for security
+            }
         });
         return { success: true, workspace };
     } catch (error) {
@@ -74,7 +87,6 @@ export async function getWorkspaceSettings(workspaceId: string) {
         return { success: false, error: 'Failed to fetch settings' };
     }
 }
-
 export async function getStorageUsage(workspaceId: string) {
     try {
         // Get workspace-specific documents from database

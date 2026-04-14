@@ -61,7 +61,6 @@ const Sidebar = ({ user, workspace }: SidebarProps) => {
   ];
 
   const isActive = (path: string) => {
-    // Strict match for the root Overview page to prevent it from being active on sub-pages
     if (path === '/management') {
       return pathname === path;
     }
@@ -111,7 +110,7 @@ const Sidebar = ({ user, workspace }: SidebarProps) => {
           </Link>
         )}
 
-        <Link href="#" className={styles.footerLink} onClick={(e) => e.preventDefault()}>
+        <Link href="/help" className={styles.footerLink}>
           <HelpCircle size={20} className={styles.navIcon} />
           <span className={styles.navText}>Help</span>
         </Link>

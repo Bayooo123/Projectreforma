@@ -1,16 +1,16 @@
 "use client";
 
-import { useState, useEffect } from 'react';
-import { Plus, Gavel } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { Plus, Gavel, Search, Calendar as CalendarIcon, Filter, Users, Loader } from 'lucide-react';
 import CalendarGrid from '@/components/calendar/CalendarGrid';
-import MatterDetailModal from '@/components/calendar/MatterDetailModal';
+import CourtEventModal from '@/components/calendar/CourtEventModal';
+import MeetingEventModal from '@/components/calendar/MeetingEventModal';
 import ScheduleMeetingModal from '@/components/calendar/ScheduleMeetingModal';
-import RecordMeetingModal from '@/components/calendar/RecordMeetingModal';
 import AddMatterModal from '@/components/calendar/AddMatterModal';
-import { getMattersForMonth } from '@/lib/matters';
 import styles from './page.module.css';
 
-import { CalendarEvent, CalendarEventType, Matter } from '@/types/legal';
+import { CalendarEvent, Matter } from '@/types/legal';
+import { getCalendarEvents } from '@/app/actions/calendar-events';
 
 interface CalendarClientProps {
     initialEvents: CalendarEvent[];
@@ -24,214 +24,113 @@ export default function CalendarClient({
     userId,
 }: CalendarClientProps) {
     const [events, setEvents] = useState<CalendarEvent[]>(initialEvents);
-
-    // Sync state with props when revalidation occurs
-    useEffect(() => {
-        setEvents(initialEvents);
-    }, [initialEvents]);
-
     const [currentDate, setCurrentDate] = useState(new Date());
-    const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
+
+    // Modals
+    const [isAddMatterModalOpen, setIsAddMatterModalOpen] = useState(false);
     const [isScheduleMeetingModalOpen, setIsScheduleMeetingModalOpen] = useState(false);
-    const [isRecordMeetingModalOpen, setIsRecordMeetingModalOpen] = useState(false);
-    const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+    const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
 
-    const [selectedMatter, setSelectedMatter] = useState<Matter | null>(null);
-    const [isLoadingMonth, setIsLoadingMonth] = useState(false);
+    // Filters
     const [searchQuery, setSearchQuery] = useState('');
-    const [filterType, setFilterType] = useState<CalendarEventType | 'ALL'>('ALL');
-    const [filterCategory, setFilterCategory] = useState<'UPCOMING' | 'PAST' | 'ALL'>('ALL');
-    const [startDate, setStartDate] = useState('');
-    const [endDate, setEndDate] = useState('');
 
-    // Unified Filtering Logic
-    const filteredEvents = events.filter(event => {
-        const queryMatch = !searchQuery || (
-            event.matter?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            event.matter?.caseNumber?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            event.title?.toLowerCase().includes(searchQuery.toLowerCase())
-        );
-
-        const typeMatch = filterType === 'ALL' || event.type === filterType;
-
-        const isPast = new Date(event.date) < new Date();
-        const categoryMatch = filterCategory === 'ALL' ||
-            (filterCategory === 'UPCOMING' && !isPast) ||
-            (filterCategory === 'PAST' && isPast);
-
-        // Date Range Match
-        const eventDate = new Date(event.date);
-        const rangeMatch = (!startDate || eventDate >= new Date(startDate)) &&
-            (!endDate || eventDate <= new Date(endDate));
-
-        return queryMatch && typeMatch && categoryMatch && rangeMatch;
-    });
-
-    const refreshEvents = async (silent = false) => {
-        if (!silent) console.log('Refreshing events...');
+    const fetchEvents = useCallback(async (date: Date) => {
+        setIsLoading(true);
         try {
-            const { getCalendarEvents } = await import('@/app/actions/calendar-events');
-            const newEvents = await getCalendarEvents(workspaceId);
-            setEvents(newEvents as CalendarEvent[]);
-        } catch (e) {
-            console.error(e);
+            // Calculate month range for lazy loading
+            const start = new Date(date.getFullYear(), date.getMonth(), 1);
+            const end = new Date(date.getFullYear(), date.getMonth() + 1, 0, 23, 59, 59);
+            
+            const fetched = await getCalendarEvents(workspaceId, start, end);
+            setEvents(fetched as CalendarEvent[]);
+        } catch (error) {
+            console.error('Failed to fetch events:', error);
+        } finally {
+            setIsLoading(false);
         }
-    };
-
-    // AUTOMATION: Background Polling (30 seconds)
-    useEffect(() => {
-        const interval = setInterval(() => {
-            refreshEvents(true);
-        }, 30000);
-        return () => clearInterval(interval);
     }, [workspaceId]);
 
-    // ... (keep handleEventClick, handleDetailClose)
-    const handleEventClick = async (event: CalendarEvent) => {
-        // Instant feedback: Open modal with data we already have
-        setSelectedMatter({
-            ...event.matter,
-            workspaceId: workspaceId,
-            briefs: [],
-            calendarEntries: [],
-            meetingRecordings: [],
-            status: 'active',
-            nextCourtDate: event.date,
-            court: null,
-            judge: null,
-            lawyers: [],
-            client: { id: '', name: event.matter?.client?.name || 'Loading...' },
-        } as Matter);
-        setIsDetailModalOpen(true);
+    // Fetch events when month changes
+    useEffect(() => {
+        fetchEvents(currentDate);
+    }, [currentDate, fetchEvents]);
 
-        // Fetch full-fidelity details in background
-        if (event.matterId) {
-            try {
-                const { getMatterById } = await import('@/app/actions/matters');
-                const fullMatter = await getMatterById(event.matterId);
-                if (fullMatter) {
-                    setSelectedMatter(fullMatter as any);
-                }
-            } catch (e) {
-                console.error('Background fetch failed:', e);
-            }
-        }
+    const handleDateChange = (newDate: Date) => {
+        // If current month/year is different, it triggers fetch via useEffect
+        setCurrentDate(newDate);
     };
 
-    const handleDetailClose = () => {
-        setIsDetailModalOpen(false);
-        setSelectedMatter(null);
-        refreshEvents();
+    const handleEventClick = (event: CalendarEvent) => {
+        setSelectedEvent(event);
     };
+
+    const filteredEvents = events.filter(event => {
+        if (!searchQuery) return true;
+        const query = searchQuery.toLowerCase();
+        return (
+            event.matter?.name?.toLowerCase().includes(query) ||
+            event.matter?.caseNumber?.toLowerCase().includes(query) ||
+            event.title?.toLowerCase().includes(query) ||
+            event.court?.toLowerCase().includes(query)
+        );
+    });
+
+    const handleRefresh = () => fetchEvents(currentDate);
 
     return (
-        <div className={styles.page}>
-            <div className={styles.header}>
-                <div>
+        <div className={styles.container}>
+            <div className={styles.topToolbar}>
+                <div className={styles.brand}>
                     <h1 className={styles.title}>Legal Calendar</h1>
-                    <p className={styles.subtitle}>Unified practice scheduling & documentation</p>
-                </div>
-                <div className={styles.headerActions}>
-                    <div className={styles.actionButtons}>
-                        <button
-                            className={styles.btnSecondary}
-                            onClick={() => setIsAddModalOpen(true)}
-                        >
-                            <Plus size={18} />
-                            <span>New Matter</span>
-                        </button>
-
-                        <button
-                            className={styles.btnSecondary}
-                            onClick={() => setIsScheduleMeetingModalOpen(true)}
-                        >
-                            <Plus size={18} />
-                            <span>Schedule Meeting</span>
-                        </button>
-
-                        <button
-                            className={styles.btnPrimary}
-                            onClick={() => setIsRecordMeetingModalOpen(true)}
-                        >
-                            <Gavel size={18} />
-                            <span>Record Meeting</span>
-                        </button>
+                    <div className={styles.stats}>
+                        <div className={styles.statItem}>
+                            <strong>{filteredEvents.filter(e => e.type === 'COURT').length}</strong> <span>Courts</span>
+                        </div>
+                        <div className={styles.statItem}>
+                            <strong>{filteredEvents.filter(e => e.type === 'MEETING').length}</strong> <span>Meetings</span>
+                        </div>
                     </div>
                 </div>
-            </div>
 
-            <div className={styles.toolBar}>
-                <div className={styles.tabs}>
-                    <button
-                        className={`${styles.tab} ${filterCategory === 'ALL' && filterType === 'ALL' ? styles.activeTab : ''}`}
-                        onClick={() => { setFilterCategory('ALL'); setFilterType('ALL'); }}
-                    >All Events</button>
-                    <button
-                        className={`${styles.tab} ${filterCategory === 'UPCOMING' ? styles.activeTab : ''}`}
-                        onClick={() => setFilterCategory('UPCOMING')}
-                    >Upcoming</button>
-                    <button
-                        className={`${styles.tab} ${filterCategory === 'PAST' ? styles.activeTab : ''}`}
-                        onClick={() => setFilterCategory('PAST')}
-                    >Past</button>
-                    <div className={styles.tabDivider} />
-                    <button
-                        className={`${styles.tab} ${filterType === 'COURT_DATE' ? styles.activeTab : ''}`}
-                        onClick={() => setFilterType('COURT_DATE')}
-                    >Court Dates</button>
-                    <button
-                        className={`${styles.tab} ${filterType === 'CLIENT_MEETING' || filterType === 'INTERNAL_MEETING' ? styles.activeTab : ''}`}
-                        onClick={() => setFilterType('CLIENT_MEETING')}
-                    >Meetings</button>
-                </div>
-
-                <div className={styles.filtersWrapper}>
-                    <div className={styles.filterGroup}>
-                        <label>Range:</label>
-                        <input
-                            type="date"
-                            className={styles.dateInput}
-                            value={startDate}
-                            onChange={(e) => setStartDate(e.target.value)}
-                        />
-                        <span>to</span>
-                        <input
-                            type="date"
-                            className={styles.dateInput}
-                            value={endDate}
-                            onChange={(e) => setEndDate(e.target.value)}
-                        />
-                    </div>
-
-                    <div className={styles.searchWrapper}>
+                <div className={styles.toolbarActions}>
+                    <div className={styles.searchBox}>
+                        <Search size={16} />
                         <input
                             type="text"
-                            placeholder="Search case, number or title..."
-                            className={styles.searchInput}
+                            placeholder="Find matter, court or meeting..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                         />
                     </div>
+                    <div className={styles.buttonGroup}>
+                        <button className={styles.primaryBtn} onClick={() => setIsAddMatterModalOpen(true)}>
+                            <Plus size={18} /> <span>New Court Date</span>
+                        </button>
+                        <button className={styles.secondaryBtn} onClick={() => setIsScheduleMeetingModalOpen(true)}>
+                            <Users size={18} /> <span>Schedule Meeting</span>
+                        </button>
+                    </div>
                 </div>
             </div>
 
-            <div className={styles.calendarSection}>
+            <div className={styles.calendarGrid}>
                 <CalendarGrid
                     events={filteredEvents}
                     currentDate={currentDate}
-                    onDateChange={setCurrentDate}
+                    onDateChange={handleDateChange}
                     onEventClick={handleEventClick}
-                    isLoading={isLoadingMonth}
+                    isLoading={isLoading}
                 />
             </div>
 
-            {/* TODO: Implement ScheduleMeetingModal and RecordMeetingModal */}
+            {/* Modals */}
             <AddMatterModal
-                isOpen={isAddModalOpen}
-                onClose={() => setIsAddModalOpen(false)}
+                isOpen={isAddMatterModalOpen}
+                onClose={() => setIsAddMatterModalOpen(false)}
                 workspaceId={workspaceId}
                 userId={userId}
-                onSuccess={refreshEvents}
+                onSuccess={handleRefresh}
             />
 
             <ScheduleMeetingModal
@@ -239,25 +138,25 @@ export default function CalendarClient({
                 onClose={() => setIsScheduleMeetingModalOpen(false)}
                 workspaceId={workspaceId}
                 userId={userId}
-                onSuccess={refreshEvents}
+                onSuccess={handleRefresh}
             />
 
-            <RecordMeetingModal
-                isOpen={isRecordMeetingModalOpen}
-                onClose={() => setIsRecordMeetingModalOpen(false)}
-                workspaceId={workspaceId}
-                userId={userId}
-                onSuccess={refreshEvents}
-            />
+            {selectedEvent && selectedEvent.type === 'COURT' && (
+                <CourtEventModal 
+                    isOpen={!!selectedEvent}
+                    onClose={() => setSelectedEvent(null)}
+                    event={selectedEvent}
+                />
+            )}
 
-            {selectedMatter && (
-                <MatterDetailModal
-                    isOpen={isDetailModalOpen}
-                    onClose={handleDetailClose}
-                    matter={selectedMatter}
-                    userId={userId}
+            {selectedEvent && selectedEvent.type === 'MEETING' && (
+                <MeetingEventModal 
+                    isOpen={!!selectedEvent}
+                    onClose={() => setSelectedEvent(null)}
+                    event={selectedEvent}
                 />
             )}
         </div>
     );
 }
+

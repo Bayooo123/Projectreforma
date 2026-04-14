@@ -7,9 +7,11 @@ import { requireAuth } from '@/lib/auth-utils';
 const genAI = new GoogleGenerativeAI(config.GOOGLE_API_KEY || '');
 
 export async function POST(request: Request) {
+    let recordingId: string | undefined;
     try {
         await requireAuth();
-        const { recordingId } = await request.json();
+        const body = await request.json();
+        recordingId = body.recordingId;
 
         if (!recordingId) {
             return NextResponse.json({ error: 'Recording ID is required' }, { status: 400 });
@@ -55,7 +57,7 @@ export async function POST(request: Request) {
             data: { transcriptText: rawTranscript }
         });
 
-        // 4. Secondary Layer: Generate Summary/Action Items (Non-blocking conceptually, but in same route for simplicity here)
+        // 4. Secondary Layer: Generate Summary/Action Items
         const insightsPrompt = `
             Based on the following transcript, provide a concise summary and a list of key action items.
             Format as a JSON object: {"summary": "...", "actionItems": "..."}
@@ -64,20 +66,49 @@ export async function POST(request: Request) {
             ${rawTranscript}
         `;
 
-        const insightsResult = await model.generateContent(insightsPrompt);
-        const insightsJson = JSON.parse(insightsResult.response.text().replace(/```json|```/g, ''));
+        try {
+            const insightsResult = await model.generateContent(insightsPrompt);
+            const insightsText = insightsResult.response.text().replace(/```json|```/g, '').trim();
+            const insightsJson = JSON.parse(insightsText);
 
-        await (prisma as any).meetingRecording.update({
-            where: { id: recordingId },
-            data: { 
-                summary: insightsJson.summary || 'Summary generated.',
-                actionItems: insightsJson.actionItems || 'No specific action items identified.'
-            }
-        });
+            await (prisma as any).meetingRecording.update({
+                where: { id: recordingId },
+                data: { 
+                    summary: insightsJson.summary || 'Summary generated.',
+                    actionItems: insightsJson.actionItems || 'No specific action items identified.'
+                }
+            });
+        } catch (insightsError) {
+            console.error('Insights generation error:', insightsError);
+            // Fallback for insights but don't fail the whole request since transcript is ready
+            await (prisma as any).meetingRecording.update({
+                where: { id: recordingId },
+                data: { 
+                    summary: 'Partial summary: ' + rawTranscript.substring(0, 100) + '...',
+                    actionItems: 'Failed to generate specific action items.'
+                }
+            });
+        }
 
         return NextResponse.json({ success: true, transcript: rawTranscript });
     } catch (error: any) {
         console.error('Transcription error:', error);
-        return NextResponse.json({ error: 'Failed to transcribe' }, { status: 500 });
+        
+        // Update status to failed so UI stops polling/shows error
+        if (recordingId) {
+            try {
+                await (prisma as any).meetingRecording.update({
+                    where: { id: recordingId },
+                    data: { 
+                        transcriptText: 'FAILED',
+                        summary: 'Transcription failed. Please check your audio file or try again.'
+                    }
+                });
+            } catch (pError) {
+                console.error('Failed to update recording status to FAILED:', pError);
+            }
+        }
+        
+        return NextResponse.json({ error: 'Failed to transcribe: ' + error.message }, { status: 500 });
     }
 }
