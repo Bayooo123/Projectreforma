@@ -42,6 +42,8 @@ export interface CalendarEvent {
         id: string;
         caseNumber: string | null;
         name: string;
+        court?: string | null;
+        judge?: string | null;
         client?: ClientSummary | null;
     } | null;
     appearances: LawyerSummary[];

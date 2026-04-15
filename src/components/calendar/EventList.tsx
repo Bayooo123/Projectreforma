@@ -46,10 +46,12 @@ const EventList = ({ events }: EventListProps) => {
         });
     };
 
-    const getIcon = (type: CalendarEventType) => {
+    const getIcon = (type: CalendarEventType | null) => {
         switch (type) {
+            case 'COURT':
             case 'COURT_DATE': return Gavel;
             case 'FILING_DEADLINE': return Clock;
+            case 'MEETING':
             case 'CLIENT_MEETING': return Users;
             case 'INTERNAL_MEETING': return Briefcase;
             default: return CalendarIcon;
@@ -93,7 +95,7 @@ const EventList = ({ events }: EventListProps) => {
                                             <h5 className={styles.eventTitle}>{event.matter?.name || event.title || 'Event'}</h5>
                                             <div className={styles.eventMeta}>
                                                 <Icon size={14} />
-                                                <span>{event.title || event.type.replace('_', ' ')}</span>
+                                                <span>{event.title || (event.type ? event.type.replace('_', ' ') : 'Event')}</span>
                                             </div>
                                         </div>
                                     </div>

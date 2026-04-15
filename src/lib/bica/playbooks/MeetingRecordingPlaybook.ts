@@ -67,7 +67,7 @@ export class MeetingRecordingPlaybook extends Playbook {
   }
 
   async resolve(id: string) {
-    const rec = await prisma.meetingRecording.findUnique({ where: { id } });
+    const rec = await (prisma as any).meetingRecording.findUnique({ where: { id } });
     if (!rec) throw Object.assign(new Error(`MeetingRecording not found: ${id}`), { name: 'MorphEntityNotFoundError' });
     return rec;
   }
