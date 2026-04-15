@@ -11,6 +11,9 @@ import { getPlaybook } from '../playbooks';
  * post-hoc confidence scoring algorithm across the playbook's searchable fields.
  */
 export class DirectLookupHandler extends BicaHandler {
+  private readonly aggregateQueryRegex =
+    /^select\s+sum\(\s*"?([a-zA-Z_][a-zA-Z0-9_]*)"?\s*\)\s+as\s+"?([a-zA-Z_][a-zA-Z0-9_]*)"?\s+from\s+(?:public\.)?"?([a-zA-Z_][a-zA-Z0-9_]*)"?\s+where\s+(.+)$/i;
+
   /**
    * Handle an incoming direct_lookup payload.
    *
@@ -82,6 +85,11 @@ export class DirectLookupHandler extends BicaHandler {
     const searchableFields = (playbook.getSearchableFields() || []).filter(Boolean);
     if (searchableFields.length === 0) searchableFields.push('name');
 
+    const parsedAggregate = this.tryParseAggregateQuery(term, relationName);
+    if (parsedAggregate) {
+      return this.executeAggregateLookup(delegate, whereScope, playbook, parsedAggregate);
+    }
+
     // Build Prisma search conditions: a case-insensitive "contains" match
     // across each searchable field. Combined later with the actor scope.
     const searchConditions = searchableFields.map(field => ({
@@ -140,6 +148,133 @@ export class DirectLookupHandler extends BicaHandler {
 
         return match;
       }),
+    };
+  }
+
+  private tryParseAggregateQuery(queryText: string, relationName: string): {
+    sumField: string;
+    alias: string;
+    where: Record<string, unknown>;
+  } | null {
+    const match = queryText.match(this.aggregateQueryRegex);
+    if (!match) return null;
+
+    const [, sumFieldRaw, aliasRaw, tableRaw, whereClause] = match;
+    const requestedTable = String(tableRaw || '').toLowerCase();
+    const normalizedRelation = String(relationName || '').trim().toLowerCase();
+    if (requestedTable !== normalizedRelation && requestedTable !== `${normalizedRelation}s`) {
+      return null;
+    }
+
+    const sumField = String(sumFieldRaw || '').trim();
+    const alias = String(aliasRaw || '').trim();
+    if (sumField !== 'amount') {
+      return null;
+    }
+
+    const dateFilter = this.parseDateWhereClause(whereClause);
+    if (!dateFilter) {
+      return null;
+    }
+
+    return {
+      sumField,
+      alias,
+      where: { date: dateFilter },
+    };
+  }
+
+  private parseDateWhereClause(whereClause: string): Record<string, Date> | null {
+    const conditions = String(whereClause || '')
+      .split(/\s+and\s+/i)
+      .map(part => part.trim())
+      .filter(Boolean);
+
+    if (conditions.length === 0) return null;
+
+    const out: Record<string, Date> = {};
+    for (const condition of conditions) {
+      const clauseMatch = condition.match(/^"?date"?\s*(>=|>|<=|<|=)\s*'([^']+)'$/i);
+      if (!clauseMatch) return null;
+
+      const operator = clauseMatch[1];
+      const rawValue = clauseMatch[2];
+      const parsed = new Date(rawValue);
+      if (Number.isNaN(parsed.getTime())) return null;
+
+      const hasTimeComponent = /[tT]|\d:\d/.test(rawValue);
+      if (operator === '<=' && !hasTimeComponent) {
+        // Treat date-only <= YYYY-MM-DD as inclusive end-of-day.
+        const dayAfter = new Date(`${rawValue}T00:00:00.000Z`);
+        dayAfter.setUTCDate(dayAfter.getUTCDate() + 1);
+        out.lt = dayAfter;
+        continue;
+      }
+
+      if (operator === '=') {
+        const start = hasTimeComponent ? new Date(parsed) : new Date(`${rawValue}T00:00:00.000Z`);
+        const end = new Date(start);
+        end.setUTCDate(end.getUTCDate() + 1);
+        out.gte = start;
+        out.lt = end;
+        continue;
+      }
+
+      if (operator === '>=') out.gte = parsed;
+      else if (operator === '>') out.gt = parsed;
+      else if (operator === '<=') out.lte = parsed;
+      else if (operator === '<') out.lt = parsed;
+    }
+
+    return Object.keys(out).length > 0 ? out : null;
+  }
+
+  private async executeAggregateLookup(
+    delegate: any,
+    whereScope: Record<string, unknown>,
+    playbook: any,
+    parsedAggregate: { sumField: string; alias: string; where: Record<string, unknown> }
+  ) {
+    let aggregateResult: any;
+    try {
+      aggregateResult = await delegate.aggregate({
+        where: {
+          AND: [whereScope, parsedAggregate.where],
+        },
+        _sum: {
+          [parsedAggregate.sumField]: true,
+        },
+        _count: {
+          _all: true,
+        },
+      });
+    } catch (err: any) {
+      throw Object.assign(new Error(`Failed to execute direct lookup aggregate: ${err.message || err}`), { bicaCode: 'SERVER_ERROR' });
+    }
+
+    const rawValue = aggregateResult?._sum?.[parsedAggregate.sumField];
+    const normalizedValue = rawValue == null ? '0' : String(rawValue);
+    const recordCount = Number(aggregateResult?._count?._all ?? 0);
+
+    const aggregatePayload = {
+      [parsedAggregate.alias]: normalizedValue,
+      matchedRecords: recordCount,
+      field: parsedAggregate.sumField,
+      function: 'SUM',
+    };
+
+    return {
+      matches: [
+        {
+          id: `aggregate:${parsedAggregate.alias}`,
+          _model: playbook.getModelName(),
+          label: `${parsedAggregate.alias}: ${normalizedValue}`,
+          secondaryLabel: `records: ${recordCount}`,
+          confidence: 1,
+          aggregate: aggregatePayload,
+        },
+      ],
+      aggregate: aggregatePayload,
     };
   }
 
