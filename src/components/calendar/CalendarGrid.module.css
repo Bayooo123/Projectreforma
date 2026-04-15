@@ -74,13 +74,6 @@
     position: relative;
 }
 
-.dayHeaders {
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    background-color: var(--surface-subtle);
-    border-bottom: 1px solid var(--border);
-}
-
 .dayHeaderCell {
     padding: 0.65rem;
     text-align: center;
@@ -99,7 +92,7 @@
 .grid {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
-    grid-template-rows: repeat(6, minmax(0, 1fr));
+    grid-template-rows: auto repeat(6, minmax(0, 1fr));
     flex: 1;
     overflow: hidden;
 }

@@ -27,6 +27,7 @@ const CalendarGrid = ({
         'July', 'August', 'September', 'October', 'November', 'December'
     ];
     const MAX_EVENTS_PER_DAY = 3;
+    const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
     const goToPreviousMonth = () => {
         onDateChange(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
@@ -129,19 +130,19 @@ const CalendarGrid = ({
             </div>
 
             <div className={styles.calendarWrapper}>
-                <div className={styles.dayHeaders}>
-                    {['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].map(day => (
-                        <div key={day} className={styles.dayHeaderCell}>{day}</div>
-                    ))}
-                </div>
-
                 <div className={styles.grid}>
                     {isLoading && (
                         <div className={styles.loadingOverlay}>
                             <Loader className="animate-spin" size={32} />
                         </div>
                     )}
-                    
+
+                    {dayNames.map(day => (
+                        <div key={`header-${day}`} className={styles.dayHeaderCell}>
+                            {day}
+                        </div>
+                    ))}
+
                     {calendarDays.map((dayObj, idx) => (
                         <div 
                             key={`${dayObj.type}-${dayObj.value}-${idx}`} 
