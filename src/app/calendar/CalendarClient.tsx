@@ -43,7 +43,7 @@ export default function CalendarClient({
             const end = new Date(date.getFullYear(), date.getMonth() + 1, 0, 23, 59, 59);
             
             const fetched = await getCalendarEvents(workspaceId, start, end);
-            setEvents(fetched as CalendarEvent[]);
+            setEvents(fetched as unknown as CalendarEvent[]);
         } catch (error) {
             console.error('Failed to fetch events:', error);
         } finally {
