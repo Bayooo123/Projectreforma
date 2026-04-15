@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo } from 'react';
-import { ChevronLeft, ChevronRight, Gavel, Loader, Clock, Users, Calendar, MapPin, User as UserIcon } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { ChevronLeft, ChevronRight, Gavel, Loader, Users, MapPin, X } from 'lucide-react';
 import styles from './CalendarGrid.module.css';
 
 import { CalendarEvent } from '@/types/legal';
@@ -21,10 +21,12 @@ const CalendarGrid = ({
     onEventClick,
     isLoading = false,
 }: CalendarGridProps) => {
+    const [expandedDay, setExpandedDay] = useState<{ day: number; events: CalendarEvent[] } | null>(null);
     const monthNames = [
         'January', 'February', 'March', 'April', 'May', 'June',
         'July', 'August', 'September', 'October', 'November', 'December'
     ];
+    const MAX_EVENTS_PER_DAY = 3;
 
     const goToPreviousMonth = () => {
         onDateChange(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
@@ -98,8 +100,8 @@ const CalendarGrid = ({
         for (let i = 1; i <= daysInMonth; i++) {
             days.push({ type: 'day', value: i });
         }
-        // Fill trailing padding to complete week rows for stable layout
-        while (days.length % 7 !== 0) {
+        // Fill trailing padding to complete a strict 6-week month grid (42 cells)
+        while (days.length < 42) {
             days.push({ type: 'padding', value: days.length });
         }
         return days;
@@ -151,7 +153,21 @@ const CalendarGrid = ({
                                         {dayObj.value}
                                     </span>
                                     <div className={styles.eventList}>
-                                        {(eventsByDay[dayObj.value] || []).map(renderEvent)}
+                                        {(eventsByDay[dayObj.value] || []).slice(0, MAX_EVENTS_PER_DAY).map(renderEvent)}
+                                        {(eventsByDay[dayObj.value] || []).length > MAX_EVENTS_PER_DAY && (
+                                            <button
+                                                className={styles.moreEventsBtn}
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setExpandedDay({
+                                                        day: dayObj.value,
+                                                        events: eventsByDay[dayObj.value] || [],
+                                                    });
+                                                }}
+                                            >
+                                                +{(eventsByDay[dayObj.value] || []).length - MAX_EVENTS_PER_DAY} more
+                                            </button>
+                                        )}
                                     </div>
                                 </>
                             )}
@@ -159,6 +175,24 @@ const CalendarGrid = ({
                     ))}
                 </div>
             </div>
+
+            {expandedDay && (
+                <div className={styles.dayDetailsOverlay} onClick={() => setExpandedDay(null)}>
+                    <div className={styles.dayDetailsModal} onClick={(e) => e.stopPropagation()}>
+                        <div className={styles.dayDetailsHeader}>
+                            <h3>
+                                {monthNames[currentDate.getMonth()]} {expandedDay.day}, {currentDate.getFullYear()}
+                            </h3>
+                            <button className={styles.closeDetailsBtn} onClick={() => setExpandedDay(null)}>
+                                <X size={16} />
+                            </button>
+                        </div>
+                        <div className={styles.dayDetailsList}>
+                            {expandedDay.events.map(renderEvent)}
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
