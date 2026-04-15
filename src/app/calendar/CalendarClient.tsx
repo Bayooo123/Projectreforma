@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, Gavel, Search, Calendar as CalendarIcon, Filter, Users, Loader } from 'lucide-react';
+import { Plus, Search, Users } from 'lucide-react';
 import CalendarGrid from '@/components/calendar/CalendarGrid';
 import CourtEventModal from '@/components/calendar/CourtEventModal';
 import MeetingEventModal from '@/components/calendar/MeetingEventModal';
@@ -9,7 +9,7 @@ import ScheduleMeetingModal from '@/components/calendar/ScheduleMeetingModal';
 import AddMatterModal from '@/components/calendar/AddMatterModal';
 import styles from './page.module.css';
 
-import { CalendarEvent, Matter } from '@/types/legal';
+import { CalendarEvent } from '@/types/legal';
 import { getCalendarEvents } from '@/app/actions/calendar-events';
 
 interface CalendarClientProps {
@@ -82,7 +82,10 @@ export default function CalendarClient({
         <div className={styles.container}>
             <div className={styles.topToolbar}>
                 <div className={styles.brand}>
-                    <h1 className={styles.title}>Legal Calendar</h1>
+                    <div>
+                        <h1 className={styles.title}>Court and Meetings Tracker</h1>
+                        <p className={styles.subtitle}>Track court dates, hearings, and internal meetings in one place.</p>
+                    </div>
                     <div className={styles.stats}>
                         <div className={styles.statItem}>
                             <strong>{filteredEvents.filter(e => e.type === 'COURT').length}</strong> <span>Courts</span>
@@ -105,7 +108,7 @@ export default function CalendarClient({
                     </div>
                     <div className={styles.buttonGroup}>
                         <button className={styles.primaryBtn} onClick={() => setIsAddMatterModalOpen(true)}>
-                            <Plus size={18} /> <span>New Court Date</span>
+                            <Plus size={18} /> <span>Create New Matter</span>
                         </button>
                         <button className={styles.secondaryBtn} onClick={() => setIsScheduleMeetingModalOpen(true)}>
                             <Users size={18} /> <span>Schedule Meeting</span>

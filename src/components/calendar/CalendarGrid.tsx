@@ -98,6 +98,10 @@ const CalendarGrid = ({
         for (let i = 1; i <= daysInMonth; i++) {
             days.push({ type: 'day', value: i });
         }
+        // Fill trailing padding to complete week rows for stable layout
+        while (days.length % 7 !== 0) {
+            days.push({ type: 'padding', value: days.length });
+        }
         return days;
     }, [daysInMonth, firstDayOfMonth]);
 
