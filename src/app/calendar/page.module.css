@@ -1,18 +1,12 @@
 .container {
     display: flex;
     flex-direction: column;
-    height: calc(100vh - 4.5rem);
+    height: auto;
     width: 100%;
-    overflow: hidden;
+    overflow: visible;
     background-color: var(--background);
     border: 1px solid var(--border);
     border-radius: 16px;
-}
-
-@media (min-width: 1024px) {
-    .container {
-        height: calc(100vh - 6rem);
-    }
 }
 
 .topToolbar {
@@ -156,16 +150,16 @@
 }
 
 .calendarGrid {
-    flex: 1;
+    flex: none;
     min-height: 0;
-    overflow: hidden;
+    overflow: visible;
     background: var(--surface);
 }
 
 @media (max-width: 1024px) {
     .container {
         border-radius: 12px;
-        height: calc(100vh - 7.5rem);
+        height: auto;
     }
 
     .topToolbar {

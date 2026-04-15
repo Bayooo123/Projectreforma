@@ -8,11 +8,34 @@ import { prisma } from '@/lib/prisma';
  */
 export async function getCalendarEvents(workspaceId: string, startDate?: Date, endDate?: Date) {
     try {
+        // Restore legacy visibility: some historical entries were created
+        // with briefId/clientId only (no matter relation).
+        const [matters, briefs, clients] = await Promise.all([
+            prisma.matter.findMany({
+                where: { workspaceId },
+                select: { id: true },
+            }),
+            prisma.brief.findMany({
+                where: { workspaceId },
+                select: { id: true },
+            }),
+            prisma.client.findMany({
+                where: { workspaceId },
+                select: { id: true },
+            }),
+        ]);
+
+        const matterIds = matters.map(m => m.id);
+        const briefIds = briefs.map(b => b.id);
+        const clientIds = clients.map(c => c.id);
+
         const events = await prisma.calendarEntry.findMany({
             where: {
                 OR: [
                     { matter: { workspaceId: workspaceId } },
-                    { clientId: { not: null }, matter: { workspaceId: workspaceId } } // Catch meetings linked to workspace via matter
+                    ...(matterIds.length ? [{ matterId: { in: matterIds } }] : []),
+                    ...(briefIds.length ? [{ briefId: { in: briefIds } }] : []),
+                    ...(clientIds.length ? [{ clientId: { in: clientIds } }] : []),
                 ],
                 date: {
                     gte: startDate || undefined,
