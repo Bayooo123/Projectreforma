@@ -2,7 +2,14 @@
  * Central TypeScript definitions for Reforma OS
  */
 
-export type CalendarEventType = 'COURT_DATE' | 'FILING_DEADLINE' | 'CLIENT_MEETING' | 'INTERNAL_MEETING' | 'OTHER';
+export type CalendarEventType =
+    | 'COURT'
+    | 'MEETING'
+    | 'COURT_DATE'
+    | 'FILING_DEADLINE'
+    | 'CLIENT_MEETING'
+    | 'INTERNAL_MEETING'
+    | 'OTHER';
 
 export interface ClientBriefSummary {
     id: string;
@@ -19,10 +26,17 @@ export interface ClientSummary {
 export interface CalendarEvent {
     id: string;
     date: Date;
-    type: CalendarEventType;
+    type: CalendarEventType | null;
     title: string | null;
+    court?: string | null;
+    judge?: string | null;
+    location?: string | null;
     proceedings: string | null;
+    outcome?: string | null;
     adjournedFor: string | null;
+    adjournedTo?: Date | null;
+    agenda?: string | null;
+    description?: string | null;
     matterId: string | null;
     matter?: {
         id: string;
