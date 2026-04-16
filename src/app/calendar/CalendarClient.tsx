@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, Search, Users } from 'lucide-react';
+import { Plus, Search, Users, Gavel } from 'lucide-react';
 import CalendarGrid from '@/components/calendar/CalendarGrid';
 import CourtEventModal from '@/components/calendar/CourtEventModal';
 import MeetingEventModal from '@/components/calendar/MeetingEventModal';
@@ -107,11 +107,11 @@ export default function CalendarClient({
                         />
                     </div>
                     <div className={styles.buttonGroup}>
-                        <button className={styles.primaryBtn} onClick={() => setIsAddMatterModalOpen(true)}>
+                        <button className={styles.secondaryBtn} onClick={() => setIsAddMatterModalOpen(true)}>
                             <Plus size={18} /> <span>Create New Matter</span>
                         </button>
-                        <button className={styles.secondaryBtn} onClick={() => setIsScheduleMeetingModalOpen(true)}>
-                            <Users size={18} /> <span>Schedule Meeting</span>
+                        <button className={styles.proceedingBtn} onClick={() => alert("Record Proceeding modal is currently being consolidated.")}>
+                            <Gavel size={18} /> <span>Record Court Proceeding</span>
                         </button>
                     </div>
                 </div>

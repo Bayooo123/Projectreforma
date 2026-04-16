@@ -128,6 +128,26 @@
     transform: translateY(-1px);
 }
 
+.proceedingBtn {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    padding: 0.75rem 1.25rem;
+    background-color: #059669;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.proceedingBtn:hover {
+    background-color: #047857;
+    transform: translateY(-1px);
+}
+
 .secondaryBtn {
     display: flex;
     align-items: center;
