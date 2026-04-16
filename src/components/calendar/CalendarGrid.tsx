@@ -27,7 +27,7 @@ const CalendarGrid = ({
         'July', 'August', 'September', 'October', 'November', 'December'
     ];
     const MAX_EVENTS_PER_DAY = 3;
-    const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
     const goToPreviousMonth = () => {
         onDateChange(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));

@@ -76,13 +76,12 @@
 
 .dayHeaderCell {
     padding: 0.65rem;
-    text-align: center;
+    text-align: left;
     font-weight: 600;
     color: var(--text-secondary);
-    font-size: 0.74rem;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
+    font-size: 0.8rem;
     border-right: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
 }
 
 .dayHeaderCell:last-child {
@@ -91,8 +90,8 @@
 
 .grid {
     display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    grid-template-rows: auto repeat(6, clamp(88px, 13vh, 150px));
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    grid-template-rows: auto repeat(6, minmax(120px, auto));
     flex: none;
     overflow: visible;
 }
@@ -154,6 +153,8 @@
     transition: all 0.15s;
     background-color: #fff;
     box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    overflow: hidden;
+    min-width: 0;
 }
 
 .eventCard:hover {
@@ -198,6 +199,13 @@
 
 .eventIcon {
     flex-shrink: 0;
+}
+
+.eventContent {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    min-width: 0;
 }
 
 .eventMeta {
