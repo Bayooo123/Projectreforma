@@ -19,14 +19,9 @@ const envSchema = z.object({
     GOOGLE_API_KEY: z.string().optional(),
     EMAIL_WEBHOOK_SECRET: z.string().optional(),
 
-    // Email Service (SMTP)
-    SMTP_HOST: z.string().optional(),
-    SMTP_PORT: z.coerce.number().optional(),
-    SMTP_USER: z.string().optional(),
-    SMTP_PASSWORD: z.string().optional(),
-    SMTP_FROM_EMAIL: z.string().optional(),
+
+    // Email Service (Resend)
     MAIL_FROM: z.string().default('Reforma <Registration@reforma.ng>'),
-    MAIL_DOMAIN_KEY: z.string().optional(),
 
     // BICA Integration
     BICA_PLATFORM_ID: z.string().default('reforma_os'),

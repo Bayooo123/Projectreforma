@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
 import { isWorkspaceOwner } from '@/lib/workspace';
-import { sendInvitationEmail } from '@/lib/email';
+import { mailService } from '@/lib/services/mail/mail';
+import { getWorkspaceInviteEmail } from '@/lib/services/mail/templates';
 import { nanoid } from 'nanoid';
 import { hashToken } from '@/lib/services/auth/tokens';
 import { isValidRole, canInviteMembers, canAssignRole } from '@/lib/roles';
@@ -141,12 +142,10 @@ export async function POST(request: NextRequest) {
                 // Send invitation email
                 const inviteLink = `${config.NEXT_PUBLIC_APP_URL}/invite/${token}`;
 
-                await sendInvitationEmail({
+                await mailService.send({
                     to: email,
-                    workspaceName: workspace.name,
-                    inviterName,
-                    inviteLink,
-                    role,
+                    subject: `You've been invited to join ${workspace.name} on Reforma`,
+                    html: getWorkspaceInviteEmail(workspace.name, inviterName, role, inviteLink),
                 });
 
                 invitations.push({ email, invitationId: invitation.id });
