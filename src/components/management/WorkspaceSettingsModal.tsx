@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { useFormState } from 'react-dom';
+import { useSession } from 'next-auth/react';
+import { getRoleSeniority } from '@/lib/roles';
 import { X, Upload, FileText, Loader, Check, Lock, Key, Building } from 'lucide-react';
 import { put } from '@vercel/blob';
 import { getWorkspaceMembers, approveMember, rejectMember } from '@/app/actions/members';
@@ -20,6 +22,9 @@ interface WorkspaceSettingsModalProps {
 const initialState: WorkspaceAccessState = {};
 
 const WorkspaceSettingsModal = ({ isOpen, onClose, workspaceId, currentLetterheadUrl, firmCode, onUpdate }: WorkspaceSettingsModalProps) => {
+    const { data: session } = useSession();
+    const canManagePin = getRoleSeniority(session?.user?.role || '') >= 5;
+
     const [activeTab, setActiveTab] = useState<'general' | 'members' | 'access'>('general');
     const [members, setMembers] = useState<any[]>([]);
     const [isLoadingMembers, setIsLoadingMembers] = useState(false);
@@ -374,8 +379,8 @@ const WorkspaceSettingsModal = ({ isOpen, onClose, workspaceId, currentLetterhea
                                 )}
                             </div>
 
-                            {/* Admin PIN Section */}
-                            <div style={{ marginBottom: '1.5rem', paddingTop: '1.5rem', borderTop: '1px solid var(--border)' }}>
+                            {/* Admin PIN Section — restricted to Head of Chamber and above */}
+                            {canManagePin && <div style={{ marginBottom: '1.5rem', paddingTop: '1.5rem', borderTop: '1px solid var(--border)' }}>
                                 <h4 style={{ fontSize: '0.9rem', fontWeight: 600, marginBottom: '0.5rem', color: 'var(--text-primary)' }}>Admin Security</h4>
                                 <p className={styles.subtitle} style={{ marginBottom: '1rem' }}>
                                     Set a 4-digit PIN to restrict access to Office Manager and Analytics.
@@ -423,7 +428,7 @@ const WorkspaceSettingsModal = ({ isOpen, onClose, workspaceId, currentLetterhea
                                         Set PIN
                                     </button>
                                 </div>
-                            </div>
+                            </div>}
 
                             {/* Revenue PIN Section */}
                             <div style={{ marginBottom: '1.5rem', paddingTop: '1.5rem', borderTop: '1px solid var(--border)' }}>

@@ -2,6 +2,11 @@
 
 import { prisma } from '@/lib/prisma';
 import { verifyPin } from '@/lib/rbac';
+import { auth } from '@/auth';
+import { getRoleSeniority } from '@/lib/roles';
+
+// Head of Chamber (index 5) and above may set the workspace PIN
+const PIN_MANAGER_MIN_SENIORITY = 5;
 
 export async function verifyWorkspacePin(workspaceId: string, pin: string): Promise<{ success: boolean; error?: string }> {
     try {
@@ -34,6 +39,29 @@ export async function verifyWorkspacePin(workspaceId: string, pin: string): Prom
 
 export async function updateAdminPin(workspaceId: string, pin: string): Promise<{ success: boolean; error?: string }> {
     try {
+        const session = await auth();
+        if (!session?.user?.id) {
+            return { success: false, error: 'Unauthorized' };
+        }
+
+        const workspace = await prisma.workspace.findUnique({
+            where: { id: workspaceId },
+            select: { ownerId: true }
+        });
+
+        const isOwner = workspace?.ownerId === session.user.id;
+
+        if (!isOwner) {
+            const membership = await prisma.workspaceMember.findFirst({
+                where: { workspaceId, userId: session.user.id },
+                select: { role: true }
+            });
+            const seniority = getRoleSeniority(membership?.role || '');
+            if (seniority < PIN_MANAGER_MIN_SENIORITY) {
+                return { success: false, error: 'Only Head of Chamber, Partner, or Managing Partner can set the PIN.' };
+            }
+        }
+
         // Basic validation: 4 digits
         if (!/^\d{4}$/.test(pin)) {
             return { success: false, error: 'PIN must be exactly 4 digits' };
