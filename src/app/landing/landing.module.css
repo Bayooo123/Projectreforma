@@ -181,6 +181,43 @@
     box-shadow: 0 10px 25px rgba(5, 150, 105, 0.35);
 }
 
+/* Demo Video Section */
+.demoSection {
+    padding: 8rem 2rem;
+    background: #020617;
+}
+
+.demoEyebrow {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: var(--primary-color);
+    margin-bottom: 1rem;
+}
+
+.videoWrapper {
+    position: relative;
+    width: 100%;
+    max-width: 960px;
+    margin: 0 auto;
+    border-radius: 1rem;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 0 0 1px rgba(5, 150, 105, 0.2), 0 32px 80px rgba(0, 0, 0, 0.6);
+    aspect-ratio: 16 / 9;
+    background: #000;
+}
+
+.videoFrame {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border: none;
+    display: block;
+}
+
 /* Features Section */
 .features {
     padding: 10rem 2rem;

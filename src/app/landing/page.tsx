@@ -117,6 +117,28 @@ export default function LandingPage() {
                 </div>
             </section>
 
+            {/* Demo Video Section */}
+            <section className={styles.demoSection}>
+                <div className={styles.container}>
+                    <div className={styles.sectionHeader} style={{ marginBottom: '3rem' }}>
+                        <p className={styles.demoEyebrow}>Product Demo</p>
+                        <h2 className={styles.sectionTitle}>See Reforma in Action</h2>
+                        <p className={styles.sectionDescription}>
+                            Watch how Reforma transforms the day-to-day operations of a modern Nigerian law firm.
+                        </p>
+                    </div>
+                    <div className={styles.videoWrapper}>
+                        <iframe
+                            src="https://drive.google.com/file/d/1TDDvFy7Hm-SA2-y3u-AVQv2cyHPoieTh/preview"
+                            className={styles.videoFrame}
+                            allow="autoplay"
+                            allowFullScreen
+                            title="Reforma Demo Video"
+                        />
+                    </div>
+                </div>
+            </section>
+
             {/* Features Grid */}
             <section className={styles.features}>
                 <div className={styles.container}>
