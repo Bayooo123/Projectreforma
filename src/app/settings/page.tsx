@@ -2,12 +2,12 @@
 
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
-import { User, Building2, Lock, Save, Image as ImageIcon, Loader, FileText, AlertCircle, Key, Copy, Trash2, Plus, Eye, EyeOff, Check, HardDrive } from 'lucide-react';
+import { User, Building2, Lock, Loader, FileText, AlertCircle, Key, Copy, Trash2, Plus, Eye, EyeOff, Check, HardDrive } from 'lucide-react';
 import { updateWorkspaceSettings, getWorkspaceSettings, getStorageUsage } from '@/app/actions/settings';
 import { getUserProfile, updateUserProfile } from '@/app/actions/members';
 import { getBankAccounts, createBankAccount, deleteBankAccount } from '@/app/actions/bank-accounts';
 import { generateApiKey, listApiKeys, revokeApiKey } from '@/app/actions/api-keys';
-import { changePassword } from '@/app/actions/auth';
+import { sendPasswordResetFromSettings } from '@/app/actions/auth';
 import styles from './page.module.css';
 
 export default function SettingsPage() {
@@ -40,8 +40,8 @@ export default function SettingsPage() {
     const [generatedKey, setGeneratedKey] = useState<string | null>(null);
     const [isGenerating, setIsGenerating] = useState(false);
     const [showKey, setShowKey] = useState(false);
-    const [isPasswordChanging, setIsPasswordChanging] = useState(false);
-    const [passwordFeedback, setPasswordFeedback] = useState<{ type: 'success' | 'error', message: string } | null>(null);
+    const [isSendingReset, setIsSendingReset] = useState(false);
+    const [resetFeedback, setResetFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
     // Storage State
     const [storageData, setStorageData] = useState<any>(null);
@@ -182,21 +182,16 @@ export default function SettingsPage() {
         setIsSaving(false);
     };
 
-    const handlePasswordChange = async (e: React.FormEvent<HTMLFormElement>) => {
-        e.preventDefault();
-        setIsPasswordChanging(true);
-        setPasswordFeedback(null);
-
-        const formData = new FormData(e.currentTarget);
-        const res = await changePassword(formData);
-
-        if (res.success) {
-            setPasswordFeedback({ type: 'success', message: res.message || 'Password updated!' });
-            (e.target as HTMLFormElement).reset();
-        } else {
-            setPasswordFeedback({ type: 'error', message: res.error || 'Failed to update password.' });
-        }
-        setIsPasswordChanging(false);
+    const handleSendResetLink = async () => {
+        setIsSendingReset(true);
+        setResetFeedback(null);
+        const res = await sendPasswordResetFromSettings();
+        setResetFeedback(
+            res.success
+                ? { type: 'success', message: res.message || 'Reset link sent.' }
+                : { type: 'error', message: res.error || 'Failed to send reset link.' }
+        );
+        setIsSendingReset(false);
     };
 
     const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -564,60 +559,50 @@ export default function SettingsPage() {
                             <h2>Security Settings</h2>
                         </div>
 
-                        <form onSubmit={handlePasswordChange} className={styles.passwordForm}>
-                            <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem' }}>
-                                To change your password, please verify your current password first.
-                            </p>
+                        <div className={styles.resetSection}>
+                            <div className={styles.resetDescription}>
+                                <h3 className={styles.resetTitle}>Change Password</h3>
+                                <p className={styles.resetText}>
+                                    We'll send a secure password reset link to your account email address.
+                                    Click the link in the email to set a new password — no old password required.
+                                </p>
+                                <div className={styles.resetEmailRow}>
+                                    <span className={styles.resetEmailLabel}>Reset link will be sent to</span>
+                                    <span className={styles.resetEmailValue}>{session?.user?.email || '—'}</span>
+                                </div>
+                            </div>
 
-                            {passwordFeedback && (
-                                <div className={passwordFeedback.type === 'error' ? styles.error : styles.success}>
-                                    {passwordFeedback.type === 'error' ? <AlertCircle size={18} /> : <Check size={18} />}
-                                    {passwordFeedback.message}
+                            {resetFeedback && (
+                                <div className={resetFeedback.type === 'error' ? styles.error : styles.success}>
+                                    {resetFeedback.type === 'error' ? <AlertCircle size={16} /> : <Check size={16} />}
+                                    {resetFeedback.message}
                                 </div>
                             )}
 
-                            <div className={styles.formGroup}>
-                                <label>Current Password</label>
-                                <input
-                                    type="password"
-                                    name="currentPassword"
-                                    required
-                                    className={styles.input}
-                                    placeholder="••••••••"
-                                />
-                            </div>
+                            <button
+                                onClick={handleSendResetLink}
+                                disabled={isSendingReset || resetFeedback?.type === 'success'}
+                                className={styles.saveBtn}
+                                style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '1.5rem' }}
+                            >
+                                {isSendingReset
+                                    ? <><Loader className="spin" size={16} /> Sending…</>
+                                    : resetFeedback?.type === 'success'
+                                        ? <><Check size={16} /> Link Sent</>
+                                        : 'Send Password Reset Link'
+                                }
+                            </button>
 
-                            <div className={styles.gridRow}>
-                                <div className={styles.formGroup}>
-                                    <label>New Password</label>
-                                    <input
-                                        type="password"
-                                        name="newPassword"
-                                        required
-                                        minLength={6}
-                                        className={styles.input}
-                                        placeholder="••••••••"
-                                    />
-                                </div>
-                                <div className={styles.formGroup}>
-                                    <label>Confirm New Password</label>
-                                    <input
-                                        type="password"
-                                        name="confirmPassword"
-                                        required
-                                        minLength={6}
-                                        className={styles.input}
-                                        placeholder="••••••••"
-                                    />
-                                </div>
-                            </div>
-
-                            <div className={styles.actions}>
-                                <button type="submit" className={styles.saveBtn} disabled={isPasswordChanging}>
-                                    {isPasswordChanging ? <Loader className="spin" size={18} /> : 'Update Password'}
+                            {resetFeedback?.type === 'success' && (
+                                <button
+                                    onClick={() => setResetFeedback(null)}
+                                    className={styles.secondaryBtn}
+                                    style={{ marginTop: '0.75rem' }}
+                                >
+                                    Send again
                                 </button>
-                            </div>
-                        </form>
+                            )}
+                        </div>
                     </div>
                 )}
                 {activeTab === 'storage' && (
