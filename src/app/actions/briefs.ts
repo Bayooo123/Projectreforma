@@ -143,8 +143,8 @@ export async function createBrief(data: {
     briefNumber: string;
     name: string;
     clientId: string;
-    lawyerId: string;
-    lawyerInChargeId?: string; // NEW: Optional lawyer in charge
+    lawyerId?: string;
+    lawyerInChargeId?: string;
     workspaceId: string;
     category: string;
     status: string;
@@ -152,9 +152,10 @@ export async function createBrief(data: {
     description?: string;
     parentBriefId?: string;
 }) {
-    await requireAuth();
+    const session = await requireAuth();
     data = applyTitleCaseToFields(data, ['name']);
     data = applySentenceCaseToFields(data, ['description']);
+    const creatorId = data.lawyerId || session.id;
     try {
         console.log('[createBrief] ========== START ==========');
         console.log('[createBrief] Creating brief with data:', JSON.stringify(data, null, 2));
@@ -186,8 +187,8 @@ export async function createBrief(data: {
                     briefNumber: data.briefNumber,
                     name: data.name,
                     clientId: data.clientId,
-                    lawyerId: data.lawyerId,
-                    lawyerInChargeId: data.lawyerInChargeId || data.lawyerId, // Default to creator if not specified
+                    lawyerId: creatorId,
+                    lawyerInChargeId: data.lawyerInChargeId || null,
                     workspaceId: data.workspaceId,
                     category: data.category,
                     status: data.status,

@@ -34,7 +34,7 @@ export class BriefPlaybook extends Playbook {
       customBriefNumber: 'nullable|string|max:100',
       customTitle: 'nullable|string|max:255',
       category: 'required|string|max:100',
-      status: 'required|in:active,closed,archived,unassigned,inactive,finalized',
+      status: 'required|in:active,closed,archived,inactive,finalized',
       dueDate: 'nullable|date',
       description: 'nullable|string',
       inboundEmailId: 'prohibited',

@@ -162,13 +162,13 @@ export async function generateBriefNumber(workspaceId: string): Promise<string> 
  */
 export async function getBriefStats(workspaceId: string) {
     try {
-        const [total, active, unassigned, inactive, finalized, closed] = await Promise.all([
+        const [total, active, inactive, finalized, closed, unassigned] = await Promise.all([
             prisma.brief.count({ where: { workspaceId, deletedAt: null } }),
             prisma.brief.count({ where: { workspaceId, status: 'active', deletedAt: null } }),
-            prisma.brief.count({ where: { workspaceId, status: 'unassigned', deletedAt: null } }),
             prisma.brief.count({ where: { workspaceId, status: 'inactive', deletedAt: null } }),
             prisma.brief.count({ where: { workspaceId, status: 'finalized', deletedAt: null } }),
             prisma.brief.count({ where: { workspaceId, status: 'closed', deletedAt: null } }),
+            prisma.brief.count({ where: { workspaceId, lawyerInChargeId: null, deletedAt: null } }),
         ]);
 
         return { total, active, unassigned, inactive, finalized, closed };

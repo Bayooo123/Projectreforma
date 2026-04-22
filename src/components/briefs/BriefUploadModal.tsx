@@ -108,11 +108,6 @@ const BriefUploadModal = ({ isOpen, onClose, onSuccess, workspaceId }: BriefUplo
             return;
         }
 
-        if (!selectedLawyerId) {
-            alert('Please select a lawyer');
-            return;
-        }
-
         setIsSubmitting(true);
 
         try {
@@ -264,14 +259,13 @@ const BriefUploadModal = ({ isOpen, onClose, onSuccess, workspaceId }: BriefUplo
 
                             {/* Row 3: Lawyer */}
                             <div className={styles.formGroup}>
-                                <label className={styles.label}>Lawyer in Charge *</label>
+                                <label className={styles.label}>Lawyer in Charge</label>
                                 <select
                                     className={styles.select}
                                     value={selectedLawyerId}
                                     onChange={e => setSelectedLawyerId(e.target.value)}
-                                    required
                                 >
-                                    <option value="">Select Lawyer...</option>
+                                    <option value="">Unassigned — assign later</option>
                                     {lawyers.map(lawyer => (
                                         <option key={lawyer.id} value={lawyer.id}>
                                             {lawyer.name || lawyer.email} ({lawyer.role})
@@ -307,7 +301,6 @@ const BriefUploadModal = ({ isOpen, onClose, onSuccess, workspaceId }: BriefUplo
                                         value={status}
                                         onChange={e => setStatus(e.target.value)}
                                     >
-                                        <option value="unassigned">Unassigned</option>
                                         <option value="active">Active</option>
                                         <option value="inactive">Inactive</option>
                                         <option value="finalized">Finalized</option>
@@ -341,7 +334,7 @@ const BriefUploadModal = ({ isOpen, onClose, onSuccess, workspaceId }: BriefUplo
                             <button type="button" onClick={handleClose} className={styles.cancelBtn} disabled={isSubmitting}>
                                 Cancel
                             </button>
-                            <button type="submit" className={styles.submitBtn} disabled={isSubmitting || lawyers.length === 0}>
+                            <button type="submit" className={styles.submitBtn} disabled={isSubmitting}>
                                 {isSubmitting ? (
                                     <>
                                         <Loader size={16} className="animate-spin mr-2" />
