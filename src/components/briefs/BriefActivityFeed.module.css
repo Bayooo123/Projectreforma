@@ -45,7 +45,7 @@
 
 .content {
     flex: 1;
-    background-color: #ffffff;
+    background-color: var(--surface);
     border-radius: 16px;
     padding: 1rem 1.25rem;
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
@@ -55,15 +55,24 @@
 
 .user_log .content {
     background-color: #fff1f2;
-    /* Subtle Maroon tint */
     border-color: #fecaca;
     border-bottom-right-radius: 4px;
+}
+
+:global(.dark) .user_log .content {
+    background-color: rgba(239, 68, 68, 0.12);
+    border-color: rgba(239, 68, 68, 0.25);
 }
 
 .inbound_email .content {
     background-color: #f0f9ff;
     border-color: #bae6fd;
     border-bottom-left-radius: 4px;
+}
+
+:global(.dark) .inbound_email .content {
+    background-color: rgba(14, 165, 233, 0.12);
+    border-color: rgba(14, 165, 233, 0.25);
 }
 
 .system_log .content {
@@ -84,19 +93,19 @@
 .author {
     font-weight: 700;
     font-size: 0.8125rem;
-    color: #1e293b;
+    color: var(--text-primary);
     letter-spacing: -0.01em;
 }
 
 .time {
     font-size: 0.75rem;
-    color: #94a3b8;
+    color: var(--text-tertiary);
     font-weight: 500;
 }
 
 .description {
     font-size: 0.9375rem;
-    color: #334155;
+    color: var(--text-secondary);
     line-height: 1.5;
     margin: 0;
     white-space: pre-wrap;
@@ -105,16 +114,16 @@
 .aiSummary {
     margin-top: 0.75rem;
     padding: 0.75rem 1rem;
-    background: rgba(255, 255, 255, 0.5);
+    background: var(--surface-subtle, rgba(255, 255, 255, 0.5));
     border-radius: 12px;
     font-size: 0.8125rem;
-    color: #475569;
+    color: var(--text-secondary);
     border-left: 3px solid #0ea5e9;
 }
 
 /* Note Input Section (Integrated into chat) */
 .noteInputBox {
-    background: #ffffff;
+    background: var(--surface);
     border: 1px solid var(--border);
     border-radius: 20px;
     padding: 0.5rem 1rem;

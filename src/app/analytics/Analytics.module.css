@@ -33,7 +33,7 @@
 .filterGroup {
     display: flex;
     gap: 6px;
-    background: var(--surface-raised, #fff);
+    background: var(--surface);
     border: 1px solid var(--border, #e2e8f0);
     border-radius: 8px;
     padding: 4px;
@@ -145,7 +145,7 @@
 }
 
 .kpiCard {
-    background: var(--surface-raised, #fff);
+    background: var(--surface);
     border: 1px solid var(--border, #e2e8f0);
     border-radius: 10px;
     padding: 18px 20px;
@@ -200,7 +200,7 @@
 
 /* ─── Section Panel ─── */
 .panel {
-    background: var(--surface-raised, #fff);
+    background: var(--surface);
     border: 1px solid var(--border, #e2e8f0);
     border-radius: 10px;
     overflow: hidden;

@@ -246,9 +246,11 @@ const EditBriefModal = ({ isOpen, onClose, onSuccess, brief, workspaceId }: Edit
                                             value={status}
                                             onChange={e => setStatus(e.target.value)}
                                         >
+                                            <option value="unassigned">Unassigned</option>
                                             <option value="active">Active</option>
                                             <option value="inactive">Inactive</option>
                                             <option value="finalized">Finalized</option>
+                                            <option value="closed">Closed</option>
                                         </select>
                                     </div>
                                 </div>

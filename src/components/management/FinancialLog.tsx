@@ -169,26 +169,30 @@ const FinancialLog = ({ workspaceId, initialExpenses, initialSummaries, userRole
             <div className={styles.header}>
                 <div>
                     <h2 className={styles.title}>
-                        {viewMode === 'summary' ? (activeRange ? `Expense Log (${activeRange.label})` : 'Expense Log') : formatDisplayDate(selectedDate!)}
+                        {viewMode === 'summary'
+                            ? (activeRange ? `Expense Log — ${activeRange.label}` : 'Expense Log')
+                            : formatDisplayDate(selectedDate!)}
                     </h2>
                     <p className={styles.subtitle}>
-                        {viewMode === 'summary' ? 'Daily breakdown' : 'Detailed transactions'}
+                        {viewMode === 'summary' ? 'Click any day to see individual transactions' : 'Detailed transactions'}
                     </p>
                 </div>
-                <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'flex-end' }}>
                     {viewMode === 'summary' && (
                         <ExpensePeriodFilter onChange={handleRangeChange} />
                     )}
-                    {viewMode === 'detail' && (
-                        <button className={styles.secondaryBtn} onClick={handleBackToSummary}>
-                            <ArrowLeft size={16} />
-                            Back to Summary
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                        {viewMode === 'detail' && (
+                            <button className={styles.secondaryBtn} onClick={handleBackToSummary}>
+                                <ArrowLeft size={16} />
+                                Back to Summary
+                            </button>
+                        )}
+                        <button className={styles.addBtn} onClick={() => { setExpenseToEdit(null); setIsExpenseModalOpen(true); }}>
+                            <Plus size={16} />
+                            <span>Add Expense</span>
                         </button>
-                    )}
-                    <button className={styles.addBtn} onClick={() => { setExpenseToEdit(null); setIsExpenseModalOpen(true); }}>
-                        <Plus size={16} />
-                        <span>Add Expense</span>
-                    </button>
+                    </div>
                 </div>
             </div>
 

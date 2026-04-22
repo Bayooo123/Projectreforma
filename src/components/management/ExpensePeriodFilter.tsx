@@ -1,9 +1,8 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
-import { ChevronDown, Calendar } from 'lucide-react';
-
-export type FilterType = 'Month' | 'Quarter' | 'Half-Year' | 'Year';
+import { useState, useEffect } from 'react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
+import styles from './ExpensePeriodFilter.module.css';
 
 export interface DateRange {
     startDate: string;
@@ -11,175 +10,131 @@ export interface DateRange {
     label: string;
 }
 
+type PeriodMode = 'month' | 'q1' | 'q2' | 'q3' | 'q4' | 'year';
+
+const MONTHS = [
+    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+];
+
+const FULL_MONTHS = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December',
+];
+
+function buildRange(mode: PeriodMode, year: number, month: number): DateRange {
+    switch (mode) {
+        case 'month': {
+            const start = new Date(year, month, 1);
+            const end = new Date(year, month + 1, 0, 23, 59, 59, 999);
+            return { startDate: start.toISOString(), endDate: end.toISOString(), label: `${FULL_MONTHS[month]} ${year}` };
+        }
+        case 'q1': {
+            const start = new Date(year, 0, 1);
+            const end = new Date(year, 3, 0, 23, 59, 59, 999);
+            return { startDate: start.toISOString(), endDate: end.toISOString(), label: `Q1 ${year} (Jan–Mar)` };
+        }
+        case 'q2': {
+            const start = new Date(year, 3, 1);
+            const end = new Date(year, 6, 0, 23, 59, 59, 999);
+            return { startDate: start.toISOString(), endDate: end.toISOString(), label: `Q2 ${year} (Apr–Jun)` };
+        }
+        case 'q3': {
+            const start = new Date(year, 6, 1);
+            const end = new Date(year, 9, 0, 23, 59, 59, 999);
+            return { startDate: start.toISOString(), endDate: end.toISOString(), label: `Q3 ${year} (Jul–Sep)` };
+        }
+        case 'q4': {
+            const start = new Date(year, 9, 1);
+            const end = new Date(year, 12, 0, 23, 59, 59, 999);
+            return { startDate: start.toISOString(), endDate: end.toISOString(), label: `Q4 ${year} (Oct–Dec)` };
+        }
+        case 'year': {
+            const start = new Date(year, 0, 1);
+            const end = new Date(year, 12, 0, 23, 59, 59, 999);
+            return { startDate: start.toISOString(), endDate: end.toISOString(), label: `Full Year ${year}` };
+        }
+    }
+}
+
 interface ExpensePeriodFilterProps {
     onChange: (range: DateRange) => void;
 }
 
-const MONTHS = [
-    'January', 'February', 'March', 'April', 'May', 'June',
-    'July', 'August', 'September', 'October', 'November', 'December'
-];
-
 export default function ExpensePeriodFilter({ onChange }: ExpensePeriodFilterProps) {
-    const [filterType, setFilterType] = useState<FilterType>('Month');
-    const [selectedValue, setSelectedValue] = useState<string>('');
+    const now = new Date();
+    const [year, setYear] = useState(now.getFullYear());
+    const [mode, setMode] = useState<PeriodMode>('month');
+    const [month, setMonth] = useState(now.getMonth());
 
-    // Generate options based on type
-    const options = useMemo(() => {
-        const currentYear = new Date().getFullYear();
-        const years = Array.from({ length: 5 }, (_, i) => currentYear + 1 - i); // e.g., 2027 down to 2023
-        const opts: { label: string; value: string; start: string; end: string }[] = [];
-
-        if (filterType === 'Month') {
-            years.forEach(year => {
-                MONTHS.forEach((month, idx) => {
-                    const start = new Date(year, idx, 1);
-                    const end = new Date(year, idx + 1, 0, 23, 59, 59, 999);
-                    opts.push({
-                        label: `${month} ${year}`,
-                        value: `${year}-${idx + 1}`,
-                        start: start.toISOString(),
-                        end: end.toISOString()
-                    });
-                });
-            });
-        } else if (filterType === 'Quarter') {
-            years.forEach(year => {
-                for (let q = 1; q <= 4; q++) {
-                    const startMonth = (q - 1) * 3;
-                    const start = new Date(year, startMonth, 1);
-                    const end = new Date(year, startMonth + 3, 0, 23, 59, 59, 999);
-                    opts.push({
-                        label: `Q${q} ${year}`,
-                        value: `${year}-Q${q}`,
-                        start: start.toISOString(),
-                        end: end.toISOString()
-                    });
-                }
-            });
-        } else if (filterType === 'Half-Year') {
-            years.forEach(year => {
-                for (let h = 1; h <= 2; h++) {
-                    const startMonth = (h - 1) * 6;
-                    const start = new Date(year, startMonth, 1);
-                    const end = new Date(year, startMonth + 6, 0, 23, 59, 59, 999);
-                    opts.push({
-                        label: `H${h} ${year}`,
-                        value: `${year}-H${h}`,
-                        start: start.toISOString(),
-                        end: end.toISOString()
-                    });
-                }
-            });
-        } else if (filterType === 'Year') {
-            years.forEach(year => {
-                const start = new Date(year, 0, 1);
-                const end = new Date(year, 12, 0, 23, 59, 59, 999);
-                opts.push({
-                    label: `${year}`,
-                    value: `${year}`,
-                    start: start.toISOString(),
-                    end: end.toISOString()
-                });
-            });
-        }
-        
-        // Return sorted (most recent first conceptually, but for months we want descending chronologically)
-        return opts.sort((a, b) => new Date(b.start).getTime() - new Date(a.start).getTime());
-    }, [filterType]);
-
-    // Set default value when type changes
+    // Fire onChange whenever any selection changes
     useEffect(() => {
-        if (options.length > 0) {
-            const now = new Date();
-            let defaultOpt = options[0];
-            
-            // Try to find current period
-            if (filterType === 'Month') {
-                const currentVal = `${now.getFullYear()}-${now.getMonth() + 1}`;
-                defaultOpt = options.find(o => o.value === currentVal) || options[0];
-            } else if (filterType === 'Quarter') {
-                const q = Math.floor(now.getMonth() / 3) + 1;
-                const currentVal = `${now.getFullYear()}-Q${q}`;
-                defaultOpt = options.find(o => o.value === currentVal) || options[0];
-            } else if (filterType === 'Half-Year') {
-                const h = Math.floor(now.getMonth() / 6) + 1;
-                const currentVal = `${now.getFullYear()}-H${h}`;
-                defaultOpt = options.find(o => o.value === currentVal) || options[0];
-            } else if (filterType === 'Year') {
-                const currentVal = `${now.getFullYear()}`;
-                defaultOpt = options.find(o => o.value === currentVal) || options[0];
-            }
-
-            setSelectedValue(defaultOpt.value);
-            // Don't fire onChange here immediately to avoid double fetching on mount, 
-            // the parent will coordinate initial fetch, or we can fire it. 
-            // It's safer to fire it so parent stays in sync.
-            onChange({
-                startDate: defaultOpt.start,
-                endDate: defaultOpt.end,
-                label: defaultOpt.label
-            });
-        }
+        onChange(buildRange(mode, year, month));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [filterType, options]);
+    }, [mode, year, month]);
 
-    const handleValueChange = (val: string) => {
-        setSelectedValue(val);
-        const opt = options.find(o => o.value === val);
-        if (opt) {
-            onChange({
-                startDate: opt.start,
-                endDate: opt.end,
-                label: opt.label
-            });
-        }
+    const handleMode = (m: PeriodMode) => {
+        setMode(m);
     };
 
-    return (
-        <div className="inline-flex items-center p-1 bg-surface border border-border rounded-full shadow-sm hover:shadow hover:border-primary/30 transition-all duration-300 animate-fade-in-up">
-            
-            {/* Type Selector Panel */}
-            <div className="relative flex items-center gap-2 px-3 py-1.5 rounded-full hover:bg-surface-subtle transition-colors group">
-                <Calendar size={15} className="text-primary/70 group-hover:text-primary group-hover:scale-110 transition-all duration-300" />
-                <span className="text-sm font-semibold text-secondary group-hover:text-primary transition-colors pointer-events-none select-none">
-                    {filterType}
-                </span>
-                <select
-                    value={filterType}
-                    onChange={(e) => setFilterType(e.target.value as FilterType)}
-                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer appearance-none"
-                    title="Change Filter Type"
-                >
-                    <option value="Month">Month</option>
-                    <option value="Quarter">Quarter</option>
-                    <option value="Half-Year">Half-Year</option>
-                    <option value="Year">Year</option>
-                </select>
-            </div>
-            
-            <div className="w-px h-5 bg-border mx-1" />
+    const PERIOD_BUTTONS: { id: PeriodMode; label: string }[] = [
+        { id: 'month', label: 'Monthly' },
+        { id: 'q1', label: 'Q1' },
+        { id: 'q2', label: 'Q2' },
+        { id: 'q3', label: 'Q3' },
+        { id: 'q4', label: 'Q4' },
+        { id: 'year', label: 'Full Year' },
+    ];
 
-            {/* Value Selector Panel */}
-            <div className="relative flex items-center gap-2 pl-4 pr-3 py-1.5 rounded-full bg-primary/5 hover:bg-primary/10 transition-colors group">
-                <span className="text-sm font-bold text-primary pointer-events-none select-none tracking-tight">
-                    {options.find(o => o.value === selectedValue)?.label || 'Select...'}
-                </span>
-                <ChevronDown size={14} className="text-primary/60 group-hover:text-primary transition-all duration-300 group-hover:translate-y-0.5 ml-1" />
-                
-                <select
-                    value={selectedValue}
-                    onChange={(e) => handleValueChange(e.target.value)}
-                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer appearance-none"
-                    title="Change Period"
+    return (
+        <div className={styles.wrapper}>
+            {/* Year navigator */}
+            <div className={styles.yearRow}>
+                <button
+                    className={styles.yearNav}
+                    onClick={() => setYear(y => y - 1)}
+                    title="Previous year"
                 >
-                    {options.map(opt => (
-                        <option key={opt.value} value={opt.value}>
-                            {opt.label}
-                        </option>
-                    ))}
-                </select>
+                    <ChevronLeft size={15} />
+                </button>
+                <span className={styles.yearLabel}>{year}</span>
+                <button
+                    className={styles.yearNav}
+                    onClick={() => setYear(y => y + 1)}
+                    disabled={year >= now.getFullYear() + 1}
+                    title="Next year"
+                >
+                    <ChevronRight size={15} />
+                </button>
             </div>
+
+            {/* Period mode buttons */}
+            <div className={styles.periodRow}>
+                {PERIOD_BUTTONS.map(btn => (
+                    <button
+                        key={btn.id}
+                        className={`${styles.periodBtn} ${mode === btn.id ? styles.periodBtnActive : ''}`}
+                        onClick={() => handleMode(btn.id)}
+                    >
+                        {btn.label}
+                    </button>
+                ))}
+            </div>
+
+            {/* Month picker — only visible when mode === 'month' */}
+            {mode === 'month' && (
+                <div className={styles.monthGrid}>
+                    {MONTHS.map((m, i) => (
+                        <button
+                            key={m}
+                            className={`${styles.monthBtn} ${month === i ? styles.monthBtnActive : ''}`}
+                            onClick={() => setMonth(i)}
+                        >
+                            {m}
+                        </button>
+                    ))}
+                </div>
+            )}
         </div>
     );
 }

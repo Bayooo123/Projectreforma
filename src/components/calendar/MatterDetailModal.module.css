@@ -146,6 +146,11 @@
     font-size: 0.9rem;
 }
 
+:global(.dark) .statusBadge {
+    background-color: rgba(245, 158, 11, 0.2);
+    color: #FCD34D;
+}
+
 .adjournedDate {
     font-weight: 700;
     color: var(--primary);
@@ -268,9 +273,9 @@
 }
 
 .deleteBtn:hover {
-    background-color: #FEE2E2;
-    border-color: #EF4444;
-    color: #EF4444;
+    background-color: var(--danger-bg);
+    border-color: var(--danger);
+    color: var(--danger);
 }
 
 .saveBtn {

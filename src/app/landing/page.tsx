@@ -33,11 +33,21 @@ export default function LandingPage() {
     const waitlistRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
+        // Landing page needs normal document scroll; the app shell locks both html and body overflow.
+        const htmlPrev = document.documentElement.style.overflowY;
+        const bodyPrev = document.body.style.overflowY;
+        document.documentElement.style.overflowY = 'auto';
+        document.body.style.overflowY = 'auto';
+
         const handleScroll = () => {
             setScrolled(window.scrollY > 50);
         };
         window.addEventListener('scroll', handleScroll);
-        return () => window.removeEventListener('scroll', handleScroll);
+        return () => {
+            window.removeEventListener('scroll', handleScroll);
+            document.documentElement.style.overflowY = htmlPrev;
+            document.body.style.overflowY = bodyPrev;
+        };
     }, []);
 
     const scrollToWaitlist = () => {

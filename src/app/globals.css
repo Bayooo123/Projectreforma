@@ -51,6 +51,9 @@
   /* Emerald-600 */
   --primary-dark: var(--accent-color, #047857);
   --primary-hover: var(--accent-color, #047857);
+  --primary-light: #A7F3D0;
+  /* Emerald-200 */
+  --primary-soft: rgba(5, 150, 105, 0.1);
   --primary-bg: #ECFDF5;
   /* Emerald-50 */
   --primary-text: var(--brand-color, #065f46);

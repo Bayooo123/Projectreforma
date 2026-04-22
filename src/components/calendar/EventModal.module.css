@@ -11,7 +11,7 @@
 }
 
 .modal {
-    background-color: #fff;
+    background-color: var(--surface);
     width: 100%;
     max-width: 600px;
     border-radius: 16px;
@@ -152,6 +152,12 @@
     font-size: 0.95rem;
 }
 
+:global(.dark) .adjournedTo {
+    background-color: rgba(239, 68, 68, 0.15);
+    border-color: rgba(239, 68, 68, 0.3);
+    color: #fca5a5;
+}
+
 .footer {
     padding: 1.5rem;
     border-top: 1px solid var(--border);
@@ -188,4 +194,9 @@
     border-radius: 6px;
     font-size: 0.8rem;
     font-weight: 600;
+}
+
+:global(.dark) .participantBadge {
+    background-color: rgba(37, 99, 235, 0.2);
+    color: #93c5fd;
 }

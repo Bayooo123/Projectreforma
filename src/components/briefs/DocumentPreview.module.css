@@ -13,7 +13,7 @@
 }
 
 .modal {
-    background: white;
+    background: var(--surface);
     border-radius: 12px;
     width: 90%;
     max-width: 1200px;
@@ -136,7 +136,7 @@
     gap: 1rem;
     margin-top: 1rem;
     padding: 0.75rem 1.5rem;
-    background: white;
+    background: var(--surface);
     border-radius: 8px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
@@ -237,7 +237,7 @@
 .navButton {
     pointer-events: all;
     padding: 1rem;
-    background: white;
+    background: var(--surface);
     border: none;
     border-radius: 50%;
     cursor: pointer;

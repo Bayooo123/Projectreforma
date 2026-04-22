@@ -220,6 +220,42 @@
     border: 1px solid var(--status-finalized-border, transparent);
 }
 
+.unassigned {
+    background-color: #F3F4F6;
+    color: #6B7280;
+    border: 1px solid #E5E7EB;
+}
+
+:global(.dark) .unassigned {
+    background-color: rgba(107, 114, 128, 0.15);
+    color: #9CA3AF;
+    border-color: rgba(107, 114, 128, 0.25);
+}
+
+.closed {
+    background-color: #F3F4F6;
+    color: #374151;
+    border: 1px solid #D1D5DB;
+}
+
+:global(.dark) .closed {
+    background-color: rgba(55, 65, 81, 0.25);
+    color: #9CA3AF;
+    border-color: rgba(75, 85, 99, 0.4);
+}
+
+.archived {
+    background-color: #FEF2F2;
+    color: #9B1C1C;
+    border: 1px solid #FECACA;
+}
+
+:global(.dark) .archived {
+    background-color: rgba(155, 28, 28, 0.15);
+    color: #FCA5A5;
+    border-color: rgba(239, 68, 68, 0.25);
+}
+
 .actionCell {
     position: relative;
 }

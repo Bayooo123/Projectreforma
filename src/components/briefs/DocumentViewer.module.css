@@ -78,7 +78,7 @@
 }
 
 .previewPage {
-    background-color: white;
+    background-color: var(--surface);
     box-shadow: var(--shadow-md);
     min-height: 1000px;
     padding: 3rem;

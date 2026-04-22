@@ -213,7 +213,7 @@
 }
 
 .supportButton {
-    background: white;
+    background: var(--surface);
     color: var(--primary-dark);
     padding: 0.75rem 2rem;
     border-radius: 8px;

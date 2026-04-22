@@ -162,17 +162,19 @@ export async function generateBriefNumber(workspaceId: string): Promise<string> 
  */
 export async function getBriefStats(workspaceId: string) {
     try {
-        const [total, active, inactive, finalized] = await Promise.all([
-            prisma.brief.count({ where: { workspaceId } }),
-            prisma.brief.count({ where: { workspaceId, status: 'active' } }),
-            prisma.brief.count({ where: { workspaceId, status: 'inactive' } }),
-            prisma.brief.count({ where: { workspaceId, status: 'finalized' } }),
+        const [total, active, unassigned, inactive, finalized, closed] = await Promise.all([
+            prisma.brief.count({ where: { workspaceId, deletedAt: null } }),
+            prisma.brief.count({ where: { workspaceId, status: 'active', deletedAt: null } }),
+            prisma.brief.count({ where: { workspaceId, status: 'unassigned', deletedAt: null } }),
+            prisma.brief.count({ where: { workspaceId, status: 'inactive', deletedAt: null } }),
+            prisma.brief.count({ where: { workspaceId, status: 'finalized', deletedAt: null } }),
+            prisma.brief.count({ where: { workspaceId, status: 'closed', deletedAt: null } }),
         ]);
 
-        return { total, active, inactive, finalized };
+        return { total, active, unassigned, inactive, finalized, closed };
     } catch (error) {
         console.error('Error fetching brief stats:', error);
-        return { total: 0, active: 0, inactive: 0, finalized: 0 };
+        return { total: 0, active: 0, unassigned: 0, inactive: 0, finalized: 0, closed: 0 };
     }
 }
 
