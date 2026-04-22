@@ -1,8 +1,10 @@
 /**
  * Brief Display Utilities
- * 
- * Helper functions for displaying brief metadata with proper fallbacks and overrides
+ *
+ * Helper functions for displaying brief metadata with proper fallbacks and overrides.
  */
+
+import { toTitleCase } from '@/lib/sentence-case';
 
 export interface DisplayableBrief {
     name: string;
@@ -30,16 +32,16 @@ export interface DisplayableBrief {
 export function getBriefDisplayTitle(brief: DisplayableBrief): string {
     // Manual override takes highest priority
     if (brief.customTitle) {
-        return brief.customTitle;
+        return toTitleCase(brief.customTitle);
     }
 
     // For litigation-derived briefs, dynamically pull from matter
     if (brief.isLitigationDerived && brief.matter) {
-        return brief.matter.name;
+        return toTitleCase(brief.matter.name);
     }
 
     // Fallback to stored name
-    return brief.name;
+    return toTitleCase(brief.name);
 }
 
 /**

@@ -1,0 +1,452 @@
+/* The Pulse — CSS Module */
+
+.page {
+    background: var(--surface, #fff);
+    min-height: 100%;
+    display: flex;
+    flex-direction: column;
+    font-family: var(--font-ibm-plex-sans, 'IBM Plex Sans', sans-serif);
+}
+
+/* ─── Topbar ─── */
+.topbar {
+    padding: 14px 20px;
+    background: var(--surface, #fff);
+    border-bottom: 1px solid var(--border, #E2E8F0);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+    gap: 16px;
+}
+
+.topbarLeft {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.topbarTitle {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text-primary, #111827);
+    margin: 0;
+    line-height: 1.3;
+}
+
+.topbarSub {
+    font-size: 11px;
+    color: var(--text-tertiary, #9CA3AF);
+    margin: 0;
+}
+
+.toggleWrap {
+    display: flex;
+    background: var(--surface-subtle, #F8FAFC);
+    border-radius: 8px;
+    padding: 3px;
+    gap: 2px;
+    border: 1px solid var(--border, #E2E8F0);
+    flex-shrink: 0;
+}
+
+.toggleBtn {
+    font-size: 11px;
+    font-weight: 500;
+    padding: 5px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--text-secondary, #4B5563);
+    transition: all 0.15s;
+    line-height: 1;
+}
+
+.toggleActive {
+    background: var(--surface, #fff);
+    color: var(--text-primary, #111827);
+    border-color: var(--border, #E2E8F0);
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+}
+
+/* ─── Stats Row ─── */
+.statsRow {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px;
+    padding: 14px 20px;
+    background: var(--surface, #fff);
+    border-bottom: 1px solid var(--border, #E2E8F0);
+    flex-shrink: 0;
+}
+
+.statCard {
+    background: var(--surface-subtle, #F8FAFC);
+    border-radius: 10px;
+    padding: 10px 12px;
+    border: 1px solid var(--border-subtle, #F1F5F9);
+}
+
+.statLabel {
+    font-size: 10px;
+    color: var(--text-tertiary, #9CA3AF);
+    margin-bottom: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight: 500;
+}
+
+.statVal {
+    font-size: 22px;
+    font-weight: 600;
+    color: var(--text-primary, #111827);
+    line-height: 1;
+}
+
+.statValUrgent {
+    color: #A32D2D;
+}
+
+.statDelta {
+    font-size: 10px;
+    margin-top: 4px;
+}
+
+.deltaUp {
+    color: #3B6D11;
+}
+
+.deltaDown {
+    color: #A32D2D;
+}
+
+.deltaNeutral {
+    color: var(--text-tertiary, #9CA3AF);
+}
+
+/* ─── Feed Area ─── */
+.feedArea {
+    flex: 1;
+    padding: 14px 20px 40px;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    background: var(--background, #F1F5F9);
+    overflow-y: auto;
+}
+
+.feedHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+}
+
+.feedLabel {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text-tertiary, #9CA3AF);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+.filterRow {
+    display: flex;
+    gap: 5px;
+}
+
+.filterChip {
+    font-size: 11px;
+    padding: 3px 10px;
+    border-radius: 20px;
+    border: 1px solid var(--border, #E2E8F0);
+    background: var(--surface, #fff);
+    color: var(--text-secondary, #4B5563);
+    cursor: pointer;
+    transition: all 0.15s;
+    font-weight: 500;
+}
+
+.filterChip:hover {
+    border-color: #1D9E75;
+    color: #0F6E56;
+}
+
+.filterChipOn {
+    background: var(--primary, #059669);
+    color: #fff;
+    border-color: var(--primary, #059669);
+}
+
+/* ─── Section Divider ─── */
+.sectionDivider {
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--text-tertiary, #9CA3AF);
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    padding: 10px 0 5px;
+    border-bottom: 1px solid var(--border, #E2E8F0);
+    margin-bottom: 8px;
+}
+
+.sectionItems {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 4px;
+}
+
+/* ─── Pulse Card ─── */
+.pulseCard {
+    background: var(--surface, #fff);
+    border: 1px solid var(--border, #E2E8F0);
+    border-radius: 10px;
+    padding: 12px 14px;
+    display: flex;
+    gap: 12px;
+    cursor: pointer;
+    transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.pulseCard:hover {
+    border-color: #C4C9D4;
+    box-shadow: 0 1px 4px rgba(15, 23, 42, 0.07);
+}
+
+/* Severity left-border variants — must come after .pulseCard */
+.card_urgent {
+    border-left: 3px solid #E24B4A;
+    border-radius: 0 10px 10px 0;
+    padding-left: 11px;
+}
+
+.card_warning {
+    border-left: 3px solid #EF9F27;
+    border-radius: 0 10px 10px 0;
+    padding-left: 11px;
+}
+
+.card_info {
+    border-left: 3px solid #378ADD;
+    border-radius: 0 10px 10px 0;
+    padding-left: 11px;
+}
+
+.card_success {
+    border-left: 3px solid #5DCAA5;
+    border-radius: 0 10px 10px 0;
+    padding-left: 11px;
+}
+
+/* ─── Icon Wrapper ─── */
+.iconWrap {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    margin-top: 1px;
+}
+
+.ic_urgent {
+    background: #FCEBEB;
+    color: #A32D2D;
+}
+
+.ic_warning {
+    background: #FAEEDA;
+    color: #854F0B;
+}
+
+.ic_info {
+    background: #E6F1FB;
+    color: #185FA5;
+}
+
+.ic_success {
+    background: #E1F5EE;
+    color: #0F6E56;
+}
+
+/* ─── Card Body ─── */
+.cardBody {
+    flex: 1;
+    min-width: 0;
+}
+
+.cardTop {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 3px;
+}
+
+.cardTitle {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-primary, #111827);
+    line-height: 1.4;
+}
+
+.cardTime {
+    font-size: 10px;
+    color: var(--text-tertiary, #9CA3AF);
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.cardDesc {
+    font-size: 11px;
+    color: var(--text-secondary, #4B5563);
+    line-height: 1.55;
+    margin: 0 0 8px;
+}
+
+.cardFooter {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+/* ─── Category Chips ─── */
+.chip {
+    font-size: 10px;
+    font-weight: 500;
+    padding: 2px 7px;
+    border-radius: 20px;
+    white-space: nowrap;
+}
+
+.chip_matter {
+    background: #EEEDFE;
+    color: #3C3489;
+}
+
+.chip_billing {
+    background: #EAF3DE;
+    color: #27500A;
+}
+
+.chip_calendar {
+    background: #E6F1FB;
+    color: #0C447C;
+}
+
+.chip_compliance {
+    background: #FAEEDA;
+    color: #633806;
+}
+
+.chip_client {
+    background: #E1F5EE;
+    color: #085041;
+}
+
+.chip_eureka {
+    background: #FBEAF0;
+    color: #72243E;
+}
+
+.chip_firm {
+    background: #F1EFE8;
+    color: #444441;
+}
+
+.chip_user {
+    background: #EEEDFE;
+    color: #534AB7;
+}
+
+/* ─── Lawyer Avatars ─── */
+.lawyersRow {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    margin-left: 2px;
+}
+
+.lawyerAvatar {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 8px;
+    font-weight: 600;
+    border: 1.5px solid var(--surface, #fff);
+    color: #fff;
+    cursor: default;
+}
+
+.avatar_0 { background: #6B63D6; }
+.avatar_1 { background: #1D9E75; }
+.avatar_2 { background: #D97706; }
+
+.lawyerLabel {
+    font-size: 10px;
+    color: var(--text-tertiary, #9CA3AF);
+    margin-left: 4px;
+}
+
+/* ─── CTA Link ─── */
+.ctaLink {
+    font-size: 11px;
+    color: var(--primary, #059669);
+    font-weight: 600;
+    margin-left: auto;
+    text-decoration: none;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.ctaLink:hover {
+    text-decoration: underline;
+}
+
+/* ─── Empty State ─── */
+.emptyState {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 56px 24px;
+    color: var(--text-tertiary, #9CA3AF);
+    gap: 10px;
+    text-align: center;
+}
+
+.emptyState p {
+    font-size: 13px;
+    margin: 0;
+}
+
+/* ─── Responsive ─── */
+@media (max-width: 960px) {
+    .statsRow {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 640px) {
+    .topbar {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+
+    .statsRow {
+        grid-template-columns: repeat(2, 1fr);
+        padding: 12px 14px;
+    }
+
+    .feedArea {
+        padding: 12px 14px 40px;
+    }
+}

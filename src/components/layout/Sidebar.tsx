@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
-  LayoutDashboard,
+  Activity,
   FileText,
   Gavel,
   Users,
@@ -51,6 +51,7 @@ const Sidebar = ({ user, workspace }: SidebarProps) => {
   }, []);
 
   const navItems = [
+    { name: 'The Pulse', href: '/pulse', icon: Activity },
     { name: 'Briefs Manager', href: '/briefs', icon: FileText },
     { name: 'Calendar and meetings', href: '/calendar', icon: Gavel },
     { name: 'Client Management', href: '/management/clients', icon: Users },

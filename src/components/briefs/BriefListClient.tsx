@@ -11,6 +11,7 @@ import MoveBriefModal from './MoveBriefModal';
 import { useRouter } from 'next/navigation';
 import BriefUploadModal from './BriefUploadModal';
 import { getBriefDisplayTitle } from '@/lib/brief-display';
+import { toTitleCase } from '@/lib/sentence-case';
 
 interface BriefListClientProps {
     initialBriefs: any[];
@@ -225,7 +226,7 @@ export default function BriefListClient({ initialBriefs, workspaceId }: Omit<Bri
                                             <span className={styles.briefRef}>{brief.ref}</span>
                                         </div>
                                     </td>
-                                    <td className={styles.clientName}>{brief.client?.name || 'Unassigned'}</td>
+                                    <td className={styles.clientName}>{brief.client?.name ? toTitleCase(brief.client.name) : 'Unassigned'}</td>
                                     <td className={styles.lawyerName}>{brief.lawyerInCharge?.name || brief.lawyer?.name || 'Unassigned'}</td>
                                     <td>{brief.category}</td>
                                     <td className={styles.dateCell}>{brief.dueDate ? new Date(brief.dueDate).toLocaleDateString() : '-'}</td>
@@ -333,7 +334,7 @@ export default function BriefListClient({ initialBriefs, workspaceId }: Omit<Bri
                             <div className={styles.cardBody}>
                                 <div className={styles.cardRow}>
                                     <span className={styles.cardLabel}>Client</span>
-                                    <span className={styles.cardValue}>{brief.client?.name || 'Unassigned'}</span>
+                                    <span className={styles.cardValue}>{brief.client?.name ? toTitleCase(brief.client.name) : 'Unassigned'}</span>
                                 </div>
                                 <div className={styles.cardRow}>
                                     <span className={styles.cardLabel}>Lawyer</span>

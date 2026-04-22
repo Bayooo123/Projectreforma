@@ -4,7 +4,7 @@ import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
 import { requireAuth } from '@/lib/auth-utils';
 import { Prisma } from '@prisma/client';
-import { applySentenceCaseToFields } from '@/lib/sentence-case';
+import { applyTitleCaseToFields } from '@/lib/sentence-case';
 
 // ============================================
 // CLIENT CRUD OPERATIONS
@@ -184,7 +184,7 @@ interface CreateClientData {
 export async function createClient(data: CreateClientData) {
     await requireAuth();
     // Normalise user-supplied text to sentence case
-    data = applySentenceCaseToFields(data, ['name', 'company']);
+    data = applyTitleCaseToFields(data, ['name', 'company']);
     try {
         // Check if email already exists
         const existingClient = await prisma.client.findUnique({
@@ -227,7 +227,7 @@ interface UpdateClientData {
 export async function updateClient(id: string, data: UpdateClientData) {
     await requireAuth();
     // Normalise user-supplied text to sentence case
-    data = applySentenceCaseToFields(data, ['name', 'company']);
+    data = applyTitleCaseToFields(data, ['name', 'company']);
     try {
         // If email is being updated, check for duplicates
         if (data.email) {

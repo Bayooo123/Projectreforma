@@ -118,7 +118,88 @@ export function toSentenceCase(text: string | null | undefined): string {
         .join(' ');
 }
 
-// ─── Action-layer helper ──────────────────────────────────────────────────────
+// ─── Title Case ───────────────────────────────────────────────────────────────
+
+// Short words that stay lowercase unless they open the string.
+// Legal "v" / "v." are protected terms and are handled by the map above.
+const _LOWER_WORDS = new Set([
+    'a', 'an', 'the',
+    'and', 'but', 'or', 'nor', 'so', 'yet',
+    'at', 'by', 'for', 'in', 'of', 'on', 'to', 'up', 'as',
+    'from', 'into', 'like', 'near', 'over', 'past', 'per',
+    'than', 'upon', 'with',
+]);
+
+/**
+ * Converts an arbitrary string to title case.
+ *
+ * Rules:
+ *  • Every word is capitalised, except short conjunctions/prepositions.
+ *  • The first word is always capitalised regardless of the above.
+ *  • Protected terms (e.g. SAN, FIRS, LTD) keep their canonical casing.
+ *  • Handles hyphenated words by capitalising each segment.
+ *  • null / undefined / empty strings return "".
+ *
+ * @example
+ * toTitleCase("mr mike igbokwe SAN tax advisory")
+ * // → "Mr Mike Igbokwe SAN Tax Advisory"
+ *
+ * toTitleCase("ego chinwuba and co (garnishee matters)")
+ * // → "Ego Chinwuba and Co (Garnishee Matters)"
+ *
+ * toTitleCase("miss halimat akanni-shelle v. administrators of the estate")
+ * // → "Miss Halimat Akanni-Shelle V. Administrators of the Estate"
+ */
+export function toTitleCase(text: string | null | undefined): string {
+    if (!text) return '';
+
+    const words = text.trim().split(/\s+/);
+
+    return words
+        .map((word, index) => {
+            if (!word) return word;
+
+            // Hyphenated words: capitalise each segment independently
+            if (word.includes('-')) {
+                return word
+                    .split('-')
+                    .map((seg, segIdx) => _titleCaseToken(seg, index === 0 && segIdx === 0))
+                    .join('-');
+            }
+
+            return _titleCaseToken(word, index === 0);
+        })
+        .join(' ');
+}
+
+function _titleCaseToken(word: string, isFirst: boolean): string {
+    if (!word) return word;
+
+    const upper = word.toUpperCase();
+
+    // Protected term — always use canonical form
+    if (_PROTECTED_MAP.has(upper)) {
+        return _PROTECTED_MAP.get(upper)!;
+    }
+
+    const lower = word.toLowerCase();
+
+    // Short words stay lowercase unless they're the first word
+    if (!isFirst && _LOWER_WORDS.has(lower)) {
+        return lower;
+    }
+
+    // Preserve parentheses prefix, e.g. "(garnishee" → "(Garnishee"
+    const parenMatch = lower.match(/^(\(+)(.*)$/);
+    if (parenMatch) {
+        const [, prefix, rest] = parenMatch;
+        return prefix + rest.charAt(0).toUpperCase() + rest.slice(1);
+    }
+
+    return lower.charAt(0).toUpperCase() + lower.slice(1);
+}
+
+// ─── Action-layer helpers ─────────────────────────────────────────────────────
 
 /**
  * Returns a shallow copy of `obj` with the specified string fields
@@ -136,6 +217,29 @@ export function applySentenceCaseToFields<T extends object>(
         const value = result[field as string];
         if (typeof value === 'string') {
             result[field as string] = toSentenceCase(value);
+        }
+    }
+    return result as T;
+}
+
+/**
+ * Returns a shallow copy of `obj` with the specified string fields
+ * normalised to title case. Non-string / nullish values are left untouched.
+ *
+ * Use this for proper nouns: brief names, client names, company names.
+ *
+ * @example
+ * const cleaned = applyTitleCaseToFields(data, ['name', 'company']);
+ */
+export function applyTitleCaseToFields<T extends object>(
+    obj: T,
+    fields: (keyof T)[]
+): T {
+    const result = { ...obj } as Record<string, unknown>;
+    for (const field of fields) {
+        const value = result[field as string];
+        if (typeof value === 'string') {
+            result[field as string] = toTitleCase(value);
         }
     }
     return result as T;
