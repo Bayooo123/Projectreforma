@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { prisma } from '@/lib/prisma';
 import { requireAuth } from '@/lib/auth-utils';
+import { createNotification } from '@/app/actions/notifications';
 
 async function assertWorkspaceMembership(workspaceId: string) {
     const user = await requireAuth();
@@ -71,6 +72,16 @@ export async function createMatter(input: {
             });
         }
 
+        await createNotification({
+            workspaceId: input.workspaceId,
+            title: 'New matter recorded',
+            message: `"${input.name}" has been added to the calendar${input.court ? ` at ${input.court}` : ''}.`,
+            type: 'info',
+            priority: 'low',
+            recipients: 'ALL',
+            relatedMatterId: matter.id,
+        }).catch(() => {});
+
         revalidatePath('/calendar');
         return { success: true, data: matter };
     } catch (error: any) {
@@ -106,6 +117,21 @@ export async function scheduleMeeting(input: {
             },
         });
 
+        const dateStr = input.date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+        const recipients = input.participantIds?.length
+            ? { userIds: input.participantIds }
+            : 'ALL' as const;
+
+        await createNotification({
+            workspaceId: input.workspaceId,
+            title: 'Meeting scheduled',
+            message: `"${input.title}" is scheduled for ${dateStr}${input.location ? ` at ${input.location}` : ''}.`,
+            type: 'info',
+            priority: 'medium',
+            recipients,
+            relatedMatterId: input.matterId || undefined,
+        }).catch(() => {});
+
         revalidatePath('/calendar');
         return { success: true, data: entry };
     } catch (error: any) {
@@ -124,6 +150,11 @@ export async function adjournMatter(
 ) {
     try {
         await requireAuth();
+
+        const matter = await prisma.matter.findUnique({
+            where: { id: matterId },
+            select: { name: true, workspaceId: true },
+        });
 
         await prisma.$transaction(async tx => {
             await tx.matter.update({
@@ -145,6 +176,19 @@ export async function adjournMatter(
                 },
             });
         });
+
+        if (matter) {
+            const dateStr = newDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+            await createNotification({
+                workspaceId: matter.workspaceId,
+                title: 'Matter adjourned',
+                message: `"${matter.name}" adjourned to ${dateStr}${adjournedFor ? ` — ${adjournedFor}` : ''}.`,
+                type: 'warning',
+                priority: 'medium',
+                recipients: 'ALL',
+                relatedMatterId: matterId,
+            }).catch(() => {});
+        }
 
         revalidatePath('/calendar');
         return { success: true };

@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache';
 import { requireAuth } from '@/lib/auth-utils';
 import { Prisma } from '@prisma/client';
 import { applyTitleCaseToFields } from '@/lib/sentence-case';
+import { createNotification } from '@/app/actions/notifications';
 
 // ============================================
 // CLIENT CRUD OPERATIONS
@@ -206,6 +207,15 @@ export async function createClient(data: CreateClientData) {
                 status: 'active',
             },
         });
+
+        await createNotification({
+            workspaceId: data.workspaceId,
+            title: 'New client added',
+            message: `${client.name}${client.company ? ` (${client.company})` : ''} has been onboarded as a client.`,
+            type: 'success',
+            priority: 'low',
+            recipients: { role: ['owner', 'partner', 'admin'] },
+        }).catch(() => {});
 
         revalidatePath('/management/clients');
         return { success: true, data: client };

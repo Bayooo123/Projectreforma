@@ -1,9 +1,13 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { Bell, Check, Info, AlertTriangle, FileText, X, CreditCard, Layout, Loader2, Settings, Archive } from 'lucide-react';
+import {
+    Bell, Check, AlertTriangle, FileText, Gavel, Calendar,
+    ShieldAlert, Users, CreditCard, Archive, Settings, Info,
+} from 'lucide-react';
 import { getUserNotifications, markAsRead, markAllAsRead } from '@/app/actions/notifications';
 import Link from 'next/link';
+import styles from './NotificationPopover.module.css';
 
 interface Notification {
     id: string;
@@ -11,6 +15,7 @@ interface Notification {
     title: string;
     message: string;
     status: string;
+    priority?: string;
     createdAt: Date;
     relatedMatterId?: string | null;
     relatedBriefId?: string | null;
@@ -18,13 +23,71 @@ interface Notification {
     relatedPaymentId?: string | null;
 }
 
-type TabCategory = 'ALL' | 'TASKS' | 'PAYMENTS' | 'ALERTS';
+type TabId = 'ALL' | 'BRIEFS' | 'BILLING' | 'CALENDAR' | 'ALERTS';
+
+const TABS: { id: TabId; label: string }[] = [
+    { id: 'ALL',      label: 'All'      },
+    { id: 'BRIEFS',   label: 'Briefs'   },
+    { id: 'BILLING',  label: 'Billing'  },
+    { id: 'CALENDAR', label: 'Calendar' },
+    { id: 'ALERTS',   label: 'Alerts'   },
+];
+
+function getSeverity(n: Notification): 'urgent' | 'warning' | 'info' | 'success' {
+    if (n.type === 'alert' || n.priority === 'critical') return 'urgent';
+    if (n.type === 'warning' || n.priority === 'high')   return 'warning';
+    if (n.type === 'success' || n.relatedPaymentId)      return 'success';
+    return 'info';
+}
+
+function getIcon(n: Notification) {
+    const severity = getSeverity(n);
+    const cls = styles[`icon${severity.charAt(0).toUpperCase() + severity.slice(1)}` as keyof typeof styles];
+
+    const titleLower = n.title.toLowerCase();
+
+    let Icon = Info;
+    if (n.relatedPaymentId)  Icon = Check;
+    else if (n.relatedInvoiceId) Icon = CreditCard;
+    else if (n.relatedBriefId)   Icon = FileText;
+    else if (titleLower.includes('court') || titleLower.includes('adjourn')) Icon = Gavel;
+    else if (titleLower.includes('meeting') || titleLower.includes('calendar')) Icon = Calendar;
+    else if (titleLower.includes('compliance') || titleLower.includes('deadline')) Icon = ShieldAlert;
+    else if (titleLower.includes('client')) Icon = Users;
+    else if (n.type === 'success') Icon = Check;
+    else if (n.type === 'warning' || n.type === 'alert') Icon = AlertTriangle;
+
+    return (
+        <div className={`${styles.iconWrap} ${cls}`}>
+            <Icon size={16} />
+        </div>
+    );
+}
+
+function getLink(n: Notification): string {
+    if (n.relatedBriefId)   return `/briefs/${n.relatedBriefId}`;
+    if (n.relatedMatterId)  return `/calendar?matterId=${n.relatedMatterId}`;
+    if (n.relatedInvoiceId) return `/management/clients`;
+    return '#';
+}
+
+function relativeTime(date: Date): string {
+    const diff = Date.now() - new Date(date).getTime();
+    const m = Math.floor(diff / 60000);
+    if (m < 1)  return 'Just now';
+    if (m < 60) return `${m}m ago`;
+    const h = Math.floor(m / 60);
+    if (h < 24) return `${h}h ago`;
+    const d = Math.floor(h / 24);
+    if (d < 7)  return `${d}d ago`;
+    return new Date(date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+}
 
 const NotificationPopover = () => {
     const [notifications, setNotifications] = useState<Notification[]>([]);
     const [unreadCount, setUnreadCount] = useState(0);
     const [isLoading, setIsLoading] = useState(true);
-    const [activeTab, setActiveTab] = useState<TabCategory>('ALL');
+    const [activeTab, setActiveTab] = useState<TabId>('ALL');
 
     useEffect(() => {
         fetchNotifications();
@@ -58,196 +121,154 @@ const NotificationPopover = () => {
         setUnreadCount(0);
     };
 
-    const filteredNotifications = useMemo(() => {
-        let list = [...notifications];
+    const filtered = useMemo(() => {
         switch (activeTab) {
-            case 'TASKS':
-                list = list.filter(n => n.relatedMatterId || n.relatedBriefId);
-                break;
-            case 'PAYMENTS':
-                list = list.filter(n => n.relatedInvoiceId || n.relatedPaymentId);
-                break;
+            case 'BRIEFS':
+                return notifications.filter(n => n.relatedBriefId);
+            case 'BILLING':
+                return notifications.filter(n => n.relatedInvoiceId || n.relatedPaymentId);
+            case 'CALENDAR': {
+                const kw = ['court', 'meeting', 'adjourn', 'hearing', 'calendar'];
+                return notifications.filter(n =>
+                    n.relatedMatterId ||
+                    kw.some(w => n.title.toLowerCase().includes(w) || n.message.toLowerCase().includes(w))
+                );
+            }
             case 'ALERTS':
-                list = list.filter(n => n.type === 'warning' || n.type === 'alert');
-                break;
+                return notifications.filter(n => n.type === 'warning' || n.type === 'alert');
+            default:
+                return notifications;
         }
-        return list;
     }, [notifications, activeTab]);
 
-    const groupedNotifications = useMemo(() => {
-        const sections: { title: string; data: Notification[] }[] = [
-            { title: 'Today', data: [] },
-            { title: 'Yesterday', data: [] },
-            { title: 'Earlier', data: [] }
-        ];
+    const grouped = useMemo(() => {
+        const now = new Date();
+        const todayStart = new Date(now); todayStart.setHours(0, 0, 0, 0);
+        const yesterdayStart = new Date(todayStart); yesterdayStart.setDate(yesterdayStart.getDate() - 1);
 
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const yesterday = new Date(today);
-        yesterday.setDate(yesterday.getDate() - 1);
+        const today: Notification[]     = [];
+        const yesterday: Notification[] = [];
+        const earlier: Notification[]   = [];
 
-        filteredNotifications.forEach(n => {
-            const d = new Date(n.createdAt);
-            d.setHours(0, 0, 0, 0);
-
-            if (d.getTime() === today.getTime()) {
-                sections[0].data.push(n);
-            } else if (d.getTime() === yesterday.getTime()) {
-                sections[1].data.push(n);
-            } else {
-                sections[2].data.push(n);
-            }
-        });
-
-        return sections.filter(s => s.data.length > 0);
-    }, [filteredNotifications]);
-
-    const getIcon = (type: string, n: Notification) => {
-        if (n.relatedInvoiceId || n.relatedPaymentId) return <CreditCard size={18} className="text-emerald-600" />;
-        if (n.relatedMatterId || n.relatedBriefId) return <Layout size={18} className="text-indigo-600" />;
-        
-        switch (type) {
-            case 'success': return <Check size={18} className="text-green-600" />;
-            case 'warning': return <AlertTriangle size={18} className="text-amber-600" />;
-            case 'info': default: return <Info size={18} className="text-blue-600" />;
+        for (const n of filtered) {
+            const d = new Date(n.createdAt); d.setHours(0, 0, 0, 0);
+            if (d >= todayStart)         today.push(n);
+            else if (d >= yesterdayStart) yesterday.push(n);
+            else                          earlier.push(n);
         }
-    };
 
-    const getLink = (n: Notification) => {
-        if (n.relatedBriefId) return `/briefs/${n.relatedBriefId}`;
-        if (n.relatedMatterId) return `/calendar?matterId=${n.relatedMatterId}`;
-        if (n.relatedInvoiceId) return `/management/clients`;
-        return '#';
-    };
+        return [
+            { label: 'Today',     items: today },
+            { label: 'Yesterday', items: yesterday },
+            { label: 'Earlier',   items: earlier },
+        ].filter(g => g.items.length > 0);
+    }, [filtered]);
 
     return (
-        <div className="absolute right-0 top-12 w-[480px] bg-white border border-slate-200 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.15)] z-50 flex flex-col max-h-[85vh] overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+        <div className={styles.panel}>
             {/* Header */}
-            <div className="px-6 py-5 border-b border-slate-100 flex justify-between items-center bg-slate-50/50 backdrop-blur-md">
-                <div>
-                    <h3 className="font-extrabold text-slate-900 tracking-tight">Activity Feed</h3>
-                    <div className="flex items-center gap-2 mt-0.5">
-                        <span className="flex h-2 w-2 rounded-full bg-blue-600 animate-pulse" />
-                        <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">
-                            {unreadCount} Unread
-                        </p>
+            <div className={styles.header}>
+                <div className={styles.headerLeft}>
+                    <span className={styles.headerTitle}>Activity Feed</span>
+                    <div className={styles.headerMeta}>
+                        <span className={styles.pulse} />
+                        <span className={styles.unreadLabel}>{unreadCount} unread</span>
                     </div>
                 </div>
                 {unreadCount > 0 && (
-                    <button
-                        onClick={handleMarkAllRead}
-                        className="text-[10px] text-blue-600 hover:text-blue-700 font-bold uppercase tracking-widest bg-blue-50 px-3 py-1.5 rounded-full transition-all hover:scale-105 active:scale-95"
-                    >
-                        Mark All Read
+                    <button className={styles.markAllBtn} onClick={handleMarkAllRead}>
+                        Mark all read
                     </button>
                 )}
             </div>
 
             {/* Tabs */}
-            <div className="flex px-4 border-b border-slate-100 bg-white">
-                {(['ALL', 'TASKS', 'PAYMENTS', 'ALERTS'] as TabCategory[]).map((tab) => (
+            <div className={styles.tabs}>
+                {TABS.map(t => (
                     <button
-                        key={tab}
-                        onClick={() => setActiveTab(tab)}
-                        className={`flex-1 py-4 text-[10px] font-black tracking-[0.1em] uppercase transition-all relative ${
-                            activeTab === tab ? 'text-blue-600' : 'text-slate-400 hover:text-slate-600'
-                        }`}
+                        key={t.id}
+                        className={`${styles.tab} ${activeTab === t.id ? styles.tabActive : ''}`}
+                        onClick={() => setActiveTab(t.id)}
                     >
-                        {tab}
-                        {activeTab === tab && (
-                            <div className="absolute bottom-0 left-4 right-4 h-1 bg-blue-600 rounded-full" />
-                        )}
+                        {t.label}
                     </button>
                 ))}
             </div>
 
-            {/* Content */}
-            <div className="overflow-y-auto flex-1 min-h-[300px] bg-white custom-scrollbar">
+            {/* Feed */}
+            <div className={styles.feed}>
                 {isLoading ? (
-                    <div className="p-4 space-y-4">
-                        {[1, 2, 3].map(i => (
-                            <div key={i} className="flex gap-4 animate-pulse">
-                                <div className="w-12 h-12 bg-slate-100 rounded-2xl shrink-0" />
-                                <div className="flex-1 space-y-3">
-                                    <div className="h-4 bg-slate-100 rounded-lg w-3/4" />
-                                    <div className="h-3 bg-slate-50 rounded-lg w-full" />
-                                    <div className="h-2 bg-slate-50 rounded-lg w-1/4" />
-                                </div>
+                    [1, 2, 3].map(i => (
+                        <div key={i} className={styles.skeleton}>
+                            <div className={styles.skeletonIcon} />
+                            <div className={styles.skeletonLines}>
+                                <div className={styles.skeletonLine} style={{ width: '65%' }} />
+                                <div className={styles.skeletonLine} style={{ width: '90%' }} />
+                                <div className={styles.skeletonLine} style={{ width: '35%' }} />
                             </div>
-                        ))}
-                    </div>
-                ) : groupedNotifications.length === 0 ? (
-                    <div className="py-24 text-center flex flex-col items-center justify-center px-12">
-                        <div className="w-20 h-20 bg-slate-50 rounded-[2rem] flex items-center justify-center mb-6 rotate-12">
-                            <Archive size={32} className="text-slate-300" />
                         </div>
-                        <h4 className="text-slate-900 font-bold text-lg tracking-tight">Inbox Zero</h4>
-                        <p className="text-slate-400 text-xs mt-2 leading-relaxed">
-                            No {activeTab !== 'ALL' ? activeTab.toLowerCase() : ''} updates found in your workspace activity feed.
+                    ))
+                ) : grouped.length === 0 ? (
+                    <div className={styles.empty}>
+                        <div className={styles.emptyIcon}>
+                            <Archive size={26} />
+                        </div>
+                        <p className={styles.emptyTitle}>All caught up</p>
+                        <p className={styles.emptyText}>
+                            No {activeTab !== 'ALL' ? activeTab.toLowerCase() + ' ' : ''}notifications in your feed.
                         </p>
                     </div>
                 ) : (
-                    <div className="pb-4">
-                        {groupedNotifications.map(section => (
-                            <div key={section.title}>
-                                <div className="px-6 py-3 bg-slate-50/30 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] border-y border-slate-50/50">
-                                    {section.title}
-                                </div>
-                                <div className="divide-y divide-slate-50">
-                                    {section.data.map(n => (
-                                        <Link
-                                            href={getLink(n)}
-                                            key={n.id}
-                                            onClick={() => handleMarkRead(n.id)}
-                                            className={`group block px-6 py-5 hover:bg-slate-50 transition-all ${n.status === 'unread' ? 'bg-blue-50/20' : ''}`}
-                                        >
-                                            <div className="flex gap-4 items-start">
-                                                <div className={`mt-0.5 flex-shrink-0 w-12 h-12 rounded-2xl flex items-center justify-center transition-transform group-hover:scale-110 ${
-                                                    n.status === 'unread' ? 'bg-white shadow-md border border-blue-100' : 'bg-slate-50'
-                                                }`}>
-                                                    {getIcon(n.type, n)}
-                                                </div>
-                                                <div className="flex-1 min-w-0">
-                                                    <div className="flex justify-between items-start mb-1">
-                                                        <p className={`text-[13px] leading-tight ${n.status === 'unread' ? 'font-black text-slate-900' : 'font-bold text-slate-600'}`}>
-                                                            {n.title}
-                                                        </p>
-                                                        {n.status === 'unread' && (
-                                                            <div className="w-2.5 h-2.5 rounded-full bg-blue-600 ring-4 ring-blue-100 shrink-0 ml-2 mt-1" />
-                                                        )}
-                                                    </div>
-                                                    <p className="text-xs text-slate-500 leading-snug line-clamp-2 mb-3 font-medium">
-                                                        {n.message}
-                                                    </p>
-                                                    <div className="flex items-center gap-3">
-                                                        <span className="text-[9px] text-slate-400 font-bold uppercase tracking-widest bg-slate-100 px-2 py-0.5 rounded-md">
-                                                            {new Date(n.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                                        </span>
-                                                        <div className="w-1 h-1 rounded-full bg-slate-200" />
-                                                        <span className="text-[9px] font-black text-blue-600 uppercase tracking-widest">
-                                                            {n.type}
-                                                        </span>
-                                                    </div>
-                                                </div>
+                    grouped.map(section => (
+                        <div key={section.label}>
+                            <div className={styles.sectionLabel}>{section.label}</div>
+                            {section.items.map(n => {
+                                const severity = getSeverity(n);
+                                const isUnread = n.status === 'unread';
+                                const severityCls = isUnread
+                                    ? ''
+                                    : styles[`item${severity.charAt(0).toUpperCase() + severity.slice(1)}` as keyof typeof styles];
+                                const typeCls = styles[`type${n.type.charAt(0).toUpperCase() + n.type.slice(1)}` as keyof typeof styles]
+                                    || styles.typeInfo;
+
+                                return (
+                                    <Link
+                                        key={n.id}
+                                        href={getLink(n)}
+                                        className={`${styles.item} ${isUnread ? styles.itemUnread : severityCls}`}
+                                        onClick={() => handleMarkRead(n.id)}
+                                    >
+                                        {getIcon(n)}
+                                        <div className={styles.itemBody}>
+                                            <div className={styles.itemHeader}>
+                                                <span className={`${styles.itemTitle} ${isUnread ? styles.itemTitleUnread : ''}`}>
+                                                    {n.title}
+                                                </span>
+                                                {isUnread && <span className={styles.unreadDot} />}
                                             </div>
-                                        </Link>
-                                    ))}
-                                </div>
-                            </div>
-                        ))}
-                    </div>
+                                            <p className={styles.itemMessage}>{n.message}</p>
+                                            <div className={styles.itemFooter}>
+                                                <span className={styles.itemTime}>{relativeTime(n.createdAt)}</span>
+                                                <span className={`${styles.itemType} ${typeCls}`}>{n.type}</span>
+                                            </div>
+                                        </div>
+                                    </Link>
+                                );
+                            })}
+                        </div>
+                    ))
                 )}
             </div>
-            
+
             {/* Footer */}
-            <div className="px-6 py-4 border-t border-slate-100 bg-slate-50/50 flex items-center justify-between">
-                <Link href="/settings" className="p-2 text-slate-400 hover:text-blue-600 transition-colors">
-                    <Settings size={18} />
+            <div className={styles.footer}>
+                <Link href="/settings" className={styles.footerIconBtn}>
+                    <Settings size={15} />
                 </Link>
-                <Link href="/management/compliance" className="text-[10px] font-black text-slate-400 hover:text-blue-600 transition-colors uppercase tracking-[0.2em]">
-                    System Dashboard
+                <Link href="/management/compliance" className={styles.footerLink}>
+                    Compliance Dashboard
                 </Link>
-                <div className="w-10 h-1" /> {/* Spacer */}
+                <div style={{ width: 23 }} />
             </div>
         </div>
     );
