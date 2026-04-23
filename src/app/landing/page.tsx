@@ -139,9 +139,9 @@ export default function LandingPage() {
                     </div>
                     <div className={styles.videoWrapper}>
                         <iframe
-                            src="https://drive.google.com/file/d/1TDDvFy7Hm-SA2-y3u-AVQv2cyHPoieTh/preview"
+                            src="https://www.youtube.com/embed/z69dSOj_qog"
                             className={styles.videoFrame}
-                            allow="autoplay"
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                             allowFullScreen
                             title="Reforma Demo Video"
                         />

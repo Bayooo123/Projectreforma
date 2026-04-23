@@ -45,7 +45,7 @@ const securityHeaders = [
             "frame-ancestors 'none'",
             "form-action 'self'",
             "base-uri 'self'",
-            "frame-src https://fladov.com https://www.fladov.com https://*.fladov.com"
+            "frame-src https://fladov.com https://www.fladov.com https://*.fladov.com https://www.youtube.com https://youtube.com"
         ].join('; '),
     },
     // Prevent XSS in older browsers
