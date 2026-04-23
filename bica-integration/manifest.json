@@ -89,7 +89,7 @@
                 },
                 "status": {
                     "description": "The current workflow status of the brief.",
-                    "validation_rules": "required|in:active,completed,pending,archived"
+                    "validation_rules": "required|in:active,closed,archived,inactive,finalized"
                 },
                 "dueDate": {
                     "description": "The deadline for the brief's completion or filing.",
@@ -101,9 +101,7 @@
                 }
             },
             "child_relationships": [
-                "Document",
-                "Task",
-                "CourtDate"
+                "Task"
             ],
             "min_record_count": 0,
             "max_record_count": null,

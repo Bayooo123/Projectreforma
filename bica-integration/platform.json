@@ -3,212 +3,70 @@
     "platform_id": "reforma_os",
     "slug": "reforma_os",
     "name": "Reforma Legal OS",
-    "description": "Reforma is a comprehensive legal practice management platform built for Nigerian law firms, designed to streamline every operational layer of a legal workspace - from matter and brief management, client records, and document storage, to billing, expense tracking, calendar scheduling, and meeting recordings. Each firm operates within an isolated workspace with role-based access control, allowing partners, associates, and office managers to collaborate with appropriately scoped permissions. Reforma exposes a structured AI assistant integration  - Known as Reforma Assistant - that allows you to read and write live firm data on behalf of  authenticated users - you can look up briefs, clients, matters, calendar events, and other records, perform write operations such as creating or updating records, and run analytical insights - all automatically scoped to the authenticated user's workspace, ensuring complete data isolation between firms. Your role is to act as an intelligent assistant embedded within Reforma, capable of understanding natural language requests from firm staff and translating them into precise, permissioned actions against the firm's live operational data.\n",
-    "version": "1.0.0"
+    "description": "Reforma is a comprehensive legal practice management platform built for Nigerian law firms. It manages every operational layer of a legal workspace: matter and brief management, client records, billing, expense tracking, calendar scheduling, meeting recordings, and regulatory compliance. Each firm operates within an isolated workspace with role-based access control. Your role is to act as an intelligent assistant embedded within Reforma — understand natural language requests from firm staff and translate them into precise, permissioned actions against the firm's live data. All queries are automatically scoped to the authenticated workspace, ensuring complete data isolation between firms. IMPORTANT RULES: (1) All monetary amounts are in KOBO — multiply naira by 100 before writing (e.g. ₦50,000 = 5000000 kobo). (2) Never include 'id', 'workspaceId', 'briefNumber', or 'invoiceNumber' in write payloads — these are server-generated. (3) Before creating a Client, always run a direct_lookup first to check if they already exist. (4) Use 'insight' for aggregate queries (totals, counts, sums) and 'lookup' or 'direct_lookup' for finding records.",
+    "version": "1.1.0"
   },
   "branding": {
     "logo_url": "https://reforma.ng/icon.png",
     "brand_color": "#121826",
     "accent_color": "#3182ce",
     "bot_name": "Reforma",
-    "greeting_message": "Good morning. How can Reforma assist your practice and compliance needs today?",
+    "greeting_message": "How can Reforma assist your practice today?",
     "suggested_prompts": [
       {
-        "prompt": "Draft a new litigation brief",
+        "prompt": "Show me all active matters",
+        "icon": "fa-solid fa-gavel"
+      },
+      {
+        "prompt": "What court dates do we have this week?",
+        "icon": "fa-solid fa-calendar-days"
+      },
+      {
+        "prompt": "Show me my pending tasks",
+        "icon": "fa-solid fa-list-check"
+      },
+      {
+        "prompt": "Create a new brief for a client",
         "icon": "fa-solid fa-file-pen"
       },
       {
-        "prompt": "Generate an invoice for Client X",
+        "prompt": "What are our total expenses this month?",
+        "icon": "fa-solid fa-chart-line"
+      },
+      {
+        "prompt": "Generate an invoice for a client",
         "icon": "fa-solid fa-file-invoice-dollar"
       },
       {
-        "prompt": "Record a payment of ₦50,000",
+        "prompt": "Record a payment received",
         "icon": "fa-solid fa-money-bill-wave"
       },
       {
-        "prompt": "Check status of a brief",
-        "icon": "fa-solid fa-circle-info"
+        "prompt": "Show me outstanding invoices",
+        "icon": "fa-solid fa-clock"
+      },
+      {
+        "prompt": "Find a client by name",
+        "icon": "fa-solid fa-magnifying-glass"
+      },
+      {
+        "prompt": "What compliance tasks are due?",
+        "icon": "fa-solid fa-shield-halved"
       }
     ]
   },
   "knowledge": {
     "playbooks": {
-      "Brief": {
-        "name": "Brief",
-        "description": "Represents a legal brief or file opened on behalf of a client within a matter.",
-        "fields": {
-          "id": {
-            "description": "id",
-            "validation_rules": "prohibited"
-          },
-          "briefNumber": {
-            "description": "System-assigned unique brief reference number.",
-            "validation_rules": "prohibited"
-          },
-          "name": {
-            "description": "Internal title or name of the brief.",
-            "validation_rules": "required|string|max:255"
-          },
-          "clientId": {
-            "description": "clientId",
-            "validation_rules": "nullable|string|max:255"
-          },
-          "matterId": {
-            "description": "matterId",
-            "validation_rules": "nullable|string|max:255"
-          },
-          "lawyerId": {
-            "description": "lawyerId",
-            "validation_rules": "nullable|string|max:255"
-          },
-          "workspaceId": {
-            "description": "workspaceId",
-            "validation_rules": "prohibited"
-          },
-          "customBriefNumber": {
-            "description": "Firm-assigned custom reference number.",
-            "validation_rules": "nullable|string|max:100"
-          },
-          "customTitle": {
-            "description": "customTitle",
-            "validation_rules": "nullable|string|max:255"
-          },
-          "category": {
-            "description": "Type or category of the brief.",
-            "validation_rules": "required|string|max:100"
-          },
-          "status": {
-            "description": "Current status of the brief (active, closed, archived).",
-            "validation_rules": "required|string|max:20"
-          },
-          "dueDate": {
-            "description": "Target completion or filing date.",
-            "validation_rules": "nullable|date"
-          },
-          "description": {
-            "description": "Detailed notes or instructions for the brief.",
-            "validation_rules": "nullable|string"
-          },
-          "inboundEmailId": {
-            "description": "inboundEmailId",
-            "validation_rules": "prohibited"
-          },
-          "isLitigationDerived": {
-            "description": "isLitigationDerived",
-            "validation_rules": "nullable|boolean"
-          },
-          "lawyerInChargeId": {
-            "description": "lawyerInChargeId",
-            "validation_rules": "nullable|string|max:255"
-          },
-          "deletedAt": {
-            "description": "deletedAt",
-            "validation_rules": "nullable|date"
-          },
-          "lastSummarizedAt": {
-            "description": "lastSummarizedAt",
-            "validation_rules": "nullable|date"
-          },
-          "summary": {
-            "description": "summary",
-            "validation_rules": "nullable|string"
-          },
-          "briefId": {
-            "description": "briefId",
-            "validation_rules": "nullable|string|max:255"
-          }
-        },
-        "child_relationships": [
-          "Task"
-        ]
-      },
-      "CalendarEntry": {
-        "name": "CalendarEntry",
-        "description": "Represents a scheduled event for a matter — including court dates, filing deadlines, client meetings, and internal meetings.",
-        "fields": {
-          "id": {
-            "description": "id",
-            "validation_rules": "prohibited"
-          },
-          "matterId": {
-            "description": "matterId",
-            "validation_rules": "nullable|string|max:255"
-          },
-          "title": {
-            "description": "Short description or title of the event.",
-            "validation_rules": "required|string|max:255"
-          },
-          "date": {
-            "description": "The date and time of the event.",
-            "validation_rules": "required|date"
-          },
-          "proceedings": {
-            "description": "What transpired during the event.",
-            "validation_rules": "nullable|string"
-          },
-          "outcome": {
-            "description": "Result or decision from the event.",
-            "validation_rules": "nullable|string"
-          },
-          "adjournedFor": {
-            "description": "Reason for adjournment, if applicable.",
-            "validation_rules": "nullable|string"
-          },
-          "submittingLawyerId": {
-            "description": "submittingLawyerId",
-            "validation_rules": "nullable|string|max:255"
-          },
-          "submittingLawyerToken": {
-            "description": "submittingLawyerToken",
-            "validation_rules": "nullable|string|max:255"
-          },
-          "submittingLawyerName": {
-            "description": "submittingLawyerName",
-            "validation_rules": "nullable|string|max:255"
-          },
-          "briefId": {
-            "description": "briefId",
-            "validation_rules": "nullable|string|max:255"
-          },
-          "clientId": {
-            "description": "clientId",
-            "validation_rules": "nullable|string|max:255"
-          },
-          "externalCounsel": {
-            "description": "externalCounsel",
-            "validation_rules": "nullable|string|max:255"
-          },
-          "type": {
-            "description": "Event type: COURT_DATE, FILING_DEADLINE, CLIENT_MEETING, INTERNAL_MEETING, or OTHER.",
-            "validation_rules": "nullable|in:COURT_DATE,FILING_DEADLINE,CLIENT_MEETING,INTERNAL_MEETING,OTHER"
-          },
-          "location": {
-            "description": "Physical or virtual location of the event.",
-            "validation_rules": "nullable|string|max:255"
-          },
-          "judge": {
-            "description": "Presiding judge (for court dates).",
-            "validation_rules": "nullable|string|max:255"
-          },
-          "agenda": {
-            "description": "Agenda or purpose of the event.",
-            "validation_rules": "nullable|string"
-          },
-          "description": {
-            "description": "description",
-            "validation_rules": "nullable|string"
-          }
-        },
-        "child_relationships": [
-          "MeetingRecording"
-        ]
-      },
       "Client": {
         "name": "Client",
-        "description": "Represents an individual or organization served by the firm.",
+        "description": "Represents an individual or organization the firm provides legal services to. Before creating a new Client, always search first using direct_lookup to avoid duplicates. Access is scoped to workspace members. Child entities (matters, briefs, invoices, payments) are linked to clients.",
         "fields": {
           "id": {
-            "description": "id",
+            "description": "System-generated unique identifier. Never include in write payloads.",
+            "validation_rules": "prohibited"
+          },
+          "workspaceId": {
+            "description": "Auto-set by the system. Never include in write payloads.",
             "validation_rules": "prohibited"
           },
           "name": {
@@ -216,75 +74,437 @@
             "validation_rules": "required|string|max:255"
           },
           "email": {
-            "description": "Primary contact email.",
+            "description": "Primary contact email address. Must be unique per workspace.",
             "validation_rules": "required|email|max:255"
           },
           "phone": {
-            "description": "Primary contact phone number.",
+            "description": "Primary contact phone number (e.g. +2348012345678).",
             "validation_rules": "nullable|string|max:20"
           },
           "company": {
-            "description": "Company name if the client is an organization.",
+            "description": "Company or organization name, if the client is a corporate entity.",
             "validation_rules": "nullable|string|max:255"
           },
           "industry": {
-            "description": "Industry sector.",
+            "description": "Industry sector the client operates in (e.g. Banking, Oil & Gas, Construction).",
             "validation_rules": "nullable|string|max:100"
           },
           "status": {
-            "description": "Relationship status.",
+            "description": "Current relationship status. Use 'active' for ongoing clients, 'inactive' for dormant ones.",
             "validation_rules": "required|in:active,inactive"
-          },
-          "workspaceId": {
-            "description": "workspaceId",
-            "validation_rules": "prohibited"
           }
         },
-        "child_relationships": [
-          "Matter",
-          "Brief",
-          "Invoice",
-          "Payment"
-        ]
+        "child_relationships": ["Matter", "Brief", "Invoice", "Payment"]
       },
-      "ComplianceTask": {
-        "name": "ComplianceTask",
-        "description": "Represents a regulatory compliance obligation assigned to a workspace, tracking its status, due date, and evidence of completion.",
+      "Matter": {
+        "name": "Matter",
+        "description": "Represents a specific legal case or matter handled by the firm. Matters belong to a client and contain briefs, calendar entries, tasks, meeting recordings, and invoices. Use 'active' for ongoing cases, 'pending' for cases awaiting action, and 'closed' for concluded cases.",
         "fields": {
           "id": {
-            "description": "id",
+            "description": "System-generated unique identifier. Never include in write payloads.",
             "validation_rules": "prohibited"
-          },
-          "obligationId": {
-            "description": "obligationId",
-            "validation_rules": "nullable|string|max:255"
           },
           "workspaceId": {
-            "description": "workspaceId",
+            "description": "Auto-set by the system. Never include in write payloads.",
             "validation_rules": "prohibited"
           },
-          "status": {
-            "description": "Completion status of the compliance task.",
-            "validation_rules": "required|in:pending,acknowledged,overdue"
+          "name": {
+            "description": "Internal descriptive name of the matter (e.g. 'Dangote v. FIRS - Tax Appeal').",
+            "validation_rules": "required|string|max:255"
           },
-          "dueDate": {
-            "description": "Deadline for the compliance action.",
+          "caseNumber": {
+            "description": "Official court reference or suit number (e.g. 'LD/ADR/123/2025'). Leave null if not yet assigned.",
+            "validation_rules": "nullable|string|max:255"
+          },
+          "clientId": {
+            "description": "ID of the client this matter belongs to. Link matters to clients whenever possible.",
+            "validation_rules": "nullable|string"
+          },
+          "clientNameRaw": {
+            "description": "Free-text client name for matters not yet linked to a client record.",
+            "validation_rules": "nullable|string|max:255"
+          },
+          "court": {
+            "description": "The presiding court or tribunal (e.g. 'Federal High Court Lagos', 'Court of Appeal Abuja').",
+            "validation_rules": "nullable|string|max:255"
+          },
+          "judge": {
+            "description": "Name of the presiding judge.",
+            "validation_rules": "nullable|string|max:255"
+          },
+          "opponentName": {
+            "description": "Name of the opposing party.",
+            "validation_rules": "nullable|string|max:255"
+          },
+          "opponentCounsel": {
+            "description": "Name of counsel representing the opposing party.",
+            "validation_rules": "nullable|string|max:255"
+          },
+          "status": {
+            "description": "Current case status.",
+            "validation_rules": "required|in:active,closed,pending"
+          },
+          "nextCourtDate": {
+            "description": "Date of the next scheduled court hearing (ISO 8601 format).",
             "validation_rules": "nullable|date"
           },
-          "period": {
-            "description": "The compliance reporting period (e.g. Q1 2025, Annual 2024).",
+          "lawyerInChargeId": {
+            "description": "User ID of the lead lawyer responsible for this matter.",
+            "validation_rules": "nullable|string|max:255"
+          },
+          "submittingLawyerId": {
+            "description": "User ID of the lawyer who submitted this matter.",
+            "validation_rules": "nullable|string|max:255"
+          },
+          "submittingLawyerToken": {
+            "description": "Token for the submitting lawyer (used in external submissions).",
+            "validation_rules": "nullable|string|max:255"
+          },
+          "submittingLawyerName": {
+            "description": "Name of the submitting lawyer.",
+            "validation_rules": "nullable|string|max:255"
+          },
+          "lastActivityAt": {
+            "description": "Timestamp of the last activity recorded on this matter.",
+            "validation_rules": "nullable|date"
+          },
+          "lastClientContact": {
+            "description": "Date of the last contact with the client regarding this matter.",
+            "validation_rules": "nullable|date"
+          }
+        },
+        "child_relationships": ["Brief", "CalendarEntry", "Task", "MeetingRecording", "Invoice"]
+      },
+      "Brief": {
+        "name": "Brief",
+        "description": "Represents a legal brief, file, or assignment opened on behalf of a client within a matter. Briefs are the core work unit in Reforma — they track document categories, statuses, due dates, and assigned lawyers. System auto-generates briefNumber; never include it in write payloads.",
+        "fields": {
+          "id": {
+            "description": "System-generated unique identifier. Never include in write payloads.",
+            "validation_rules": "prohibited"
+          },
+          "workspaceId": {
+            "description": "Auto-set by the system. Never include in write payloads.",
+            "validation_rules": "prohibited"
+          },
+          "briefNumber": {
+            "description": "System-generated sequential brief reference number (e.g. BRF-042). Never include in write payloads.",
+            "validation_rules": "prohibited"
+          },
+          "inboundEmailId": {
+            "description": "Internal reference for email-originated briefs. Never include in write payloads.",
+            "validation_rules": "prohibited"
+          },
+          "name": {
+            "description": "Title or subject of the brief (e.g. 'Motion to Strike Defendant's Statement of Defence').",
+            "validation_rules": "required|string|max:255"
+          },
+          "category": {
+            "description": "Legal category of the brief (e.g. 'Litigation', 'Advisory', 'Corporate', 'Conveyancing', 'Employment').",
+            "validation_rules": "required|string|max:100"
+          },
+          "status": {
+            "description": "Current lifecycle status of the brief. Use 'active' for ongoing work, 'closed' for concluded matters, 'archived' for stored briefs, 'inactive' for paused work, 'finalized' for completed deliverables.",
+            "validation_rules": "required|in:active,closed,archived,inactive,finalized"
+          },
+          "clientId": {
+            "description": "ID of the client this brief is for. Link to an existing client record.",
+            "validation_rules": "nullable|string|max:255"
+          },
+          "matterId": {
+            "description": "ID of the matter this brief belongs to, if applicable.",
+            "validation_rules": "nullable|string|max:255"
+          },
+          "lawyerId": {
+            "description": "User ID of the lawyer assigned to handle this brief.",
+            "validation_rules": "nullable|string|max:255"
+          },
+          "lawyerInChargeId": {
+            "description": "User ID of the supervising lawyer responsible for this brief.",
+            "validation_rules": "nullable|string|max:255"
+          },
+          "customBriefNumber": {
+            "description": "Firm-assigned custom reference number for internal tracking.",
             "validation_rules": "nullable|string|max:100"
           },
-          "evidenceUrl": {
-            "description": "URL to supporting evidence or filed document.",
-            "validation_rules": "nullable|string|max:2048"
+          "customTitle": {
+            "description": "Alternative title for the brief if different from the standard name.",
+            "validation_rules": "nullable|string|max:255"
           },
-          "acknowledgedAt": {
-            "description": "Timestamp when the task was marked complete.",
+          "dueDate": {
+            "description": "Target completion or filing date (ISO 8601 format).",
             "validation_rules": "nullable|date"
           },
-          "acknowledgedBy": {
-            "description": "acknowledgedBy",
+          "description": {
+            "description": "Detailed background, instructions, or notes for the brief.",
+            "validation_rules": "nullable|string"
+          },
+          "isLitigationDerived": {
+            "description": "Whether this brief was created from a litigation matter record.",
+            "validation_rules": "nullable|boolean"
+          },
+          "summary": {
+            "description": "AI-generated or manually written summary of the brief.",
+            "validation_rules": "nullable|string"
+          }
+        },
+        "child_relationships": ["Task"]
+      },
+      "CalendarEntry": {
+        "name": "CalendarEntry",
+        "description": "Represents a scheduled event linked to a matter — court hearings, filing deadlines, client meetings, and internal meetings. Use type COURT_DATE for court hearings, FILING_DEADLINE for document submission deadlines, CLIENT_MEETING for client consultations, INTERNAL_MEETING for firm meetings, OTHER for any other events. The 'proceedings' field records what actually happened; 'outcome' records the result or decision.",
+        "fields": {
+          "id": {
+            "description": "System-generated unique identifier. Never include in write payloads.",
+            "validation_rules": "prohibited"
+          },
+          "matterId": {
+            "description": "ID of the matter this calendar event belongs to.",
+            "validation_rules": "nullable|string|max:255"
+          },
+          "clientId": {
+            "description": "ID of the client associated with this event.",
+            "validation_rules": "nullable|string|max:255"
+          },
+          "briefId": {
+            "description": "ID of the brief associated with this event, if applicable.",
+            "validation_rules": "nullable|string|max:255"
+          },
+          "title": {
+            "description": "Short descriptive title of the event (e.g. 'Hearing on Preliminary Objection', 'Client Meeting - Briefing').",
+            "validation_rules": "required|string|max:255"
+          },
+          "date": {
+            "description": "Date and time of the event in ISO 8601 format (e.g. '2026-05-15T09:00:00.000Z').",
+            "validation_rules": "required|date"
+          },
+          "type": {
+            "description": "Type of event. Must be one of: COURT_DATE (court hearings), FILING_DEADLINE (document submission deadlines), CLIENT_MEETING (client consultations), INTERNAL_MEETING (firm meetings), OTHER.",
+            "validation_rules": "nullable|in:COURT_DATE,FILING_DEADLINE,CLIENT_MEETING,INTERNAL_MEETING,OTHER"
+          },
+          "location": {
+            "description": "Physical or virtual location (e.g. 'Court 3, Federal High Court Lagos', 'Zoom Meeting').",
+            "validation_rules": "nullable|string|max:255"
+          },
+          "judge": {
+            "description": "Name of the presiding judge (for court dates only).",
+            "validation_rules": "nullable|string|max:255"
+          },
+          "agenda": {
+            "description": "Agenda or purpose of the meeting or event.",
+            "validation_rules": "nullable|string"
+          },
+          "proceedings": {
+            "description": "What actually transpired during the event (completed after the event).",
+            "validation_rules": "nullable|string"
+          },
+          "outcome": {
+            "description": "Result or decision from the event (e.g. 'Matter adjourned to 15 June 2026', 'Judgment for Claimant').",
+            "validation_rules": "nullable|string"
+          },
+          "adjournedFor": {
+            "description": "Reason the matter was adjourned to the next date (e.g. 'ruling', 'judgment', 'hearing', 'mention').",
+            "validation_rules": "nullable|string"
+          },
+          "externalCounsel": {
+            "description": "Name of any external counsel appearing at this event.",
+            "validation_rules": "nullable|string|max:255"
+          },
+          "submittingLawyerId": {
+            "description": "User ID of the lawyer recording this entry.",
+            "validation_rules": "nullable|string|max:255"
+          },
+          "submittingLawyerToken": {
+            "description": "Token for external submission of this entry.",
+            "validation_rules": "nullable|string|max:255"
+          },
+          "submittingLawyerName": {
+            "description": "Name of the lawyer recording this entry.",
+            "validation_rules": "nullable|string|max:255"
+          },
+          "description": {
+            "description": "Additional details or notes about this event.",
+            "validation_rules": "nullable|string"
+          }
+        },
+        "child_relationships": ["MeetingRecording"]
+      },
+      "Task": {
+        "name": "Task",
+        "description": "Represents an action item or to-do assigned to a lawyer within a workspace, brief, or matter. Use priority 'urgent' for time-sensitive actions, 'high' for important work, 'medium' for normal tasks, 'low' for background work. Tasks can be linked to a matter or brief for context.",
+        "fields": {
+          "id": {
+            "description": "System-generated unique identifier. Never include in write payloads.",
+            "validation_rules": "prohibited"
+          },
+          "workspaceId": {
+            "description": "Auto-set by the system. Never include in write payloads.",
+            "validation_rules": "prohibited"
+          },
+          "title": {
+            "description": "Clear, actionable title of the task (e.g. 'File Motion for Extension by 30 April').",
+            "validation_rules": "required|string|max:255"
+          },
+          "description": {
+            "description": "Detailed instructions, background, or context for the task.",
+            "validation_rules": "nullable|string"
+          },
+          "status": {
+            "description": "Current progress status. Use 'pending' for new tasks, 'in_progress' for active work, 'completed' for done tasks, 'on_hold' for paused tasks.",
+            "validation_rules": "required|in:pending,in_progress,completed,on_hold"
+          },
+          "priority": {
+            "description": "Urgency level. Use 'urgent' for time-critical, 'high' for important, 'medium' for normal, 'low' for background work.",
+            "validation_rules": "required|in:low,medium,high,urgent"
+          },
+          "dueDate": {
+            "description": "Target completion date (ISO 8601 format).",
+            "validation_rules": "nullable|date"
+          },
+          "assignedToId": {
+            "description": "User ID of the lawyer or staff member this task is assigned to.",
+            "validation_rules": "nullable|string|max:255"
+          },
+          "assignedById": {
+            "description": "User ID of the person who created or assigned this task.",
+            "validation_rules": "nullable|string|max:255"
+          },
+          "matterId": {
+            "description": "ID of the matter this task relates to, if applicable.",
+            "validation_rules": "nullable|string|max:255"
+          },
+          "briefId": {
+            "description": "ID of the brief this task belongs to, if applicable.",
+            "validation_rules": "nullable|string|max:255"
+          },
+          "completedAt": {
+            "description": "Timestamp when the task was marked completed.",
+            "validation_rules": "nullable|date"
+          },
+          "requirements": {
+            "description": "List of sub-requirements or checklist items for this task (JSON array of strings).",
+            "validation_rules": "nullable|array"
+          }
+        },
+        "child_relationships": []
+      },
+      "Invoice": {
+        "name": "Invoice",
+        "description": "Represents a billing invoice issued to a client for legal services rendered. IMPORTANT: Invoices should only be created by authorised users (Admin or Managing Partner role). All monetary amounts are in KOBO (multiply naira by 100). The system auto-generates invoiceNumber — never include it in write payloads. Link invoices to a client and, where possible, to a specific matter.",
+        "fields": {
+          "id": {
+            "description": "System-generated unique identifier. Never include in write payloads.",
+            "validation_rules": "prohibited"
+          },
+          "invoiceNumber": {
+            "description": "System-generated sequential invoice reference (e.g. INV-2026-042). Never include in write payloads.",
+            "validation_rules": "prohibited"
+          },
+          "clientId": {
+            "description": "ID of the client being billed. Must match an existing client record.",
+            "validation_rules": "nullable|string|max:255"
+          },
+          "matterId": {
+            "description": "ID of the matter this invoice relates to, if applicable.",
+            "validation_rules": "nullable|string|max:255"
+          },
+          "billToName": {
+            "description": "Full name of the entity or person being billed (may differ from client name).",
+            "validation_rules": "required|string|max:255"
+          },
+          "billToAddress": {
+            "description": "Billing address for the invoice.",
+            "validation_rules": "nullable|string"
+          },
+          "billToCity": {
+            "description": "City for the billing address.",
+            "validation_rules": "nullable|string|max:255"
+          },
+          "billToState": {
+            "description": "State or region for the billing address.",
+            "validation_rules": "nullable|string|max:255"
+          },
+          "attentionTo": {
+            "description": "Specific person within the client organisation to address the invoice to.",
+            "validation_rules": "nullable|string|max:255"
+          },
+          "date": {
+            "description": "Invoice issue date (ISO 8601 format). Defaults to today if not specified.",
+            "validation_rules": "nullable|date"
+          },
+          "dueDate": {
+            "description": "Payment due date (ISO 8601 format).",
+            "validation_rules": "nullable|date"
+          },
+          "status": {
+            "description": "Payment status. Use 'pending' for unpaid, 'paid' for fully settled, 'overdue' for past-due, 'cancelled' for void invoices.",
+            "validation_rules": "required|in:pending,paid,overdue,cancelled"
+          },
+          "subtotal": {
+            "description": "Pre-tax total in kobo (₦1 = 100 kobo). Example: ₦500,000 = 50000000.",
+            "validation_rules": "nullable|integer|min:0"
+          },
+          "vatRate": {
+            "description": "VAT rate as a percentage (e.g. 7.5 for 7.5% VAT).",
+            "validation_rules": "nullable|numeric|min:0"
+          },
+          "vatAmount": {
+            "description": "Calculated VAT amount in kobo.",
+            "validation_rules": "nullable|integer|min:0"
+          },
+          "securityChargeRate": {
+            "description": "Security charge rate as a percentage, if applicable.",
+            "validation_rules": "nullable|numeric|min:0"
+          },
+          "securityChargeAmount": {
+            "description": "Calculated security charge amount in kobo.",
+            "validation_rules": "nullable|integer|min:0"
+          },
+          "totalAmount": {
+            "description": "Grand total payable in kobo (subtotal + VAT + security charge). Example: ₦537,500 = 53750000.",
+            "validation_rules": "nullable|integer|min:0"
+          },
+          "notes": {
+            "description": "Additional payment instructions or notes to the client.",
+            "validation_rules": "nullable|string"
+          },
+          "followUpSent": {
+            "description": "Whether a payment follow-up notification has been sent for this invoice.",
+            "validation_rules": "nullable|boolean"
+          }
+        },
+        "child_relationships": ["InvoiceItem", "Payment"]
+      },
+      "Payment": {
+        "name": "Payment",
+        "description": "Records a financial transaction received from a client, usually in settlement of an invoice. IMPORTANT: Payment recording is a restricted action requiring Finance or Admin clearance. All amounts are in KOBO (multiply naira by 100). Always link the payment to the relevant client and invoice where possible.",
+        "fields": {
+          "id": {
+            "description": "System-generated unique identifier. Never include in write payloads.",
+            "validation_rules": "prohibited"
+          },
+          "clientId": {
+            "description": "ID of the client making the payment.",
+            "validation_rules": "nullable|string|max:255"
+          },
+          "invoiceId": {
+            "description": "ID of the invoice being settled by this payment, if applicable.",
+            "validation_rules": "nullable|string|max:255"
+          },
+          "amount": {
+            "description": "Amount received in kobo (₦1 = 100 kobo). Example: ₦50,000 = 5000000.",
+            "validation_rules": "required|integer|min:1"
+          },
+          "date": {
+            "description": "Date the payment was received (ISO 8601 format).",
+            "validation_rules": "nullable|date"
+          },
+          "method": {
+            "description": "Payment method used (e.g. 'Bank Transfer', 'Cash', 'Cheque', 'POS', 'Online').",
+            "validation_rules": "required|string|max:100"
+          },
+          "reference": {
+            "description": "Bank transaction reference, receipt number, or any other identifying reference for this payment.",
             "validation_rules": "nullable|string|max:255"
           }
         },
@@ -292,49 +512,139 @@
       },
       "Expense": {
         "name": "Expense",
-        "description": "Represents an operational or overhead expense incurred by the firm.",
+        "description": "Records an operational or overhead expense incurred by the firm. All amounts are in KOBO (multiply naira by 100). Use the correct category to ensure accurate expense reporting. Common categories: OFFICE_UTILITIES (electricity, water), OFFICE_EQUIPMENT_MAINTENANCE, COURT_LITIGATION (filing fees, court costs), NON_LITIGATION_ADVISORY, COMMUNICATION_SUBSCRIPTIONS, STAFF_COSTS (salaries, allowances), VEHICLE_LOGISTICS (fuel, maintenance), MISCELLANEOUS.",
         "fields": {
           "id": {
-            "description": "id",
+            "description": "System-generated unique identifier. Never include in write payloads.",
             "validation_rules": "prohibited"
           },
           "workspaceId": {
-            "description": "workspaceId",
+            "description": "Auto-set by the system. Never include in write payloads.",
             "validation_rules": "prohibited"
           },
           "amount": {
-            "description": "Expense amount in kobo.",
-            "validation_rules": "required|numeric|min:0"
+            "description": "Expense amount in kobo (₦1 = 100 kobo). Example: ₦25,000 = 2500000. Must be a whole number (integer).",
+            "validation_rules": "required|integer|min:1"
           },
           "description": {
-            "description": "What the expense was for.",
+            "description": "Clear description of what the expense was for (e.g. 'NEPA bill for November', 'Fuel for court run').",
             "validation_rules": "nullable|string"
           },
           "date": {
-            "description": "Date the expense was incurred.",
+            "description": "Date the expense was incurred (ISO 8601 format).",
             "validation_rules": "nullable|date"
           },
           "reference": {
-            "description": "Receipt number or external reference.",
+            "description": "Receipt number, invoice number, or any other external reference.",
             "validation_rules": "nullable|string|max:255"
           },
           "category": {
-            "description": "Expense category (e.g. OFFICE_UTILITIES, COURT_LITIGATION, STAFF_COSTS).",
+            "description": "Expense category. Must be exactly one of: OFFICE_UTILITIES, OFFICE_EQUIPMENT_MAINTENANCE, COURT_LITIGATION, NON_LITIGATION_ADVISORY, COMMUNICATION_SUBSCRIPTIONS, STAFF_COSTS, VEHICLE_LOGISTICS, MISCELLANEOUS.",
             "validation_rules": "required|in:OFFICE_UTILITIES,OFFICE_EQUIPMENT_MAINTENANCE,COURT_LITIGATION,NON_LITIGATION_ADVISORY,COMMUNICATION_SUBSCRIPTIONS,STAFF_COSTS,VEHICLE_LOGISTICS,MISCELLANEOUS"
+          }
+        },
+        "child_relationships": []
+      },
+      "ComplianceTask": {
+        "name": "ComplianceTask",
+        "description": "Tracks a regulatory compliance obligation for the firm — such as annual filings with the NBA, CAC returns, FIRS tax submissions, or SCUML requirements. Status moves from 'pending' to 'acknowledged' once the obligation is fulfilled. Evidence URLs should point to filed documents or receipts.",
+        "fields": {
+          "id": {
+            "description": "System-generated unique identifier. Never include in write payloads.",
+            "validation_rules": "prohibited"
+          },
+          "workspaceId": {
+            "description": "Auto-set by the system. Never include in write payloads.",
+            "validation_rules": "prohibited"
+          },
+          "obligationId": {
+            "description": "ID of the regulatory obligation this task fulfils.",
+            "validation_rules": "nullable|string|max:255"
+          },
+          "status": {
+            "description": "Completion status. Use 'pending' for outstanding obligations, 'acknowledged' for completed ones, 'overdue' for past-deadline items.",
+            "validation_rules": "required|in:pending,acknowledged,overdue"
+          },
+          "period": {
+            "description": "The compliance reporting period (e.g. 'Q1 2026', 'Annual 2025', 'FY2024-2025').",
+            "validation_rules": "nullable|string|max:100"
+          },
+          "dueDate": {
+            "description": "Deadline by which the compliance obligation must be fulfilled.",
+            "validation_rules": "nullable|date"
+          },
+          "evidenceUrl": {
+            "description": "URL to the filed document, certificate, or receipt confirming compliance.",
+            "validation_rules": "nullable|string|max:2048"
+          },
+          "acknowledgedAt": {
+            "description": "Date and time when the obligation was marked as fulfilled.",
+            "validation_rules": "nullable|date"
+          },
+          "acknowledgedBy": {
+            "description": "Name or ID of the person who acknowledged the compliance task.",
+            "validation_rules": "nullable|string|max:255"
+          }
+        },
+        "child_relationships": []
+      },
+      "MeetingRecording": {
+        "name": "MeetingRecording",
+        "description": "Stores an AI-generated or manually written summary, action items, and transcript for a recorded meeting or court session. Linked to a CalendarEntry and/or Matter. Always provide a summary; action items and transcript are optional.",
+        "fields": {
+          "id": {
+            "description": "System-generated unique identifier. Never include in write payloads.",
+            "validation_rules": "prohibited"
+          },
+          "calendarEntryId": {
+            "description": "ID of the calendar event this recording belongs to.",
+            "validation_rules": "nullable|string|max:255"
+          },
+          "matterId": {
+            "description": "ID of the matter this recording is associated with.",
+            "validation_rules": "nullable|string|max:255"
+          },
+          "summary": {
+            "description": "Summary of what was discussed or decided in the meeting or court session.",
+            "validation_rules": "required|string"
+          },
+          "actionItems": {
+            "description": "Follow-up actions or next steps identified from the meeting.",
+            "validation_rules": "nullable|string"
+          },
+          "date": {
+            "description": "Date the meeting or session took place (ISO 8601 format).",
+            "validation_rules": "nullable|date"
+          },
+          "followUpDate": {
+            "description": "Date by which the identified action items should be completed.",
+            "validation_rules": "nullable|date"
+          },
+          "participants": {
+            "description": "List of participant names (JSON array of strings).",
+            "validation_rules": "nullable|array"
+          },
+          "transcriptText": {
+            "description": "Full or partial transcript of the meeting or session.",
+            "validation_rules": "nullable|string"
+          },
+          "audioDuration": {
+            "description": "Duration of the audio recording in seconds.",
+            "validation_rules": "nullable|integer|min:0"
           }
         },
         "child_relationships": []
       },
       "Invitation": {
         "name": "Invitation",
-        "description": "Represents an invitation sent to a person to join a workspace with a specific role.",
+        "description": "Represents an invitation sent to someone to join the workspace with a specific role. READ-ONLY — Bica cannot create or modify invitations. Use this only to look up existing invitation status.",
         "fields": {
           "id": {
-            "description": "id",
+            "description": "System-generated unique identifier.",
             "validation_rules": "prohibited"
           },
           "workspaceId": {
-            "description": "workspaceId",
+            "description": "Auto-set by the system.",
             "validation_rules": "prohibited"
           },
           "email": {
@@ -342,16 +652,8 @@
             "validation_rules": "required|email|max:255"
           },
           "role": {
-            "description": "The role being granted (e.g. admin, member).",
+            "description": "The role being granted to the invitee (e.g. admin, member, associate).",
             "validation_rules": "required|string|max:100"
-          },
-          "tokenHash": {
-            "description": "tokenHash",
-            "validation_rules": "prohibited"
-          },
-          "invitedBy": {
-            "description": "invitedBy",
-            "validation_rules": "nullable|string|max:255"
           },
           "status": {
             "description": "Current state of the invitation.",
@@ -360,544 +662,131 @@
           "expiresAt": {
             "description": "Date the invitation link expires.",
             "validation_rules": "nullable|date"
-          },
-          "acceptedAt": {
-            "description": "acceptedAt",
-            "validation_rules": "nullable|date"
-          },
-          "revokedAt": {
-            "description": "revokedAt",
-            "validation_rules": "nullable|date"
-          },
-          "ipAddress": {
-            "description": "ipAddress",
-            "validation_rules": "nullable|string|max:255"
-          },
-          "userAgent": {
-            "description": "userAgent",
-            "validation_rules": "nullable|string|max:1000"
-          }
-        },
-        "child_relationships": []
-      },
-      "Invoice": {
-        "name": "Invoice",
-        "description": "Represents a billing invoice issued to a client for legal services rendered.",
-        "fields": {
-          "id": {
-            "description": "id",
-            "validation_rules": "prohibited"
-          },
-          "invoiceNumber": {
-            "description": "Unique invoice reference number.",
-            "validation_rules": "prohibited"
-          },
-          "clientId": {
-            "description": "clientId",
-            "validation_rules": "nullable|string|max:255"
-          },
-          "matterId": {
-            "description": "matterId",
-            "validation_rules": "nullable|string|max:255"
-          },
-          "billToName": {
-            "description": "Name of the billed party.",
-            "validation_rules": "required|string|max:255"
-          },
-          "billToAddress": {
-            "description": "Billing address.",
-            "validation_rules": "nullable|string"
-          },
-          "billToCity": {
-            "description": "billToCity",
-            "validation_rules": "nullable|string|max:255"
-          },
-          "billToState": {
-            "description": "billToState",
-            "validation_rules": "nullable|string|max:255"
-          },
-          "attentionTo": {
-            "description": "attentionTo",
-            "validation_rules": "nullable|string|max:255"
-          },
-          "date": {
-            "description": "Invoice issue date.",
-            "validation_rules": "nullable|date"
-          },
-          "dueDate": {
-            "description": "Payment due date.",
-            "validation_rules": "nullable|date"
-          },
-          "status": {
-            "description": "Payment status of the invoice.",
-            "validation_rules": "required|in:pending,paid,overdue,cancelled"
-          },
-          "notes": {
-            "description": "Additional notes or payment instructions.",
-            "validation_rules": "nullable|string"
-          },
-          "subtotal": {
-            "description": "Pre-tax total in kobo.",
-            "validation_rules": "nullable|numeric|min:0"
-          },
-          "vatRate": {
-            "description": "vatRate",
-            "validation_rules": "nullable|numeric|min:0"
-          },
-          "vatAmount": {
-            "description": "VAT component in kobo.",
-            "validation_rules": "nullable|numeric|min:0"
-          },
-          "securityChargeRate": {
-            "description": "securityChargeRate",
-            "validation_rules": "nullable|numeric|min:0"
-          },
-          "securityChargeAmount": {
-            "description": "securityChargeAmount in kobo.",
-            "validation_rules": "nullable|numeric|min:0"
-          },
-          "totalAmount": {
-            "description": "Grand total payable in kobo.",
-            "validation_rules": "nullable|numeric|min:0"
-          },
-          "followUpSent": {
-            "description": "followUpSent",
-            "validation_rules": "nullable|boolean"
-          }
-        },
-        "child_relationships": [
-          "InvoiceItem",
-          "Payment"
-        ]
-      },
-      "Matter": {
-        "name": "Matter",
-        "description": "Represents a specific legal case or matter.",
-        "fields": {
-          "id": {
-            "description": "id",
-            "validation_rules": "prohibited"
-          },
-          "caseNumber": {
-            "description": "Official court reference number.",
-            "validation_rules": "nullable|string|max:255"
-          },
-          "name": {
-            "description": "Internal name of the matter.",
-            "validation_rules": "required|string|max:255"
-          },
-          "clientId": {
-            "description": "clientId",
-            "validation_rules": "nullable|string"
-          },
-          "clientNameRaw": {
-            "description": "clientNameRaw",
-            "validation_rules": "nullable|string|max:255"
-          },
-          "workspaceId": {
-            "description": "workspaceId",
-            "validation_rules": "prohibited"
-          },
-          "court": {
-            "description": "Presiding court jurisdiction.",
-            "validation_rules": "nullable|string|max:255"
-          },
-          "judge": {
-            "description": "Presiding judge.",
-            "validation_rules": "nullable|string|max:255"
-          },
-          "opponentName": {
-            "description": "Opposing party.",
-            "validation_rules": "nullable|string|max:255"
-          },
-          "opponentCounsel": {
-            "description": "Counsel representing the opponent.",
-            "validation_rules": "nullable|string|max:255"
-          },
-          "status": {
-            "description": "Current status of the case.",
-            "validation_rules": "required|in:active,closed,pending"
-          },
-          "nextCourtDate": {
-            "description": "Next hearing or court date.",
-            "validation_rules": "nullable|date"
-          },
-          "lastActivityAt": {
-            "description": "lastActivityAt",
-            "validation_rules": "nullable|date"
-          },
-          "lastClientContact": {
-            "description": "lastClientContact",
-            "validation_rules": "nullable|date"
-          },
-          "submittingLawyerId": {
-            "description": "submittingLawyerId",
-            "validation_rules": "nullable|string|max:255"
-          },
-          "submittingLawyerToken": {
-            "description": "submittingLawyerToken",
-            "validation_rules": "nullable|string|max:255"
-          },
-          "submittingLawyerName": {
-            "description": "submittingLawyerName",
-            "validation_rules": "nullable|string|max:255"
-          },
-          "lawyerInChargeId": {
-            "description": "lawyerInChargeId",
-            "validation_rules": "nullable|string|max:255"
-          }
-        },
-        "child_relationships": [
-          "Brief",
-          "CalendarEntry",
-          "Task",
-          "MeetingRecording",
-          "Invoice"
-        ]
-      },
-      "MeetingRecording": {
-        "name": "MeetingRecording",
-        "description": "Represents an AI-generated summary and action items from a recorded meeting or court session linked to a matter.",
-        "fields": {
-          "id": {
-            "description": "id",
-            "validation_rules": "prohibited"
-          },
-          "calendarEntryId": {
-            "description": "calendarEntryId",
-            "validation_rules": "nullable|string|max:255"
-          },
-          "matterId": {
-            "description": "matterId",
-            "validation_rules": "nullable|string|max:255"
-          },
-          "summary": {
-            "description": "AI-generated or manually written summary of the meeting.",
-            "validation_rules": "required|string"
-          },
-          "actionItems": {
-            "description": "Follow-up actions identified from the meeting.",
-            "validation_rules": "nullable|string"
-          },
-          "date": {
-            "description": "Date the meeting or session took place.",
-            "validation_rules": "nullable|date"
-          },
-          "followUpDate": {
-            "description": "Date by which follow-up actions should be completed.",
-            "validation_rules": "nullable|date"
-          },
-          "participants": {
-            "description": "JSON list of participant names or identifiers.",
-            "validation_rules": "nullable|array"
-          },
-          "audioUrl": {
-            "description": "audioUrl",
-            "validation_rules": "nullable|string|max:2048"
-          },
-          "transcriptText": {
-            "description": "transcriptText",
-            "validation_rules": "nullable|string"
-          },
-          "audioDuration": {
-            "description": "Duration of the audio recording in seconds.",
-            "validation_rules": "nullable|integer|min:0"
-          },
-          "createdById": {
-            "description": "createdById",
-            "validation_rules": "nullable|string|max:255"
-          },
-          "complianceTaskId": {
-            "description": "complianceTaskId",
-            "validation_rules": "nullable|string|max:255"
-          }
-        },
-        "child_relationships": []
-      },
-      "Payment": {
-        "name": "Payment",
-        "description": "Represents a payment received from a client against an invoice or retainer.",
-        "fields": {
-          "id": {
-            "description": "id",
-            "validation_rules": "prohibited"
-          },
-          "clientId": {
-            "description": "clientId",
-            "validation_rules": "nullable|string|max:255"
-          },
-          "invoiceId": {
-            "description": "invoiceId",
-            "validation_rules": "nullable|string|max:255"
-          },
-          "amount": {
-            "description": "Amount paid in kobo.",
-            "validation_rules": "required|numeric|min:0"
-          },
-          "date": {
-            "description": "Date the payment was received.",
-            "validation_rules": "nullable|date"
-          },
-          "method": {
-            "description": "Payment method (e.g. bank transfer, cash, cheque).",
-            "validation_rules": "required|string|max:100"
-          },
-          "reference": {
-            "description": "Bank reference or transaction ID.",
-            "validation_rules": "nullable|string|max:255"
-          }
-        },
-        "child_relationships": []
-      },
-      "Task": {
-        "name": "Task",
-        "description": "Represents a general task or action item within a workspace.",
-        "fields": {
-          "id": {
-            "description": "id",
-            "validation_rules": "prohibited"
-          },
-          "title": {
-            "description": "The task title.",
-            "validation_rules": "required|string|max:255"
-          },
-          "description": {
-            "description": "Detailed task instructions.",
-            "validation_rules": "nullable|string"
-          },
-          "assignedToId": {
-            "description": "assignedToId",
-            "validation_rules": "nullable|string|max:255"
-          },
-          "assignedById": {
-            "description": "assignedById",
-            "validation_rules": "nullable|string|max:255"
-          },
-          "workspaceId": {
-            "description": "workspaceId",
-            "validation_rules": "prohibited"
-          },
-          "matterId": {
-            "description": "matterId",
-            "validation_rules": "nullable|string|max:255"
-          },
-          "briefId": {
-            "description": "briefId",
-            "validation_rules": "nullable|string|max:255"
-          },
-          "status": {
-            "description": "Current status of the task.",
-            "validation_rules": "required|in:pending,in_progress,completed,on_hold"
-          },
-          "priority": {
-            "description": "Urgency level.",
-            "validation_rules": "required|in:low,medium,high,urgent"
-          },
-          "dueDate": {
-            "description": "Target completion date.",
-            "validation_rules": "nullable|date"
-          },
-          "completedAt": {
-            "description": "completedAt",
-            "validation_rules": "nullable|date"
-          },
-          "source": {
-            "description": "source",
-            "validation_rules": "nullable|string|max:100"
-          },
-          "sourceEmail": {
-            "description": "sourceEmail",
-            "validation_rules": "nullable|email|max:255"
-          },
-          "emailSubject": {
-            "description": "emailSubject",
-            "validation_rules": "nullable|string|max:255"
-          },
-          "emailBody": {
-            "description": "emailBody",
-            "validation_rules": "nullable|string"
-          },
-          "aiConfidence": {
-            "description": "aiConfidence",
-            "validation_rules": "nullable|integer|min:0|max:100"
-          },
-          "requirements": {
-            "description": "requirements",
-            "validation_rules": "nullable|array"
-          },
-          "attachments": {
-            "description": "attachments",
-            "validation_rules": "nullable|array"
           }
         },
         "child_relationships": []
       },
       "User": {
         "name": "User",
-        "description": "Represents a Reforma user who can act within a workspace.",
+        "description": "Represents a Reforma user who can act within a workspace. Use this to look up team members, find lawyer IDs for assignments, or view profile information. IMPORTANT: Never read or write password, mfaSecret, or any security credentials.",
         "fields": {
           "id": {
-            "description": "id",
+            "description": "System-generated unique identifier. Never include in write payloads.",
             "validation_rules": "prohibited"
           },
           "name": {
-            "description": "Display name of the user.",
+            "description": "Display name of the user (their full name as it appears in the system).",
             "validation_rules": "nullable|string|max:255"
           },
           "email": {
-            "description": "Primary email address.",
+            "description": "Primary email address for the user.",
             "validation_rules": "required|email|max:255"
           },
-          "password": {
-            "description": "password",
-            "validation_rules": "nullable|string|max:255"
-          },
           "phone": {
-            "description": "phone",
+            "description": "Contact phone number.",
             "validation_rules": "nullable|string|max:30"
           },
           "image": {
-            "description": "image",
+            "description": "URL to the user's profile photo.",
             "validation_rules": "nullable|string|max:2048"
           },
           "jobTitle": {
-            "description": "jobTitle",
+            "description": "Job title or role description (e.g. 'Senior Associate', 'Managing Partner').",
             "validation_rules": "nullable|string|max:255"
-          },
-          "lawyerToken": {
-            "description": "lawyerToken",
-            "validation_rules": "nullable|string|max:255"
-          },
-          "isPlatformAdmin": {
-            "description": "isPlatformAdmin",
-            "validation_rules": "nullable|boolean"
           },
           "mfaEnabled": {
-            "description": "mfaEnabled",
+            "description": "Whether the user has two-factor authentication enabled.",
             "validation_rules": "nullable|boolean"
-          },
-          "mfaSecret": {
-            "description": "mfaSecret",
-            "validation_rules": "nullable|string|max:255"
           }
         },
         "child_relationships": []
       },
       "Workspace": {
         "name": "Workspace",
-        "description": "Represents a workspace or firm root that owns operational records.",
+        "description": "Represents the firm's workspace root — the top-level container for all operational data. Use this to read firm-level settings or look up the workspace. Most creation of child records (clients, matters, briefs, etc.) uses the workspace as the parent.",
         "fields": {
           "id": {
-            "description": "id",
+            "description": "System-generated unique identifier.",
+            "validation_rules": "prohibited"
+          },
+          "ownerId": {
+            "description": "Auto-set by the system. The user ID of the workspace owner.",
             "validation_rules": "prohibited"
           },
           "name": {
-            "description": "Display name of the workspace.",
+            "description": "Display name of the workspace / firm (e.g. 'Abiola Sanni & Co.').",
             "validation_rules": "required|string|max:255"
           },
           "slug": {
-            "description": "Unique URL-safe workspace slug.",
+            "description": "URL-safe unique identifier for the workspace.",
             "validation_rules": "nullable|string|max:255"
-          },
-          "ownerId": {
-            "description": "ownerId",
-            "validation_rules": "required|string"
           },
           "plan": {
-            "description": "plan",
+            "description": "Current subscription plan (e.g. 'basic', 'pro', 'enterprise').",
             "validation_rules": "nullable|string|max:50"
           },
-          "firmCode": {
-            "description": "firmCode",
-            "validation_rules": "nullable|string|max:255"
-          },
-          "joinPassword": {
-            "description": "joinPassword",
-            "validation_rules": "nullable|string|max:255"
-          },
-          "letterheadUrl": {
-            "description": "letterheadUrl",
-            "validation_rules": "nullable|string|max:2048"
-          },
-          "revenuePin": {
-            "description": "revenuePin",
-            "validation_rules": "nullable|string|max:255"
-          },
-          "inviteLinkToken": {
-            "description": "inviteLinkToken",
-            "validation_rules": "nullable|string|max:255"
-          },
-          "litigationPin": {
-            "description": "litigationPin",
-            "validation_rules": "nullable|string|max:255"
-          },
-          "adminCode": {
-            "description": "adminCode",
-            "validation_rules": "nullable|string|max:255"
-          },
           "accentColor": {
-            "description": "accentColor",
+            "description": "Brand accent color in hex (e.g. '#3182ce').",
             "validation_rules": "nullable|string|max:20"
           },
           "brandColor": {
-            "description": "brandColor",
+            "description": "Primary brand color in hex (e.g. '#121826').",
             "validation_rules": "nullable|string|max:20"
-          },
-          "secondaryColor": {
-            "description": "secondaryColor",
-            "validation_rules": "nullable|string|max:20"
-          },
-          "brandingCompleted": {
-            "description": "brandingCompleted",
-            "validation_rules": "nullable|boolean"
           }
         },
-        "child_relationships": [
-          "clients",
-          "matters",
-          "tasks",
-          "briefs",
-          "expenses",
-          "invitations",
-          "complianceTasks"
-        ]
+        "child_relationships": ["clients", "matters", "tasks", "briefs", "expenses", "invitations", "complianceTasks"]
       }
     },
     "model_parentage_map": {
-      "Brief": [
-        "Task"
-      ],
-      "CalendarEntry": [
-        "MeetingRecording"
-      ],
-      "Client": [
-        "Matter",
-        "Brief",
-        "Invoice",
-        "Payment"
-      ],
-      "Invoice": [
-        "InvoiceItem",
-        "Payment"
-      ],
-      "Matter": [
-        "Brief",
-        "CalendarEntry",
-        "Task",
-        "MeetingRecording",
-        "Invoice"
-      ],
-      "Workspace": [
-        "clients",
-        "matters",
-        "tasks",
-        "briefs",
-        "expenses",
-        "invitations",
-        "complianceTasks"
-      ]
+      "Brief": ["Task"],
+      "CalendarEntry": ["MeetingRecording"],
+      "Client": ["Matter", "Brief", "Invoice", "Payment"],
+      "Invoice": ["InvoiceItem", "Payment"],
+      "Matter": ["Brief", "CalendarEntry", "Task", "MeetingRecording", "Invoice"],
+      "Workspace": ["clients", "matters", "tasks", "briefs", "expenses", "invitations", "complianceTasks"]
     },
-    "protocols": {}
+    "protocols": {
+      "create_client": {
+        "description": "Before creating a client, always search for an existing one first to prevent duplicates.",
+        "steps": [
+          "Run direct_lookup on Client with the client's name as queryText.",
+          "If a match is found with confidence > 0.8, show it to the user and ask if this is the correct client.",
+          "Only proceed with creation if the user confirms no match exists."
+        ]
+      },
+      "create_brief": {
+        "description": "When creating a brief, identify the client and matter first.",
+        "steps": [
+          "Use direct_lookup to find the client by name.",
+          "If a matter is mentioned, use direct_lookup on Matter to find it.",
+          "Create the brief using write with parentEntityType 'workspace' and include clientId and matterId in the definition."
+        ]
+      },
+      "record_payment": {
+        "description": "When recording a payment, link it to the correct invoice.",
+        "steps": [
+          "Use direct_lookup on Invoice with the client name or invoice number to find the outstanding invoice.",
+          "Create the payment using write with parentEntityType 'invoice' and parentEntityId set to the found invoice's ID.",
+          "All amounts must be in kobo."
+        ]
+      },
+      "find_upcoming_court_dates": {
+        "description": "To find upcoming court dates, query CalendarEntry with a date filter.",
+        "steps": [
+          "Use lookup on CalendarEntry with $whereAll [['type', '=', 'COURT_DATE'], ['date', 'date>', 'TODAY']] and $orderBy [['date', 'asc']].",
+          "Include matter details using $with if the user wants context on each hearing."
+        ]
+      },
+      "aggregate_financials": {
+        "description": "For financial totals, sums, or counts, always use the insight operation with SQL.",
+        "steps": [
+          "Use operation_type 'insight' with a SELECT SQL query.",
+          "Use {{EntityName}} table templates (e.g. {{Invoice}}, {{Expense}}, {{Payment}}).",
+          "All monetary amounts returned will be in kobo — divide by 100 to display in naira.",
+          "Example: SELECT SUM(amount) AS total FROM {{Expense}} WHERE date >= '2026-01-01'"
+        ]
+      }
+    }
   },
   "endpoints": {
     "base_url": "https://reforma.ng/api",
