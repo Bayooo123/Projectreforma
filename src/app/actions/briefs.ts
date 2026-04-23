@@ -307,14 +307,24 @@ export async function updateBrief(
             return { success: false, error: 'Brief not found' };
         }
 
-        const membership = await prisma.workspaceMember.findFirst({
-            where: {
-                userId: session.id,
-                workspaceId: existingBrief.workspaceId
-            }
-        });
+        // Sanitize empty-string FKs — Prisma throws on FK violation with empty string
+        if (data.clientId === '') data.clientId = undefined;
+        if (data.lawyerInChargeId === '') data.lawyerInChargeId = undefined;
+        if (data.lawyerId === '') data.lawyerId = undefined;
 
-        if (!membership) {
+        const [membership, workspace] = await Promise.all([
+            prisma.workspaceMember.findFirst({
+                where: { userId: session.id, workspaceId: existingBrief.workspaceId }
+            }),
+            prisma.workspace.findUnique({
+                where: { id: existingBrief.workspaceId },
+                select: { ownerId: true }
+            })
+        ]);
+
+        const isWorkspaceOwner = workspace?.ownerId === session.id;
+
+        if (!membership && !isWorkspaceOwner) {
             return { success: false, error: 'Not a member of this workspace' };
         }
 
@@ -328,7 +338,7 @@ export async function updateBrief(
         });
         const isReformaSuperAdmin = dbUser?.isPlatformAdmin === true;
 
-        if (data.lawyerInChargeId && !isReformaSuperAdmin && !session.isWorkspaceOwner && !canEditLawyerInCharge(membership.role)) {
+        if (data.lawyerInChargeId && !isReformaSuperAdmin && !isWorkspaceOwner && !canEditLawyerInCharge(membership?.role ?? '')) {
             return {
                 success: false,
                 error: 'Only Principal Partners, Partners, and Head of Chambers can change Lawyer in Charge'
@@ -336,7 +346,7 @@ export async function updateBrief(
         }
 
         // RBAC Check for Brief Number
-        if (data.customBriefNumber && !isReformaSuperAdmin && !session.isWorkspaceOwner && !BriefPermissions.canEditBriefNumber(membership.role)) {
+        if (data.customBriefNumber && !isReformaSuperAdmin && !isWorkspaceOwner && !BriefPermissions.canEditBriefNumber(membership?.role ?? '')) {
             return {
                 success: false,
                 error: 'Only senior roles can edit brief numbers'
