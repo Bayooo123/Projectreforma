@@ -166,20 +166,22 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
                         return authUser;
                     }
 
-                    // Login without firmCode - use first workspace
-                    const firstMembership = user.workspaces[0];
+                    // Login without firmCode - prefer owned workspace, fall back to first membership
+                    const ownedWorkspaceId = user.ownedWorkspaces[0]?.id;
+                    const preferredMembership = ownedWorkspaceId
+                        ? (user.workspaces.find(ws => ws.workspaceId === ownedWorkspaceId) ?? user.workspaces[0])
+                        : user.workspaces[0];
+                    const resolvedWorkspaceId = preferredMembership?.workspaceId || ownedWorkspaceId || '';
                     const authUser: User = {
                         id: user.id,
                         email: user.email,
                         name: user.name,
-                        role: ((firstMembership?.role || 'Associate') as RoleType),
-                        workspaceId: firstMembership?.workspaceId || '',
+                        role: ((preferredMembership?.role || 'Associate') as RoleType),
+                        workspaceId: resolvedWorkspaceId,
                         lawyerToken: user.lawyerToken || '',
                         isPlatformAdmin: user.isPlatformAdmin,
-                        isWorkspaceOwner: firstMembership 
-                            ? user.ownedWorkspaces.some(w => w.id === firstMembership.workspaceId)
-                            : false,
-                        permissions: getPermissionsForRole(firstMembership?.role || 'Associate'),
+                        isWorkspaceOwner: !!ownedWorkspaceId && resolvedWorkspaceId === ownedWorkspaceId,
+                        permissions: getPermissionsForRole(preferredMembership?.role || 'Associate'),
                     };
                     return authUser;
                 }

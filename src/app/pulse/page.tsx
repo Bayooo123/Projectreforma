@@ -28,7 +28,7 @@ export default async function PulsePage() {
         getPulseFeedUser(workspaceId),
     ]);
 
-    const attentionCount = firmFeed.filter(i => i.severity === 'urgent').length;
+    const attentionCount = (firmFeed ?? []).filter(i => i.severity === 'urgent').length;
 
     return (
         <PulseClient
