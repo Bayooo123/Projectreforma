@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { prisma } from '@/lib/prisma';
 import { requireAuth } from '@/lib/auth-utils';
 import { createNotification } from '@/app/actions/notifications';
+import { scheduleCourtReminders } from '@/lib/courtReminders';
 
 async function assertWorkspaceMembership(workspaceId: string) {
     const user = await requireAuth();
@@ -59,16 +60,19 @@ export async function createMatter(input: {
         });
 
         if (input.nextCourtDate) {
-            await prisma.calendarEntry.create({
-                data: {
-                    matterId: matter.id,
-                    date: input.nextCourtDate,
-                    type: 'COURT',
-                    title: 'Initial Court Date',
-                    court: input.court || null,
-                    judge: input.judge || null,
-                    submittingLawyerId: input.userId,
-                },
+            await prisma.$transaction(async tx => {
+                const entry = await tx.calendarEntry.create({
+                    data: {
+                        matterId: matter.id,
+                        date: input.nextCourtDate!,
+                        type: 'COURT',
+                        title: 'Initial Court Date',
+                        court: input.court || null,
+                        judge: input.judge || null,
+                        submittingLawyerId: input.userId,
+                    },
+                });
+                await scheduleCourtReminders(tx, entry.id, input.nextCourtDate!, matter.id, [input.userId]);
             });
         }
 
@@ -153,7 +157,12 @@ export async function adjournMatter(
 
         const matter = await prisma.matter.findUnique({
             where: { id: matterId },
-            select: { name: true, workspaceId: true },
+            select: {
+                name: true,
+                workspaceId: true,
+                lawyerInChargeId: true,
+                lawyers: { select: { lawyerId: true } },
+            },
         });
 
         await prisma.$transaction(async tx => {
@@ -162,7 +171,7 @@ export async function adjournMatter(
                 data: { nextCourtDate: newDate },
             });
 
-            await tx.calendarEntry.create({
+            const entry = await tx.calendarEntry.create({
                 data: {
                     matterId,
                     date: newDate,
@@ -175,6 +184,14 @@ export async function adjournMatter(
                         : undefined,
                 },
             });
+
+            const recipientIds = [
+                userId,
+                matter?.lawyerInChargeId,
+                ...(matter?.lawyers.map(l => l.lawyerId) ?? []),
+            ].filter(Boolean) as string[];
+
+            await scheduleCourtReminders(tx, entry.id, newDate, matterId, recipientIds);
         });
 
         if (matter) {
