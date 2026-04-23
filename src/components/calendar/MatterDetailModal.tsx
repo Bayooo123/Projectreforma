@@ -320,6 +320,16 @@ const MatterDetailModal = ({ isOpen, onClose, matter, userId }: MatterDetailModa
                                                 </div>
                                             </div>
 
+                                            {entry.appearances && entry.appearances.length > 0 && (
+                                                <div className="flex flex-wrap gap-1 mt-1">
+                                                    {entry.appearances.map(a => (
+                                                        <span key={a.id} className="text-[11px] px-2 py-0.5 bg-emerald-50 text-emerald-700 rounded-full font-medium border border-emerald-200">
+                                                            {a.name || a.email}
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                            )}
+
                                             {entry.proceedings || entry.agenda || entry.location ? (
                                                 <div className="text-sm text-tertiary bg-surface-subtle p-3 rounded-md mt-1 whitespace-pre-wrap">
                                                     {entry.proceedings}

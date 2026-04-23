@@ -144,11 +144,16 @@ export default function CalendarClient({
                 onSuccess={handleRefresh}
             />
 
-            {selectedEvent && selectedEvent.type === 'COURT' && (
-                <CourtEventModal 
+            {selectedEvent && (selectedEvent.type === 'COURT' || selectedEvent.type === 'COURT_DATE') && (
+                <CourtEventModal
                     isOpen={!!selectedEvent}
                     onClose={() => setSelectedEvent(null)}
                     event={selectedEvent}
+                    workspaceId={workspaceId}
+                    onUpdate={(patch) => {
+                        setSelectedEvent(prev => prev ? { ...prev, ...patch } : prev);
+                        setEvents(prev => prev.map(e => e.id === selectedEvent.id ? { ...e, ...patch } : e));
+                    }}
                 />
             )}
 

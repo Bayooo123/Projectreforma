@@ -250,7 +250,13 @@ export async function deleteMatter(matterId: string) {
 
 export async function updateCalendarEntry(
     entryId: string,
-    patch: { proceedings?: string; outcome?: string; adjournedFor?: string; title?: string }
+    patch: {
+        proceedings?: string;
+        outcome?: string;
+        adjournedFor?: string;
+        title?: string;
+        appearingLawyerIds?: string[];
+    }
 ) {
     try {
         await requireAuth();
@@ -261,9 +267,18 @@ export async function updateCalendarEntry(
                 outcome: patch.outcome ?? undefined,
                 adjournedFor: patch.adjournedFor ?? undefined,
                 title: patch.title ?? undefined,
+                ...(patch.appearingLawyerIds !== undefined && {
+                    appearances: {
+                        set: patch.appearingLawyerIds.map(id => ({ id })),
+                    },
+                }),
+            },
+            include: {
+                appearances: { select: { id: true, name: true, email: true, image: true } },
             },
         });
         revalidatePath('/calendar');
+        revalidatePath('/matters');
         return { success: true, data: updated };
     } catch (error: any) {
         return { success: false, error: error?.message || 'Failed to update calendar entry' };
