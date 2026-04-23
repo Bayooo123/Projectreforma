@@ -2,10 +2,10 @@
 
 import { useState } from 'react';
 import { AlertTriangle, ArrowUp, ArrowDown, Download, Users, Briefcase, Calendar, DollarSign, TrendingDown, ChevronRight } from 'lucide-react';
-import { useRouter } from 'next/navigation';
 import { PinProtection } from '@/components/auth/PinProtection';
 import { useCountUp } from '@/hooks/useCountUp';
 import styles from './Analytics.module.css';
+import { getAnalyticsMetrics, getTopClients, getCourtVisits, getExpenseDistribution } from '@/app/actions/analytics';
 
 interface AnalyticsData {
     metrics: any;
@@ -199,14 +199,35 @@ function HBarChart({ data }: { data: { label: string; value: number }[] }) {
 // ─────────────────────────────────────────
 export default function AnalyticsClient({ data, workspaceId, initialFilter }: AnalyticsClientProps) {
     const [filter, setFilter] = useState(initialFilter);
-    const router = useRouter();
+    const [displayData, setDisplayData] = useState(data);
+    const [isFiltering, setIsFiltering] = useState(false);
 
-    const handleFilterChange = (f: string) => {
+    const handleFilterChange = async (f: string) => {
+        if (f === filter) return;
         setFilter(f);
-        router.push(`/analytics?filter=${f}`);
+        setIsFiltering(true);
+        try {
+            const [newMetrics, newTopClients, newCourtVisits, newExpenseDist] = await Promise.all([
+                getAnalyticsMetrics(workspaceId, f),
+                getTopClients(workspaceId, f),
+                getCourtVisits(workspaceId, f),
+                getExpenseDistribution(workspaceId, f),
+            ]);
+            setDisplayData(prev => ({
+                ...prev,
+                metrics: newMetrics ?? prev.metrics,
+                topClients: newTopClients ?? prev.topClients,
+                courtVisits: newCourtVisits ?? prev.courtVisits,
+                expenseDistribution: newExpenseDist ?? prev.expenseDistribution,
+            }));
+        } catch (e) {
+            console.error('[Analytics] Filter change failed:', e);
+        } finally {
+            setIsFiltering(false);
+        }
     };
 
-    const { metrics, revenueTrend, topClients, lawyerStats, matterDistribution, courtVisits, expenseDistribution } = data;
+    const { metrics, revenueTrend, topClients, lawyerStats, matterDistribution, courtVisits, expenseDistribution } = displayData;
 
     const totalMatters = (matterDistribution || []).reduce((s: number, d: any) => s + (d.count || 0), 0) || 1;
     const topClientTotal = (topClients || []).reduce((s: number, c: any) => s + (c.totalRevenue || 0), 0) || 1;
@@ -252,7 +273,7 @@ export default function AnalyticsClient({ data, workspaceId, initialFilter }: An
                         <p>Executive dashboard for measuring and improving insights</p>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                        <div className={styles.filterGroup}>
+                        <div className={styles.filterGroup} style={{ opacity: isFiltering ? 0.6 : 1, pointerEvents: isFiltering ? 'none' : undefined }}>
                             {[{ key: 'this-month', label: 'This Month' }, { key: 'this-quarter', label: 'This Quarter' }, { key: 'this-year', label: 'This Year' }].map(f => (
                                 <button
                                     key={f.key}
@@ -287,7 +308,7 @@ export default function AnalyticsClient({ data, workspaceId, initialFilter }: An
                 )}
 
                 {/* ── KPI Cards ── */}
-                <div className={styles.kpiRow}>
+                <div className={styles.kpiRow} style={{ transition: 'opacity 0.2s', opacity: isFiltering ? 0.5 : 1 }}>
                     {/* Revenue */}
                     <div className={styles.kpiCard}>
                         <div className={styles.kpiLabel}>Total Revenue</div>
