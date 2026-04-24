@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import styles from './BicaWidget.module.css';
 
 type PanelState =
@@ -22,7 +22,6 @@ export default function BicaWidget() {
     const [panel, setPanel] = useState<PanelState>({ status: 'idle' });
     const [pos, setPos] = useState<Position>(DEFAULT_POS);
     const hasFetched = useRef(false);
-    const dragState = useRef<{ startX: number; startY: number; startLeft: number; startBottom: number } | null>(null);
 
     const openPanel = async () => {
         setOpen(true);
@@ -68,33 +67,29 @@ export default function BicaWidget() {
 
     // ── Drag handlers ────────────────────────────────────────────────────────
 
-    const onDragMove = useCallback((e: PointerEvent) => {
-        if (!dragState.current) return;
-        const dx = e.clientX - dragState.current.startX;
-        const dy = e.clientY - dragState.current.startY;
-        const newLeft = Math.max(0, dragState.current.startLeft + dx);
-        const newBottom = Math.max(0, dragState.current.startBottom - dy);
-        setPos({ left: newLeft, bottom: newBottom });
-    }, []);
-
-    const onDragEnd = useCallback(() => {
-        dragState.current = null;
-        window.removeEventListener('pointermove', onDragMove);
-        window.removeEventListener('pointerup', onDragEnd);
-    }, [onDragMove]);
-
     const onDragStart = (e: React.PointerEvent<HTMLDivElement>) => {
-        // Only drag on the header itself, not buttons inside it
         if ((e.target as HTMLElement).closest('button')) return;
-        dragState.current = {
-            startX: e.clientX,
-            startY: e.clientY,
-            startLeft: pos.left,
-            startBottom: pos.bottom,
+        e.preventDefault();
+
+        const startX = e.clientX;
+        const startY = e.clientY;
+        const startLeft = pos.left;
+        const startBottom = pos.bottom;
+
+        const handleMove = (ev: PointerEvent) => {
+            setPos({
+                left: Math.max(0, startLeft + ev.clientX - startX),
+                bottom: Math.max(0, startBottom - (ev.clientY - startY)),
+            });
         };
-        e.currentTarget.setPointerCapture(e.pointerId);
-        window.addEventListener('pointermove', onDragMove);
-        window.addEventListener('pointerup', onDragEnd);
+
+        const handleUp = () => {
+            window.removeEventListener('pointermove', handleMove);
+            window.removeEventListener('pointerup', handleUp);
+        };
+
+        window.addEventListener('pointermove', handleMove);
+        window.addEventListener('pointerup', handleUp);
     };
 
     const togglePos: Position = { bottom: pos.bottom - TOGGLE_OFFSET, left: pos.left };
@@ -109,7 +104,6 @@ export default function BicaWidget() {
                 <div
                     className={styles.header}
                     onPointerDown={onDragStart}
-                    style={{ cursor: 'grab' }}
                 >
                     <div className={styles.headerLeft}>
                         <span className={styles.headerDot} />
