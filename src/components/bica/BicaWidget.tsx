@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import styles from './BicaWidget.module.css';
 
 type PanelState =
@@ -9,15 +9,24 @@ type PanelState =
     | { status: 'ready'; entryUrl: string }
     | { status: 'error'; message: string };
 
+interface Position {
+    bottom: number;
+    left: number;
+}
+
+const DEFAULT_POS: Position = { bottom: 84, left: 24 };
+const TOGGLE_OFFSET = 60; // px between toggle button bottom and panel bottom
+
 export default function BicaWidget() {
     const [open, setOpen] = useState(false);
     const [panel, setPanel] = useState<PanelState>({ status: 'idle' });
+    const [pos, setPos] = useState<Position>(DEFAULT_POS);
     const hasFetched = useRef(false);
+    const dragState = useRef<{ startX: number; startY: number; startLeft: number; startBottom: number } | null>(null);
 
     const openPanel = async () => {
         setOpen(true);
 
-        // Only fetch the session once per mount
         if (hasFetched.current) return;
         hasFetched.current = true;
 
@@ -57,11 +66,51 @@ export default function BicaWidget() {
         }
     };
 
+    // ── Drag handlers ────────────────────────────────────────────────────────
+
+    const onDragMove = useCallback((e: PointerEvent) => {
+        if (!dragState.current) return;
+        const dx = e.clientX - dragState.current.startX;
+        const dy = e.clientY - dragState.current.startY;
+        const newLeft = Math.max(0, dragState.current.startLeft + dx);
+        const newBottom = Math.max(0, dragState.current.startBottom - dy);
+        setPos({ left: newLeft, bottom: newBottom });
+    }, []);
+
+    const onDragEnd = useCallback(() => {
+        dragState.current = null;
+        window.removeEventListener('pointermove', onDragMove);
+        window.removeEventListener('pointerup', onDragEnd);
+    }, [onDragMove]);
+
+    const onDragStart = (e: React.PointerEvent<HTMLDivElement>) => {
+        // Only drag on the header itself, not buttons inside it
+        if ((e.target as HTMLElement).closest('button')) return;
+        dragState.current = {
+            startX: e.clientX,
+            startY: e.clientY,
+            startLeft: pos.left,
+            startBottom: pos.bottom,
+        };
+        e.currentTarget.setPointerCapture(e.pointerId);
+        window.addEventListener('pointermove', onDragMove);
+        window.addEventListener('pointerup', onDragEnd);
+    };
+
+    const togglePos: Position = { bottom: pos.bottom - TOGGLE_OFFSET, left: pos.left };
+
     return (
         <>
             {/* Panel — stays mounted once opened so the iframe session persists */}
-            <div className={`${styles.panel} ${open ? styles.panelOpen : styles.panelClosed}`}>
-                <div className={styles.header}>
+            <div
+                className={`${styles.panel} ${open ? styles.panelOpen : styles.panelClosed}`}
+                style={{ bottom: pos.bottom, left: pos.left }}
+            >
+                <div
+                    className={styles.header}
+                    onPointerDown={onDragStart}
+                    style={{ cursor: 'grab' }}
+                >
                     <div className={styles.headerLeft}>
                         <span className={styles.headerDot} />
                         <span className={styles.headerTitle}>Reforma AI</span>
@@ -116,22 +165,18 @@ export default function BicaWidget() {
             </div>
 
             {/* Floating toggle button */}
-            <button className={styles.toggle} onClick={toggle} title="Reforma AI Assistant">
-                {open ? <XIcon /> : <BotIcon />}
+            <button
+                className={styles.toggle}
+                onClick={toggle}
+                title="Reforma AI Assistant"
+                style={{ bottom: togglePos.bottom, left: togglePos.left }}
+            >
+                {open
+                    ? <XIcon />
+                    : <img src="/logos/reforma-logo-monogram.png" alt="Reforma AI" className={styles.toggleLogo} />
+                }
             </button>
         </>
-    );
-}
-
-function BotIcon() {
-    return (
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-            <rect x="3" y="8" width="18" height="12" rx="2" />
-            <path d="M9 8V6a3 3 0 0 1 6 0v2" />
-            <circle cx="9" cy="14" r="1.2" fill="currentColor" stroke="none" />
-            <circle cx="15" cy="14" r="1.2" fill="currentColor" stroke="none" />
-            <path d="M12 2v1" />
-        </svg>
     );
 }
 

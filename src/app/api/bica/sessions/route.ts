@@ -126,6 +126,30 @@ export async function POST(req: NextRequest) {
             );
         }
 
+        // Guard against Fladov returning a sign-up / login page instead of a valid entry token.
+        // This happens when BICA_SHARED_SECRET is wrong or the platform isn't registered.
+        const authPaths = ['/signup', '/sign-up', '/register', '/login', '/auth', '/onboard', '/join'];
+        try {
+            const parsed = new URL(entryUrl);
+            const lowerPath = parsed.pathname.toLowerCase();
+            if (authPaths.some(p => lowerPath.startsWith(p))) {
+                console.error('[BICA SESSIONS] Fladov returned an auth page URL — platform misconfigured:', entryUrl);
+                return NextResponse.json(
+                    {
+                        status: 'failed',
+                        data: null,
+                        error: {
+                            code: 'SESSION_GENERATION_FAILED',
+                            message: 'Bica platform not configured correctly. Please contact your workspace administrator.',
+                        },
+                    },
+                    { status: 502 }
+                );
+            }
+        } catch {
+            // If URL parsing fails, let it through — Fladov returned something unexpected but we'll surface that later
+        }
+
         return NextResponse.json({
             status: 'success',
             data: { entry_url: entryUrl, token },

@@ -29,11 +29,19 @@
     flex-shrink: 0;
 }
 
+.toggleLogo {
+    width: 28px;
+    height: 28px;
+    object-fit: contain;
+    flex-shrink: 0;
+    border-radius: 4px;
+}
+
 /* ── Panel ─────────────────────────────────────────────────────────────────── */
 .panel {
     position: fixed;
-    bottom: 84px;
-    left: 24px;
+    bottom: 84px; /* overridden by inline style when dragged */
+    left: 24px;   /* overridden by inline style when dragged */
     z-index: 999;
     width: 380px;
     height: 560px;
@@ -210,12 +218,5 @@
     .panel {
         width: calc(100vw - 32px);
         height: 70dvh;
-        left: 16px;
-        bottom: 80px;
-    }
-
-    .toggle {
-        left: 16px;
-        bottom: 16px;
     }
 }
