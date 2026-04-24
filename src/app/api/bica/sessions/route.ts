@@ -118,6 +118,7 @@ export async function POST(req: NextRequest) {
         const data = await response.json();
         const entryUrl: string | undefined = data.entry_url;
         const token: string | undefined = data.token;
+        console.log('[BICA SESSIONS] entry_url from Fladov:', entryUrl);
 
         if (!entryUrl) {
             return NextResponse.json(
