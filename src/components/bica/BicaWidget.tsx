@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import styles from './BicaWidget.module.css';
 
 type PanelState =
@@ -22,6 +22,14 @@ export default function BicaWidget() {
     const [panel, setPanel] = useState<PanelState>({ status: 'idle' });
     const [pos, setPos] = useState<Position>(DEFAULT_POS);
     const hasFetched = useRef(false);
+
+    // Prevent Fladov's frame-busting script from navigating the top window.
+    // We block any unload triggered while the panel is open.
+    useEffect(() => {
+        const block = (e: BeforeUnloadEvent) => { if (open) e.preventDefault(); };
+        window.addEventListener('beforeunload', block);
+        return () => window.removeEventListener('beforeunload', block);
+    }, [open]);
 
     const openPanel = async () => {
         setOpen(true);
@@ -152,7 +160,6 @@ export default function BicaWidget() {
                             title="Reforma AI"
                             allow="microphone; clipboard-write"
                             referrerPolicy="origin"
-                            sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-modals"
                         />
                     )}
                 </div>

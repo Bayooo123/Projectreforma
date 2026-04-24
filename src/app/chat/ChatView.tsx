@@ -79,7 +79,6 @@ export default function ChatView() {
                 allow="microphone; clipboard-write"
                 referrerPolicy="origin"
                 title="Reforma AI Assistant"
-                sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-modals"
             />
         );
     }
