@@ -227,17 +227,19 @@ export async function getLawyerStats(workspaceId: string) {
         include: { user: true }
     });
 
-    // 2. Get appearances for each user
+    // 2. Get appearances for each user — only past dates (actual visits, not scheduled)
+    const now = new Date();
     const stats = await Promise.all(members.map(async (m) => {
-        const appearances = await prisma.calendarEntry.count({
-            where: {
-                appearances: { some: { id: m.userId } }
-            }
-        });
+        const pastFilter = {
+            appearances: { some: { id: m.userId } },
+            date: { lte: now },
+        };
+
+        const appearances = await prisma.calendarEntry.count({ where: pastFilter });
 
         // Get distinct matters (cases) and courts visited
         const visitedEntries = await prisma.calendarEntry.findMany({
-            where: { appearances: { some: { id: m.userId } } },
+            where: pastFilter,
             select: { matterId: true, matter: { select: { court: true } } },
         });
 
