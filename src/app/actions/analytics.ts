@@ -235,19 +235,19 @@ export async function getLawyerStats(workspaceId: string) {
             }
         });
 
-        // Get distinct courts visited (heuristic)
-        const visitedCourts = await prisma.calendarEntry.findMany({
+        // Get distinct matters (cases) and courts visited
+        const visitedEntries = await prisma.calendarEntry.findMany({
             where: { appearances: { some: { id: m.userId } } },
-            select: { matter: { select: { court: true } } },
-            distinct: ['matterId'] // Approximation since distinct on relation field is tricky
+            select: { matterId: true, matter: { select: { court: true } } },
         });
 
-        // Count unique court names manually
-        const courts = new Set(visitedCourts.map(vc => vc.matter?.court).filter(Boolean));
+        const cases = new Set(visitedEntries.map(e => e.matterId).filter(Boolean));
+        const courts = new Set(visitedEntries.map(e => e.matter?.court).filter(Boolean));
 
         return {
             name: m.user.name || m.user.email,
             appearances,
+            cases: cases.size,
             courts: courts.size,
             topCourt: Array.from(courts)[0] || 'N/A'
         };

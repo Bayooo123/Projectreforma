@@ -552,8 +552,8 @@ export default function AnalyticsClient({ data, workspaceId, initialFilter }: An
                                     {lawyerStats.length > 0 ? lawyerStats.map((lawyer: any, idx: number) => (
                                         <tr key={lawyer.name}>
                                             <td className={styles.clientName}>{lawyer.name}</td>
-                                            <td>{lawyer.appearances} appearances</td>
-                                            <td>{lawyer.courts || '-'} courts</td>
+                                            <td>{lawyer.appearances} {lawyer.appearances === 1 ? 'appearance' : 'appearances'}</td>
+                                            <td>{lawyer.cases || '-'} {lawyer.cases === 1 ? 'case' : 'cases'}</td>
                                             <td>{lawyer.topCourt || 'N/A'}</td>
                                             <td>
                                                 <div style={{ display: 'flex', gap: 4 }}>
