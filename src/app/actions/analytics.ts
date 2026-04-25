@@ -216,47 +216,61 @@ export async function getTopClients(workspaceId: string, filter: string = 'this-
 export async function getLawyerStats(workspaceId: string) {
     const members = await prisma.workspaceMember.findMany({
         where: { workspaceId },
-        include: { user: true }
+        include: { user: { select: { id: true, name: true, email: true } } }
     });
 
+    const memberIds = members.map(m => m.userId);
     const now = new Date();
 
-    // Court appearance = type COURT, past date, scoped to this workspace
-    // A lawyer is counted if they are in the appearances relation OR are the submittingLawyerId
-    const stats = await Promise.all(members.map(async (m) => {
-        const courtFilter: Prisma.CalendarEntryWhereInput = {
+    // Single query — fetch all past COURT entries in this workspace that have
+    // at least one of the workspace members as Appearing Counsel
+    const entries = await prisma.calendarEntry.findMany({
+        where: {
             type: 'COURT',
             date: { lte: now },
             matter: { workspaceId },
-            appearances: { some: { id: m.userId } },
-        };
+            appearances: { some: { id: { in: memberIds } } },
+        },
+        select: {
+            matterId: true,
+            court: true,
+            matter: { select: { court: true } },
+            appearances: { select: { id: true }, where: { id: { in: memberIds } } },
+        },
+    });
 
-        const entries = await prisma.calendarEntry.findMany({
-            where: courtFilter,
-            select: {
-                id: true,
-                matterId: true,
-                court: true,
-                matter: { select: { court: true } },
-            },
+    // Aggregate per member in memory
+    const statsMap = new Map<string, { name: string; appearances: number; caseIds: Set<string>; courts: Set<string> }>();
+    for (const m of members) {
+        statsMap.set(m.userId, {
+            name: m.user.name || m.user.email || 'Unknown',
+            appearances: 0,
+            caseIds: new Set(),
+            courts: new Set(),
         });
+    }
 
-        const cases = new Set(entries.map(e => e.matterId).filter(Boolean));
-        // Prefer CalendarEntry.court (specific to the appearance); fall back to Matter.court
-        const courts = new Set(
-            entries.map(e => e.court || e.matter?.court).filter(Boolean)
-        );
+    for (const entry of entries) {
+        const court = entry.court || entry.matter?.court || null;
+        for (const user of entry.appearances) {
+            const stat = statsMap.get(user.id);
+            if (!stat) continue;
+            stat.appearances += 1;
+            if (entry.matterId) stat.caseIds.add(entry.matterId);
+            if (court) stat.courts.add(court);
+        }
+    }
 
-        return {
-            name: m.user.name || m.user.email,
-            appearances: entries.length,
-            cases: cases.size,
-            courts: courts.size,
-            topCourt: Array.from(courts)[0] || 'N/A',
-        };
-    }));
-
-    return stats.sort((a, b) => b.appearances - a.appearances).slice(0, 5);
+    return Array.from(statsMap.values())
+        .map(s => ({
+            name: s.name,
+            appearances: s.appearances,
+            cases: s.caseIds.size,
+            courts: s.courts.size,
+            topCourt: Array.from(s.courts)[0] || 'N/A',
+        }))
+        .sort((a, b) => b.appearances - a.appearances)
+        .slice(0, 5);
 }
 
 export async function getMatterDistribution(workspaceId: string) {
