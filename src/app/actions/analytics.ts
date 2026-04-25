@@ -228,10 +228,7 @@ export async function getLawyerStats(workspaceId: string) {
             type: 'COURT',
             date: { lte: now },
             matter: { workspaceId },
-            OR: [
-                { appearances: { some: { id: m.userId } } },
-                { submittingLawyerId: m.userId },
-            ],
+            appearances: { some: { id: m.userId } },
         };
 
         const entries = await prisma.calendarEntry.findMany({
