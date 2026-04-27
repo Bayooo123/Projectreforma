@@ -41,6 +41,7 @@ model Workspace {
   invitations       Invitation[]
   matters           Matter[]
   tasks             Task[]
+  inboundEmails     InboundEmail[]
   owner             User                  @relation("WorkspaceOwner", fields: [ownerId], references: [id])
   emailConfig       WorkspaceEmailConfig?
   members           WorkspaceMember[]
@@ -282,6 +283,7 @@ model Matter {
   briefs                Brief[]
   calendarEntries       CalendarEntry[]
   clientCommunications  ClientCommunication[]
+  inboundEmails         InboundEmail[]
   invoices              Invoice[]
   client                Client?               @relation(fields: [clientId], references: [id])
   lawyerInCharge        User?                 @relation("MatterLawyerInCharge", fields: [lawyerInChargeId], references: [id])
@@ -513,6 +515,7 @@ model Client {
   briefs               Brief[]
   workspace            Workspace             @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   clientCommunications ClientCommunication[]
+  inboundEmails        InboundEmail[]
   invoices             Invoice[]
   matters              Matter[]
   payments             Payment[]
@@ -920,4 +923,26 @@ enum ExpenseCategory {
   STAFF_COSTS
   VEHICLE_LOGISTICS
   MISCELLANEOUS
+}
+
+model InboundEmail {
+  id              String     @id @default(cuid())
+  workspaceId     String?
+  fromEmail       String
+  fromName        String?
+  subject         String
+  bodyPreview     String?
+  clientId        String?
+  matterId        String?
+  attachmentCount Int        @default(0)
+  attachmentNames String?
+  receivedAt      DateTime   @default(now())
+
+  workspace       Workspace? @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  client          Client?    @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  matter          Matter?    @relation(fields: [matterId], references: [id], onDelete: SetNull)
+
+  @@index([workspaceId, receivedAt])
+  @@index([clientId])
+  @@index([matterId])
 }

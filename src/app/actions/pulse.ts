@@ -342,6 +342,40 @@ export async function getPulseFeedFirmwide(workspaceId: string): Promise<PulseIt
             });
         }
 
+        // THIS WEEK: Recent inbound emails
+        const recentEmails = await prisma.inboundEmail.findMany({
+            where: {
+                workspaceId,
+                receivedAt: { gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) },
+            },
+            take: 3,
+            orderBy: { receivedAt: 'desc' },
+            select: {
+                id: true, fromEmail: true, fromName: true, subject: true,
+                attachmentCount: true, receivedAt: true,
+                client: { select: { name: true } },
+                matter: { select: { name: true } },
+            },
+        });
+
+        for (const email of recentEmails) {
+            const sender = email.fromName || email.fromEmail;
+            const matched = email.matter?.name || email.client?.name;
+            const hasAttachments = email.attachmentCount > 0;
+            items.push({
+                id: `email-${email.id}`,
+                severity: matched ? 'info' : 'warning',
+                section: 'thisWeek',
+                iconType: 'email',
+                title: `Email received — ${email.subject}`,
+                description: `From ${sender}${matched ? ` · Linked to: ${matched}` : ' · Unmatched — no matter found'}. ${hasAttachments ? `${email.attachmentCount} attachment${email.attachmentCount !== 1 ? 's' : ''} filed automatically.` : 'No attachments.'}`,
+                timeLabel: relativeTime(email.receivedAt),
+                categories: ['client', 'firm'],
+                ctaLabel: matched ? 'View matter' : 'Review',
+                ctaHref: email.matter ? `/briefs?matter=${email.matter.name}` : '/management/clients',
+            });
+        }
+
         // INSIGHTS: Monthly financial snapshot
         const [monthRevenue, monthExpenses, outstandingInvoiceCount] = await Promise.all([
             prisma.payment.aggregate({
