@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { GoogleGenerativeAI, FunctionDeclarationSchemaType } from '@google/generative-ai';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import { auth } from '@/auth';
 import { getGeminiTools, executeTool } from '@/lib/eureka/tools';
 
