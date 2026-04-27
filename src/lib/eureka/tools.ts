@@ -151,7 +151,7 @@ export async function executeTool(
                         orderBy: { date: 'desc' }, take: 10,
                         select: { date: true, court: true, proceedings: true, outcome: true, adjournedTo: true, appearances: { select: { name: true } } },
                     },
-                    documents: { take: 10, select: { id: true, name: true, createdAt: true } },
+                    briefs: { take: 10, select: { id: true, name: true, createdAt: true } },
                     invoices: { select: { totalAmount: true, status: true, date: true } },
                 },
             });
