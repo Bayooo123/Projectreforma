@@ -305,19 +305,21 @@ export async function executeTool(
         case 'search_documents': {
             return prisma.document.findMany({
                 where: {
-                    matter: { workspaceId },
+                    brief: {
+                        workspaceId,
+                        ...(input.matter_title && { matter: { name: { contains: input.matter_title, mode: 'insensitive' } } }),
+                    },
                     ...(input.search && { name: { contains: input.search, mode: 'insensitive' } }),
-                    ...(input.matter_title && { matter: { workspaceId, name: { contains: input.matter_title, mode: 'insensitive' } } }),
                 },
-                select: { id: true, name: true, createdAt: true, matter: { select: { name: true } } },
-                orderBy: { createdAt: 'desc' },
+                select: { id: true, name: true, uploadedAt: true, brief: { select: { name: true } } },
+                orderBy: { uploadedAt: 'desc' },
                 take: input.limit ?? 10,
             });
         }
 
         case 'analyse_document': {
             const doc = await prisma.document.findFirst({
-                where: { id: input.document_id, matter: { workspaceId } },
+                where: { id: input.document_id, brief: { workspaceId } },
                 select: { name: true, url: true },
             });
             if (!doc?.url) return { error: 'Document not found or has no file attached.' };
