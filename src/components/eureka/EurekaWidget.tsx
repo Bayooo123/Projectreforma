@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import styles from './EurekaWidget.module.css';
 
 interface Message {
@@ -110,10 +111,10 @@ export default function EurekaWidget() {
                             <p className={styles.emptyTitle}>Ask Eureka anything</p>
                             <div className={styles.suggestions}>
                                 {[
-                                    'Summarise active matters',
-                                    'Which clients have outstanding invoices?',
+                                    'Show upcoming deadlines this week',
+                                    'Which matters have had no activity in 30 days?',
+                                    'Which clients have overdue invoices?',
                                     'Who appears in court most?',
-                                    'Show upcoming court dates',
                                 ].map(s => (
                                     <button key={s} className={styles.suggestion} onClick={() => { setInput(s); inputRef.current?.focus(); }}>
                                         {s}
@@ -176,17 +177,45 @@ export default function EurekaWidget() {
 }
 
 function MessageText({ text }: { text: string }) {
-    // Render line breaks and bold (**text**)
-    const parts = text.split(/(\*\*[^*]+\*\*)/g);
+    const router = useRouter();
+
+    function renderInline(str: string, lineKey: number): React.ReactNode[] {
+        // Split on [text](url) and **text**
+        const parts = str.split(/(\[[^\]]+\]\([^)]+\)|\*\*[^*]+\*\*)/g);
+        return parts.map((part, i) => {
+            const linkMatch = part.match(/^\[([^\]]+)\]\(([^)]+)\)$/);
+            if (linkMatch) {
+                const [, label, href] = linkMatch;
+                const internal = href.startsWith('/');
+                return (
+                    <a
+                        key={`${lineKey}-${i}`}
+                        href={href}
+                        className={styles.link}
+                        onClick={internal ? (e) => { e.preventDefault(); router.push(href); } : undefined}
+                        target={internal ? undefined : '_blank'}
+                        rel="noopener noreferrer"
+                    >
+                        {label}
+                    </a>
+                );
+            }
+            if (part.startsWith('**') && part.endsWith('**')) {
+                return <strong key={`${lineKey}-${i}`}>{part.slice(2, -2)}</strong>;
+            }
+            return <span key={`${lineKey}-${i}`}>{part}</span>;
+        });
+    }
+
+    const lines = text.split('\n');
     return (
         <>
-            {parts.map((part, i) =>
-                part.startsWith('**') && part.endsWith('**')
-                    ? <strong key={i}>{part.slice(2, -2)}</strong>
-                    : part.split('\n').map((line, j, arr) => (
-                        <span key={`${i}-${j}`}>{line}{j < arr.length - 1 && <br />}</span>
-                    ))
-            )}
+            {lines.map((line, i) => (
+                <span key={i}>
+                    {renderInline(line, i)}
+                    {i < lines.length - 1 && <br />}
+                </span>
+            ))}
         </>
     );
 }

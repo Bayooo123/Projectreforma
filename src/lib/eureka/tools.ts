@@ -166,6 +166,46 @@ export function getGeminiTools(): FunctionDeclaration[] {
                 required: ['matter_title', 'date'],
             },
         },
+        {
+            name: 'get_inactive_matters',
+            description: 'Find active matters with no recent activity — useful for spotting neglected cases.',
+            parameters: {
+                type: SchemaType.OBJECT,
+                properties: {
+                    days: { type: SchemaType.NUMBER, description: 'Inactivity threshold in days (default 30)' },
+                },
+            },
+        },
+        {
+            name: 'get_overdue_invoices',
+            description: 'Find invoices that are unpaid and past their due date.',
+            parameters: {
+                type: SchemaType.OBJECT,
+                properties: {
+                    client_name: { type: SchemaType.STRING, description: 'Filter to a specific client (optional)' },
+                },
+            },
+        },
+        {
+            name: 'get_upcoming_deadlines',
+            description: 'Get all upcoming court dates AND brief due dates within a window — the full deadline picture.',
+            parameters: {
+                type: SchemaType.OBJECT,
+                properties: {
+                    days: { type: SchemaType.NUMBER, description: 'How many days ahead to look (default 14)' },
+                },
+            },
+        },
+        {
+            name: 'get_client_health',
+            description: 'Identify clients who have had no recent payments — useful for follow-up and relationship management.',
+            parameters: {
+                type: SchemaType.OBJECT,
+                properties: {
+                    days: { type: SchemaType.NUMBER, description: 'Inactivity threshold in days (default 60)' },
+                },
+            },
+        },
     ];
 }
 
@@ -497,6 +537,102 @@ export async function executeTool(
                 },
             });
             return { success: true, id: entry.id, date: entry.date, message: `Court date scheduled for ${new Date(input.date).toLocaleDateString('en-NG', { dateStyle: 'long' })}.` };
+        }
+
+        case 'get_inactive_matters': {
+            const days = input.days ?? 30;
+            const cutoff = new Date();
+            cutoff.setDate(cutoff.getDate() - days);
+            const matters = await prisma.matter.findMany({
+                where: { workspaceId, status: 'active', lastActivityAt: { lt: cutoff } },
+                select: {
+                    id: true, name: true, court: true, lastActivityAt: true,
+                    client: { select: { name: true } },
+                },
+                orderBy: { lastActivityAt: 'asc' },
+                take: 20,
+            });
+            return { threshold_days: days, count: matters.length, matters };
+        }
+
+        case 'get_overdue_invoices': {
+            const now = new Date();
+            const clientFilter = input.client_name
+                ? { workspaceId, name: { contains: input.client_name, mode: 'insensitive' as const } }
+                : { workspaceId };
+            const invoices = await prisma.invoice.findMany({
+                where: {
+                    client: clientFilter,
+                    dueDate: { lt: now },
+                    NOT: { status: { in: ['paid', 'PAID'] } },
+                },
+                select: {
+                    id: true, invoiceNumber: true, totalAmount: true, dueDate: true, status: true,
+                    client: { select: { id: true, name: true } },
+                },
+                orderBy: { dueDate: 'asc' },
+                take: 30,
+            });
+            const total = invoices.reduce((s, i) => s + Number(i.totalAmount || 0), 0);
+            return { count: invoices.length, total_overdue: total, invoices };
+        }
+
+        case 'get_upcoming_deadlines': {
+            const now = new Date();
+            const days = input.days ?? 14;
+            const boundary = new Date();
+            boundary.setDate(boundary.getDate() + days);
+            const [courtDates, briefs] = await Promise.all([
+                prisma.calendarEntry.findMany({
+                    where: { type: 'COURT', date: { gte: now, lte: boundary }, matter: { workspaceId } },
+                    select: {
+                        id: true, date: true, court: true, proceedings: true,
+                        matter: { select: { id: true, name: true } },
+                    },
+                    orderBy: { date: 'asc' },
+                    take: 20,
+                }),
+                prisma.brief.findMany({
+                    where: { workspaceId, status: 'active', dueDate: { gte: now, lte: boundary } },
+                    select: {
+                        id: true, name: true, dueDate: true, category: true,
+                        client: { select: { name: true } },
+                    },
+                    orderBy: { dueDate: 'asc' },
+                    take: 20,
+                }),
+            ]);
+            return { window_days: days, court_dates: courtDates, brief_deadlines: briefs };
+        }
+
+        case 'get_client_health': {
+            const days = input.days ?? 60;
+            const cutoff = new Date();
+            cutoff.setDate(cutoff.getDate() - days);
+            const clients = await prisma.client.findMany({
+                where: { workspaceId },
+                select: {
+                    id: true, name: true, email: true,
+                    payments: { orderBy: { date: 'desc' }, take: 1, select: { date: true, amount: true } },
+                    matters: { where: { status: 'active' }, select: { id: true } },
+                    invoices: {
+                        where: { NOT: { status: { in: ['paid', 'PAID'] } } },
+                        select: { totalAmount: true },
+                    },
+                },
+            });
+            const result = clients.map(c => ({
+                id: c.id,
+                name: c.name,
+                email: c.email,
+                last_payment: c.payments[0]?.date ?? null,
+                last_payment_amount: c.payments[0]?.amount ?? null,
+                active_matters: c.matters.length,
+                outstanding_balance: c.invoices.reduce((s, i) => s + Number(i.totalAmount || 0), 0),
+                needs_attention: !c.payments[0] || new Date(c.payments[0].date) < cutoff,
+            }));
+            const flagged = result.filter(c => c.needs_attention);
+            return { threshold_days: days, flagged_count: flagged.length, clients: flagged };
         }
 
         default:

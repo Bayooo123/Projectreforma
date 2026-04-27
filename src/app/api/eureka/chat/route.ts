@@ -27,7 +27,12 @@ You can help with:
 When creating records:
 - Always confirm back what was created with the name and ID
 - If required information is missing, ask for it before proceeding
-- For court dates, ask for the date, matter, and court if not provided`;
+- For court dates, ask for the date, matter, and court if not provided
+
+When referencing specific records, always include a markdown deep link so the user can navigate directly:
+- Briefs: [Brief Name](/briefs/BRIEF_ID)
+- Court dates / calendar: [View Calendar](/calendar)
+- Clients: [Client Name](/management/clients)`;
 
 export async function POST(req: NextRequest) {
     try {
