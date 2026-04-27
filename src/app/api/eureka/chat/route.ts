@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
 
         const genAI = new GoogleGenerativeAI(apiKey);
         const model = genAI.getGenerativeModel({
-            model: 'gemini-2.5-flash',
+            model: 'gemini-2.0-flash',
             systemInstruction: SYSTEM_PROMPT,
             tools: [{ functionDeclarations: getGeminiTools() }],
         });
@@ -95,6 +95,13 @@ export async function POST(req: NextRequest) {
 
     } catch (error: any) {
         console.error('[Eureka] Error:', error);
-        return NextResponse.json({ error: error.message ?? 'Unexpected error' }, { status: 500 });
+        const msg = error.message ?? '';
+        if (msg.includes('429') || msg.includes('quota') || msg.includes('Too Many Requests')) {
+            return NextResponse.json({ message: "I'm temporarily unavailable due to high demand. Please try again in a minute." });
+        }
+        if (msg.includes('503') || msg.includes('Service Unavailable')) {
+            return NextResponse.json({ message: "The AI service is experiencing high demand right now. Please try again in a few seconds." });
+        }
+        return NextResponse.json({ message: "Something went wrong on my end. Please try again." });
     }
 }

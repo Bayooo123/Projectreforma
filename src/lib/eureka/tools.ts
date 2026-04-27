@@ -332,7 +332,7 @@ export async function executeTool(
             const mimeType = (fileResponse.headers.get('content-type') || 'application/pdf') as any;
 
             const { GoogleGenerativeAI } = await import('@google/generative-ai');
-            const innerModel = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY!).getGenerativeModel({ model: 'gemini-2.5-flash' });
+            const innerModel = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY!).getGenerativeModel({ model: 'gemini-2.0-flash' });
 
             const result = await innerModel.generateContent([
                 { inlineData: { data: base64, mimeType } },
