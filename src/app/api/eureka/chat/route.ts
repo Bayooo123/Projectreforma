@@ -1,12 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import Anthropic from '@anthropic-ai/sdk';
+import { GoogleGenerativeAI, FunctionDeclarationSchemaType } from '@google/generative-ai';
 import { auth } from '@/auth';
-import { prisma } from '@/lib/prisma';
-import { getTools, executeTool } from '@/lib/eureka/tools';
-
-const client = new Anthropic({
-    apiKey: process.env.ANTHROPIC_API_KEY,
-});
+import { getGeminiTools, executeTool } from '@/lib/eureka/tools';
 
 const SYSTEM_PROMPT = `You are Eureka, the intelligent legal practice assistant built into Reforma OS — a legal practice management platform used by Nigerian law firms.
 
@@ -26,8 +21,7 @@ You can help with:
 - Court dates, appearances, and schedules
 - Financial summaries, outstanding invoices, revenue
 - Document analysis and summarisation
-- Lawyer performance and workload
-- Deadline and risk flagging`;
+- Lawyer performance and workload`;
 
 export async function POST(req: NextRequest) {
     try {
@@ -41,60 +35,63 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: 'No workspace' }, { status: 400 });
         }
 
+        const apiKey = process.env.GOOGLE_API_KEY;
+        if (!apiKey) {
+            return NextResponse.json({ error: 'GOOGLE_API_KEY is not configured.' }, { status: 500 });
+        }
+
         const { messages } = await req.json();
         if (!messages?.length) {
             return NextResponse.json({ error: 'No messages' }, { status: 400 });
         }
 
-        const tools = getTools();
+        const genAI = new GoogleGenerativeAI(apiKey);
+        const model = genAI.getGenerativeModel({
+            model: 'gemini-2.0-flash',
+            systemInstruction: SYSTEM_PROMPT,
+            tools: [{ functionDeclarations: getGeminiTools() }],
+        });
 
-        // Agentic loop — Claude may call multiple tools before responding
-        let currentMessages = [...messages];
+        // Convert message history to Gemini format (exclude last user message — sent separately)
+        const history = messages.slice(0, -1).map((m: { role: string; content: string }) => ({
+            role: m.role === 'user' ? 'user' : 'model',
+            parts: [{ text: m.content }],
+        }));
+
+        const lastMessage = messages[messages.length - 1].content;
+        const chat = model.startChat({ history });
+
+        // Agentic loop
+        let result = await chat.sendMessage(lastMessage);
         let iterations = 0;
-        const MAX_ITERATIONS = 10;
 
-        while (iterations < MAX_ITERATIONS) {
+        while (iterations < 10) {
             iterations++;
+            const response = result.response;
+            const functionCalls = response.functionCalls();
 
-            const response = await client.messages.create({
-                model: 'claude-sonnet-4-6',
-                max_tokens: 4096,
-                system: SYSTEM_PROMPT,
-                tools,
-                messages: currentMessages,
-            });
-
-            // If Claude wants to use tools, execute them and continue the loop
-            if (response.stop_reason === 'tool_use') {
-                const assistantMessage = { role: 'assistant' as const, content: response.content };
-                currentMessages = [...currentMessages, assistantMessage];
-
-                const toolResults = await Promise.all(
-                    response.content
-                        .filter((block): block is Anthropic.ToolUseBlock => block.type === 'tool_use')
-                        .map(async (toolUse) => {
-                            const result = await executeTool(toolUse.name, toolUse.input as Record<string, any>, workspaceId);
-                            return {
-                                type: 'tool_result' as const,
-                                tool_use_id: toolUse.id,
-                                content: JSON.stringify(result),
-                            };
-                        })
-                );
-
-                currentMessages = [...currentMessages, { role: 'user' as const, content: toolResults }];
-                continue;
+            if (!functionCalls || functionCalls.length === 0) {
+                // Final text response
+                return NextResponse.json({ message: response.text() });
             }
 
-            // Final text response
-            const textBlock = response.content.find((b): b is Anthropic.TextBlock => b.type === 'text');
-            return NextResponse.json({
-                message: textBlock?.text ?? 'No response generated.',
-                usage: response.usage,
-            });
+            // Execute all requested tools
+            const toolResults = await Promise.all(
+                functionCalls.map(async (call) => {
+                    const output = await executeTool(call.name, call.args as Record<string, any>, workspaceId);
+                    return {
+                        functionResponse: {
+                            name: call.name,
+                            response: { result: output },
+                        },
+                    };
+                })
+            );
+
+            result = await chat.sendMessage(toolResults);
         }
 
-        return NextResponse.json({ message: 'I reached the maximum number of steps. Please try a more specific question.' });
+        return NextResponse.json({ message: 'Maximum steps reached. Please try a more specific question.' });
 
     } catch (error: any) {
         console.error('[Eureka] Error:', error);
