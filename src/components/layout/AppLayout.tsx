@@ -4,7 +4,8 @@ import { ReactNode } from 'react';
 import Sidebar from '@/components/layout/Sidebar';
 import Header from '@/components/layout/Header';
 import BottomNavigation from '@/components/layout/BottomNavigation';
-import BicaWidget from '@/components/bica/BicaWidget';
+// import BicaWidget from '@/components/bica/BicaWidget'; // deactivated — replaced by Eureka
+import EurekaWidget from '@/components/eureka/EurekaWidget';
 import styles from './AppLayout.module.css';
 
 interface AppLayoutProps {
@@ -30,7 +31,8 @@ export default function AppLayout({ children, user, workspace }: AppLayoutProps)
                 </main>
                 <BottomNavigation />
             </div>
-            <BicaWidget />
+            {/* <BicaWidget /> — deactivated, replaced by Eureka */}
+            <EurekaWidget />
         </div>
     );
 }

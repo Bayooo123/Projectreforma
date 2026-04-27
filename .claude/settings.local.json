@@ -1,0 +1,25 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx tsc *)",
+      "Bash(npm run *)",
+      "Bash(git add *)",
+      "Bash(git push *)",
+      "Bash(git pull *)",
+      "Bash(xargs grep *)",
+      "Bash(git commit -m ' *)",
+      "Bash(npx tsx -e ' *)",
+      "Bash(node -e ' *)",
+      "Bash(node scripts/proceedings-backlog.js)",
+      "Bash(node scripts/backfill-matter-briefs.js)",
+      "Bash(node scripts/backfill-appearances.js)",
+      "Bash(DATABASE_URL=\"postgresql://postgres.veltyrhvxeiwbhptvczc:REFORMISFROMGOD122%40@aws-1-eu-central-1.pooler.supabase.com:5432/postgres\" node scripts/backfill-appearances.js)",
+      "Bash(DATABASE_URL=\"postgresql://postgres.veltyrhvxeiwbhptvczc:REFORMISFROMGOD122%40@aws-1-eu-central-1.pooler.supabase.com:5432/postgres\" node scripts/backfill-appearances.js --apply)",
+      "Bash(cat .env.local)",
+      "Bash(cat .env)",
+      "Bash(grep -v \"^C:\\\\\\\\\")",
+      "Bash(npm list *)",
+      "Bash(npm install *)"
+    ]
+  }
+}

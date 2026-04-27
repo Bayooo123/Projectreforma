@@ -13,6 +13,7 @@ const envSchema = z.object({
     NEXT_PUBLIC_APP_URL: z.string().default('http://localhost:3000'),
 
     // External Services
+    ANTHROPIC_API_KEY: z.string().optional(),
     BLOB_READ_WRITE_TOKEN: z.string().optional(),
     CRON_SECRET: z.string().min(32).optional(),
     RESEND_API_KEY: z.string().optional(),
