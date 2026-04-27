@@ -181,7 +181,7 @@ export async function executeTool(
                     : { name: { contains: input.name, mode: 'insensitive' }, workspaceId },
                 include: {
                     matters: { select: { id: true, name: true, status: true, court: true }, orderBy: { createdAt: 'desc' } },
-                    payments: { select: { amount: true, date: true, description: true }, orderBy: { date: 'desc' }, take: 20 },
+                    payments: { select: { amount: true, date: true, method: true, reference: true }, orderBy: { date: 'desc' }, take: 20 },
                     invoices: { select: { totalAmount: true, status: true, date: true }, orderBy: { date: 'desc' }, take: 20 },
                 },
             });
