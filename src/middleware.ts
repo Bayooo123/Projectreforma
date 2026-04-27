@@ -37,6 +37,6 @@ export const config = {
          * - favicon.ico, sitemap.xml, robots.txt (public files)
          * - images and other static assets
          */
-        '/((?!api/auth|_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt|.*\\.png$|.*\\.jpg$|.*\\.jpeg$|.*\\.gif$|.*\\.svg$).*)',
+        '/((?!api/auth|api/email/inbound|_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt|.*\\.png$|.*\\.jpg$|.*\\.jpeg$|.*\\.gif$|.*\\.svg$).*)',
     ],
 };
