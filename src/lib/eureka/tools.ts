@@ -122,21 +122,21 @@ export async function executeTool(
                     workspaceId,
                     ...(input.status && { status: input.status }),
                     ...(input.client_name && { client: { name: { contains: input.client_name, mode: 'insensitive' } } }),
-                    ...(input.search && { title: { contains: input.search, mode: 'insensitive' } }),
+                    ...(input.search && { name: { contains: input.search, mode: 'insensitive' } }),
                 },
                 select: {
-                    id: true, title: true, status: true, court: true,
+                    id: true, name: true, status: true, court: true,
                     createdAt: true, updatedAt: true,
                     client: { select: { name: true } },
-                    _count: { select: { calendarEntries: true, documents: true } },
+                    _count: { select: { calendarEntries: true, briefs: true } },
                 },
                 orderBy: { updatedAt: 'desc' },
                 take: input.limit ?? 20,
             });
             return matters.map(m => ({
-                id: m.id, title: m.title, status: m.status, court: m.court,
+                id: m.id, title: m.name, status: m.status, court: m.court,
                 client: m.client?.name, court_dates: m._count.calendarEntries,
-                documents: m._count.documents, last_activity: m.updatedAt, opened: m.createdAt,
+                briefs: m._count.briefs, last_activity: m.updatedAt, opened: m.createdAt,
             }));
         }
 
@@ -144,7 +144,7 @@ export async function executeTool(
             const matter = await prisma.matter.findFirst({
                 where: input.matter_id
                     ? { id: input.matter_id, workspaceId }
-                    : { title: { contains: input.title, mode: 'insensitive' }, workspaceId },
+                    : { name: { contains: input.title, mode: 'insensitive' }, workspaceId },
                 include: {
                     client: { select: { name: true, email: true, phone: true } },
                     calendarEntries: {
@@ -180,7 +180,7 @@ export async function executeTool(
                     ? { id: input.client_id, workspaceId }
                     : { name: { contains: input.name, mode: 'insensitive' }, workspaceId },
                 include: {
-                    matters: { select: { id: true, title: true, status: true, court: true }, orderBy: { createdAt: 'desc' } },
+                    matters: { select: { id: true, name: true, status: true, court: true }, orderBy: { createdAt: 'desc' } },
                     payments: { select: { amount: true, date: true, description: true }, orderBy: { date: 'desc' }, take: 20 },
                     invoices: { select: { totalAmount: true, status: true, date: true }, orderBy: { date: 'desc' }, take: 20 },
                 },
@@ -206,13 +206,13 @@ export async function executeTool(
                         ? { gte: now, lte: boundary }
                         : { gte: boundary, lte: now },
                     ...(input.lawyer_name && { appearances: { some: { name: { contains: input.lawyer_name, mode: 'insensitive' } } } }),
-                    ...(input.matter_title && { matter: { workspaceId, title: { contains: input.matter_title, mode: 'insensitive' } } }),
+                    ...(input.matter_title && { matter: { workspaceId, name: { contains: input.matter_title, mode: 'insensitive' } } }),
                 },
                 orderBy: { date: input.upcoming !== false ? 'asc' : 'desc' },
                 take: 30,
                 select: {
                     date: true, court: true, proceedings: true, outcome: true, adjournedTo: true,
-                    matter: { select: { title: true, client: { select: { name: true } } } },
+                    matter: { select: { name: true, client: { select: { name: true } } } },
                     appearances: { select: { name: true } },
                 },
             });
@@ -307,9 +307,9 @@ export async function executeTool(
                 where: {
                     matter: { workspaceId },
                     ...(input.search && { name: { contains: input.search, mode: 'insensitive' } }),
-                    ...(input.matter_title && { matter: { workspaceId, title: { contains: input.matter_title, mode: 'insensitive' } } }),
+                    ...(input.matter_title && { matter: { workspaceId, name: { contains: input.matter_title, mode: 'insensitive' } } }),
                 },
-                select: { id: true, name: true, createdAt: true, matter: { select: { title: true } } },
+                select: { id: true, name: true, createdAt: true, matter: { select: { name: true } } },
                 orderBy: { createdAt: 'desc' },
                 take: input.limit ?? 10,
             });
