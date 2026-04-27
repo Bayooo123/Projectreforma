@@ -107,13 +107,73 @@ export function getGeminiTools(): FunctionDeclaration[] {
                 required: ['document_id', 'question'],
             },
         },
+        {
+            name: 'create_client',
+            description: 'Create a new client in the workspace.',
+            parameters: {
+                type: SchemaType.OBJECT,
+                properties: {
+                    name: { type: SchemaType.STRING, description: 'Full client name' },
+                    email: { type: SchemaType.STRING, description: 'Client email address' },
+                    phone: { type: SchemaType.STRING, description: 'Phone number (optional)' },
+                    company: { type: SchemaType.STRING, description: 'Company or organisation name (optional)' },
+                },
+                required: ['name', 'email'],
+            },
+        },
+        {
+            name: 'create_matter',
+            description: 'Create a new matter (case) in the workspace.',
+            parameters: {
+                type: SchemaType.OBJECT,
+                properties: {
+                    name: { type: SchemaType.STRING, description: 'Matter/case title' },
+                    client_name: { type: SchemaType.STRING, description: 'Client name to link (optional)' },
+                    court: { type: SchemaType.STRING, description: 'Court name (optional)' },
+                    status: { type: SchemaType.STRING, description: 'active, closed, or archived (default active)' },
+                },
+                required: ['name'],
+            },
+        },
+        {
+            name: 'create_brief',
+            description: 'Create a new brief, optionally linked to a matter and client.',
+            parameters: {
+                type: SchemaType.OBJECT,
+                properties: {
+                    name: { type: SchemaType.STRING, description: 'Brief title' },
+                    category: { type: SchemaType.STRING, description: 'e.g. litigation, advisory, corporate, property' },
+                    matter_title: { type: SchemaType.STRING, description: 'Matter title to link (optional)' },
+                    client_name: { type: SchemaType.STRING, description: 'Client name to link (optional)' },
+                    due_date: { type: SchemaType.STRING, description: 'Due date in ISO format e.g. 2025-07-01 (optional)' },
+                    description: { type: SchemaType.STRING, description: 'Brief description (optional)' },
+                },
+                required: ['name', 'category'],
+            },
+        },
+        {
+            name: 'create_court_date',
+            description: 'Schedule a new court date or hearing for a matter.',
+            parameters: {
+                type: SchemaType.OBJECT,
+                properties: {
+                    matter_title: { type: SchemaType.STRING, description: 'Matter title to link the court date to' },
+                    date: { type: SchemaType.STRING, description: 'Date and time in ISO format e.g. 2025-07-15T09:00:00' },
+                    court: { type: SchemaType.STRING, description: 'Court name (optional)' },
+                    proceedings: { type: SchemaType.STRING, description: 'What the hearing is for e.g. Cross-examination (optional)' },
+                    type: { type: SchemaType.STRING, description: 'COURT or MEETING (default COURT)' },
+                },
+                required: ['matter_title', 'date'],
+            },
+        },
     ];
 }
 
 export async function executeTool(
     name: string,
     input: Record<string, any>,
-    workspaceId: string
+    workspaceId: string,
+    userId: string
 ): Promise<unknown> {
     switch (name) {
         case 'get_matters': {
@@ -339,6 +399,104 @@ export async function executeTool(
                 input.question,
             ]);
             return { document_name: doc.name, analysis: result.response.text() };
+        }
+
+        case 'create_client': {
+            const existing = await prisma.client.findFirst({
+                where: { email: input.email, workspaceId },
+            });
+            if (existing) return { error: `A client with email ${input.email} already exists.` };
+            const client = await prisma.client.create({
+                data: {
+                    name: input.name,
+                    email: input.email,
+                    workspaceId,
+                    ...(input.phone && { phone: input.phone }),
+                    ...(input.company && { company: input.company }),
+                },
+            });
+            return { success: true, id: client.id, name: client.name, message: `Client "${client.name}" created successfully.` };
+        }
+
+        case 'create_matter': {
+            let clientId: string | undefined;
+            if (input.client_name) {
+                const client = await prisma.client.findFirst({
+                    where: { name: { contains: input.client_name, mode: 'insensitive' }, workspaceId },
+                    select: { id: true },
+                });
+                if (client) clientId = client.id;
+            }
+            const matter = await prisma.matter.create({
+                data: {
+                    name: input.name,
+                    workspaceId,
+                    status: input.status ?? 'active',
+                    ...(input.court && { court: input.court }),
+                    ...(clientId && { clientId }),
+                    lawyerInChargeId: userId,
+                },
+            });
+            return { success: true, id: matter.id, name: matter.name, message: `Matter "${matter.name}" created successfully.` };
+        }
+
+        case 'create_brief': {
+            let matterId: string | undefined;
+            let clientId: string | undefined;
+            if (input.matter_title) {
+                const matter = await prisma.matter.findFirst({
+                    where: { name: { contains: input.matter_title, mode: 'insensitive' }, workspaceId },
+                    select: { id: true, clientId: true },
+                });
+                if (matter) { matterId = matter.id; clientId = matter.clientId ?? undefined; }
+            }
+            if (!clientId && input.client_name) {
+                const client = await prisma.client.findFirst({
+                    where: { name: { contains: input.client_name, mode: 'insensitive' }, workspaceId },
+                    select: { id: true },
+                });
+                if (client) clientId = client.id;
+            }
+            const year = new Date().getFullYear();
+            const count = await prisma.brief.count({ where: { workspaceId } });
+            const briefNumber = `EUR-${year}-${String(count + 1).padStart(4, '0')}`;
+            const brief = await prisma.brief.create({
+                data: {
+                    briefNumber,
+                    name: input.name,
+                    category: input.category,
+                    workspaceId,
+                    lawyerId: userId,
+                    status: 'active',
+                    ...(matterId && { matterId }),
+                    ...(clientId && { clientId }),
+                    ...(input.due_date && { dueDate: new Date(input.due_date) }),
+                    ...(input.description && { description: input.description }),
+                },
+            });
+            return { success: true, id: brief.id, name: brief.name, briefNumber: brief.briefNumber, message: `Brief "${brief.name}" (${brief.briefNumber}) created successfully.` };
+        }
+
+        case 'create_court_date': {
+            let matterId: string | undefined;
+            if (input.matter_title) {
+                const matter = await prisma.matter.findFirst({
+                    where: { name: { contains: input.matter_title, mode: 'insensitive' }, workspaceId },
+                    select: { id: true },
+                });
+                if (!matter) return { error: `No matter found matching "${input.matter_title}". Please check the matter title.` };
+                matterId = matter.id;
+            }
+            const entry = await prisma.calendarEntry.create({
+                data: {
+                    date: new Date(input.date),
+                    type: input.type === 'MEETING' ? 'MEETING' : 'COURT',
+                    ...(matterId && { matterId }),
+                    ...(input.court && { court: input.court }),
+                    ...(input.proceedings && { proceedings: input.proceedings }),
+                },
+            });
+            return { success: true, id: entry.id, date: entry.date, message: `Court date scheduled for ${new Date(input.date).toLocaleDateString('en-NG', { dateStyle: 'long' })}.` };
         }
 
         default:

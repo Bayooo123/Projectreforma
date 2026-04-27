@@ -21,7 +21,13 @@ You can help with:
 - Court dates, appearances, and schedules
 - Financial summaries, outstanding invoices, revenue
 - Document analysis and summarisation
-- Lawyer performance and workload`;
+- Lawyer performance and workload
+- Creating new clients, matters, briefs, and court dates
+
+When creating records:
+- Always confirm back what was created with the name and ID
+- If required information is missing, ask for it before proceeding
+- For court dates, ask for the date, matter, and court if not provided`;
 
 export async function POST(req: NextRequest) {
     try {
@@ -78,7 +84,7 @@ export async function POST(req: NextRequest) {
             // Execute all requested tools
             const toolResults = await Promise.all(
                 functionCalls.map(async (call) => {
-                    const output = await executeTool(call.name, call.args as Record<string, any>, workspaceId);
+                    const output = await executeTool(call.name, call.args as Record<string, any>, workspaceId, session.user.id);
                     return {
                         functionResponse: {
                             name: call.name,
