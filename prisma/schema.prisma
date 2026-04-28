@@ -51,18 +51,38 @@ model Workspace {
 }
 
 model WorkspaceMember {
-  id          String    @id @default(cuid())
-  workspaceId String
-  userId      String
-  role        String
-  joinedAt    DateTime  @default(now())
-  designation String?
-  status      String    @default("active")
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  id           String             @id @default(cuid())
+  workspaceId  String
+  userId       String
+  role         String
+  joinedAt     DateTime           @default(now())
+  designation  String?
+  status       String             @default("active")
+  isGuest      Boolean            @default(false)
+  canDownload  Boolean            @default(true)
+  expiresAt    DateTime?
+  user         User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace    Workspace          @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  briefGrants  BriefAccessGrant[]
 
   @@unique([workspaceId, userId])
   @@index([userId])
+  @@index([isGuest])
+}
+
+model BriefAccessGrant {
+  id               String          @id @default(cuid())
+  memberId         String
+  briefId          String
+  grantedBy        String
+  createdAt        DateTime        @default(now())
+  member           WorkspaceMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  brief            Brief           @relation(fields: [briefId], references: [id], onDelete: Cascade)
+  grantedByUser    User            @relation(fields: [grantedBy], references: [id])
+
+  @@unique([memberId, briefId])
+  @@index([memberId])
+  @@index([briefId])
 }
 
 model Invitation {
@@ -128,6 +148,7 @@ model User {
   assignedTasks          Task[]                 @relation("AssignedTasks")
   ownedWorkspaces        Workspace[]            @relation("WorkspaceOwner")
   workspaces             WorkspaceMember[]
+  grantedBriefAccess     BriefAccessGrant[]
   calendarAppearances    CalendarEntry[]        @relation("CalendarAppearances")
   pushSubscriptions      PushSubscription[]
 
@@ -440,6 +461,7 @@ model Brief {
   notifications       Notification[]
   tasks               Task[]
   folders             Folder[]
+  accessGrants        BriefAccessGrant[]
 
   @@index([lawyerId])
   @@index([lawyerInChargeId])

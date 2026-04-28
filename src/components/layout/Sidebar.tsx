@@ -13,7 +13,8 @@ import {
   HelpCircle,
   LogOut,
   ShieldAlert,
-  MessageSquare
+  MessageSquare,
+  Terminal
 } from 'lucide-react';
 import styles from './Sidebar.module.css';
 import { signOut } from 'next-auth/react'; // Use client-side signOut
@@ -59,6 +60,7 @@ const Sidebar = ({ user, workspace }: SidebarProps) => {
     { name: 'Compliance', href: '/management/compliance', icon: ShieldCheck },
     { name: 'Analytics', href: '/analytics', icon: BarChart2 },
     { name: 'Reforma AI', href: '/chat', icon: MessageSquare },
+    { name: 'IT Management', href: '/management/it', icon: Terminal },
   ];
 
   const isActive = (path: string) => {
