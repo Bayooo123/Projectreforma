@@ -347,15 +347,16 @@ export async function getActiveSessions() {
     });
     const userIds = memberUserIds.map(m => m.userId);
 
-    return prisma.session.findMany({
+    return prisma.userSession.findMany({
         where: {
             userId: { in: userIds },
-            expires: { gt: new Date() },
+            revokedAt: null,
+            expiresAt: { gt: new Date() },
         },
         include: {
             user: { select: { id: true, name: true, email: true, image: true } },
         },
-        orderBy: { expires: 'desc' },
+        orderBy: { createdAt: 'desc' },
     });
 }
 
@@ -368,8 +369,17 @@ export async function forceLogoutUser(targetUserId: string) {
     });
     if (!member) throw new Error('User not in this workspace');
 
-    await prisma.session.deleteMany({
-        where: { userId: targetUserId },
+    // Increment sessionVersion — this invalidates all existing JWTs immediately
+    // on the user's next page load (jwt callback compares token version vs DB version)
+    await prisma.user.update({
+        where: { id: targetUserId },
+        data: { sessionVersion: { increment: 1 } },
+    });
+
+    // Also mark all active UserSession records as revoked (for UI accuracy)
+    await prisma.userSession.updateMany({
+        where: { userId: targetUserId, revokedAt: null },
+        data: { revokedAt: new Date() },
     });
 
     await prisma.securityAuditLog.create({

@@ -194,12 +194,56 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
     callbacks: {
         async jwt({ token, user }) {
             if (user) {
+                // Fresh login — assign a JTI, snapshot sessionVersion, record the session
+                const { randomUUID } = await import('crypto');
+                const jti = randomUUID();
+
+                const dbUser = await prisma.user.findUnique({
+                    where: { id: user.id },
+                    select: { sessionVersion: true },
+                });
+                const sessionVersion = dbUser?.sessionVersion ?? 0;
+
+                token.jti = jti;
+                token.sessionVersion = sessionVersion;
                 token.role = user.role;
                 token.workspaceId = user.workspaceId;
                 token.lawyerToken = user.lawyerToken;
                 token.isPlatformAdmin = user.isPlatformAdmin;
                 token.isWorkspaceOwner = user.isWorkspaceOwner;
                 token.permissions = user.permissions;
+
+                // Fire-and-forget: record session + log success
+                const userId = user.id!;
+                Promise.all([
+                    prisma.userSession.create({
+                        data: {
+                            userId,
+                            jti,
+                            sessionVersion,
+                            expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+                        },
+                    }),
+                    prisma.securityAuditLog.create({
+                        data: {
+                            userId,
+                            event: 'LOGIN_SUCCESS',
+                            description: `${user.email} signed in`,
+                        },
+                    }),
+                ]).catch(e => console.error('[Auth] Session record error:', e));
+
+            } else if (token.sub) {
+                // Subsequent request — check if session was force-revoked
+                const dbUser = await prisma.user.findUnique({
+                    where: { id: token.sub },
+                    select: { sessionVersion: true },
+                });
+
+                if (!dbUser || (dbUser.sessionVersion as number) > (token.sessionVersion as number ?? 0)) {
+                    // sessionVersion was incremented (force-logout) — invalidate this JWT
+                    return null;
+                }
             }
             return token;
         },
@@ -214,6 +258,24 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
                 session.user.permissions = (token.permissions as string[]) || [];
             }
             return session;
+        },
+    },
+    events: {
+        async signOut(message) {
+            const token = (message as any).token;
+            if (token?.sub) {
+                Promise.all([
+                    prisma.securityAuditLog.create({
+                        data: { userId: token.sub, event: 'LOGOUT', description: 'User signed out' },
+                    }),
+                    token.jti
+                        ? prisma.userSession.updateMany({
+                              where: { jti: token.jti, revokedAt: null },
+                              data: { revokedAt: new Date() },
+                          })
+                        : Promise.resolve(),
+                ]).catch(() => {});
+            }
         },
     }
 });

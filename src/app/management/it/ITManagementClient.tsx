@@ -476,7 +476,8 @@ function AuditLogTab() {
     const eventColor: Record<string, string> = {
         guest_invited: '#0369a1', guest_revoked: '#dc2626', guest_updated: '#0891b2',
         role_changed: '#7c3aed', permission_changed: '#d97706',
-        force_logout: '#dc2626', login: '#059669', logout: '#64748b',
+        force_logout: '#dc2626', LOGIN_SUCCESS: '#059669', LOGOUT: '#64748b',
+        LOGIN_FAILURE: '#dc2626', PASSWORD_RESET_REQUEST: '#d97706', PASSWORD_RESET_SUCCESS: '#0891b2',
     };
 
     return (
@@ -554,65 +555,114 @@ function SessionsTab() {
     }
 
     function handleForceLogout(userId: string, userName: string) {
-        if (!confirm(`Force logout all sessions for ${userName}? They will be signed out immediately.`)) return;
+        if (!confirm(`Force logout all sessions for ${userName}?\n\nThey will be signed out on their next page load.`)) return;
         startTransition(async () => {
             await forceLogoutUser(userId);
             load();
         });
     }
 
-    // Group by user
+    // Group sessions by user
     const byUser = sessions.reduce((acc: Record<string, any>, s) => {
         if (!acc[s.userId]) acc[s.userId] = { user: s.user, sessions: [] };
         acc[s.userId].sessions.push(s);
         return acc;
     }, {});
 
+    function timeSince(date: string) {
+        const seconds = Math.floor((Date.now() - new Date(date).getTime()) / 1000);
+        if (seconds < 60) return 'just now';
+        if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
+        if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
+        return `${Math.floor(seconds / 86400)}d ago`;
+    }
+
     return (
         <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
                 <div>
                     <h2 style={{ fontWeight: 600, fontSize: '1rem', marginBottom: '0.25rem' }}>Session Control</h2>
-                    <p style={{ fontSize: '0.8rem', color: '#64748b' }}>View active sessions and force-logout users when needed.</p>
+                    <p style={{ fontSize: '0.8rem', color: '#64748b' }}>
+                        Live view of who is signed in. Sessions are recorded from this deployment onward.
+                    </p>
                 </div>
-                <button onClick={load} style={iconBtnStyle}><RefreshCw size={14} /> Refresh</button>
+                <button onClick={load} disabled={loading} style={iconBtnStyle}>
+                    <RefreshCw size={14} style={{ animation: loading ? 'spin 1s linear infinite' : 'none' }} /> Refresh
+                </button>
             </div>
 
             {loading ? (
                 <div style={{ textAlign: 'center', padding: '2rem' }}><Loader2 size={20} className="animate-spin" color="#94a3b8" /></div>
             ) : Object.keys(byUser).length === 0 ? (
-                <div style={emptyStyle}>No active sessions found.</div>
+                <div style={emptyStyle}>
+                    No active sessions recorded yet.<br />
+                    <span style={{ fontSize: '0.75rem', marginTop: '0.5rem', display: 'block' }}>
+                        Sessions are tracked from the first login after this update was deployed.
+                    </span>
+                </div>
             ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                    {Object.values(byUser).map((entry: any) => (
-                        <div key={entry.user.id} style={cardStyle}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                                    <div style={avatarStyle}>{entry.user.name?.[0]?.toUpperCase() || 'U'}</div>
-                                    <div>
-                                        <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>{entry.user.name}</div>
-                                        <div style={{ fontSize: '0.78rem', color: '#94a3b8' }}>{entry.user.email}</div>
-                                        <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '0.1rem' }}>
-                                            {entry.sessions.length} active session{entry.sessions.length > 1 ? 's' : ''} ·
-                                            Expires {new Date(entry.sessions[0].expires).toLocaleString()}
+                    {Object.values(byUser).map((entry: any) => {
+                        const latest = entry.sessions[0];
+                        const sessionCount = entry.sessions.length;
+                        return (
+                            <div key={entry.user.id} style={cardStyle}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                        <div style={{ ...avatarStyle, position: 'relative' }}>
+                                            {entry.user.name?.[0]?.toUpperCase() || 'U'}
+                                            <span style={{
+                                                position: 'absolute', bottom: 1, right: 1,
+                                                width: 9, height: 9, borderRadius: '50%',
+                                                background: '#22c55e', border: '1.5px solid #fff',
+                                            }} />
+                                        </div>
+                                        <div>
+                                            <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>{entry.user.name}</div>
+                                            <div style={{ fontSize: '0.78rem', color: '#94a3b8' }}>{entry.user.email}</div>
+                                            <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.3rem', flexWrap: 'wrap' }}>
+                                                <span style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                                                    🕐 Signed in {timeSince(latest.createdAt)}
+                                                </span>
+                                                {sessionCount > 1 && (
+                                                    <span style={badgeStyle('#fffbeb', '#d97706') as React.CSSProperties}>
+                                                        {sessionCount} active sessions
+                                                    </span>
+                                                )}
+                                                <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
+                                                    Expires {new Date(latest.expiresAt).toLocaleDateString()}
+                                                </span>
+                                            </div>
                                         </div>
                                     </div>
+                                    <button
+                                        onClick={() => handleForceLogout(entry.user.id, entry.user.name)}
+                                        disabled={isPending}
+                                        style={{ ...btnStyle('#fef2f2', '#dc2626'), border: '1px solid #fecaca', flexShrink: 0 }}
+                                    >
+                                        <LogOut size={14} /> Force Logout
+                                    </button>
                                 </div>
-                                <button
-                                    onClick={() => handleForceLogout(entry.user.id, entry.user.name)}
-                                    disabled={isPending}
-                                    style={{ ...btnStyle('#fef2f2', '#dc2626'), border: '1px solid #fecaca' }}
-                                >
-                                    <LogOut size={14} /> Force Logout
-                                </button>
+
+                                {/* Per-session rows when multiple */}
+                                {sessionCount > 1 && (
+                                    <div style={{ marginTop: '0.75rem', paddingTop: '0.75rem', borderTop: '1px solid #f1f5f9' }}>
+                                        {entry.sessions.map((s: any, i: number) => (
+                                            <div key={s.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: '#94a3b8', padding: '0.2rem 0' }}>
+                                                <span>Session {i + 1} — signed in {timeSince(s.createdAt)}</span>
+                                                <span>expires {new Date(s.expiresAt).toLocaleDateString()}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
-                        </div>
-                    ))}
+                        );
+                    })}
                 </div>
             )}
 
             <p style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '1.5rem' }}>
-                Force logout terminates all browser sessions for the user. They will need to sign in again.
+                Force logout invalidates all sessions instantly. The user is redirected to login on their next page load.
             </p>
         </div>
     );

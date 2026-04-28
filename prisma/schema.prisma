@@ -146,9 +146,11 @@ model User {
   sessions               Session[]
   createdTasks           Task[]                 @relation("CreatedTasks")
   assignedTasks          Task[]                 @relation("AssignedTasks")
+  sessionVersion         Int                    @default(0)
   ownedWorkspaces        Workspace[]            @relation("WorkspaceOwner")
   workspaces             WorkspaceMember[]
   grantedBriefAccess     BriefAccessGrant[]
+  userSessions           UserSession[]
   calendarAppearances    CalendarEntry[]        @relation("CalendarAppearances")
   pushSubscriptions      PushSubscription[]
 
@@ -224,6 +226,24 @@ model Session {
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+}
+
+model UserSession {
+  id             String    @id @default(cuid())
+  userId         String
+  jti            String    @unique
+  sessionVersion Int       @default(0)
+  ipAddress      String?
+  userAgent      String?
+  createdAt      DateTime  @default(now())
+  lastSeenAt     DateTime  @default(now())
+  expiresAt      DateTime
+  revokedAt      DateTime?
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([jti])
+  @@index([expiresAt])
 }
 
 model VerificationToken {
