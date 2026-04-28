@@ -142,6 +142,7 @@ export default function CalendarClient({
                 isOpen={isRecordProceedingOpen}
                 onClose={() => setIsRecordProceedingOpen(false)}
                 workspaceId={workspaceId}
+                userId={userId}
                 onSuccess={handleRefresh}
             />
 

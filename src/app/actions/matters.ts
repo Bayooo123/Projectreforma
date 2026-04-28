@@ -30,7 +30,12 @@ export async function createMatter(input: {
     caseNumber?: string;
     court?: string;
     judge?: string;
-    nextCourtDate?: Date;
+    // First sitting
+    firstSittingDate?: Date;
+    proceedings?: string;
+    adjournedFor?: string;
+    adjournedTo?: Date;
+    appearingLawyerIds?: string[];
 }) {
     try {
         await assertWorkspaceMembership(input.workspaceId);
@@ -45,6 +50,9 @@ export async function createMatter(input: {
             return { success: false, error: 'Create at least one client before adding a matter.' };
         }
 
+        // nextCourtDate on the matter record = adjournedTo (if set) else firstSittingDate
+        const matterNextDate = input.adjournedTo || input.firstSittingDate || null;
+
         const matter = await prisma.matter.create({
             data: {
                 workspaceId: input.workspaceId,
@@ -54,27 +62,52 @@ export async function createMatter(input: {
                 caseNumber: input.caseNumber || null,
                 court: input.court || null,
                 judge: input.judge || null,
-                nextCourtDate: input.nextCourtDate || null,
+                nextCourtDate: matterNextDate,
                 status: 'active',
             },
         });
 
-        if (input.nextCourtDate) {
-            await prisma.$transaction(async tx => {
+        await prisma.$transaction(async tx => {
+            // Entry 1: the first sitting (with proceedings + appearances)
+            if (input.firstSittingDate) {
                 const entry = await tx.calendarEntry.create({
                     data: {
                         matterId: matter.id,
-                        date: input.nextCourtDate!,
+                        date: input.firstSittingDate,
                         type: 'COURT',
-                        title: 'Initial Court Date',
+                        title: 'First Sitting',
                         court: input.court || null,
                         judge: input.judge || null,
                         submittingLawyerId: input.userId,
+                        proceedings: input.proceedings || null,
+                        adjournedFor: input.adjournedFor || null,
+                        adjournedTo: input.adjournedTo || null,
+                        appearances: input.appearingLawyerIds?.length
+                            ? { connect: input.appearingLawyerIds.map(id => ({ id })) }
+                            : undefined,
                     },
                 });
-                await scheduleCourtReminders(tx, entry.id, input.nextCourtDate!, matter.id, [input.userId]);
-            });
-        }
+
+                // Entry 2: the adjourned-to date (next scheduled sitting)
+                if (input.adjournedTo) {
+                    const nextEntry = await tx.calendarEntry.create({
+                        data: {
+                            matterId: matter.id,
+                            date: input.adjournedTo,
+                            type: 'COURT',
+                            title: input.adjournedFor || 'Next Sitting',
+                            court: input.court || null,
+                            judge: input.judge || null,
+                            submittingLawyerId: input.userId,
+                            adjournedFor: input.adjournedFor || null,
+                        },
+                    });
+                    await scheduleCourtReminders(tx, nextEntry.id, input.adjournedTo, matter.id, [input.userId]);
+                } else {
+                    await scheduleCourtReminders(tx, entry.id, input.firstSittingDate, matter.id, [input.userId]);
+                }
+            }
+        });
 
         await createNotification({
             workspaceId: input.workspaceId,
@@ -91,6 +124,132 @@ export async function createMatter(input: {
     } catch (error: any) {
         console.error('createMatter failed:', error);
         return { success: false, error: error?.message || 'Failed to create matter' };
+    }
+}
+
+export async function getMattersForWorkspace(workspaceId: string) {
+    await requireAuth();
+    return prisma.matter.findMany({
+        where: { workspaceId, status: 'active' },
+        select: {
+            id: true,
+            name: true,
+            caseNumber: true,
+            court: true,
+            judge: true,
+            calendarEntries: {
+                where: { type: 'COURT', proceedings: null },
+                select: { id: true, date: true, adjournedFor: true, title: true },
+                orderBy: { date: 'asc' },
+            },
+        },
+        orderBy: { createdAt: 'desc' },
+    });
+}
+
+export async function recordProceeding(input: {
+    matterId: string;
+    entryId?: string;        // existing CalendarEntry to record against
+    date?: Date;             // required when no entryId (new sitting not pre-scheduled)
+    proceedings: string;
+    outcome?: string;
+    adjournedFor?: string;
+    adjournedTo?: Date;
+    appearingLawyerIds: string[];
+    userId: string;
+}) {
+    try {
+        await requireAuth();
+
+        const matter = await prisma.matter.findUnique({
+            where: { id: input.matterId },
+            select: { workspaceId: true, name: true, court: true, judge: true, lawyerInChargeId: true },
+        });
+        if (!matter) return { success: false, error: 'Matter not found' };
+
+        await prisma.$transaction(async tx => {
+            let entryId = input.entryId;
+
+            if (entryId) {
+                // Update the existing entry
+                await tx.calendarEntry.update({
+                    where: { id: entryId },
+                    data: {
+                        proceedings: input.proceedings,
+                        outcome: input.outcome || null,
+                        adjournedFor: input.adjournedFor || null,
+                        adjournedTo: input.adjournedTo || null,
+                        appearances: {
+                            set: input.appearingLawyerIds.map(id => ({ id })),
+                        },
+                    },
+                });
+            } else {
+                // Create a new entry for this sitting
+                const entry = await tx.calendarEntry.create({
+                    data: {
+                        matterId: input.matterId,
+                        date: input.date!,
+                        type: 'COURT',
+                        title: input.adjournedFor || 'Court Sitting',
+                        court: matter.court || null,
+                        judge: matter.judge || null,
+                        submittingLawyerId: input.userId,
+                        proceedings: input.proceedings,
+                        outcome: input.outcome || null,
+                        adjournedFor: input.adjournedFor || null,
+                        adjournedTo: input.adjournedTo || null,
+                        appearances: input.appearingLawyerIds.length
+                            ? { connect: input.appearingLawyerIds.map(id => ({ id })) }
+                            : undefined,
+                    },
+                });
+                entryId = entry.id;
+            }
+
+            // If adjourned to a new date: update matter.nextCourtDate + create next entry
+            if (input.adjournedTo) {
+                await tx.matter.update({
+                    where: { id: input.matterId },
+                    data: { nextCourtDate: input.adjournedTo },
+                });
+
+                const nextEntry = await tx.calendarEntry.create({
+                    data: {
+                        matterId: input.matterId,
+                        date: input.adjournedTo,
+                        type: 'COURT',
+                        title: input.adjournedFor || 'Next Sitting',
+                        court: matter.court || null,
+                        judge: matter.judge || null,
+                        submittingLawyerId: input.userId,
+                        adjournedFor: input.adjournedFor || null,
+                    },
+                });
+
+                const recipientIds = [input.userId, matter.lawyerInChargeId].filter(Boolean) as string[];
+                await scheduleCourtReminders(tx, nextEntry.id, input.adjournedTo, input.matterId, recipientIds);
+            }
+        });
+
+        if (input.adjournedTo && matter) {
+            const dateStr = input.adjournedTo.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+            await createNotification({
+                workspaceId: matter.workspaceId,
+                title: 'Proceeding recorded',
+                message: `"${matter.name}" — proceeding recorded. Adjourned to ${dateStr}${input.adjournedFor ? ` (${input.adjournedFor})` : ''}.`,
+                type: 'info',
+                priority: 'medium',
+                recipients: 'ALL',
+                relatedMatterId: input.matterId,
+            }).catch(() => {});
+        }
+
+        revalidatePath('/calendar');
+        return { success: true };
+    } catch (error: any) {
+        console.error('recordProceeding failed:', error);
+        return { success: false, error: error?.message || 'Failed to record proceeding' };
     }
 }
 
