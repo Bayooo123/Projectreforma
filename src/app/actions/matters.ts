@@ -149,8 +149,7 @@ export async function getMattersForWorkspace(workspaceId: string) {
 
 export async function recordProceeding(input: {
     matterId: string;
-    entryId?: string;        // existing CalendarEntry to record against
-    date?: Date;             // required when no entryId (new sitting not pre-scheduled)
+    date: Date;
     proceedings: string;
     outcome?: string;
     adjournedFor?: string;
@@ -168,46 +167,27 @@ export async function recordProceeding(input: {
         if (!matter) return { success: false, error: 'Matter not found' };
 
         await prisma.$transaction(async tx => {
-            let entryId = input.entryId;
+            // Always create a new entry — each sitting is its own record
+            await tx.calendarEntry.create({
+                data: {
+                    matterId: input.matterId,
+                    date: input.date,
+                    type: 'COURT',
+                    title: input.adjournedFor || 'Court Sitting',
+                    court: matter.court || null,
+                    judge: matter.judge || null,
+                    submittingLawyerId: input.userId,
+                    proceedings: input.proceedings,
+                    outcome: input.outcome || null,
+                    adjournedFor: input.adjournedFor || null,
+                    adjournedTo: input.adjournedTo || null,
+                    appearances: input.appearingLawyerIds.length
+                        ? { connect: input.appearingLawyerIds.map(id => ({ id })) }
+                        : undefined,
+                },
+            });
 
-            if (entryId) {
-                // Update the existing entry
-                await tx.calendarEntry.update({
-                    where: { id: entryId },
-                    data: {
-                        proceedings: input.proceedings,
-                        outcome: input.outcome || null,
-                        adjournedFor: input.adjournedFor || null,
-                        adjournedTo: input.adjournedTo || null,
-                        appearances: {
-                            set: input.appearingLawyerIds.map(id => ({ id })),
-                        },
-                    },
-                });
-            } else {
-                // Create a new entry for this sitting
-                const entry = await tx.calendarEntry.create({
-                    data: {
-                        matterId: input.matterId,
-                        date: input.date!,
-                        type: 'COURT',
-                        title: input.adjournedFor || 'Court Sitting',
-                        court: matter.court || null,
-                        judge: matter.judge || null,
-                        submittingLawyerId: input.userId,
-                        proceedings: input.proceedings,
-                        outcome: input.outcome || null,
-                        adjournedFor: input.adjournedFor || null,
-                        adjournedTo: input.adjournedTo || null,
-                        appearances: input.appearingLawyerIds.length
-                            ? { connect: input.appearingLawyerIds.map(id => ({ id })) }
-                            : undefined,
-                    },
-                });
-                entryId = entry.id;
-            }
-
-            // If adjourned to a new date: update matter.nextCourtDate + create next entry
+            // If adjourned — update matter's next date and schedule a reminder entry
             if (input.adjournedTo) {
                 await tx.matter.update({
                     where: { id: input.matterId },
@@ -232,18 +212,21 @@ export async function recordProceeding(input: {
             }
         });
 
-        if (input.adjournedTo && matter) {
-            const dateStr = input.adjournedTo.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
-            await createNotification({
-                workspaceId: matter.workspaceId,
-                title: 'Proceeding recorded',
-                message: `"${matter.name}" — proceeding recorded. Adjourned to ${dateStr}${input.adjournedFor ? ` (${input.adjournedFor})` : ''}.`,
-                type: 'info',
-                priority: 'medium',
-                recipients: 'ALL',
-                relatedMatterId: input.matterId,
-            }).catch(() => {});
-        }
+        const dateStr = input.adjournedTo
+            ? input.adjournedTo.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+            : null;
+
+        await createNotification({
+            workspaceId: matter.workspaceId,
+            title: 'Proceeding recorded',
+            message: dateStr
+                ? `"${matter.name}" — proceeding recorded. Adjourned to ${dateStr}${input.adjournedFor ? ` (${input.adjournedFor})` : ''}.`
+                : `"${matter.name}" — proceeding recorded.`,
+            type: 'info',
+            priority: 'medium',
+            recipients: 'ALL',
+            relatedMatterId: input.matterId,
+        }).catch(() => {});
 
         revalidatePath('/calendar');
         return { success: true };

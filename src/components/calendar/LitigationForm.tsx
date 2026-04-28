@@ -48,10 +48,7 @@ const LitigationForm = ({ isOpen, onClose, workspaceId, userId, onSuccess }: Lit
         setAdjournedTo(''); setSelectedLawyerIds(new Set()); setError('');
     }
 
-    function handleClose() {
-        resetForm();
-        onClose();
-    }
+    function handleClose() { resetForm(); onClose(); }
 
     function toggleLawyer(id: string) {
         setSelectedLawyerIds(prev => {
@@ -111,11 +108,17 @@ const LitigationForm = ({ isOpen, onClose, workspaceId, userId, onSuccess }: Lit
                 <div className={styles.content}>
                     <form className={styles.form} onSubmit={handleSubmit}>
 
-                        {/* ── Matter Details ── */}
+                        {/* Matter identity */}
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                             <div className={styles.formGroup} style={{ gridColumn: '1 / -1' }}>
                                 <label className={styles.label}>Matter Title *</label>
-                                <input className={styles.input} value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Ayodele v. Federal Republic of Nigeria" required />
+                                <input
+                                    className={styles.input}
+                                    value={name}
+                                    onChange={e => setName(e.target.value)}
+                                    placeholder="e.g. Ayodele v. Federal Republic of Nigeria"
+                                    required
+                                />
                             </div>
                             <div className={styles.formGroup}>
                                 <label className={styles.label}>Case Number</label>
@@ -131,38 +134,35 @@ const LitigationForm = ({ isOpen, onClose, workspaceId, userId, onSuccess }: Lit
                             </div>
                         </div>
 
-                        {/* ── First Sitting ── */}
-                        <div style={{ borderTop: '1px solid var(--border)', paddingTop: '1.25rem' }}>
-                            <p style={{ fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-tertiary)', marginBottom: '1rem' }}>
-                                First Sitting
-                            </p>
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                                <div className={styles.formGroup}>
-                                    <label className={styles.label}>Date of First Sitting</label>
-                                    <input type="date" className={styles.input} value={firstSittingDate} onChange={e => setFirstSittingDate(e.target.value)} />
-                                </div>
-                                <div className={styles.formGroup}>
-                                    <label className={styles.label}>Adjourned For</label>
-                                    <input className={styles.input} value={adjournedFor} onChange={e => setAdjournedFor(e.target.value)} placeholder="e.g. Hearing of Motion" />
-                                </div>
-                                <div className={styles.formGroup} style={{ gridColumn: '1 / -1' }}>
-                                    <label className={styles.label}>What Happened in Court</label>
-                                    <textarea
-                                        className={styles.textarea}
-                                        value={proceedings}
-                                        onChange={e => setProceedings(e.target.value)}
-                                        placeholder="Describe the events of the first sitting — arguments made, applications moved, orders given..."
-                                        style={{ height: 100 }}
-                                    />
-                                </div>
-                                <div className={styles.formGroup}>
-                                    <label className={styles.label}>Adjourned To (Next Date)</label>
-                                    <input type="date" className={styles.input} value={adjournedTo} onChange={e => setAdjournedTo(e.target.value)} />
-                                </div>
+                        {/* First sitting */}
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', borderTop: '1px solid var(--border)', paddingTop: '1.25rem' }}>
+                            <div className={styles.formGroup} style={{ gridColumn: '1 / -1' }}>
+                                <label className={styles.label} style={{ color: 'var(--text-secondary)' }}>— First Sitting —</label>
+                            </div>
+                            <div className={styles.formGroup}>
+                                <label className={styles.label}>Date of First Sitting</label>
+                                <input type="date" className={styles.input} value={firstSittingDate} onChange={e => setFirstSittingDate(e.target.value)} />
+                            </div>
+                            <div className={styles.formGroup}>
+                                <label className={styles.label}>Adjourned For</label>
+                                <input className={styles.input} value={adjournedFor} onChange={e => setAdjournedFor(e.target.value)} placeholder="e.g. Hearing of Motion" />
+                            </div>
+                            <div className={styles.formGroup} style={{ gridColumn: '1 / -1' }}>
+                                <label className={styles.label}>What Happened in Court</label>
+                                <textarea
+                                    className={styles.textarea}
+                                    value={proceedings}
+                                    onChange={e => setProceedings(e.target.value)}
+                                    placeholder="Describe the events of this sitting — arguments made, applications, orders given..."
+                                />
+                            </div>
+                            <div className={styles.formGroup}>
+                                <label className={styles.label}>Adjourned To (Next Date)</label>
+                                <input type="date" className={styles.input} value={adjournedTo} onChange={e => setAdjournedTo(e.target.value)} />
                             </div>
                         </div>
 
-                        {/* ── Lawyers Who Appeared ── */}
+                        {/* Appearing lawyers */}
                         {lawyers.length > 0 && (
                             <div className={styles.formGroup}>
                                 <label className={styles.label}>Lawyers Who Appeared</label>
