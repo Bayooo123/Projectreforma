@@ -1,17 +1,19 @@
 .authContainer {
     display: flex;
-    min-height: 100vh;
+    height: 100vh;
+    overflow: hidden;
     background: linear-gradient(135deg, #022c22 0%, #064e3b 100%);
 }
 
 .brandingSide {
     flex: 1;
-    padding: 3rem;
+    padding: 2.5rem 3rem;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
     position: relative;
-    overflow: hidden;
+    overflow-y: auto;
+    min-height: 0;
 }
 
 .brandingSide::before {
@@ -67,18 +69,18 @@
 }
 
 .brandingTitle {
-    font-size: 2.5rem;
+    font-size: 2.25rem;
     font-weight: 700;
     color: white;
     line-height: 1.2;
-    margin-bottom: 1.5rem;
+    margin-bottom: 1rem;
 }
 
 .brandingDescription {
-    font-size: 1.125rem;
+    font-size: 1rem;
     color: #cbd5e1;
     line-height: 1.6;
-    margin-bottom: 3rem;
+    margin-bottom: 1.75rem;
 }
 
 .features {
@@ -126,7 +128,9 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 2rem;
+    padding: 1.5rem 2rem;
+    overflow-y: auto;
+    min-height: 0;
 }
 
 .formContainer {
@@ -135,14 +139,14 @@
 }
 
 .formHeader {
-    margin-bottom: 2rem;
+    margin-bottom: 1.5rem;
 }
 
 .formTitle {
-    font-size: 2rem;
+    font-size: 1.75rem;
     font-weight: 700;
     color: #1e293b;
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.4rem;
 }
 
 .formSubtitle {
@@ -164,7 +168,7 @@
 .form {
     display: flex;
     flex-direction: column;
-    gap: 1.25rem;
+    gap: 1rem;
 }
 
 .formGroup {
@@ -260,7 +264,7 @@
 
 .footer {
     text-align: center;
-    margin-top: 1.5rem;
+    margin-top: 1rem;
 }
 
 .footerLink {
