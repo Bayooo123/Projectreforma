@@ -395,6 +395,29 @@ export async function forceLogoutUser(targetUserId: string) {
     return { success: true };
 }
 
+// ─── Workspace Activity Log ────────────────────────────────────────────────────
+
+export async function getActivityLogs(page = 1, limit = 50) {
+    const { workspaceId } = await requireAdmin();
+
+    const skip = (page - 1) * limit;
+
+    const [logs, total] = await Promise.all([
+        prisma.workspaceActivityLog.findMany({
+            where: { workspaceId },
+            include: {
+                user: { select: { id: true, name: true, email: true, image: true } },
+            },
+            orderBy: { createdAt: 'desc' },
+            skip,
+            take: limit,
+        }),
+        prisma.workspaceActivityLog.count({ where: { workspaceId } }),
+    ]);
+
+    return { logs, total, page, limit };
+}
+
 // ─── Briefs list for access grant selector ────────────────────────────────────
 
 export async function getWorkspaceBriefs() {

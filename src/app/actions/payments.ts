@@ -3,6 +3,8 @@
 import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
 import { Prisma } from '@prisma/client';
+import { auth } from '@/auth';
+import { logActivity } from '@/lib/log-activity';
 
 interface RecordPaymentData {
     invoiceId?: string;
@@ -15,6 +17,8 @@ interface RecordPaymentData {
 
 export async function createPayment(data: RecordPaymentData) {
     try {
+        const session = await auth();
+
         // 1. Fetch Invoice to validate amount
         let invoice = null;
         if (data.invoiceId) {
@@ -78,9 +82,16 @@ export async function createPayment(data: RecordPaymentData) {
             // Use Decimal for safe formatting
             const displayAmount = new Prisma.Decimal(data.amount).toNumber().toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
+            const clientRecord = await prisma.client.findUnique({ where: { id: data.clientId }, select: { workspaceId: true } });
+            const workspaceId = clientRecord?.workspaceId || '';
+
+            if (workspaceId && session?.user?.id) {
+                logActivity({ workspaceId, userId: session.user.id, resource: 'PAYMENT', action: 'CREATED', resourceId: payment.id, resourceName: `₦${displayAmount} via ${data.method}` }).catch(() => {});
+            }
+
             const { createNotification } = await import('@/app/actions/notifications');
             await createNotification({
-                workspaceId: (await prisma.client.findUnique({ where: { id: data.clientId }, select: { workspaceId: true } }))?.workspaceId || '',
+                workspaceId,
                 title: 'Payment Received',
                 message: `Payment of ₦${displayAmount} received from ${invoice ? invoice.invoiceNumber : 'Client'} via ${data.method}.`,
                 type: 'success',

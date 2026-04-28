@@ -3,6 +3,7 @@
 import { prisma } from '@/lib/prisma';
 import { auth } from '@/auth'; // fixed import based on page.tsx usage
 import { revalidatePath } from 'next/cache';
+import { logActivity } from '@/lib/log-activity';
 
 // Re-exporting Prisma types would be better, but keeping interfaces for now to match verified structure
 export interface ComplianceObligation {
@@ -100,6 +101,9 @@ export async function uploadEvidence(taskId: string, evidenceUrl: string): Promi
         });
 
         revalidatePath(`/management/compliance`);
+
+        logActivity({ workspaceId: task.workspaceId, userId: session.user.id!, resource: 'COMPLIANCE', action: 'UPLOADED', resourceId: task.id, resourceName: task.obligation?.actionRequired || 'Compliance task' }).catch(() => {});
+
         return { success: true, data: task as unknown as ComplianceTask };
     } catch (error: any) {
         console.error('Failed to upload evidence:', error);

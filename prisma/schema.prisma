@@ -42,6 +42,7 @@ model Workspace {
   matters           Matter[]
   tasks             Task[]
   inboundEmails     InboundEmail[]
+  activityLogs      WorkspaceActivityLog[]
   owner             User                  @relation("WorkspaceOwner", fields: [ownerId], references: [id])
   emailConfig       WorkspaceEmailConfig?
   members           WorkspaceMember[]
@@ -151,6 +152,7 @@ model User {
   workspaces             WorkspaceMember[]
   grantedBriefAccess     BriefAccessGrant[]
   userSessions           UserSession[]
+  workspaceActivity      WorkspaceActivityLog[]
   calendarAppearances    CalendarEntry[]        @relation("CalendarAppearances")
   pushSubscriptions      PushSubscription[]
 
@@ -965,6 +967,24 @@ enum ExpenseCategory {
   STAFF_COSTS
   VEHICLE_LOGISTICS
   MISCELLANEOUS
+}
+
+model WorkspaceActivityLog {
+  id           String    @id @default(cuid())
+  workspaceId  String
+  userId       String
+  resource     String
+  action       String
+  resourceId   String?
+  resourceName String?
+  metadata     Json?
+  createdAt    DateTime  @default(now())
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace    Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, createdAt])
+  @@index([userId, createdAt])
+  @@index([resource, action])
 }
 
 model InboundEmail {

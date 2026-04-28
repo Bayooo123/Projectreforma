@@ -1,6 +1,34 @@
 'use server';
 
 import { prisma } from '@/lib/prisma';
+import { requireAuth } from '@/lib/auth-utils';
+
+export async function getCourtEntriesForWorkspace(workspaceId: string) {
+    await requireAuth();
+    return prisma.calendarEntry.findMany({
+        where: {
+            type: 'COURT',
+            OR: [
+                { matter: { workspaceId } },
+                { clientId: { in: (await prisma.client.findMany({ where: { workspaceId }, select: { id: true } })).map(c => c.id) } },
+            ],
+        },
+        select: {
+            id: true,
+            title: true,
+            date: true,
+            court: true,
+            proceedings: true,
+            outcome: true,
+            adjournedFor: true,
+            adjournedTo: true,
+            appearances: { select: { id: true, name: true, email: true } },
+            matter: { select: { id: true, name: true, caseNumber: true } },
+        },
+        orderBy: { date: 'desc' },
+        take: 100,
+    });
+}
 
 /**
  * Get calendar entries for a workspace within a specific date range.

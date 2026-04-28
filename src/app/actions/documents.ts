@@ -2,6 +2,21 @@
 
 import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
+import { auth } from '@/auth';
+import { logActivity } from '@/lib/log-activity';
+
+export async function logDocumentDownload(documentId: string) {
+    try {
+        const session = await auth();
+        if (!session?.user?.id) return;
+        const doc = await prisma.document.findUnique({
+            where: { id: documentId },
+            select: { name: true, brief: { select: { workspaceId: true } } },
+        });
+        if (!doc?.brief?.workspaceId) return;
+        await logActivity({ workspaceId: doc.brief.workspaceId, userId: session.user.id, resource: 'DOCUMENT', action: 'DOWNLOADED', resourceId: documentId, resourceName: doc.name });
+    } catch {}
+}
 
 export async function getDocuments(briefId: string, folderId?: string | null) {
     try {

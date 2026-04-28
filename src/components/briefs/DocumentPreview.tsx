@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { X, Download, ChevronLeft, ChevronRight } from 'lucide-react';
+import { logDocumentDownload } from '@/app/actions/documents';
 import { Document, Page, pdfjs } from 'react-pdf';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
@@ -135,6 +136,7 @@ export default function DocumentPreview({ document, onClose, onNavigate, canNavi
                             download
                             className={styles.downloadButton}
                             title="Download"
+                            onClick={() => logDocumentDownload(document.id).catch(() => {})}
                         >
                             <Download size={20} />
                         </a>

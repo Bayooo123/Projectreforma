@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma';
 import { revalidatePath, unstable_noStore as noStore } from 'next/cache';
 import { requireAuth } from '@/lib/auth-utils';
 import { applySentenceCaseToFields, applyTitleCaseToFields } from '@/lib/sentence-case';
+import { logActivity } from '@/lib/log-activity';
 
 export async function getUserBriefs() {
     const user = await requireAuth();
@@ -255,6 +256,8 @@ export async function createBrief(data: {
             console.error('Notification error:', error);
         }
 
+        logActivity({ workspaceId: data.workspaceId, userId: session.id!, resource: 'BRIEF', action: 'CREATED', resourceId: result.id, resourceName: result.name }).catch(() => {});
+
         console.log('[createBrief] ========== END ==========');
         return { success: true, brief: result };
     } catch (error: any) {
@@ -420,6 +423,8 @@ export async function updateBrief(
                 },
             },
         });
+        logActivity({ workspaceId: existingBrief?.workspaceId || brief.workspaceId, userId: session.id!, resource: 'BRIEF', action: 'UPDATED', resourceId: brief.id, resourceName: brief.name }).catch(() => {});
+
         revalidatePath('/briefs');
         revalidatePath(`/briefs/${id}`);
         return { success: true, brief };
@@ -606,4 +611,14 @@ export async function reassignBriefHierarchy(briefId: string, parentBriefId: str
         console.error('[reassignBriefHierarchy] Error:', error);
         return { success: false, error: 'Internal server error during hierarchy reassignment' };
     }
+}
+
+export async function logBriefViewed(briefId: string) {
+    try {
+        const session = await requireAuth();
+        if (!session?.id) return;
+        const brief = await prisma.brief.findUnique({ where: { id: briefId }, select: { workspaceId: true, name: true } });
+        if (!brief) return;
+        await logActivity({ workspaceId: brief.workspaceId, userId: session.id, resource: 'BRIEF', action: 'VIEWED', resourceId: briefId, resourceName: brief.name });
+    } catch {}
 }

@@ -3,6 +3,8 @@
 import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
 import { Prisma } from '@prisma/client';
+import { auth } from '@/auth';
+import { logActivity } from '@/lib/log-activity';
 
 // ============================================
 // INVOICE CRUD OPERATIONS
@@ -52,6 +54,8 @@ interface CreateInvoiceData {
 
 export async function createInvoice(data: CreateInvoiceData) {
     try {
+        const session = await auth();
+
         // Get client to verify workspace
         const client = await prisma.client.findUnique({
             where: { id: data.clientId },
@@ -111,6 +115,10 @@ export async function createInvoice(data: CreateInvoiceData) {
 
         revalidatePath('/management/clients');
         revalidatePath('/management/invoices');
+
+        if (session?.user?.id) {
+            logActivity({ workspaceId: client.workspaceId, userId: session.user.id, resource: 'INVOICE', action: 'CREATED', resourceId: invoice.id, resourceName: invoice.invoiceNumber }).catch(() => {});
+        }
 
         // Notification: New Invoice Created
         try {

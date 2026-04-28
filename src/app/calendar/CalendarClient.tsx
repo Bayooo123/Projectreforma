@@ -7,6 +7,7 @@ import CourtEventModal from '@/components/calendar/CourtEventModal';
 import MeetingEventModal from '@/components/calendar/MeetingEventModal';
 import ScheduleMeetingModal from '@/components/calendar/ScheduleMeetingModal';
 import AddMatterModal from '@/components/calendar/AddMatterModal';
+import RecordProceedingModal from '@/components/calendar/RecordProceedingModal';
 import styles from './page.module.css';
 
 import { CalendarEvent } from '@/types/legal';
@@ -30,6 +31,7 @@ export default function CalendarClient({
     // Modals
     const [isAddMatterModalOpen, setIsAddMatterModalOpen] = useState(false);
     const [isScheduleMeetingModalOpen, setIsScheduleMeetingModalOpen] = useState(false);
+    const [isRecordProceedingOpen, setIsRecordProceedingOpen] = useState(false);
     const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
 
     // Filters
@@ -110,7 +112,7 @@ export default function CalendarClient({
                         <button className={styles.secondaryBtn} onClick={() => setIsAddMatterModalOpen(true)}>
                             <Plus size={18} /> <span>Create New Matter</span>
                         </button>
-                        <button className={styles.proceedingBtn} onClick={() => alert("Record Proceeding modal is currently being consolidated.")}>
+                        <button className={styles.proceedingBtn} onClick={() => setIsRecordProceedingOpen(true)}>
                             <Gavel size={18} /> <span>Record Court Proceeding</span>
                         </button>
                     </div>
@@ -133,6 +135,13 @@ export default function CalendarClient({
                 onClose={() => setIsAddMatterModalOpen(false)}
                 workspaceId={workspaceId}
                 userId={userId}
+                onSuccess={handleRefresh}
+            />
+
+            <RecordProceedingModal
+                isOpen={isRecordProceedingOpen}
+                onClose={() => setIsRecordProceedingOpen(false)}
+                workspaceId={workspaceId}
                 onSuccess={handleRefresh}
             />
 

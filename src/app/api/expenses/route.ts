@@ -4,6 +4,7 @@ import { requireAuth } from '@/lib/auth-utils';
 import { notifyExpenseRecorded } from '@/lib/notifications';
 import { categorizeExpense } from '@/lib/services/expense-classification';
 import { ExpenseCategory, Prisma } from '@prisma/client';
+import { logActivity } from '@/lib/log-activity';
 
 // GET /api/expenses - Fetch expenses with optional filtering
 export async function GET(request: NextRequest) {
@@ -137,7 +138,7 @@ export async function GET(request: NextRequest) {
 // POST /api/expenses - Create a new expense (single or batch)
 export async function POST(request: NextRequest) {
     try {
-        await requireAuth();
+        const authUser = await requireAuth();
         const body = await request.json();
         const { workspaceId, expenses, ...singleExpense } = body;
 
@@ -189,6 +190,10 @@ export async function POST(request: NextRequest) {
                     .catch(err => console.error('Failed to notify partners:', err));
             });
 
+            if (authUser?.id) {
+                logActivity({ workspaceId, userId: authUser.id, resource: 'EXPENSE', action: 'UPLOADED', resourceName: `${result.length} expense(s)` }).catch(() => {});
+            }
+
             return NextResponse.json({
                 success: true,
                 data: result,
@@ -228,6 +233,10 @@ export async function POST(request: NextRequest) {
 
         notifyExpenseRecorded(expense, workspaceId)
             .catch(err => console.error('Failed to notify partners:', err));
+
+        if (authUser?.id) {
+            logActivity({ workspaceId, userId: authUser.id, resource: 'EXPENSE', action: 'UPLOADED', resourceId: expense.id, resourceName: expense.description || `${expense.category} expense` }).catch(() => {});
+        }
 
         return NextResponse.json({
             success: true,

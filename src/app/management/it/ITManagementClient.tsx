@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useTransition } from 'react';
 import {
-    Users, ShieldCheck, ClipboardList, Monitor,
+    Users, ShieldCheck, ClipboardList, Monitor, Activity,
     Plus, Trash2, Edit2, Check, X, ChevronDown,
     UserX, RefreshCw, Loader2, FileText, Download,
     Ban, AlertTriangle, Clock, LogOut, Mail
@@ -12,10 +12,10 @@ import {
     grantBriefAccess, revokeBriefAccess, sendGuestInviteEmail,
     getWorkspaceMembers, updateMemberRole, updateMemberDownloadPermission,
     getAuditLogs, getActiveSessions, forceLogoutUser,
-    getWorkspaceBriefs,
+    getWorkspaceBriefs, getActivityLogs,
 } from '@/app/actions/it-management';
 
-type Tab = 'guests' | 'roles' | 'audit' | 'sessions';
+type Tab = 'guests' | 'roles' | 'audit' | 'sessions' | 'activity';
 
 const ROLES = ['owner', 'admin', 'lawyer', 'paralegal', 'viewer'];
 
@@ -35,6 +35,7 @@ export default function ITManagementClient({ workspaceId }: { workspaceId: strin
         { id: 'roles', label: 'Roles & Permissions', icon: ShieldCheck },
         { id: 'audit', label: 'Audit Log', icon: ClipboardList },
         { id: 'sessions', label: 'Session Control', icon: Monitor },
+        { id: 'activity', label: 'Activity Log', icon: Activity },
     ];
 
     return (
@@ -75,6 +76,7 @@ export default function ITManagementClient({ workspaceId }: { workspaceId: strin
             {activeTab === 'roles' && <RolesTab />}
             {activeTab === 'audit' && <AuditLogTab />}
             {activeTab === 'sessions' && <SessionsTab />}
+            {activeTab === 'activity' && <ActivityLogTab />}
         </div>
     );
 }
@@ -664,6 +666,135 @@ function SessionsTab() {
             <p style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '1.5rem' }}>
                 Force logout invalidates all sessions instantly. The user is redirected to login on their next page load.
             </p>
+        </div>
+    );
+}
+
+// ─── Activity Log Tab ──────────────────────────────────────────────────────────
+
+const RESOURCE_COLORS: Record<string, { bg: string; color: string }> = {
+    BRIEF:      { bg: '#eff6ff', color: '#2563eb' },
+    DOCUMENT:   { bg: '#f0fdf4', color: '#16a34a' },
+    INVOICE:    { bg: '#fefce8', color: '#ca8a04' },
+    PAYMENT:    { bg: '#f0fdf4', color: '#15803d' },
+    EXPENSE:    { bg: '#fff7ed', color: '#ea580c' },
+    COMPLIANCE: { bg: '#faf5ff', color: '#7c3aed' },
+};
+
+const ACTION_LABELS: Record<string, string> = {
+    CREATED: 'Created',
+    UPDATED: 'Updated',
+    DELETED: 'Deleted',
+    VIEWED: 'Viewed',
+    DOWNLOADED: 'Downloaded',
+    UPLOADED: 'Uploaded',
+    ACKNOWLEDGED: 'Acknowledged',
+};
+
+function ActivityLogTab() {
+    const [logs, setLogs] = useState<any[]>([]);
+    const [total, setTotal] = useState(0);
+    const [page, setPage] = useState(1);
+    const [loading, setLoading] = useState(true);
+    const LIMIT = 50;
+
+    async function load(p = page) {
+        setLoading(true);
+        try {
+            const result = await getActivityLogs(p, LIMIT);
+            setLogs(result.logs);
+            setTotal(result.total);
+            setPage(p);
+        } catch {}
+        setLoading(false);
+    }
+
+    useEffect(() => { load(1); }, []);
+
+    function fmt(dateStr: string) {
+        const d = new Date(dateStr);
+        return d.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+    }
+
+    const totalPages = Math.ceil(total / LIMIT);
+
+    return (
+        <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+                <div>
+                    <h2 style={{ fontWeight: 600, fontSize: '1rem', marginBottom: '0.25rem' }}>Activity Log</h2>
+                    <p style={{ fontSize: '0.8rem', color: '#64748b' }}>
+                        All workspace actions — briefs, documents, invoices, payments, expenses, compliance.
+                    </p>
+                </div>
+                <button onClick={() => load(1)} disabled={loading} style={iconBtnStyle}>
+                    <RefreshCw size={14} style={{ animation: loading ? 'spin 1s linear infinite' : 'none' }} /> Refresh
+                </button>
+            </div>
+
+            {loading ? (
+                <div style={{ textAlign: 'center', padding: '2rem' }}><Loader2 size={20} className="animate-spin" color="#94a3b8" /></div>
+            ) : logs.length === 0 ? (
+                <div style={emptyStyle}>
+                    No activity recorded yet.<br />
+                    <span style={{ fontSize: '0.75rem', marginTop: '0.5rem', display: 'block' }}>
+                        Actions taken on briefs, documents, invoices, payments, and compliance will appear here.
+                    </span>
+                </div>
+            ) : (
+                <>
+                    <div style={{ overflowX: 'auto' }}>
+                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.875rem' }}>
+                            <thead>
+                                <tr style={{ borderBottom: '1px solid #e2e8f0', background: '#f8fafc' }}>
+                                    <th style={thStyle}>Time</th>
+                                    <th style={thStyle}>User</th>
+                                    <th style={thStyle}>Resource</th>
+                                    <th style={thStyle}>Action</th>
+                                    <th style={thStyle}>Name</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {logs.map(log => {
+                                    const rc = RESOURCE_COLORS[log.resource] || { bg: '#f8fafc', color: '#64748b' };
+                                    return (
+                                        <tr key={log.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                                            <td style={{ padding: '0.6rem 1rem', color: '#94a3b8', whiteSpace: 'nowrap', fontSize: '0.8rem' }}>
+                                                {fmt(log.createdAt)}
+                                            </td>
+                                            <td style={{ padding: '0.6rem 1rem' }}>
+                                                <div style={{ fontWeight: 500 }}>{log.user?.name || '—'}</div>
+                                                <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>{log.user?.email}</div>
+                                            </td>
+                                            <td style={{ padding: '0.6rem 1rem' }}>
+                                                <span style={{ ...badgeStyle(rc.bg, rc.color), cursor: 'default' }}>
+                                                    {log.resource}
+                                                </span>
+                                            </td>
+                                            <td style={{ padding: '0.6rem 1rem', color: '#475569' }}>
+                                                {ACTION_LABELS[log.action] || log.action}
+                                            </td>
+                                            <td style={{ padding: '0.6rem 1rem', color: '#64748b', maxWidth: 260, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                {log.resourceName || log.resourceId || '—'}
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    {totalPages > 1 && (
+                        <div style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem', marginTop: '1.25rem' }}>
+                            <button onClick={() => load(page - 1)} disabled={page <= 1} style={iconBtnStyle}>← Prev</button>
+                            <span style={{ padding: '0.35rem 0.65rem', fontSize: '0.8rem', color: '#64748b' }}>
+                                Page {page} of {totalPages} ({total} entries)
+                            </span>
+                            <button onClick={() => load(page + 1)} disabled={page >= totalPages} style={iconBtnStyle}>Next →</button>
+                        </div>
+                    )}
+                </>
+            )}
         </div>
     );
 }

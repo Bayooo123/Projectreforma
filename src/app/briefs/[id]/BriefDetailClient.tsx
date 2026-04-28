@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, Clock, Tag, User, Building, Calendar, Upload, Loader, FileText, Trash2, Edit, Sparkles, Folder, FolderPlus, FolderInput, CornerUpLeft } from 'lucide-react';
@@ -83,7 +83,7 @@ interface BriefDetailClientProps {
 
 import { getDocuments } from '@/app/actions/documents';
 import { getFolders, deleteFolder } from '@/app/actions/folders';
-import { summarizeBrief } from '@/app/actions/briefs';
+import { summarizeBrief, logBriefViewed } from '@/app/actions/briefs';
 
 export default function BriefDetailClient({ brief }: BriefDetailClientProps) {
     const router = useRouter();
@@ -97,6 +97,10 @@ export default function BriefDetailClient({ brief }: BriefDetailClientProps) {
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [summary, setSummary] = useState<string | null>(brief.summary);
     const [isSummarizing, setIsSummarizing] = useState(false);
+
+    useEffect(() => {
+        logBriefViewed(brief.id).catch(() => {});
+    }, [brief.id]);
 
     const refreshData = async (silent = false) => {
         if (!silent) setIsRefreshing(true);

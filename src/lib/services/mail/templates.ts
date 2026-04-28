@@ -1,3 +1,4 @@
+import { config } from '@/lib/config';
 
 interface EmailTemplateData {
     title: string;
@@ -7,12 +8,12 @@ interface EmailTemplateData {
     ctaUrl?: string;
 }
 
-/**
- * Shared layout for all transactional emails.
- * Follows "minimal, formal, and mobile-responsive" requirements.
- */
-const sharedLayout = (data: EmailTemplateData) => `
-<!DOCTYPE html>
+const sharedLayout = (data: EmailTemplateData) => {
+    const appUrl = config.NEXT_PUBLIC_APP_URL;
+    const logoUrl = `${appUrl}/logos/reforma-logo-pillar.png`;
+    const year = new Date().getFullYear();
+
+    return `<!DOCTYPE html>
 <html>
 <head>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -20,59 +21,90 @@ const sharedLayout = (data: EmailTemplateData) => `
   <title>${data.title}</title>
   <style>
     body {
-      background-color: #f8fafc;
+      background-color: #f1f5f9;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
       margin: 0;
       padding: 0;
       -webkit-text-size-adjust: none;
     }
     .wrapper {
-      background-color: #f8fafc;
+      background-color: #f1f5f9;
       width: 100%;
       padding: 40px 0;
+    }
+    .outer {
+      margin: 0 auto;
+      max-width: 580px;
+    }
+    .email-header {
+      background-color: #0f172a;
+      border-radius: 8px 8px 0 0;
+      padding: 24px 40px;
+      text-align: center;
+    }
+    .email-header img {
+      height: 38px;
+      width: auto;
+      display: inline-block;
     }
     .container {
       background-color: #ffffff;
       border: 1px solid #e2e8f0;
-      border-radius: 8px;
-      margin: 0 auto;
-      max-width: 580px;
-      padding: 40px;
+      border-top: 3px solid #0d9488;
+      border-radius: 0 0 8px 8px;
+      padding: 36px 40px 32px;
     }
     h1 {
       color: #0f172a;
-      font-size: 24px;
+      font-size: 22px;
       font-weight: 700;
       margin-top: 0;
-      margin-bottom: 24px;
+      margin-bottom: 20px;
     }
     p {
       color: #475569;
-      font-size: 16px;
+      font-size: 15px;
       line-height: 24px;
       margin-top: 0;
-      margin-bottom: 24px;
+      margin-bottom: 20px;
     }
     .cta-container {
-      margin-top: 32px;
-      margin-bottom: 32px;
+      margin-top: 28px;
+      margin-bottom: 28px;
       text-align: center;
     }
     .button {
-      background-color: #121826;
+      background-color: #0d9488;
       border-radius: 6px;
       color: #ffffff !important;
       display: inline-block;
-      font-size: 16px;
+      font-size: 15px;
       font-weight: 600;
-      padding: 12px 24px;
+      padding: 13px 30px;
       text-decoration: none;
+      letter-spacing: 0.01em;
+    }
+    .divider {
+      border: none;
+      border-top: 1px solid #e2e8f0;
+      margin: 24px 0 20px;
     }
     .footer {
+      text-align: center;
+      margin-top: 24px;
+      padding: 0 16px;
+    }
+    .footer p {
       color: #94a3b8;
       font-size: 12px;
-      margin-top: 32px;
-      text-align: center;
+      line-height: 20px;
+      margin: 0 0 2px;
+    }
+    .footer .brand {
+      color: #64748b;
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 4px;
     }
     .footer a {
       color: #64748b;
@@ -82,27 +114,39 @@ const sharedLayout = (data: EmailTemplateData) => `
 </head>
 <body>
   <div class="wrapper">
-    <div class="container">
-      <h1>${data.title}</h1>
-      ${data.content}
-      
-      ${data.ctaText && data.ctaUrl ? `
-      <div class="cta-container">
-        <a href="${data.ctaUrl}" class="button">${data.ctaText}</a>
+    <div class="outer">
+
+      <div class="email-header">
+        <img src="${logoUrl}" alt="Reforma" />
       </div>
-      ` : ''}
-      
-      <p style="color: #64748b; font-size: 14px;">
-        If you have any questions, please reply to this email or contact support.
-      </p>
-    </div>
-    <div class="footer">
-      &copy; ${new Date().getFullYear()} Reforma. All rights reserved.
+
+      <div class="container">
+        <h1>${data.title}</h1>
+        ${data.content}
+
+        ${data.ctaText && data.ctaUrl ? `
+        <div class="cta-container">
+          <a href="${data.ctaUrl}" class="button">${data.ctaText}</a>
+        </div>
+        ` : ''}
+
+        <hr class="divider" />
+        <p style="color: #94a3b8; font-size: 13px; margin-bottom: 0;">
+          If you have any questions, reply to this email or contact our support team.
+        </p>
+      </div>
+
+      <div class="footer">
+        <p class="brand">Reforma</p>
+        <p>Built by <strong>Reforma Digital Solutions</strong></p>
+        <p>&copy; ${year} Reforma Digital Solutions. All rights reserved.</p>
+      </div>
+
     </div>
   </div>
 </body>
-</html>
-`;
+</html>`;
+};
 
 export const getVerificationEmail = (name: string, url: string) => {
     return sharedLayout({

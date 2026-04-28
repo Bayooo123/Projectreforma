@@ -2,11 +2,12 @@ import { put } from '@vercel/blob';
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { requireAuth } from '@/lib/auth-utils';
+import { logActivity } from '@/lib/log-activity';
 
 export async function POST(request: Request): Promise<NextResponse> {
     try {
         // 1. Security: Auth Check
-        await requireAuth();
+        const authUser = await requireAuth();
 
         const { searchParams } = new URL(request.url);
         const filename = searchParams.get('filename');
@@ -44,7 +45,7 @@ export async function POST(request: Request): Promise<NextResponse> {
 
         // 4. Database Record (Only if linked to a brief)
         if (briefId) {
-            await prisma.document.create({
+            const doc = await prisma.document.create({
                 data: {
                     name: filename,
                     url: blob.url,
@@ -52,7 +53,12 @@ export async function POST(request: Request): Promise<NextResponse> {
                     size: parseInt(request.headers.get('content-length') || '0'),
                     briefId: briefId,
                 },
+                select: { id: true, brief: { select: { workspaceId: true } } },
             });
+
+            if (authUser?.id && doc.brief?.workspaceId) {
+                logActivity({ workspaceId: doc.brief.workspaceId, userId: authUser.id, resource: 'DOCUMENT', action: 'UPLOADED', resourceId: doc.id, resourceName: filename }).catch(() => {});
+            }
         }
 
         return NextResponse.json(blob);
