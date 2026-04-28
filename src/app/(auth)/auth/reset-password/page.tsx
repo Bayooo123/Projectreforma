@@ -2,9 +2,11 @@
 
 import { useActionState, useEffect, useState, Suspense } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useSearchParams } from 'next/navigation';
-import { Lock, Check, Loader, AlertTriangle } from 'lucide-react';
+import { Lock, Check, Loader2, AlertTriangle, ShieldCheck } from 'lucide-react';
 import { updatePassword } from '@/app/actions/reset-password';
+import styles from '../../auth.module.css';
 
 function ResetPasswordForm() {
     const searchParams = useSearchParams();
@@ -14,26 +16,39 @@ function ResetPasswordForm() {
     const [missingToken, setMissingToken] = useState(false);
 
     useEffect(() => {
-        if (!token) {
-            setMissingToken(true);
-        }
+        if (!token) setMissingToken(true);
     }, [token]);
 
     if (missingToken) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-slate-900 px-4">
-                <div className="max-w-md w-full bg-white dark:bg-slate-800 p-8 rounded-xl shadow-lg border border-red-100 text-center">
-                    <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
-                        <AlertTriangle className="h-6 w-6 text-red-600" />
+            <div className={styles.authContainer}>
+                <div className={styles.brandingSide}>
+                    <div className={styles.logo}>
+                        <Image src="/logo.png" alt="Reforma" width={40} height={40} className={styles.logoImage} />
+                        <span className={styles.logoText}>Reforma</span>
                     </div>
-                    <h3 className="text-lg font-medium text-gray-900 dark:text-white">Invalid Link</h3>
-                    <p className="mt-2 text-sm text-gray-500 dark:text-slate-400">
-                        This password reset link is invalid or missing a token. Please request a new one.
-                    </p>
-                    <div className="mt-6">
-                        <Link href="/forgot-password" className="text-primary hover:underline font-medium">
+                    <div className={styles.brandingContent}>
+                        <h1 className={styles.brandingTitle}>Secure Legal<br />Practice Management</h1>
+                        <p className={styles.brandingDescription}>Your account security is our priority.</p>
+                    </div>
+                    <p className={styles.copyright}>© 2024 Reforma. All rights reserved.</p>
+                </div>
+
+                <div className={styles.formSide}>
+                    <div className={styles.formContainer}>
+                        <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+                            <div style={{ width: 56, height: 56, borderRadius: '50%', background: '#fef2f2', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1rem' }}>
+                                <AlertTriangle size={26} color="#dc2626" />
+                            </div>
+                            <h2 className={styles.formTitle}>Invalid Link</h2>
+                            <p className={styles.formSubtitle}>This reset link is invalid or has expired. Request a new one.</p>
+                        </div>
+                        <Link href="/forgot-password" className={styles.submitButton} style={{ textDecoration: 'none', display: 'flex', justifyContent: 'center' }}>
                             Request new link
                         </Link>
+                        <div className={styles.footer}>
+                            <Link href="/login" className={styles.footerLink}>Back to Login</Link>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -41,108 +56,120 @@ function ResetPasswordForm() {
     }
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4 py-12 sm:px-6 lg:px-8 dark:bg-slate-900">
-            <div className="max-w-md w-full space-y-8 bg-white dark:bg-slate-800 p-8 rounded-xl shadow-lg border border-gray-100 dark:border-slate-700">
-                <div>
-                    <h2 className="text-center text-3xl font-extrabold text-primary">
-                        Set New Password
-                    </h2>
-                    <p className="mt-2 text-center text-sm text-tertiary">
-                        Please enter your new password below.
-                    </p>
+        <div className={styles.authContainer}>
+            {/* Branding Side */}
+            <div className={styles.brandingSide}>
+                <div className={styles.logo}>
+                    <Image src="/logo.png" alt="Reforma" width={40} height={40} className={styles.logoImage} />
+                    <span className={styles.logoText}>Reforma</span>
                 </div>
 
-                {state.success ? (
-                    <div className="rounded-md bg-green-50 dark:bg-green-900/20 p-4 border border-green-200 dark:border-green-900 text-center">
-                        <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100 mb-4">
-                            <Check className="h-6 w-6 text-green-600" />
+                <div className={styles.brandingContent}>
+                    <h1 className={styles.brandingTitle}>
+                        Your security<br />matters to us
+                    </h1>
+                    <p className={styles.brandingDescription}>
+                        Choose a strong password to protect your firm's data. We recommend at least 8 characters with a mix of letters and numbers.
+                    </p>
+                    <div className={styles.features}>
+                        <div className={styles.feature}>
+                            <div className={styles.featureIconWrapper}>
+                                <ShieldCheck className={styles.featureIcon} />
+                            </div>
+                            <div className={styles.featureContent}>
+                                <h3>End-to-end encrypted</h3>
+                                <p>Your credentials are never stored in plain text.</p>
+                            </div>
                         </div>
-                        <h3 className="text-lg font-medium text-green-800 dark:text-green-200">
-                            Password Reset Successful
-                        </h3>
-                        <p className="mt-2 text-sm text-green-700 dark:text-green-300">
-                            Your password has been updated. You can now login.
-                        </p>
-                        <div className="mt-6">
-                            <Link
-                                href="/login"
-                                className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary hover:bg-primary/90 focus:outline-none"
-                            >
+                    </div>
+                </div>
+
+                <p className={styles.copyright}>© 2024 Reforma. All rights reserved.</p>
+            </div>
+
+            {/* Form Side */}
+            <div className={styles.formSide}>
+                <div className={styles.formContainer}>
+                    {state.success ? (
+                        <div style={{ textAlign: 'center' }}>
+                            <div style={{ width: 64, height: 64, borderRadius: '50%', background: '#f0fdf4', border: '2px solid #bbf7d0', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem' }}>
+                                <Check size={28} color="#059669" />
+                            </div>
+                            <h2 className={styles.formTitle}>Password updated</h2>
+                            <p className={styles.formSubtitle} style={{ marginBottom: '2rem' }}>
+                                Your password has been reset successfully. You can now sign in with your new credentials.
+                            </p>
+                            <Link href="/login" className={styles.submitButton} style={{ textDecoration: 'none', display: 'flex', justifyContent: 'center' }}>
                                 Go to Login
                             </Link>
                         </div>
-                    </div>
-                ) : (
-                    <form action={action} className="mt-8 space-y-6">
-                        <input type="hidden" name="token" value={token || ''} />
-
-                        <div className="space-y-4">
-                            <div>
-                                <label htmlFor="password" title="New Password" className="block text-sm font-medium text-gray-700 dark:text-slate-300">
-                                    New Password
-                                </label>
-                                <div className="mt-1 relative rounded-md shadow-sm">
-                                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                        <Lock size={18} className="text-gray-400" />
-                                    </div>
-                                    <input
-                                        id="password"
-                                        name="password"
-                                        type="password"
-                                        required
-                                        minLength={6}
-                                        className="block w-full pl-10 pr-3 py-3 border border-gray-300 dark:border-slate-600 rounded-md leading-5 bg-white dark:bg-white placeholder-gray-500 dark:placeholder-slate-400 text-black focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
-                                        placeholder="••••••••"
-                                    />
-                                </div>
+                    ) : (
+                        <>
+                            <div className={styles.formHeader}>
+                                <h2 className={styles.formTitle}>Set new password</h2>
+                                <p className={styles.formSubtitle}>Enter and confirm your new password below.</p>
                             </div>
 
-                            <div>
-                                <label htmlFor="confirmPassword" title="Confirm Password" className="block text-sm font-medium text-gray-700 dark:text-slate-300">
-                                    Confirm Password
-                                </label>
-                                <div className="mt-1 relative rounded-md shadow-sm">
-                                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                        <Lock size={18} className="text-gray-400" />
+                            <form action={action} className={styles.form}>
+                                <input type="hidden" name="token" value={token || ''} />
+
+                                <div className={styles.formGroup}>
+                                    <label htmlFor="password" className={styles.label}>New Password</label>
+                                    <div style={{ position: 'relative' }}>
+                                        <div style={{ position: 'absolute', inset: '0 auto 0 0', width: 42, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
+                                            <Lock size={16} color="#94a3b8" />
+                                        </div>
+                                        <input
+                                            id="password"
+                                            name="password"
+                                            type="password"
+                                            required
+                                            minLength={6}
+                                            className={styles.input}
+                                            placeholder="••••••••"
+                                            style={{ paddingLeft: '2.5rem' }}
+                                        />
                                     </div>
-                                    <input
-                                        id="confirmPassword"
-                                        name="confirmPassword"
-                                        type="password"
-                                        required
-                                        minLength={6}
-                                        className="block w-full pl-10 pr-3 py-3 border border-gray-300 dark:border-slate-600 rounded-md leading-5 bg-white dark:bg-white placeholder-gray-500 dark:placeholder-slate-400 text-black focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
-                                        placeholder="••••••••"
-                                    />
                                 </div>
-                            </div>
-                        </div>
 
-                        {state.error && (
-                            <p className="text-red-500 text-sm text-center">{state.error}</p>
-                        )}
+                                <div className={styles.formGroup}>
+                                    <label htmlFor="confirmPassword" className={styles.label}>Confirm Password</label>
+                                    <div style={{ position: 'relative' }}>
+                                        <div style={{ position: 'absolute', inset: '0 auto 0 0', width: 42, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
+                                            <Lock size={16} color="#94a3b8" />
+                                        </div>
+                                        <input
+                                            id="confirmPassword"
+                                            name="confirmPassword"
+                                            type="password"
+                                            required
+                                            minLength={6}
+                                            className={styles.input}
+                                            placeholder="••••••••"
+                                            style={{ paddingLeft: '2.5rem' }}
+                                        />
+                                    </div>
+                                </div>
 
-                        <div>
-                            <button
-                                type="submit"
-                                disabled={isPending}
-                                className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-primary hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-                            >
-                                {isPending ? (
-                                    <Loader className="animate-spin h-5 w-5 text-white" />
-                                ) : (
-                                    "Reset Password"
+                                {state.error && (
+                                    <div className={styles.error}>{state.error}</div>
                                 )}
-                            </button>
-                        </div>
 
-                        <div className="text-center">
-                            <Link href="/login" className="font-medium text-primary hover:text-primary/80 text-sm">
-                                Back to Login
-                            </Link>
-                        </div>
-                    </form>
-                )}
+                                <button type="submit" disabled={isPending} className={styles.submitButton}>
+                                    {isPending ? (
+                                        <><Loader2 className={styles.spinner} size={18} /> Updating password...</>
+                                    ) : (
+                                        'Reset Password'
+                                    )}
+                                </button>
+
+                                <div className={styles.footer}>
+                                    <Link href="/login" className={styles.footerLink}>Back to Login</Link>
+                                </div>
+                            </form>
+                        </>
+                    )}
+                </div>
             </div>
         </div>
     );
@@ -151,8 +178,10 @@ function ResetPasswordForm() {
 export default function ResetPasswordPage() {
     return (
         <Suspense fallback={
-            <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-slate-900 px-4">
-                <Loader className="animate-spin h-8 w-8 text-primary" />
+            <div className={styles.authContainer}>
+                <div className={styles.formSide} style={{ flex: 1 }}>
+                    <Loader2 className="animate-spin" size={32} color="#059669" />
+                </div>
             </div>
         }>
             <ResetPasswordForm />
