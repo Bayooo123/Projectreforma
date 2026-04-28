@@ -132,6 +132,21 @@ export const getPasswordResetEmail = (url: string) => {
     });
 };
 
+export const getGuestWelcomeEmail = (guestName: string, workspaceName: string, designation: string, setPasswordUrl: string) => {
+    return sharedLayout({
+        title: `You've been added to ${workspaceName}`,
+        previewTextText: `Your guest access to ${workspaceName} on Reforma is ready`,
+        content: `
+      <p>Hello ${guestName},</p>
+      <p>You've been added as a <strong>${designation}</strong> to the <strong>${workspaceName}</strong> workspace on Reforma — a secure legal practice management platform.</p>
+      <p>To get started, click the button below to set your password and sign in. This link is valid for <strong>24 hours</strong>.</p>
+      <p style="color: #94a3b8; font-size: 14px;">As a guest, you'll have view-only access to the briefs that have been shared with you.</p>
+    `,
+        ctaText: 'Set Password & Sign In',
+        ctaUrl: setPasswordUrl,
+    });
+};
+
 export const getWorkspaceInviteEmail = (workspaceName: string, inviterName: string, role: string, url: string) => {
     return sharedLayout({
         title: `Invite to join ${workspaceName}`,

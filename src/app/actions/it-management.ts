@@ -3,6 +3,10 @@
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
+import { mailService } from '@/lib/services/mail/mail';
+import { getGuestWelcomeEmail } from '@/lib/services/mail/templates';
+import { createPasswordResetToken } from '@/lib/services/auth/tokens';
+import { config } from '@/lib/config';
 
 async function requireAdmin() {
     const session = await auth();
@@ -98,7 +102,47 @@ export async function inviteGuestMember(data: {
         },
     });
 
+    // Send welcome email with set-password link (24h TTL)
+    await _sendGuestEmail(user.id, data.name, data.designation || 'Guest', member.workspaceId);
+
     revalidatePath('/management/it');
+    return { success: true };
+}
+
+async function _sendGuestEmail(userId: string, name: string, designation: string, workspaceId: string) {
+    const workspace = await prisma.workspace.findUnique({
+        where: { id: workspaceId },
+        select: { name: true },
+    });
+    const user = await prisma.user.findUnique({ where: { id: userId }, select: { email: true } });
+    if (!workspace || !user) return;
+
+    const token = await createPasswordResetToken(userId, 24 * 60 * 60 * 1000); // 24 hours
+    const setPasswordUrl = `${config.NEXT_PUBLIC_APP_URL}/auth/reset-password?token=${token}`;
+
+    await mailService.send({
+        to: user.email,
+        subject: `You've been added to ${workspace.name} on Reforma`,
+        html: getGuestWelcomeEmail(name, workspace.name, designation, setPasswordUrl),
+    });
+}
+
+export async function sendGuestInviteEmail(memberId: string) {
+    const { workspaceId } = await requireAdmin();
+
+    const member = await prisma.workspaceMember.findFirst({
+        where: { id: memberId, workspaceId },
+        include: { user: { select: { id: true, name: true, email: true } } },
+    });
+    if (!member) throw new Error('Member not found');
+
+    await _sendGuestEmail(
+        member.userId,
+        member.user.name || member.user.email,
+        member.designation || 'Guest',
+        workspaceId,
+    );
+
     return { success: true };
 }
 

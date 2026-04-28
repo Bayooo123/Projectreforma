@@ -5,11 +5,11 @@ import {
     Users, ShieldCheck, ClipboardList, Monitor,
     Plus, Trash2, Edit2, Check, X, ChevronDown,
     UserX, RefreshCw, Loader2, FileText, Download,
-    Ban, AlertTriangle, Clock, LogOut
+    Ban, AlertTriangle, Clock, LogOut, Mail
 } from 'lucide-react';
 import {
     getGuestMembers, inviteGuestMember, updateGuestMember, revokeGuestMember,
-    grantBriefAccess, revokeBriefAccess,
+    grantBriefAccess, revokeBriefAccess, sendGuestInviteEmail,
     getWorkspaceMembers, updateMemberRole, updateMemberDownloadPermission,
     getAuditLogs, getActiveSessions, forceLogoutUser,
     getWorkspaceBriefs,
@@ -88,6 +88,7 @@ function GuestAccountsTab({ workspaceId }: { workspaceId: string }) {
     const [showInvite, setShowInvite] = useState(false);
     const [isPending, startTransition] = useTransition();
     const [expandedGuest, setExpandedGuest] = useState<string | null>(null);
+    const [sentInvite, setSentInvite] = useState<string | null>(null);
 
     const [form, setForm] = useState({ email: '', name: '', designation: '', expiresAt: '', canDownload: false });
     const [formError, setFormError] = useState('');
@@ -239,6 +240,21 @@ function GuestAccountsTab({ workspaceId }: { workspaceId: string }) {
                                         </button>
                                         <button onClick={() => setExpandedGuest(isExpanded ? null : guest.id)} style={iconBtnStyle}>
                                             <FileText size={14} /> Brief Access <ChevronDown size={12} style={{ transform: isExpanded ? 'rotate(180deg)' : 'none', transition: '0.2s' }} />
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                startTransition(async () => {
+                                                    await sendGuestInviteEmail(guest.id);
+                                                    setSentInvite(guest.id);
+                                                    setTimeout(() => setSentInvite(null), 3000);
+                                                });
+                                            }}
+                                            disabled={isPending}
+                                            style={iconBtnStyle}
+                                            title="Resend invite email"
+                                        >
+                                            {sentInvite === guest.id ? <Check size={14} color="#059669" /> : <Mail size={14} />}
+                                            {sentInvite === guest.id ? 'Sent!' : 'Resend Invite'}
                                         </button>
                                         <button onClick={() => handleRevoke(guest.id)} style={{ ...iconBtnStyle, color: '#dc2626' }}>
                                             <UserX size={14} /> Revoke

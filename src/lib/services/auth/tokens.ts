@@ -66,10 +66,10 @@ export const validateEmailVerificationToken = async (token: string) => {
 /**
  * PASSWORD RESET TOKENS
  */
-export const createPasswordResetToken = async (userId: string) => {
+export const createPasswordResetToken = async (userId: string, ttlMs = 15 * 60 * 1000) => {
     const token = generateOpaqueToken();
     const tokenHash = hashToken(token);
-    const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 Minutes
+    const expiresAt = new Date(Date.now() + ttlMs);
 
     // Invalidate any existing reset tokens for this user
     await (prisma as any).passwordResetRequest.deleteMany({
