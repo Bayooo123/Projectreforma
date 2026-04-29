@@ -2,6 +2,7 @@
 
 import AppLayout from "./AppLayout";
 import BrandingWizardModal from "@/components/management/BrandingWizardModal";
+import GeofenceCheck from "@/components/attendance/GeofenceCheck";
 import { useEffect, useState, Suspense } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 
@@ -56,6 +57,9 @@ function WizardTrigger({ user, children }: { user: any, children: React.ReactNod
                     workspaceName={fullWorkspace.name}
                     onComplete={handleCloseWizard}
                 />
+            )}
+            {fullWorkspace?.id && (
+                <GeofenceCheck workspaceId={fullWorkspace.id} />
             )}
             <AppLayout user={user} workspace={fullWorkspace}>
                 {children}

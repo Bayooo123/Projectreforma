@@ -32,6 +32,11 @@ model Workspace {
   brandColor        String?               @default("#121826")
   brandingCompleted Boolean               @default(false)
   secondaryColor    String?               @default("#1e293b")
+  geofenceEnabled   Boolean               @default(false)
+  geofenceLat       Float?
+  geofenceLng       Float?
+  geofenceRadius    Int                   @default(150)
+  geofenceAddress   String?
   bankAccounts      BankAccount[]
   briefs            Brief[]
   clients           Client[]
@@ -43,6 +48,7 @@ model Workspace {
   tasks             Task[]
   inboundEmails     InboundEmail[]
   activityLogs      WorkspaceActivityLog[]
+  attendanceRecords AttendanceRecord[]
   owner             User                  @relation("WorkspaceOwner", fields: [ownerId], references: [id])
   emailConfig       WorkspaceEmailConfig?
   members           WorkspaceMember[]
@@ -153,6 +159,7 @@ model User {
   grantedBriefAccess     BriefAccessGrant[]
   userSessions           UserSession[]
   workspaceActivity      WorkspaceActivityLog[]
+  attendanceRecords      AttendanceRecord[]
   calendarAppearances    CalendarEntry[]        @relation("CalendarAppearances")
   pushSubscriptions      PushSubscription[]
 
@@ -1007,4 +1014,23 @@ model InboundEmail {
   @@index([workspaceId, receivedAt])
   @@index([clientId])
   @@index([matterId])
+}
+
+model AttendanceRecord {
+  id          String    @id @default(cuid())
+  userId      String
+  workspaceId String
+  date        DateTime
+  clockIn     DateTime  @default(now())
+  clockOut    DateTime?
+  lat         Float?
+  lng         Float?
+  createdAt   DateTime  @default(now())
+
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, workspaceId, date])
+  @@index([workspaceId, date])
+  @@index([userId])
 }
