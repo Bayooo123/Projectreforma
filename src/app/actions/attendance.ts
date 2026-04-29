@@ -102,7 +102,7 @@ export async function getWorkspaceMembersBasic(workspaceId: string) {
     return members.map(m => m.user);
 }
 
-export async function adminClockIn(workspaceId: string, targetUserId: string) {
+export async function adminClockIn(workspaceId: string, targetUserId: string, clockInTime?: Date) {
     const session = await auth();
     if (!session?.user?.id) return { success: false, error: 'Unauthorized' };
 
@@ -115,11 +115,13 @@ export async function adminClockIn(workspaceId: string, targetUserId: string) {
     const isAdmin = member && (['admin', 'owner'].includes(member.role) || workspace?.ownerId === session.user.id);
     if (!isAdmin) return { success: false, error: 'Only admins can manually clock in members' };
 
-    const today = toDateOnly(new Date());
+    const recordedTime = clockInTime ?? new Date();
+    const today = toDateOnly(recordedTime);
+
     const record = await prisma.attendanceRecord.upsert({
         where: { userId_workspaceId_date: { userId: targetUserId, workspaceId, date: today } },
-        create: { userId: targetUserId, workspaceId, date: today, clockIn: new Date() },
-        update: {},
+        create: { userId: targetUserId, workspaceId, date: today, clockIn: recordedTime },
+        update: { clockIn: recordedTime },
     });
 
     revalidatePath('/management/office');

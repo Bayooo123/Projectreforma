@@ -9,7 +9,7 @@ interface GeofenceCheckProps {
 }
 
 function haversineDistance(lat1: number, lng1: number, lat2: number, lng2: number): number {
-    const R = 6371000; // Earth radius in metres
+    const R = 6371000;
     const toRad = (deg: number) => (deg * Math.PI) / 180;
     const dLat = toRad(lat2 - lat1);
     const dLng = toRad(lng2 - lng1);
@@ -25,48 +25,40 @@ export default function GeofenceCheck({ workspaceId }: GeofenceCheckProps) {
     const [banner, setBanner] = useState<BannerState>('hidden');
     const [clockInTime, setClockInTime] = useState<string>('');
     const [clockOutTime, setClockOutTime] = useState<string>('');
-    const [isInsideFence, setIsInsideFence] = useState(false);
     const [todayRecord, setTodayRecord] = useState<any>(null);
 
     useEffect(() => {
-        let dismissed = false;
-
         async function run() {
-            if (!navigator.geolocation) return;
-
-            // Load geofence config and today's record in parallel
+            // 1. Load today's record + geofence config in parallel
             const [geofence, existing] = await Promise.all([
                 getWorkspaceGeofence(workspaceId),
                 getTodayAttendance(workspaceId),
             ]);
 
-            if (!geofence?.geofenceEnabled || !geofence.geofenceLat || !geofence.geofenceLng) return;
-
             setTodayRecord(existing);
+
+            // 2. Already clocked in — acknowledge immediately, no GPS needed
+            if (existing) {
+                const t = new Date(existing.clockIn).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                setClockInTime(t);
+                setBanner('already-in');
+                setTimeout(() => setBanner('hidden'), 6000);
+                return;
+            }
+
+            // 3. Not clocked in — attempt auto clock-in via geofence
+            if (!geofence?.geofenceEnabled || !geofence.geofenceLat || !geofence.geofenceLng) return;
+            if (!navigator.geolocation) return;
 
             navigator.geolocation.getCurrentPosition(
                 async (pos) => {
-                    if (dismissed) return;
                     const dist = haversineDistance(
                         pos.coords.latitude, pos.coords.longitude,
                         geofence.geofenceLat!, geofence.geofenceLng!
                     );
-
                     const inside = dist <= (geofence.geofenceRadius ?? 150);
-                    setIsInsideFence(inside);
-
                     if (!inside) return;
 
-                    if (existing) {
-                        // Already clocked in — show status briefly
-                        const t = new Date(existing.clockIn).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                        setClockInTime(t);
-                        setBanner('already-in');
-                        setTimeout(() => setBanner('hidden'), 4000);
-                        return;
-                    }
-
-                    // Not clocked in yet — clock in now
                     const result = await clockIn(workspaceId, pos.coords.latitude, pos.coords.longitude);
                     if (result.success && result.data) {
                         const t = new Date(result.data.clockIn).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -75,7 +67,7 @@ export default function GeofenceCheck({ workspaceId }: GeofenceCheckProps) {
                         setBanner('clocked-in');
                     }
                 },
-                () => {}, // silently ignore denied geolocation
+                () => {},
                 { timeout: 8000, maximumAge: 60000 }
             );
         }
@@ -94,21 +86,19 @@ export default function GeofenceCheck({ workspaceId }: GeofenceCheckProps) {
         }
     }
 
+    // Persistent bottom-right indicator whenever clocked in (no GPS gate)
     if (banner === 'hidden') {
-        // Show a small persistent dot if clocked in
-        if (todayRecord && !todayRecord.clockOut && isInsideFence) {
+        if (todayRecord && !todayRecord.clockOut) {
             return (
-                <div
-                    style={{
-                        position: 'fixed', bottom: 24, right: 24,
-                        background: '#0f172a', borderRadius: 12,
-                        padding: '0.5rem 0.85rem',
-                        display: 'flex', alignItems: 'center', gap: 8,
-                        fontSize: '0.78rem', color: '#fff',
-                        boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
-                        zIndex: 999, cursor: 'default',
-                    }}
-                >
+                <div style={{
+                    position: 'fixed', bottom: 24, right: 24,
+                    background: '#0f172a', borderRadius: 12,
+                    padding: '0.5rem 0.85rem',
+                    display: 'flex', alignItems: 'center', gap: 8,
+                    fontSize: '0.78rem', color: '#fff',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
+                    zIndex: 999,
+                }}>
                     <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#22c55e', display: 'inline-block', flexShrink: 0 }} />
                     Clocked in · {clockInTime || new Date(todayRecord.clockIn).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     <button
@@ -127,19 +117,17 @@ export default function GeofenceCheck({ workspaceId }: GeofenceCheckProps) {
     const isClockIn = banner === 'clocked-in' || banner === 'already-in';
 
     return (
-        <div
-            style={{
-                position: 'fixed', top: 20, left: '50%', transform: 'translateX(-50%)',
-                background: isClockIn ? '#0f172a' : '#1e293b',
-                borderRadius: 14,
-                padding: '0.9rem 1.5rem',
-                display: 'flex', alignItems: 'center', gap: 14,
-                boxShadow: '0 8px 24px rgba(0,0,0,0.25)',
-                zIndex: 9999,
-                minWidth: 320,
-                animation: 'slideDown 0.35s cubic-bezier(0.16,1,0.3,1)',
-            }}
-        >
+        <div style={{
+            position: 'fixed', top: 20, left: '50%', transform: 'translateX(-50%)',
+            background: isClockIn ? '#0f172a' : '#1e293b',
+            borderRadius: 14,
+            padding: '0.9rem 1.5rem',
+            display: 'flex', alignItems: 'center', gap: 14,
+            boxShadow: '0 8px 24px rgba(0,0,0,0.25)',
+            zIndex: 9999,
+            minWidth: 320,
+            animation: 'slideDown 0.35s cubic-bezier(0.16,1,0.3,1)',
+        }}>
             <style>{`@keyframes slideDown { from { opacity:0; transform: translateX(-50%) translateY(-16px); } to { opacity:1; transform: translateX(-50%) translateY(0); } }`}</style>
 
             <div style={{
