@@ -1,5 +1,5 @@
 import FinancialLog from "@/components/management/FinancialLog";
-import { prisma } from "@/lib/prisma";
+import AttendanceLogSection from "@/components/attendance/AttendanceLogSection";
 
 interface OfficeManagerClientProps {
     workspaceId: string;
@@ -31,6 +31,7 @@ export default function OfficeManagerClient({
                     userRole={userRole}
                     isOwner={isOwner}
                 />
+                <AttendanceLogSection workspaceId={workspaceId} />
             </div>
         </div>
     );

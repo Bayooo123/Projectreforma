@@ -103,3 +103,53 @@ export async function getAttendanceRangeReport(workspaceId: string, from: Date, 
         orderBy: [{ date: 'desc' }, { clockIn: 'asc' }],
     });
 }
+
+export async function getAttendanceStats(workspaceId: string, period: 'week' | 'month') {
+    const session = await auth();
+    if (!session?.user?.id) return [];
+
+    const now = new Date();
+    let from: Date;
+
+    if (period === 'week') {
+        const dayOfWeek = now.getDay(); // 0 = Sunday
+        const start = new Date(now);
+        start.setDate(now.getDate() - dayOfWeek);
+        from = toDateOnly(start);
+    } else {
+        from = new Date(Date.UTC(now.getFullYear(), now.getMonth(), 1));
+    }
+
+    const to = toDateOnly(now);
+
+    const records = await prisma.attendanceRecord.findMany({
+        where: { workspaceId, date: { gte: from, lte: to } },
+        include: {
+            user: { select: { id: true, name: true, email: true, image: true } },
+        },
+        orderBy: { date: 'asc' },
+    });
+
+    const byUser: Record<string, {
+        user: { id: string; name: string | null; email: string | null; image: string | null };
+        clockInMinutes: number[];
+    }> = {};
+
+    for (const rec of records) {
+        const uid = rec.userId;
+        if (!byUser[uid]) byUser[uid] = { user: rec.user, clockInMinutes: [] };
+        const ci = new Date(rec.clockIn);
+        byUser[uid].clockInMinutes.push(ci.getHours() * 60 + ci.getMinutes());
+    }
+
+    return Object.values(byUser).map(u => {
+        const avg = Math.round(u.clockInMinutes.reduce((a, b) => a + b, 0) / u.clockInMinutes.length);
+        return {
+            ...u.user,
+            daysPresent: u.clockInMinutes.length,
+            avgClockInMinutes: avg,
+            earliestMinutes: Math.min(...u.clockInMinutes),
+            latestMinutes: Math.max(...u.clockInMinutes),
+        };
+    }).sort((a, b) => a.avgClockInMinutes - b.avgClockInMinutes);
+}

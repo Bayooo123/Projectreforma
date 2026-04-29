@@ -6,6 +6,7 @@ import { PinProtection } from '@/components/auth/PinProtection';
 import { useCountUp } from '@/hooks/useCountUp';
 import styles from './Analytics.module.css';
 import { getAnalyticsMetrics, getTopClients, getCourtVisits, getExpenseDistribution } from '@/app/actions/analytics';
+import AttendanceAnalytics from '@/components/analytics/AttendanceAnalytics';
 
 interface AnalyticsData {
     metrics: any;
@@ -530,6 +531,9 @@ export default function AnalyticsClient({ data, workspaceId, initialFilter }: An
                         </div>
                     </div>
                 </div>
+
+                {/* ── Staff Attendance ── */}
+                <AttendanceAnalytics workspaceId={workspaceId} />
 
                 {/* ── Court Appearances by Lawyer Table ── */}
                 <div>
