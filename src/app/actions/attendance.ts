@@ -51,7 +51,7 @@ export async function clockIn(workspaceId: string, lat?: number, lng?: number) {
         update: {},
     });
 
-    revalidatePath('/management/attendance');
+    revalidatePath('/management/office');
     return { success: true, data: record, alreadyClockedIn: record.createdAt < new Date(Date.now() - 5000) };
 }
 
@@ -66,7 +66,7 @@ export async function clockOut(workspaceId: string) {
             where: { userId_workspaceId_date: { userId: session.user.id, workspaceId, date: today } },
             data: { clockOut: new Date() },
         });
-        revalidatePath('/management/attendance');
+        revalidatePath('/management/office');
         return { success: true, data: record };
     } catch {
         return { success: false, error: 'No clock-in record found for today' };
@@ -86,6 +86,44 @@ export async function getAttendanceReport(workspaceId: string, date?: Date) {
         },
         orderBy: { clockIn: 'asc' },
     });
+}
+
+export async function getWorkspaceMembersBasic(workspaceId: string) {
+    const session = await auth();
+    if (!session?.user?.id) return [];
+
+    const members = await prisma.workspaceMember.findMany({
+        where: { workspaceId, status: 'active' },
+        include: {
+            user: { select: { id: true, name: true, email: true, image: true } },
+        },
+        orderBy: { joinedAt: 'asc' },
+    });
+    return members.map(m => m.user);
+}
+
+export async function adminClockIn(workspaceId: string, targetUserId: string) {
+    const session = await auth();
+    if (!session?.user?.id) return { success: false, error: 'Unauthorized' };
+
+    // Verify requester is admin/owner
+    const member = await prisma.workspaceMember.findFirst({
+        where: { workspaceId, userId: session.user.id, status: 'active' },
+        select: { role: true },
+    });
+    const workspace = await prisma.workspace.findUnique({ where: { id: workspaceId }, select: { ownerId: true } });
+    const isAdmin = member && (['admin', 'owner'].includes(member.role) || workspace?.ownerId === session.user.id);
+    if (!isAdmin) return { success: false, error: 'Only admins can manually clock in members' };
+
+    const today = toDateOnly(new Date());
+    const record = await prisma.attendanceRecord.upsert({
+        where: { userId_workspaceId_date: { userId: targetUserId, workspaceId, date: today } },
+        create: { userId: targetUserId, workspaceId, date: today, clockIn: new Date() },
+        update: {},
+    });
+
+    revalidatePath('/management/office');
+    return { success: true, data: record };
 }
 
 export async function getAttendanceRangeReport(workspaceId: string, from: Date, to: Date) {

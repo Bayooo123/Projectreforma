@@ -20,7 +20,12 @@
       "Bash(grep -v \"^C:\\\\\\\\\")",
       "Bash(npm list *)",
       "Bash(npm install *)",
-      "Bash(node -e \"require\\('@google/generative-ai'\\); console.log\\('ok'\\)\")"
+      "Bash(node -e \"require\\('@google/generative-ai'\\); console.log\\('ok'\\)\")",
+      "Bash(git commit *)",
+      "Bash(awk '/^model Brief/,/^}/' \"c:\\\\Users\\\\DELL\\\\.gemini\\\\antigravity\\\\scratch\\\\reforma-os\\\\prisma\\\\schema.prisma\")",
+      "Bash(awk '/^model Matter/,/^}/' \"c:\\\\Users\\\\DELL\\\\.gemini\\\\antigravity\\\\scratch\\\\reforma-os\\\\prisma\\\\schema.prisma\")",
+      "Bash(npx prisma *)",
+      "Bash(grep \"\\\\.ts$\")"
     ]
   }
 }
