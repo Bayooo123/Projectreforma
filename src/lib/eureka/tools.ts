@@ -22,7 +22,7 @@ export function getClaudeTools() {
             search: { type: 'string', description: 'Search by matter title' },
             limit: { type: 'number', description: 'Max results (default 20)' },
         }),
-        tool('get_matter_detail', 'Get full detail on a specific matter including recent court dates, documents, and invoices.', {
+        tool('get_matter_detail', 'Get full detail on a specific matter including all court dates (with proceedings and outcomes), all linked briefs with their document counts, and invoices. For a deep-dive into a specific brief, follow up with get_brief_timeline or get_brief_detail.', {
             matter_id: { type: 'string', description: 'The matter ID' },
             title: { type: 'string', description: 'Search by matter title if ID unknown' },
         }),
@@ -51,6 +51,15 @@ export function getClaudeTools() {
             search: { type: 'string', description: 'Search term for document name' },
             matter_title: { type: 'string', description: 'Filter by matter title' },
             limit: { type: 'number', description: 'Max results (default 10)' },
+        }),
+        tool('get_brief_detail', 'Get a complete picture of a specific brief: metadata, all tasks (pending and completed), all documents with their OCR text, and all linked court dates. Use this to understand what has happened on a brief and what is still pending.', {
+            brief_id: { type: 'string', description: 'The brief ID' },
+            brief_title: { type: 'string', description: 'Search by brief title or number if ID unknown' },
+        }),
+        tool('get_brief_timeline', 'Get a full chronological timeline for a brief — court hearings, adjournments, tasks created/completed, documents uploaded, with document OCR content included. Covers past (what happened), present (active items), and future (upcoming). Use this to narrate the history and trajectory of a matter.', {
+            brief_id: { type: 'string', description: 'The brief ID' },
+            brief_title: { type: 'string', description: 'Search by brief title or number if ID unknown' },
+            matter_title: { type: 'string', description: 'Search by linked matter title' },
         }),
         tool('analyse_document', 'Fetch a document from storage and analyse its contents — summarise, extract clauses, or answer a question about it.', {
             document_id: { type: 'string', description: 'The document ID from Reforma' },
@@ -156,15 +165,210 @@ export async function executeTool(
                 include: {
                     client: { select: { name: true, email: true, phone: true } },
                     calendarEntries: {
-                        orderBy: { date: 'desc' }, take: 10,
-                        select: { date: true, court: true, proceedings: true, outcome: true, adjournedTo: true, appearances: { select: { name: true } } },
+                        orderBy: { date: 'asc' },
+                        select: {
+                            id: true, date: true, court: true, judge: true, type: true,
+                            proceedings: true, outcome: true, adjournedTo: true,
+                            appearances: { select: { name: true } },
+                        },
                     },
-                    briefs: { take: 10, select: { id: true, name: true, createdAt: true } },
+                    briefs: {
+                        where: { deletedAt: null },
+                        select: {
+                            id: true, name: true, briefNumber: true, status: true, category: true,
+                            createdAt: true, dueDate: true,
+                            _count: { select: { documents: true, tasks: true } },
+                            lawyerInCharge: { select: { name: true } },
+                        },
+                        orderBy: { createdAt: 'asc' },
+                    },
                     invoices: { select: { totalAmount: true, status: true, date: true } },
+                    tasks: {
+                        select: { id: true, title: true, status: true, dueDate: true, completedAt: true, assignedTo: { select: { name: true } } },
+                        orderBy: { createdAt: 'asc' },
+                    },
                 },
             });
             if (!matter) return { error: 'Matter not found' };
-            return matter;
+            const now = new Date();
+            return {
+                ...matter,
+                past_hearings: matter.calendarEntries.filter(e => new Date(e.date) < now),
+                upcoming_hearings: matter.calendarEntries.filter(e => new Date(e.date) >= now),
+                pending_tasks: matter.tasks.filter(t => t.status !== 'completed'),
+                completed_tasks: matter.tasks.filter(t => t.status === 'completed'),
+            };
+        }
+
+        case 'get_brief_detail': {
+            const brief = await prisma.brief.findFirst({
+                where: {
+                    workspaceId, deletedAt: null,
+                    ...(input.brief_id
+                        ? { id: input.brief_id }
+                        : { OR: [
+                            { name: { contains: input.brief_title, mode: 'insensitive' } },
+                            { briefNumber: { contains: input.brief_title, mode: 'insensitive' } },
+                            { customBriefNumber: { contains: input.brief_title, mode: 'insensitive' } },
+                        ]}
+                    ),
+                },
+                include: {
+                    client: { select: { name: true } },
+                    matter: { select: { id: true, name: true, court: true, status: true } },
+                    lawyerInCharge: { select: { name: true } },
+                    documents: {
+                        select: { id: true, name: true, uploadedAt: true, ocrStatus: true, ocrText: true },
+                        orderBy: { uploadedAt: 'asc' },
+                    },
+                    tasks: {
+                        select: { id: true, title: true, description: true, status: true, priority: true, dueDate: true, completedAt: true, assignedTo: { select: { name: true } } },
+                        orderBy: { createdAt: 'asc' },
+                    },
+                },
+            });
+            if (!brief) return { error: 'Brief not found' };
+
+            return {
+                id: brief.id,
+                title: brief.name,
+                briefNumber: brief.briefNumber,
+                category: brief.category,
+                status: brief.status,
+                description: brief.description,
+                summary: brief.summary,
+                openedAt: brief.createdAt,
+                dueDate: brief.dueDate,
+                client: brief.client?.name ?? null,
+                lawyerInCharge: brief.lawyerInCharge?.name ?? null,
+                linkedMatter: brief.matter ? { id: brief.matter.id, name: brief.matter.name, court: brief.matter.court } : null,
+                tasks: {
+                    pending: brief.tasks.filter(t => t.status !== 'completed').map(t => ({ ...t, ocrText: undefined })),
+                    completed: brief.tasks.filter(t => t.status === 'completed').map(t => ({ ...t, ocrText: undefined })),
+                },
+                documents: brief.documents.map(d => ({
+                    id: d.id,
+                    name: d.name,
+                    uploadedAt: d.uploadedAt,
+                    ocrStatus: d.ocrStatus,
+                    // Provide first 800 chars of OCR so Eureka can understand what's in each file
+                    contentPreview: d.ocrText ? d.ocrText.slice(0, 800) + (d.ocrText.length > 800 ? '…' : '') : null,
+                })),
+            };
+        }
+
+        case 'get_brief_timeline': {
+            // Resolve brief
+            const brief = await prisma.brief.findFirst({
+                where: {
+                    workspaceId, deletedAt: null,
+                    ...(input.brief_id
+                        ? { id: input.brief_id }
+                        : input.brief_title
+                        ? { OR: [
+                            { name: { contains: input.brief_title, mode: 'insensitive' } },
+                            { briefNumber: { contains: input.brief_title, mode: 'insensitive' } },
+                            { customBriefNumber: { contains: input.brief_title, mode: 'insensitive' } },
+                        ]}
+                        : input.matter_title
+                        ? { matter: { name: { contains: input.matter_title, mode: 'insensitive' } } }
+                        : {}
+                    ),
+                },
+                select: { id: true, name: true, briefNumber: true, createdAt: true, dueDate: true, status: true, matterId: true, client: { select: { name: true } } },
+            });
+            if (!brief) return { error: 'Brief not found. Try get_matter_detail first to get the brief ID.' };
+
+            const [calendarEntries, tasks, documents] = await Promise.all([
+                prisma.calendarEntry.findMany({
+                    where: { OR: [{ briefId: brief.id }, ...(brief.matterId ? [{ matterId: brief.matterId }] : [])] },
+                    select: {
+                        id: true, date: true, type: true, court: true, judge: true,
+                        proceedings: true, outcome: true, adjournedTo: true, adjournedFor: true,
+                        appearances: { select: { name: true } },
+                    },
+                    orderBy: { date: 'asc' },
+                }),
+                prisma.task.findMany({
+                    where: { briefId: brief.id },
+                    select: { id: true, title: true, description: true, status: true, priority: true, createdAt: true, dueDate: true, completedAt: true, assignedTo: { select: { name: true } } },
+                    orderBy: { createdAt: 'asc' },
+                }),
+                prisma.document.findMany({
+                    where: { briefId: brief.id },
+                    select: { id: true, name: true, uploadedAt: true, ocrStatus: true, ocrText: true },
+                    orderBy: { uploadedAt: 'asc' },
+                }),
+            ]);
+
+            const now = new Date();
+            const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+            const classify = (date: Date) => {
+                const d = new Date(date);
+                if (d < todayStart) return 'past';
+                if (d.toDateString() === now.toDateString()) return 'today';
+                return 'future';
+            };
+
+            type TLEvent = {
+                date: Date; type: string; title: string;
+                when: 'past' | 'today' | 'future';
+                details?: Record<string, any>;
+            };
+            const events: TLEvent[] = [];
+
+            events.push({ date: brief.createdAt, type: 'brief_created', title: 'Brief opened', when: classify(brief.createdAt) });
+            if (brief.dueDate) events.push({ date: brief.dueDate, type: 'brief_due', title: 'Brief due date', when: classify(brief.dueDate) });
+
+            for (const e of calendarEntries) {
+                events.push({
+                    date: e.date, when: classify(e.date),
+                    type: e.type === 'MEETING' ? 'meeting' : 'court_hearing',
+                    title: e.proceedings || (e.type === 'MEETING' ? 'Meeting' : 'Court Hearing'),
+                    details: {
+                        court: e.court, judge: e.judge, outcome: e.outcome,
+                        adjournedTo: e.adjournedTo, adjournedFor: e.adjournedFor,
+                        counsel: e.appearances.map(a => a.name),
+                    },
+                });
+                if (e.adjournedTo) {
+                    events.push({ date: e.adjournedTo, when: classify(e.adjournedTo), type: 'court_adjourned', title: `Adjournment (from: ${e.proceedings || 'hearing'})`, details: { court: e.court } });
+                }
+            }
+
+            for (const t of tasks) {
+                events.push({ date: t.createdAt, when: classify(t.createdAt), type: 'task_created', title: t.title, details: { priority: t.priority, assignedTo: t.assignedTo?.name, description: t.description } });
+                if (t.completedAt) events.push({ date: t.completedAt, when: classify(t.completedAt), type: 'task_completed', title: `Completed: ${t.title}` });
+                else if (t.dueDate) events.push({ date: t.dueDate, when: classify(t.dueDate), type: 'task_deadline', title: `Deadline: ${t.title}`, details: { assignedTo: t.assignedTo?.name } });
+            }
+
+            for (const d of documents) {
+                events.push({
+                    date: d.uploadedAt, when: classify(d.uploadedAt), type: 'document_uploaded', title: d.name,
+                    details: {
+                        ocrStatus: d.ocrStatus,
+                        // Include first 600 chars of OCR so Eureka can read the document
+                        content: d.ocrText ? d.ocrText.slice(0, 600) + (d.ocrText.length > 600 ? '…' : '') : null,
+                    },
+                });
+            }
+
+            events.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+            return {
+                brief: { id: brief.id, title: brief.name, briefNumber: brief.briefNumber, status: brief.status, client: brief.client?.name },
+                summary: {
+                    total_events: events.length,
+                    past_events: events.filter(e => e.when === 'past').length,
+                    upcoming_events: events.filter(e => e.when === 'future').length,
+                    documents_uploaded: documents.length,
+                    documents_with_ocr: documents.filter(d => d.ocrStatus === 'completed').length,
+                    pending_tasks: tasks.filter(t => t.status !== 'completed').length,
+                    completed_tasks: tasks.filter(t => t.status === 'completed').length,
+                },
+                timeline: events,
+            };
         }
 
         case 'get_clients': {
