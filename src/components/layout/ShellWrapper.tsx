@@ -12,25 +12,12 @@ interface ShellWrapperProps {
     workspace: any;
 }
 
-import { getCurrentUserWithWorkspaceAction } from "@/app/actions/workspace";
-
 // WizardTrigger: renders the branding wizard modal if needed.
-function WizardTrigger({ user, children }: { user: any, children: React.ReactNode }) {
+function WizardTrigger({ user, workspace, children }: { user: any, workspace: any, children: React.ReactNode }) {
     const pathname = usePathname();
     const searchParams = useSearchParams();
     const [shouldShowWizard, setShouldShowWizard] = useState(false);
-    const [fullWorkspace, setFullWorkspace] = useState<any>(null);
-
-    // Fetch full workspace data in background if needed for the wizard
-    useEffect(() => {
-        const fetchWorkspace = async () => {
-            const res = await getCurrentUserWithWorkspaceAction();
-            if (res.success && res.data?.workspace) {
-                setFullWorkspace(res.data.workspace);
-            }
-        };
-        fetchWorkspace();
-    }, []);
+    const fullWorkspace = workspace;
 
     useEffect(() => {
         const isPilotParam = searchParams.get('pilot') === 'true';
@@ -74,7 +61,7 @@ export default function ShellWrapper({ children, user, workspace }: ShellWrapper
     // and let WizardTrigger hydrate the full details.
     return (
         <Suspense fallback={<AppLayout user={user} workspace={workspace}>{children}</AppLayout>}>
-            <WizardTrigger user={user}>
+            <WizardTrigger user={user} workspace={workspace}>
                 {children}
             </WizardTrigger>
         </Suspense>
