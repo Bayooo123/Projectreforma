@@ -204,8 +204,7 @@ export default function EurekaWidget() {
 function MessageText({ text }: { text: string }) {
     const router = useRouter();
 
-    function renderInline(str: string, lineKey: number): React.ReactNode[] {
-        // Split on [text](url) and **text**
+    function renderInline(str: string, key: string): React.ReactNode[] {
         const parts = str.split(/(\[[^\]]+\]\([^)]+\)|\*\*[^*]+\*\*)/g);
         return parts.map((part, i) => {
             const linkMatch = part.match(/^\[([^\]]+)\]\(([^)]+)\)$/);
@@ -214,7 +213,7 @@ function MessageText({ text }: { text: string }) {
                 const internal = href.startsWith('/');
                 return (
                     <a
-                        key={`${lineKey}-${i}`}
+                        key={`${key}-${i}`}
                         href={href}
                         className={styles.link}
                         onClick={internal ? (e) => { e.preventDefault(); router.push(href); } : undefined}
@@ -226,21 +225,66 @@ function MessageText({ text }: { text: string }) {
                 );
             }
             if (part.startsWith('**') && part.endsWith('**')) {
-                return <strong key={`${lineKey}-${i}`}>{part.slice(2, -2)}</strong>;
+                return <strong key={`${key}-${i}`}>{part.slice(2, -2)}</strong>;
             }
-            return <span key={`${lineKey}-${i}`}>{part}</span>;
+            return <span key={`${key}-${i}`}>{part}</span>;
         });
     }
 
-    const lines = text.split('\n');
+    const isSep = (line: string) => /^\|[\s\-:|]+\|/.test(line.trim());
+    const isRow = (line: string) => line.trim().startsWith('|');
+    const parseRow = (line: string) => line.trim().split('|').slice(1, -1).map(c => c.trim());
+
+    type Seg = { type: 'text'; lines: string[] } | { type: 'table'; headers: string[]; rows: string[][] };
+
+    const segments: Seg[] = [];
+    const rawLines = text.split('\n');
+    let i = 0;
+
+    while (i < rawLines.length) {
+        if (isRow(rawLines[i]) && isSep(rawLines[i + 1] ?? '')) {
+            const tableLines: string[] = [];
+            while (i < rawLines.length && isRow(rawLines[i])) { tableLines.push(rawLines[i++]); }
+            segments.push({ type: 'table', headers: parseRow(tableLines[0]), rows: tableLines.slice(2).map(parseRow) });
+        } else {
+            const textLines: string[] = [];
+            while (i < rawLines.length && !(isRow(rawLines[i]) && isSep(rawLines[i + 1] ?? ''))) {
+                textLines.push(rawLines[i++]);
+            }
+            if (textLines.length) segments.push({ type: 'text', lines: textLines });
+        }
+    }
+
     return (
         <>
-            {lines.map((line, i) => (
-                <span key={i}>
-                    {renderInline(line, i)}
-                    {i < lines.length - 1 && <br />}
-                </span>
-            ))}
+            {segments.map((seg, si) => {
+                if (seg.type === 'table') {
+                    return (
+                        <div key={si} className={styles.tableWrapper}>
+                            <table className={styles.table}>
+                                <thead>
+                                    <tr>{seg.headers.map((h, hi) => <th key={hi}>{renderInline(h, `${si}h${hi}`)}</th>)}</tr>
+                                </thead>
+                                <tbody>
+                                    {seg.rows.map((row, ri) => (
+                                        <tr key={ri}>{row.map((cell, ci) => <td key={ci}>{renderInline(cell, `${si}r${ri}c${ci}`)}</td>)}</tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    );
+                }
+                return (
+                    <span key={si}>
+                        {seg.lines.map((line, li) => (
+                            <span key={li}>
+                                {renderInline(line, `${si}l${li}`)}
+                                {li < seg.lines.length - 1 && <br />}
+                            </span>
+                        ))}
+                    </span>
+                );
+            })}
         </>
     );
 }
