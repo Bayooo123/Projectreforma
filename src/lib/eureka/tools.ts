@@ -95,6 +95,25 @@ export function getClaudeTools() {
         tool('get_client_health', 'Identify clients who have had no recent payments — useful for follow-up and relationship management.', {
             days: { type: 'number', description: 'Inactivity threshold in days (default 60)' },
         }),
+        tool('update_matter', 'Update fields on an existing matter — assign/change client, update court, judge, status, or lawyer in charge.', {
+            matter_id: { type: 'string', description: 'The matter ID to update' },
+            matter_title: { type: 'string', description: 'Search by matter title if ID unknown' },
+            client_name: { type: 'string', description: 'New client name to assign (will look up by name)' },
+            client_id: { type: 'string', description: 'New client ID to assign directly' },
+            court: { type: 'string', description: 'Update the court name' },
+            judge: { type: 'string', description: 'Update the judge name' },
+            status: { type: 'string', description: 'Update status: active, closed, archived' },
+            lawyer_in_charge_name: { type: 'string', description: 'Name of the lawyer to set as in-charge' },
+        }),
+        tool('update_brief', 'Update fields on an existing brief — assign/change client, matter, status, due date, or lawyer in charge.', {
+            brief_id: { type: 'string', description: 'The brief ID to update' },
+            brief_title: { type: 'string', description: 'Search by brief title if ID unknown' },
+            client_name: { type: 'string', description: 'New client name to assign' },
+            client_id: { type: 'string', description: 'New client ID to assign directly' },
+            matter_title: { type: 'string', description: 'Matter title to link the brief to' },
+            status: { type: 'string', description: 'Update status: active, closed, archived' },
+            due_date: { type: 'string', description: 'New due date in ISO format' },
+        }),
     ];
 }
 
@@ -516,6 +535,105 @@ export async function executeTool(
                 }))
                 .filter(c => c.needs_attention);
             return { threshold_days: days, flagged_count: flagged.length, clients: flagged };
+        }
+
+        case 'update_matter': {
+            // Resolve matter
+            const matter = await prisma.matter.findFirst({
+                where: input.matter_id
+                    ? { id: input.matter_id, workspaceId }
+                    : { name: { contains: input.matter_title, mode: 'insensitive' }, workspaceId },
+                select: { id: true, name: true },
+            });
+            if (!matter) return { error: 'Matter not found.' };
+
+            const updates: Record<string, any> = {};
+
+            // Resolve client
+            if (input.client_id) {
+                updates.clientId = input.client_id;
+            } else if (input.client_name) {
+                const client = await prisma.client.findFirst({
+                    where: { name: { contains: input.client_name, mode: 'insensitive' }, workspaceId },
+                    select: { id: true, name: true },
+                });
+                if (!client) return { error: `Client "${input.client_name}" not found. Create them first.` };
+                updates.clientId = client.id;
+            }
+
+            if (input.court) updates.court = input.court;
+            if (input.judge) updates.judge = input.judge;
+            if (input.status) updates.status = input.status;
+
+            if (input.lawyer_in_charge_name) {
+                const lawyer = await prisma.workspaceMember.findFirst({
+                    where: { workspaceId, user: { name: { contains: input.lawyer_in_charge_name, mode: 'insensitive' } } },
+                    include: { user: { select: { id: true, name: true } } },
+                });
+                if (lawyer) updates.lawyerInChargeId = lawyer.userId;
+            }
+
+            if (Object.keys(updates).length === 0) return { error: 'No valid fields provided to update.' };
+
+            const updated = await prisma.matter.update({
+                where: { id: matter.id },
+                data: { ...updates, lastActivityAt: new Date() },
+                include: { client: { select: { name: true } } },
+            });
+
+            return {
+                success: true,
+                matter: { id: updated.id, name: updated.name, client: updated.client?.name ?? null },
+                message: `Matter "${updated.name}" updated successfully.`,
+            };
+        }
+
+        case 'update_brief': {
+            const brief = await prisma.brief.findFirst({
+                where: input.brief_id
+                    ? { id: input.brief_id, workspaceId }
+                    : { name: { contains: input.brief_title, mode: 'insensitive' }, workspaceId },
+                select: { id: true, name: true },
+            });
+            if (!brief) return { error: 'Brief not found.' };
+
+            const updates: Record<string, any> = {};
+
+            if (input.client_id) {
+                updates.clientId = input.client_id;
+            } else if (input.client_name) {
+                const client = await prisma.client.findFirst({
+                    where: { name: { contains: input.client_name, mode: 'insensitive' }, workspaceId },
+                    select: { id: true },
+                });
+                if (!client) return { error: `Client "${input.client_name}" not found.` };
+                updates.clientId = client.id;
+            }
+
+            if (input.matter_title) {
+                const matter = await prisma.matter.findFirst({
+                    where: { name: { contains: input.matter_title, mode: 'insensitive' }, workspaceId },
+                    select: { id: true },
+                });
+                if (matter) updates.matterId = matter.id;
+            }
+
+            if (input.status) updates.status = input.status;
+            if (input.due_date) updates.dueDate = new Date(input.due_date);
+
+            if (Object.keys(updates).length === 0) return { error: 'No valid fields provided to update.' };
+
+            const updated = await prisma.brief.update({
+                where: { id: brief.id },
+                data: updates,
+                include: { client: { select: { name: true } } },
+            });
+
+            return {
+                success: true,
+                brief: { id: updated.id, name: updated.name, client: updated.client?.name ?? null },
+                message: `Brief "${updated.name}" updated successfully.`,
+            };
         }
 
         default:
