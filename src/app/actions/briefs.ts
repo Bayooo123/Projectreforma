@@ -622,3 +622,121 @@ export async function logBriefViewed(briefId: string) {
         await logActivity({ workspaceId: brief.workspaceId, userId: session.id, resource: 'BRIEF', action: 'VIEWED', resourceId: briefId, resourceName: brief.name });
     } catch {}
 }
+
+// ── Timeline ─────────────────────────────────────────────────────────────────
+
+export type TimelineEventType =
+    | 'brief_created' | 'brief_due'
+    | 'court_hearing' | 'court_adjourned' | 'meeting'
+    | 'task_created' | 'task_completed' | 'task_due'
+    | 'document_uploaded' | 'activity';
+
+export interface TimelineEvent {
+    id: string;
+    date: Date;
+    type: TimelineEventType;
+    title: string;
+    description?: string;
+    actor?: string;
+    isFuture: boolean;
+    isToday: boolean;
+}
+
+export async function getBriefTimeline(briefId: string): Promise<TimelineEvent[]> {
+    await requireAuth();
+
+    const brief = await prisma.brief.findUnique({
+        where: { id: briefId, deletedAt: null },
+        select: { createdAt: true, dueDate: true, name: true, matterId: true },
+    });
+    if (!brief) return [];
+
+    const matterId = brief.matterId;
+
+    const [calendarEntries, tasks, documents, activityLogs] = await Promise.all([
+        prisma.calendarEntry.findMany({
+            where: { OR: [{ briefId }, ...(matterId ? [{ matterId }] : [])] },
+            select: {
+                id: true, title: true, date: true, adjournedTo: true,
+                type: true, proceedings: true, court: true, judge: true,
+                submittingLawyerName: true,
+            },
+            orderBy: { date: 'asc' },
+        }),
+        prisma.task.findMany({
+            where: { briefId },
+            select: {
+                id: true, title: true, createdAt: true, completedAt: true,
+                dueDate: true, status: true,
+                assignedTo: { select: { name: true } },
+            },
+            orderBy: { createdAt: 'asc' },
+        }),
+        prisma.document.findMany({
+            where: { briefId },
+            select: { id: true, name: true, uploadedAt: true },
+            orderBy: { uploadedAt: 'asc' },
+        }),
+        prisma.briefActivityLog.findMany({
+            where: { briefId, activityType: { not: 'viewed' } },
+            select: { id: true, timestamp: true, activityType: true, description: true, performedBy: true },
+            orderBy: { timestamp: 'asc' },
+        }),
+    ]);
+
+    const now = new Date();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const todayEnd = new Date(todayStart.getTime() + 86_400_000);
+
+    const classify = (date: Date) => ({
+        isFuture: date >= todayEnd,
+        isToday: date >= todayStart && date < todayEnd,
+    });
+
+    const events: TimelineEvent[] = [];
+
+    events.push({ id: 'brief_created', date: brief.createdAt, type: 'brief_created', title: 'Brief opened', description: brief.name, ...classify(brief.createdAt) });
+
+    if (brief.dueDate) {
+        events.push({ id: 'brief_due', date: brief.dueDate, type: 'brief_due', title: 'Brief due date', ...classify(brief.dueDate) });
+    }
+
+    for (const e of calendarEntries) {
+        const desc = [e.court, e.judge ? `Judge: ${e.judge}` : null, e.proceedings].filter(Boolean).join(' · ');
+        events.push({
+            id: `cal_${e.id}`,
+            date: e.date,
+            type: e.type === 'MEETING' ? 'meeting' : 'court_hearing',
+            title: e.title || (e.type === 'MEETING' ? 'Meeting' : 'Court Hearing'),
+            description: desc || undefined,
+            actor: e.submittingLawyerName ?? undefined,
+            ...classify(e.date),
+        });
+        if (e.adjournedTo) {
+            events.push({ id: `cal_adj_${e.id}`, date: e.adjournedTo, type: 'court_adjourned', title: `Adjournment: ${e.title || 'Court date'}`, ...classify(e.adjournedTo) });
+        }
+    }
+
+    for (const t of tasks) {
+        events.push({
+            id: `task_c_${t.id}`, date: t.createdAt, type: 'task_created', title: t.title,
+            description: t.assignedTo?.name ? `Assigned to ${t.assignedTo.name}` : undefined,
+            ...classify(t.createdAt),
+        });
+        if (t.completedAt) {
+            events.push({ id: `task_done_${t.id}`, date: t.completedAt, type: 'task_completed', title: `Completed: ${t.title}`, ...classify(t.completedAt) });
+        } else if (t.dueDate) {
+            events.push({ id: `task_due_${t.id}`, date: t.dueDate, type: 'task_due', title: `Deadline: ${t.title}`, ...classify(t.dueDate) });
+        }
+    }
+
+    for (const d of documents) {
+        events.push({ id: `doc_${d.id}`, date: d.uploadedAt, type: 'document_uploaded', title: d.name, ...classify(d.uploadedAt) });
+    }
+
+    for (const a of activityLogs) {
+        events.push({ id: `act_${a.id}`, date: a.timestamp, type: 'activity', title: a.description, actor: a.performedBy ?? undefined, ...classify(a.timestamp) });
+    }
+
+    return events.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+}

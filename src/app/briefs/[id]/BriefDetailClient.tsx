@@ -84,6 +84,7 @@ interface BriefDetailClientProps {
 import { getDocuments } from '@/app/actions/documents';
 import { getFolders, deleteFolder } from '@/app/actions/folders';
 import { summarizeBrief, logBriefViewed } from '@/app/actions/briefs';
+import BriefTimeline from '@/components/briefs/BriefTimeline';
 
 export default function BriefDetailClient({ brief }: BriefDetailClientProps) {
     const router = useRouter();
@@ -97,6 +98,7 @@ export default function BriefDetailClient({ brief }: BriefDetailClientProps) {
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [summary, setSummary] = useState<string | null>(brief.summary);
     const [isSummarizing, setIsSummarizing] = useState(false);
+    const [activeTab, setActiveTab] = useState<'timeline' | 'documents'>('timeline');
 
     useEffect(() => {
         logBriefViewed(brief.id).catch(() => {});
@@ -323,6 +325,34 @@ export default function BriefDetailClient({ brief }: BriefDetailClientProps) {
             </div>
 
             <div className={styles.content}>
+                {/* Tabs */}
+                <div style={{ display: 'flex', gap: '0', borderBottom: '1px solid var(--border)', marginBottom: '1.5rem' }}>
+                    {(['timeline', 'documents'] as const).map(tab => (
+                        <button
+                            key={tab}
+                            onClick={() => setActiveTab(tab)}
+                            style={{
+                                padding: '0.6rem 1.25rem',
+                                fontSize: 'var(--text-sm)',
+                                fontWeight: activeTab === tab ? 600 : 400,
+                                color: activeTab === tab ? 'var(--primary)' : 'var(--text-secondary)',
+                                background: 'none',
+                                border: 'none',
+                                borderBottom: activeTab === tab ? '2px solid var(--primary)' : '2px solid transparent',
+                                cursor: 'pointer',
+                                textTransform: 'capitalize',
+                                marginBottom: '-1px',
+                                transition: 'color 0.15s',
+                            }}
+                        >
+                            {tab}
+                        </button>
+                    ))}
+                </div>
+
+                {activeTab === 'timeline' && <BriefTimeline briefId={brief.id} />}
+
+                {activeTab === 'documents' && <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
                     <div style={{ flex: 1, minWidth: '300px' }}>
                         <DocumentUpload briefId={brief.id} folderId={currentFolderId} onUploadComplete={handleUploadComplete} />
@@ -444,6 +474,7 @@ export default function BriefDetailClient({ brief }: BriefDetailClientProps) {
                         ))}
                     </div>
                 )}
+                </div>}
             </div>
 
             <EditBriefModal
