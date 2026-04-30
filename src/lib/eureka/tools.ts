@@ -1,211 +1,100 @@
-import { FunctionDeclaration, SchemaType } from '@google/generative-ai';
 import { prisma } from '@/lib/prisma';
 
-export function getGeminiTools(): FunctionDeclaration[] {
+type Prop = { type: string; description?: string };
+
+function tool(name: string, description: string, properties: Record<string, Prop>, required?: string[]) {
+    return {
+        name,
+        description,
+        input_schema: {
+            type: 'object' as const,
+            properties,
+            ...(required && { required }),
+        },
+    };
+}
+
+export function getClaudeTools() {
     return [
-        {
-            name: 'get_matters',
-            description: 'Get matters (cases/briefs) for the workspace. Can filter by status, client name, or search term.',
-            parameters: {
-                type: SchemaType.OBJECT,
-                properties: {
-                    status: { type: SchemaType.STRING, description: 'Filter by status: active, closed, archived' },
-                    client_name: { type: SchemaType.STRING, description: 'Filter by client name (partial match)' },
-                    search: { type: SchemaType.STRING, description: 'Search by matter title' },
-                    limit: { type: SchemaType.NUMBER, description: 'Max results (default 20)' },
-                },
-            },
-        },
-        {
-            name: 'get_matter_detail',
-            description: 'Get full detail on a specific matter including recent court dates, documents, and invoices.',
-            parameters: {
-                type: SchemaType.OBJECT,
-                properties: {
-                    matter_id: { type: SchemaType.STRING, description: 'The matter ID' },
-                    title: { type: SchemaType.STRING, description: 'Search by matter title if ID unknown' },
-                },
-            },
-        },
-        {
-            name: 'get_clients',
-            description: 'Get clients for the workspace with matter and payment counts.',
-            parameters: {
-                type: SchemaType.OBJECT,
-                properties: {
-                    search: { type: SchemaType.STRING, description: 'Search by client name' },
-                    limit: { type: SchemaType.NUMBER, description: 'Max results (default 20)' },
-                },
-            },
-        },
-        {
-            name: 'get_client_detail',
-            description: 'Get full client profile: all matters, payment history, outstanding invoices.',
-            parameters: {
-                type: SchemaType.OBJECT,
-                properties: {
-                    client_id: { type: SchemaType.STRING, description: 'The client ID' },
-                    name: { type: SchemaType.STRING, description: 'Search by client name if ID unknown' },
-                },
-            },
-        },
-        {
-            name: 'get_court_dates',
-            description: 'Get upcoming or past court dates. Filter by date range, lawyer name, or matter title.',
-            parameters: {
-                type: SchemaType.OBJECT,
-                properties: {
-                    upcoming: { type: SchemaType.BOOLEAN, description: 'True for future dates, false for past. Default true.' },
-                    days: { type: SchemaType.NUMBER, description: 'Number of days ahead/behind to look (default 30)' },
-                    lawyer_name: { type: SchemaType.STRING, description: 'Filter by appearing counsel name' },
-                    matter_title: { type: SchemaType.STRING, description: 'Filter by matter title' },
-                },
-            },
-        },
-        {
-            name: 'get_financials',
-            description: 'Get financial summary: payments received, outstanding invoices, revenue breakdown.',
-            parameters: {
-                type: SchemaType.OBJECT,
-                properties: {
-                    period: { type: SchemaType.STRING, description: 'this-month, last-month, this-quarter, this-year, all-time' },
-                    client_name: { type: SchemaType.STRING, description: 'Filter to a specific client' },
-                },
-            },
-        },
-        {
-            name: 'get_lawyer_activity',
-            description: 'Get court appearance stats and workload breakdown for lawyers in the workspace.',
-            parameters: {
-                type: SchemaType.OBJECT,
-                properties: {
-                    lawyer_name: { type: SchemaType.STRING, description: 'Filter to a specific lawyer (optional — omit for all)' },
-                },
-            },
-        },
-        {
-            name: 'search_documents',
-            description: 'Search for documents by name or matter title.',
-            parameters: {
-                type: SchemaType.OBJECT,
-                properties: {
-                    search: { type: SchemaType.STRING, description: 'Search term for document name' },
-                    matter_title: { type: SchemaType.STRING, description: 'Filter by matter title' },
-                    limit: { type: SchemaType.NUMBER, description: 'Max results (default 10)' },
-                },
-            },
-        },
-        {
-            name: 'analyse_document',
-            description: 'Fetch a document from storage and analyse its contents — summarise, extract clauses, or answer a question about it.',
-            parameters: {
-                type: SchemaType.OBJECT,
-                properties: {
-                    document_id: { type: SchemaType.STRING, description: 'The document ID from Reforma' },
-                    question: { type: SchemaType.STRING, description: 'What to find or analyse in the document' },
-                },
-                required: ['document_id', 'question'],
-            },
-        },
-        {
-            name: 'create_client',
-            description: 'Create a new client in the workspace.',
-            parameters: {
-                type: SchemaType.OBJECT,
-                properties: {
-                    name: { type: SchemaType.STRING, description: 'Full client name' },
-                    email: { type: SchemaType.STRING, description: 'Client email address' },
-                    phone: { type: SchemaType.STRING, description: 'Phone number (optional)' },
-                    company: { type: SchemaType.STRING, description: 'Company or organisation name (optional)' },
-                },
-                required: ['name', 'email'],
-            },
-        },
-        {
-            name: 'create_matter',
-            description: 'Create a new matter (case) in the workspace.',
-            parameters: {
-                type: SchemaType.OBJECT,
-                properties: {
-                    name: { type: SchemaType.STRING, description: 'Matter/case title' },
-                    client_name: { type: SchemaType.STRING, description: 'Client name to link (optional)' },
-                    court: { type: SchemaType.STRING, description: 'Court name (optional)' },
-                    status: { type: SchemaType.STRING, description: 'active, closed, or archived (default active)' },
-                },
-                required: ['name'],
-            },
-        },
-        {
-            name: 'create_brief',
-            description: 'Create a new brief, optionally linked to a matter and client.',
-            parameters: {
-                type: SchemaType.OBJECT,
-                properties: {
-                    name: { type: SchemaType.STRING, description: 'Brief title' },
-                    category: { type: SchemaType.STRING, description: 'e.g. litigation, advisory, corporate, property' },
-                    matter_title: { type: SchemaType.STRING, description: 'Matter title to link (optional)' },
-                    client_name: { type: SchemaType.STRING, description: 'Client name to link (optional)' },
-                    due_date: { type: SchemaType.STRING, description: 'Due date in ISO format e.g. 2025-07-01 (optional)' },
-                    description: { type: SchemaType.STRING, description: 'Brief description (optional)' },
-                },
-                required: ['name', 'category'],
-            },
-        },
-        {
-            name: 'create_court_date',
-            description: 'Schedule a new court date or hearing for a matter.',
-            parameters: {
-                type: SchemaType.OBJECT,
-                properties: {
-                    matter_title: { type: SchemaType.STRING, description: 'Matter title to link the court date to' },
-                    date: { type: SchemaType.STRING, description: 'Date and time in ISO format e.g. 2025-07-15T09:00:00' },
-                    court: { type: SchemaType.STRING, description: 'Court name (optional)' },
-                    proceedings: { type: SchemaType.STRING, description: 'What the hearing is for e.g. Cross-examination (optional)' },
-                    type: { type: SchemaType.STRING, description: 'COURT or MEETING (default COURT)' },
-                },
-                required: ['matter_title', 'date'],
-            },
-        },
-        {
-            name: 'get_inactive_matters',
-            description: 'Find active matters with no recent activity — useful for spotting neglected cases.',
-            parameters: {
-                type: SchemaType.OBJECT,
-                properties: {
-                    days: { type: SchemaType.NUMBER, description: 'Inactivity threshold in days (default 30)' },
-                },
-            },
-        },
-        {
-            name: 'get_overdue_invoices',
-            description: 'Find invoices that are unpaid and past their due date.',
-            parameters: {
-                type: SchemaType.OBJECT,
-                properties: {
-                    client_name: { type: SchemaType.STRING, description: 'Filter to a specific client (optional)' },
-                },
-            },
-        },
-        {
-            name: 'get_upcoming_deadlines',
-            description: 'Get all upcoming court dates AND brief due dates within a window — the full deadline picture.',
-            parameters: {
-                type: SchemaType.OBJECT,
-                properties: {
-                    days: { type: SchemaType.NUMBER, description: 'How many days ahead to look (default 14)' },
-                },
-            },
-        },
-        {
-            name: 'get_client_health',
-            description: 'Identify clients who have had no recent payments — useful for follow-up and relationship management.',
-            parameters: {
-                type: SchemaType.OBJECT,
-                properties: {
-                    days: { type: SchemaType.NUMBER, description: 'Inactivity threshold in days (default 60)' },
-                },
-            },
-        },
+        tool('get_matters', 'Get matters (cases/briefs) for the workspace. Can filter by status, client name, or search term.', {
+            status: { type: 'string', description: 'Filter by status: active, closed, archived' },
+            client_name: { type: 'string', description: 'Filter by client name (partial match)' },
+            search: { type: 'string', description: 'Search by matter title' },
+            limit: { type: 'number', description: 'Max results (default 20)' },
+        }),
+        tool('get_matter_detail', 'Get full detail on a specific matter including recent court dates, documents, and invoices.', {
+            matter_id: { type: 'string', description: 'The matter ID' },
+            title: { type: 'string', description: 'Search by matter title if ID unknown' },
+        }),
+        tool('get_clients', 'Get clients for the workspace with matter and payment counts.', {
+            search: { type: 'string', description: 'Search by client name' },
+            limit: { type: 'number', description: 'Max results (default 20)' },
+        }),
+        tool('get_client_detail', 'Get full client profile: all matters, payment history, outstanding invoices.', {
+            client_id: { type: 'string', description: 'The client ID' },
+            name: { type: 'string', description: 'Search by client name if ID unknown' },
+        }),
+        tool('get_court_dates', 'Get upcoming or past court dates. Filter by date range, lawyer name, or matter title.', {
+            upcoming: { type: 'boolean', description: 'True for future dates, false for past. Default true.' },
+            days: { type: 'number', description: 'Number of days ahead/behind to look (default 30)' },
+            lawyer_name: { type: 'string', description: 'Filter by appearing counsel name' },
+            matter_title: { type: 'string', description: 'Filter by matter title' },
+        }),
+        tool('get_financials', 'Get financial summary: payments received, outstanding invoices, revenue breakdown.', {
+            period: { type: 'string', description: 'this-month, last-month, this-quarter, this-year, all-time' },
+            client_name: { type: 'string', description: 'Filter to a specific client' },
+        }),
+        tool('get_lawyer_activity', 'Get court appearance stats and workload breakdown for lawyers in the workspace.', {
+            lawyer_name: { type: 'string', description: 'Filter to a specific lawyer (optional — omit for all)' },
+        }),
+        tool('search_documents', 'Search for documents by name or matter title.', {
+            search: { type: 'string', description: 'Search term for document name' },
+            matter_title: { type: 'string', description: 'Filter by matter title' },
+            limit: { type: 'number', description: 'Max results (default 10)' },
+        }),
+        tool('analyse_document', 'Fetch a document from storage and analyse its contents — summarise, extract clauses, or answer a question about it.', {
+            document_id: { type: 'string', description: 'The document ID from Reforma' },
+            question: { type: 'string', description: 'What to find or analyse in the document' },
+        }, ['document_id', 'question']),
+        tool('create_client', 'Create a new client in the workspace.', {
+            name: { type: 'string', description: 'Full client name' },
+            email: { type: 'string', description: 'Client email address' },
+            phone: { type: 'string', description: 'Phone number (optional)' },
+            company: { type: 'string', description: 'Company or organisation name (optional)' },
+        }, ['name', 'email']),
+        tool('create_matter', 'Create a new matter (case) in the workspace.', {
+            name: { type: 'string', description: 'Matter/case title' },
+            client_name: { type: 'string', description: 'Client name to link (optional)' },
+            court: { type: 'string', description: 'Court name (optional)' },
+            status: { type: 'string', description: 'active, closed, or archived (default active)' },
+        }, ['name']),
+        tool('create_brief', 'Create a new brief, optionally linked to a matter and client.', {
+            name: { type: 'string', description: 'Brief title' },
+            category: { type: 'string', description: 'e.g. litigation, advisory, corporate, property' },
+            matter_title: { type: 'string', description: 'Matter title to link (optional)' },
+            client_name: { type: 'string', description: 'Client name to link (optional)' },
+            due_date: { type: 'string', description: 'Due date in ISO format e.g. 2025-07-01 (optional)' },
+            description: { type: 'string', description: 'Brief description (optional)' },
+        }, ['name', 'category']),
+        tool('create_court_date', 'Schedule a new court date or hearing for a matter.', {
+            matter_title: { type: 'string', description: 'Matter title to link the court date to' },
+            date: { type: 'string', description: 'Date and time in ISO format e.g. 2025-07-15T09:00:00' },
+            court: { type: 'string', description: 'Court name (optional)' },
+            proceedings: { type: 'string', description: 'What the hearing is for e.g. Cross-examination (optional)' },
+            type: { type: 'string', description: 'COURT or MEETING (default COURT)' },
+        }, ['matter_title', 'date']),
+        tool('get_inactive_matters', 'Find active matters with no recent activity — useful for spotting neglected cases.', {
+            days: { type: 'number', description: 'Inactivity threshold in days (default 30)' },
+        }),
+        tool('get_overdue_invoices', 'Find invoices that are unpaid and past their due date.', {
+            client_name: { type: 'string', description: 'Filter to a specific client (optional)' },
+        }),
+        tool('get_upcoming_deadlines', 'Get all upcoming court dates AND brief due dates within a window — the full deadline picture.', {
+            days: { type: 'number', description: 'How many days ahead to look (default 14)' },
+        }),
+        tool('get_client_health', 'Identify clients who have had no recent payments — useful for follow-up and relationship management.', {
+            days: { type: 'number', description: 'Inactivity threshold in days (default 60)' },
+        }),
     ];
 }
 
@@ -429,28 +318,45 @@ export async function executeTool(
 
             const buffer = await fileResponse.arrayBuffer();
             const base64 = Buffer.from(buffer).toString('base64');
-            const mimeType = (fileResponse.headers.get('content-type') || 'application/pdf') as any;
+            const rawMime = (fileResponse.headers.get('content-type') || '').split(';')[0].trim();
+            const isPdf = rawMime === 'application/pdf' || doc.url.toLowerCase().includes('.pdf');
+            const isImage = rawMime.startsWith('image/');
 
-            const { GoogleGenerativeAI } = await import('@google/generative-ai');
-            const innerModel = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY!).getGenerativeModel({ model: 'gemini-2.0-flash' });
+            const { default: Anthropic } = await import('@anthropic-ai/sdk');
+            const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! });
 
-            const result = await innerModel.generateContent([
-                { inlineData: { data: base64, mimeType } },
-                input.question,
-            ]);
-            return { document_name: doc.name, analysis: result.response.text() };
+            let docBlock: any;
+            if (isPdf) {
+                docBlock = { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: base64 } };
+            } else if (isImage) {
+                const mediaType = (rawMime || 'image/jpeg') as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp';
+                docBlock = { type: 'image', source: { type: 'base64', media_type: mediaType, data: base64 } };
+            } else {
+                const text = Buffer.from(buffer).toString('utf-8').slice(0, 50000);
+                const response = await client.messages.create({
+                    model: 'claude-sonnet-4-6',
+                    max_tokens: 2048,
+                    messages: [{ role: 'user', content: `Document: "${doc.name}"\n\n${text}\n\n${input.question}` }],
+                });
+                const out = response.content[0]?.type === 'text' ? response.content[0].text : '';
+                return { document_name: doc.name, analysis: out };
+            }
+
+            const response = await client.messages.create({
+                model: 'claude-sonnet-4-6',
+                max_tokens: 2048,
+                messages: [{ role: 'user', content: [docBlock, { type: 'text', text: input.question }] }],
+            });
+            const text = response.content[0]?.type === 'text' ? response.content[0].text : '';
+            return { document_name: doc.name, analysis: text };
         }
 
         case 'create_client': {
-            const existing = await prisma.client.findFirst({
-                where: { email: input.email, workspaceId },
-            });
+            const existing = await prisma.client.findFirst({ where: { email: input.email, workspaceId } });
             if (existing) return { error: `A client with email ${input.email} already exists.` };
             const client = await prisma.client.create({
                 data: {
-                    name: input.name,
-                    email: input.email,
-                    workspaceId,
+                    name: input.name, email: input.email, workspaceId,
                     ...(input.phone && { phone: input.phone }),
                     ...(input.company && { company: input.company }),
                 },
@@ -469,9 +375,7 @@ export async function executeTool(
             }
             const matter = await prisma.matter.create({
                 data: {
-                    name: input.name,
-                    workspaceId,
-                    status: input.status ?? 'active',
+                    name: input.name, workspaceId, status: input.status ?? 'active',
                     ...(input.court && { court: input.court }),
                     ...(clientId && { clientId }),
                     lawyerInChargeId: userId,
@@ -502,12 +406,8 @@ export async function executeTool(
             const briefNumber = `EUR-${year}-${String(count + 1).padStart(4, '0')}`;
             const brief = await prisma.brief.create({
                 data: {
-                    briefNumber,
-                    name: input.name,
-                    category: input.category,
-                    workspaceId,
-                    lawyerId: userId,
-                    status: 'active',
+                    briefNumber, name: input.name, category: input.category,
+                    workspaceId, lawyerId: userId, status: 'active',
                     ...(matterId && { matterId }),
                     ...(clientId && { clientId }),
                     ...(input.due_date && { dueDate: new Date(input.due_date) }),
@@ -545,10 +445,7 @@ export async function executeTool(
             cutoff.setDate(cutoff.getDate() - days);
             const matters = await prisma.matter.findMany({
                 where: { workspaceId, status: 'active', lastActivityAt: { lt: cutoff } },
-                select: {
-                    id: true, name: true, court: true, lastActivityAt: true,
-                    client: { select: { name: true } },
-                },
+                select: { id: true, name: true, court: true, lastActivityAt: true, client: { select: { name: true } } },
                 orderBy: { lastActivityAt: 'asc' },
                 take: 20,
             });
@@ -561,11 +458,7 @@ export async function executeTool(
                 ? { workspaceId, name: { contains: input.client_name, mode: 'insensitive' as const } }
                 : { workspaceId };
             const invoices = await prisma.invoice.findMany({
-                where: {
-                    client: clientFilter,
-                    dueDate: { lt: now },
-                    NOT: { status: { in: ['paid', 'PAID'] } },
-                },
+                where: { client: clientFilter, dueDate: { lt: now }, NOT: { status: { in: ['paid', 'PAID'] } } },
                 select: {
                     id: true, invoiceNumber: true, totalAmount: true, dueDate: true, status: true,
                     client: { select: { id: true, name: true } },
@@ -585,19 +478,13 @@ export async function executeTool(
             const [courtDates, briefs] = await Promise.all([
                 prisma.calendarEntry.findMany({
                     where: { type: 'COURT', date: { gte: now, lte: boundary }, matter: { workspaceId } },
-                    select: {
-                        id: true, date: true, court: true, proceedings: true,
-                        matter: { select: { id: true, name: true } },
-                    },
+                    select: { id: true, date: true, court: true, proceedings: true, matter: { select: { id: true, name: true } } },
                     orderBy: { date: 'asc' },
                     take: 20,
                 }),
                 prisma.brief.findMany({
                     where: { workspaceId, status: 'active', dueDate: { gte: now, lte: boundary } },
-                    select: {
-                        id: true, name: true, dueDate: true, category: true,
-                        client: { select: { name: true } },
-                    },
+                    select: { id: true, name: true, dueDate: true, category: true, client: { select: { name: true } } },
                     orderBy: { dueDate: 'asc' },
                     take: 20,
                 }),
@@ -615,23 +502,19 @@ export async function executeTool(
                     id: true, name: true, email: true,
                     payments: { orderBy: { date: 'desc' }, take: 1, select: { date: true, amount: true } },
                     matters: { where: { status: 'active' }, select: { id: true } },
-                    invoices: {
-                        where: { NOT: { status: { in: ['paid', 'PAID'] } } },
-                        select: { totalAmount: true },
-                    },
+                    invoices: { where: { NOT: { status: { in: ['paid', 'PAID'] } } }, select: { totalAmount: true } },
                 },
             });
-            const result = clients.map(c => ({
-                id: c.id,
-                name: c.name,
-                email: c.email,
-                last_payment: c.payments[0]?.date ?? null,
-                last_payment_amount: c.payments[0]?.amount ?? null,
-                active_matters: c.matters.length,
-                outstanding_balance: c.invoices.reduce((s, i) => s + Number(i.totalAmount || 0), 0),
-                needs_attention: !c.payments[0] || new Date(c.payments[0].date) < cutoff,
-            }));
-            const flagged = result.filter(c => c.needs_attention);
+            const flagged = clients
+                .map(c => ({
+                    id: c.id, name: c.name, email: c.email,
+                    last_payment: c.payments[0]?.date ?? null,
+                    last_payment_amount: c.payments[0]?.amount ?? null,
+                    active_matters: c.matters.length,
+                    outstanding_balance: c.invoices.reduce((s, i) => s + Number(i.totalAmount || 0), 0),
+                    needs_attention: !c.payments[0] || new Date(c.payments[0].date) < cutoff,
+                }))
+                .filter(c => c.needs_attention);
             return { threshold_days: days, flagged_count: flagged.length, clients: flagged };
         }
 

@@ -1,36 +1,17 @@
-
 import { prisma } from '@/lib/prisma';
 import { Vectorizer } from '@/lib/ingestion/vectorizer';
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import Anthropic from '@anthropic-ai/sdk';
 import { SYSTEM_PROMPTS } from './prompts';
 import { config } from '@/lib/config';
 
-const genAI = new GoogleGenerativeAI(config.GOOGLE_API_KEY || '');
-
 export class DraftingService {
 
-    /**
-     * Retrieves the most relevant document chunks for a given query within a Brief.
-     */
     static async retrieveContext(briefId: string, query: string, limit = 10): Promise<string> {
-        // 1. Vectorize the query
         const queryVector = await Vectorizer.embed(query);
-
-        // 2. Perform Cosine Similarity Search via Raw SQL (pgvector)
-        // We cast the vector array to a string representation for SQL
         const vectorString = `[${queryVector.join(',')}]`;
 
-        /* 
-           Prisma doesn't support vector comparisons in `findMany` yet.
-           We must use $queryRaw.
-           
-           Query explanation:
-           - Join DocumentChunk with Document to filter by briefId
-           - Calculate distance using <=> (cosine distance operator) or <-> (Euclidean)
-           - Order by distance ASC (closest first)
-        */
         const chunks = await prisma.$queryRaw`
-            SELECT 
+            SELECT
                 chunk.content,
                 chunk.metadata,
                 (chunk.embedding <=> ${vectorString}::vector) as distance
@@ -41,42 +22,31 @@ export class DraftingService {
             LIMIT ${limit};
         ` as any[];
 
-        // 3. Format context string
-        const contextString = chunks.map((c, i) => `
-[Fact ${i + 1}]
-${c.content}
-`).join('\n');
-
-        return contextString;
+        return chunks.map((c, i) => `\n[Fact ${i + 1}]\n${c.content}\n`).join('\n');
     }
 
-    /**
-     * Generates a draft based on the session state and user instruction.
-     */
     static async generateDraft(briefId: string, instruction: string): Promise<string> {
-        try {
-            // 1. Retrieve Context
-            console.log(`[DraftingService] Retrieving context for: "${instruction}"`);
-            const context = await this.retrieveContext(briefId, instruction);
+        const apiKey = config.ANTHROPIC_API_KEY;
+        if (!apiKey) throw new Error('ANTHROPIC_API_KEY is not configured.');
 
-            // 2. Construct Prompt
-            let prompt = SYSTEM_PROMPTS.SENIOR_ASSOCIATE + "\n\n" + SYSTEM_PROMPTS.FRESH_DRAFT_INSTRUCTION;
-            prompt = prompt.replace('{{CONTEXT}}', context || "No specific documents found in Brief.");
-            prompt = prompt.replace('{{INSTRUCTION}}', instruction);
+        console.log(`[DraftingService] Retrieving context for: "${instruction}"`);
+        const context = await this.retrieveContext(briefId, instruction);
 
-            // 3. Call LLM (Gemini Pro)
-            console.log(`[DraftingService] Generating draft...`);
-            const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+        let prompt = SYSTEM_PROMPTS.SENIOR_ASSOCIATE + '\n\n' + SYSTEM_PROMPTS.FRESH_DRAFT_INSTRUCTION;
+        prompt = prompt.replace('{{CONTEXT}}', context || 'No specific documents found in Brief.');
+        prompt = prompt.replace('{{INSTRUCTION}}', instruction);
 
-            const result = await model.generateContent(prompt);
-            const response = await result.response;
-            const text = response.text();
+        console.log('[DraftingService] Generating draft…');
 
-            return text;
+        const client = new Anthropic({ apiKey });
+        const response = await client.messages.create({
+            model: 'claude-sonnet-4-6',
+            max_tokens: 4096,
+            messages: [{ role: 'user', content: prompt }],
+        });
 
-        } catch (error) {
-            console.error('[DraftingService] Error generating draft:', error);
-            throw new Error(`Failed to generate draft: ${error instanceof Error ? error.message : 'Unknown error'}`);
-        }
+        const text = response.content[0]?.type === 'text' ? response.content[0].text : '';
+        if (!text) throw new Error('No draft returned from Claude.');
+        return text;
     }
 }

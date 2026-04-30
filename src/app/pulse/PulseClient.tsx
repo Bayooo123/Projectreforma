@@ -19,6 +19,7 @@ import type {
     PulseCategory,
     PulseIconType,
 } from '@/app/actions/pulse';
+import PendingQuestionsPanel from './PendingQuestionsPanel';
 
 const ICON_MAP: Record<PulseIconType, React.ElementType> = {
     alert: AlertCircle,
@@ -56,6 +57,14 @@ const SECTION_LABELS_USER: Record<string, string> = {
 
 type FilterType = 'all' | 'urgent' | 'billing' | 'calendar';
 
+interface PendingQuestion {
+    id: string;
+    question: string;
+    askedAt: Date | string;
+    matter: { id: string; name: string; caseNumber: string | null; court: string | null };
+    calendarEntry: { id: string; date: Date | string; title: string | null };
+}
+
 interface PulseClientProps {
     firmStats: PulseFirmStats;
     userStats: PulseUserStats;
@@ -63,6 +72,7 @@ interface PulseClientProps {
     userFeed: PulseItem[];
     userName: string;
     attentionCount: number;
+    pendingQuestions: PendingQuestion[];
 }
 
 export default function PulseClient({
@@ -71,6 +81,7 @@ export default function PulseClient({
     firmFeed,
     userFeed,
     attentionCount,
+    pendingQuestions,
 }: PulseClientProps) {
     const [view, setView] = useState<'firm' | 'user'>('firm');
     const [filter, setFilter] = useState<FilterType>('all');
@@ -197,6 +208,10 @@ export default function PulseClient({
 
             {/* Feed Area */}
             <div className={styles.feedArea}>
+                {pendingQuestions.length > 0 && (
+                    <PendingQuestionsPanel questions={pendingQuestions} />
+                )}
+
                 <div className={styles.feedHeader}>
                     <span className={styles.feedLabel}>
                         {view === 'firm' ? 'Firmwide activity' : 'My activity'}

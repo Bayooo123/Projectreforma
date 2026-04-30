@@ -1,41 +1,63 @@
-
-import { GoogleGenerativeAI } from "@google/generative-ai";
-
 import { config } from '@/lib/config';
 
-const genAI = new GoogleGenerativeAI(config.GOOGLE_API_KEY || '');
-
+// Voyage AI — Anthropic's recommended embedding partner.
+// Uses voyage-law-2, purpose-built for legal text (1024 dimensions).
+// Set VOYAGE_API_KEY in your environment variables.
 export class Vectorizer {
 
-    /**
-     * Generates an embedding vector for a given text.
-     * Uses 'embedding-001' model.
-     */
     static async embed(text: string): Promise<number[]> {
-        if (!config.GOOGLE_API_KEY) {
-            console.error("Missing GOOGLE_API_KEY");
-            // Return dummy vector for dev/test if key missing (Prevents crash, but useless for retrieval)
-            // In prod this should throw.
-            throw new Error("API Key for Embeddings not configured");
+        const apiKey = config.VOYAGE_API_KEY;
+        if (!apiKey) {
+            throw new Error('VOYAGE_API_KEY is not configured. Voyage AI is required for document embeddings.');
         }
 
-        try {
-            const model = genAI.getGenerativeModel({ model: "embedding-001" });
-            const result = await model.embedContent(text);
-            const embedding = result.embedding;
-            return embedding.values;
-        } catch (error) {
-            console.error('[Vectorizer] Error generating embedding:', error);
-            throw error;
+        const response = await fetch('https://api.voyageai.com/v1/embeddings', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${apiKey}`,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                model: 'voyage-law-2',
+                input: [text],
+            }),
+        });
+
+        if (!response.ok) {
+            const err = await response.text();
+            throw new Error(`Voyage AI embedding failed: ${response.status} ${err}`);
         }
+
+        const data = await response.json();
+        return data.data[0].embedding as number[];
     }
 
     static async embedBatch(texts: string[]): Promise<number[][]> {
-        // Prepare batch request logic if needed, for now sequential
-        const vectors = [];
-        for (const t of texts) {
-            vectors.push(await this.embed(t));
+        const apiKey = config.VOYAGE_API_KEY;
+        if (!apiKey) {
+            throw new Error('VOYAGE_API_KEY is not configured.');
         }
-        return vectors;
+
+        const response = await fetch('https://api.voyageai.com/v1/embeddings', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${apiKey}`,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                model: 'voyage-law-2',
+                input: texts,
+            }),
+        });
+
+        if (!response.ok) {
+            const err = await response.text();
+            throw new Error(`Voyage AI batch embedding failed: ${response.status} ${err}`);
+        }
+
+        const data = await response.json();
+        return (data.data as Array<{ embedding: number[] }>)
+            .sort((a: any, b: any) => a.index - b.index)
+            .map(d => d.embedding);
     }
 }

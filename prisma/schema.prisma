@@ -49,6 +49,7 @@ model Workspace {
   inboundEmails     InboundEmail[]
   activityLogs      WorkspaceActivityLog[]
   attendanceRecords AttendanceRecord[]
+  matterQuestions   MatterQuestion[]
   owner             User                  @relation("WorkspaceOwner", fields: [ownerId], references: [id])
   emailConfig       WorkspaceEmailConfig?
   members           WorkspaceMember[]
@@ -160,8 +161,9 @@ model User {
   userSessions           UserSession[]
   workspaceActivity      WorkspaceActivityLog[]
   attendanceRecords      AttendanceRecord[]
-  calendarAppearances    CalendarEntry[]        @relation("CalendarAppearances")
-  pushSubscriptions      PushSubscription[]
+  calendarAppearances          CalendarEntry[]        @relation("CalendarAppearances")
+  answeredMatterQuestions      MatterQuestion[]       @relation("MatterQuestionAnsweredBy")
+  pushSubscriptions            PushSubscription[]
 
   @@index([email])
   @@index([lawyerToken])
@@ -343,6 +345,7 @@ model Matter {
 
   notifications         Notification[]
   tasks                 Task[]
+  matterQuestions       MatterQuestion[]
 
   @@index([workspaceId])
   @@index([lastActivityAt])
@@ -390,6 +393,7 @@ model CalendarEntry {
   matter                 Matter?                 @relation(fields: [matterId], references: [id], onDelete: Cascade, map: "CourtDate_matterId_fkey")
   scheduledNotifications ScheduledNotification[]
   appearances            User[]                  @relation("CalendarAppearances")
+  matterQuestions        MatterQuestion[]
 
   @@index([briefId], map: "CourtDate_briefId_idx")
   @@index([clientId], map: "CourtDate_clientId_idx")
@@ -1033,4 +1037,27 @@ model AttendanceRecord {
   @@unique([userId, workspaceId, date])
   @@index([workspaceId, date])
   @@index([userId])
+}
+
+model MatterQuestion {
+  id              String        @id @default(cuid())
+  workspaceId     String
+  matterId        String
+  calendarEntryId String
+  question        String
+  context         String?
+  status          String        @default("pending")
+  answer          String?
+  answeredAt      DateTime?
+  answeredById    String?
+  askedAt         DateTime      @default(now())
+
+  workspace       Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  matter          Matter        @relation(fields: [matterId], references: [id], onDelete: Cascade)
+  calendarEntry   CalendarEntry @relation(fields: [calendarEntryId], references: [id], onDelete: Cascade)
+  answeredBy      User?         @relation("MatterQuestionAnsweredBy", fields: [answeredById], references: [id])
+
+  @@index([workspaceId, status])
+  @@index([matterId])
+  @@index([calendarEntryId])
 }

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import Anthropic from '@anthropic-ai/sdk';
 import { auth } from '@/auth';
-import { getGeminiTools, executeTool } from '@/lib/eureka/tools';
+import { getClaudeTools, executeTool } from '@/lib/eureka/tools';
 
 const SYSTEM_PROMPT = `You are Eureka, the intelligent legal practice assistant built into Reforma OS — a legal practice management platform used by Nigerian law firms.
 
@@ -46,9 +46,9 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: 'No workspace' }, { status: 400 });
         }
 
-        const apiKey = process.env.GOOGLE_API_KEY;
+        const apiKey = process.env.ANTHROPIC_API_KEY;
         if (!apiKey) {
-            return NextResponse.json({ error: 'GOOGLE_API_KEY is not configured.' }, { status: 500 });
+            return NextResponse.json({ error: 'ANTHROPIC_API_KEY is not configured.' }, { status: 500 });
         }
 
         const { messages } = await req.json();
@@ -56,58 +56,71 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: 'No messages' }, { status: 400 });
         }
 
-        const genAI = new GoogleGenerativeAI(apiKey);
-        const model = genAI.getGenerativeModel({
-            model: 'gemini-2.0-flash',
-            systemInstruction: SYSTEM_PROMPT,
-            tools: [{ functionDeclarations: getGeminiTools() }],
+        const client = new Anthropic({ apiKey });
+
+        const claudeMessages: Anthropic.MessageParam[] = messages.map(
+            (m: { role: string; content: string }) => ({
+                role: m.role === 'user' ? 'user' : 'assistant' as const,
+                content: m.content,
+            })
+        );
+
+        let currentMessages = [...claudeMessages];
+        let response = await client.messages.create({
+            model: 'claude-sonnet-4-6',
+            max_tokens: 4096,
+            system: SYSTEM_PROMPT,
+            tools: getClaudeTools(),
+            messages: currentMessages,
         });
 
-        // Convert message history to Gemini format (exclude last user message — sent separately)
-        const history = messages.slice(0, -1).map((m: { role: string; content: string }) => ({
-            role: m.role === 'user' ? 'user' : 'model',
-            parts: [{ text: m.content }],
-        }));
-
-        const lastMessage = messages[messages.length - 1].content;
-        const chat = model.startChat({ history });
-
-        // Agentic loop
-        let result = await chat.sendMessage(lastMessage);
         let iterations = 0;
 
-        while (iterations < 10) {
+        while (response.stop_reason === 'tool_use' && iterations < 10) {
             iterations++;
-            const response = result.response;
-            const functionCalls = response.functionCalls();
 
-            if (!functionCalls || functionCalls.length === 0) {
-                // Final text response
-                return NextResponse.json({ message: response.text() });
-            }
+            const toolUseBlocks = response.content.filter(
+                (b): b is Anthropic.ToolUseBlock => b.type === 'tool_use'
+            );
 
-            // Execute all requested tools
             const toolResults = await Promise.all(
-                functionCalls.map(async (call) => {
-                    const output = await executeTool(call.name, call.args as Record<string, any>, workspaceId, session.user.id);
+                toolUseBlocks.map(async (block) => {
+                    const output = await executeTool(
+                        block.name,
+                        block.input as Record<string, any>,
+                        workspaceId,
+                        session.user.id
+                    );
                     return {
-                        functionResponse: {
-                            name: call.name,
-                            response: { result: output },
-                        },
+                        type: 'tool_result' as const,
+                        tool_use_id: block.id,
+                        content: JSON.stringify(output),
                     };
                 })
             );
 
-            result = await chat.sendMessage(toolResults);
+            currentMessages = [
+                ...currentMessages,
+                { role: 'assistant' as const, content: response.content },
+                { role: 'user' as const, content: toolResults },
+            ];
+
+            response = await client.messages.create({
+                model: 'claude-sonnet-4-6',
+                max_tokens: 4096,
+                system: SYSTEM_PROMPT,
+                tools: getClaudeTools(),
+                messages: currentMessages,
+            });
         }
 
-        return NextResponse.json({ message: 'Maximum steps reached. Please try a more specific question.' });
+        const textBlock = response.content.find((b): b is Anthropic.TextBlock => b.type === 'text');
+        return NextResponse.json({ message: textBlock?.text || 'No response generated.' });
 
     } catch (error: any) {
         console.error('[Eureka] Error:', error);
         const msg = error.message ?? '';
-        if (msg.includes('429') || msg.includes('quota') || msg.includes('Too Many Requests')) {
+        if (msg.includes('429') || msg.includes('rate_limit') || msg.includes('overloaded')) {
             return NextResponse.json({ message: "I'm temporarily unavailable due to high demand. Please try again in a minute." });
         }
         if (msg.includes('503') || msg.includes('Service Unavailable')) {

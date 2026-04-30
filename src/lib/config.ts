@@ -14,10 +14,10 @@ const envSchema = z.object({
 
     // External Services
     ANTHROPIC_API_KEY: z.string().optional(),
+    VOYAGE_API_KEY: z.string().optional(),
     BLOB_READ_WRITE_TOKEN: z.string().optional(),
     CRON_SECRET: z.string().min(32).optional(),
     RESEND_API_KEY: z.string().optional(),
-    GOOGLE_API_KEY: z.string().optional(),
     EMAIL_WEBHOOK_SECRET: z.string().optional(),
 
 
