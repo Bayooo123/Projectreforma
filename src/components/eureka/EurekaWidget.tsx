@@ -13,9 +13,30 @@ interface Position { bottom: number; left: number; }
 const DEFAULT_POS: Position = { bottom: 84, left: 24 };
 const TOGGLE_OFFSET = 60;
 
+const HISTORY_KEY = 'eureka_history';
+const MAX_HISTORY = 50;
+
+function loadHistory(): Message[] {
+    if (typeof window === 'undefined') return [];
+    try {
+        const raw = localStorage.getItem(HISTORY_KEY);
+        if (!raw) return [];
+        const parsed = JSON.parse(raw);
+        return Array.isArray(parsed) ? parsed.slice(-MAX_HISTORY) : [];
+    } catch {
+        return [];
+    }
+}
+
+function saveHistory(messages: Message[]) {
+    try {
+        localStorage.setItem(HISTORY_KEY, JSON.stringify(messages.slice(-MAX_HISTORY)));
+    } catch {}
+}
+
 export default function EurekaWidget() {
     const [open, setOpen] = useState(false);
-    const [messages, setMessages] = useState<Message[]>([]);
+    const [messages, setMessages] = useState<Message[]>(() => loadHistory());
     const [input, setInput] = useState('');
     const [loading, setLoading] = useState(false);
     const [pos, setPos] = useState<Position>(DEFAULT_POS);
@@ -30,6 +51,10 @@ export default function EurekaWidget() {
     useEffect(() => {
         if (open) inputRef.current?.focus();
     }, [open]);
+
+    useEffect(() => {
+        saveHistory(messages);
+    }, [messages]);
 
     const send = async () => {
         const text = input.trim();
@@ -94,7 +119,7 @@ export default function EurekaWidget() {
                         <span className={styles.headerSub}>Reforma Intelligence</span>
                     </div>
                     <div className={styles.headerActions}>
-                        <button className={styles.iconBtn} onClick={() => setMessages([])} title="Clear chat">
+                        <button className={styles.iconBtn} onClick={() => { setMessages([]); localStorage.removeItem(HISTORY_KEY); }} title="Clear chat">
                             <TrashIcon />
                         </button>
                         <button className={styles.iconBtn} onClick={() => setOpen(false)} title="Minimise">
