@@ -1,10 +1,10 @@
 "use client";
 
-import { X, Loader } from 'lucide-react';
+import { X, Loader, Plus } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import styles from './BriefUploadModal.module.css'; // Reuse existing styles
 import { updateBrief } from '@/app/actions/briefs';
-import { getClientsForWorkspace, getLawyersForWorkspace } from '@/lib/briefs';
+import { getClientsForWorkspace, getLawyersForWorkspace, createClientQuick } from '@/lib/briefs';
 import { PinProtection } from '@/components/auth/PinProtection';
 
 interface EditBriefModalProps {
@@ -45,6 +45,12 @@ const EditBriefModal = ({ isOpen, onClose, onSuccess, brief, workspaceId }: Edit
     const [isLoadingData, setIsLoadingData] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
+    // Quick client creation
+    const [showQuickClient, setShowQuickClient] = useState(false);
+    const [quickClientName, setQuickClientName] = useState('');
+    const [quickClientEmail, setQuickClientEmail] = useState('');
+    const [isCreatingClient, setIsCreatingClient] = useState(false);
+
     // Load data when modal opens
     useEffect(() => {
         if (isOpen && workspaceId) {
@@ -79,6 +85,27 @@ const EditBriefModal = ({ isOpen, onClose, onSuccess, brief, workspaceId }: Edit
             alert('Failed to load clients and lawyers');
         } finally {
             setIsLoadingData(false);
+        }
+    };
+
+    const handleQuickClientCreate = async () => {
+        if (!quickClientName.trim()) { alert('Please enter a client name'); return; }
+        setIsCreatingClient(true);
+        try {
+            const result = await createClientQuick(workspaceId, quickClientName.trim(), quickClientEmail.trim() || undefined);
+            if (result.success && result.client) {
+                setClients(prev => [...prev, result.client as Client]);
+                setSelectedClientId(result.client.id);
+                setShowQuickClient(false);
+                setQuickClientName('');
+                setQuickClientEmail('');
+            } else {
+                alert('Failed to create client. Please try again.');
+            }
+        } catch {
+            alert('An error occurred while creating the client.');
+        } finally {
+            setIsCreatingClient(false);
         }
     };
 
@@ -188,18 +215,65 @@ const EditBriefModal = ({ isOpen, onClose, onSuccess, brief, workspaceId }: Edit
 
                                 <div className={styles.formGroup}>
                                     <label className={styles.label}>Client (Optional)</label>
-                                    <select
-                                        className={styles.select}
-                                        value={selectedClientId}
-                                        onChange={e => setSelectedClientId(e.target.value)}
-                                    >
-                                        <option value="">Select Client...</option>
-                                        {clients.map(client => (
-                                            <option key={client.id} value={client.id}>
-                                                {client.name} {client.company ? `(${client.company})` : ''}
-                                            </option>
-                                        ))}
-                                    </select>
+                                    {!showQuickClient ? (
+                                        <div className={styles.selectWrapper}>
+                                            <select
+                                                className={styles.select}
+                                                value={selectedClientId}
+                                                onChange={e => setSelectedClientId(e.target.value)}
+                                            >
+                                                <option value="">Select Client...</option>
+                                                {clients.map(client => (
+                                                    <option key={client.id} value={client.id}>
+                                                        {client.name} {client.company ? `(${client.company})` : ''}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                            <button
+                                                type="button"
+                                                className={styles.quickAddBtn}
+                                                onClick={() => setShowQuickClient(true)}
+                                                title="Add new client"
+                                            >
+                                                <Plus size={14} /> New
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <div className={styles.quickClientForm}>
+                                            <input
+                                                type="text"
+                                                className={styles.input}
+                                                placeholder="Client Name *"
+                                                value={quickClientName}
+                                                onChange={e => setQuickClientName(e.target.value)}
+                                                autoFocus
+                                            />
+                                            <input
+                                                type="email"
+                                                className={styles.input}
+                                                placeholder="Email (optional — placeholder used if blank)"
+                                                value={quickClientEmail}
+                                                onChange={e => setQuickClientEmail(e.target.value)}
+                                            />
+                                            <div className={styles.quickClientActions}>
+                                                <button
+                                                    type="button"
+                                                    className={styles.quickAddConfirm}
+                                                    onClick={handleQuickClientCreate}
+                                                    disabled={isCreatingClient}
+                                                >
+                                                    {isCreatingClient ? <Loader size={12} className="animate-spin" /> : 'Create & Select'}
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    className={styles.quickAddCancel}
+                                                    onClick={() => { setShowQuickClient(false); setQuickClientName(''); setQuickClientEmail(''); }}
+                                                >
+                                                    Cancel
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
 
                                 <div className={styles.formGroup}>
