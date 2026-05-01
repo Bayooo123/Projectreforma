@@ -8,6 +8,7 @@ import {
 } from '@/app/actions/pulse';
 import { getPendingMatterQuestions } from '@/app/actions/matterQuestions';
 import { getOpenAnomalies } from '@/app/actions/anomalies';
+import { runAnomalyScan } from '@/lib/anomaly/detector';
 import PulseClient from './PulseClient';
 
 export default async function PulsePage() {
@@ -22,6 +23,9 @@ export default async function PulsePage() {
             </div>
         );
     }
+
+    // Run scan first (duplicate-safe), then fetch results in parallel with the rest
+    await runAnomalyScan(workspaceId);
 
     const [firmStats, userStats, firmFeed, userFeed, pendingQuestions, anomalies] = await Promise.all([
         getPulseFirmStats(workspaceId),
