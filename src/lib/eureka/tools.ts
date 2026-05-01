@@ -92,6 +92,10 @@ export function getClaudeTools() {
             proceedings: { type: 'string', description: 'What the hearing is for e.g. Cross-examination (optional)' },
             type: { type: 'string', description: 'COURT or MEETING (default COURT)' },
         }, ['matter_title', 'date']),
+        tool('get_anomalies', 'Get open anomalies detected by the system — things that ought not to be: briefs with no documents, placeholder client data, past court hearings with no outcome recorded, months with no expenses despite active operations, matters with no future hearings scheduled. Use this when the user asks about problems, gaps, or things that need attention.', {
+            type: { type: 'string', description: 'Filter by type: SPARSE_BRIEF | PLACEHOLDER_CLIENT | MISSING_COURT_OUTCOME | MISSING_EXPENSE_PERIOD | UNSCHEDULED_MATTER (optional)' },
+            severity: { type: 'string', description: 'Filter by severity: low | medium | high | critical (optional)' },
+        }),
         tool('get_inactive_matters', 'Find active matters with no recent activity — useful for spotting neglected cases.', {
             days: { type: 'number', description: 'Inactivity threshold in days (default 30)' },
         }),
@@ -660,6 +664,34 @@ export async function executeTool(
                 },
             });
             return { success: true, id: entry.id, date: entry.date, message: `Court date scheduled for ${new Date(input.date).toLocaleDateString('en-NG', { dateStyle: 'long' })}.` };
+        }
+
+        case 'get_anomalies': {
+            const anomalies = await prisma.workspaceAnomaly.findMany({
+                where: {
+                    workspaceId,
+                    status: { in: ['open', 'acknowledged'] },
+                    ...(input.type && { type: input.type }),
+                    ...(input.severity && { severity: input.severity }),
+                },
+                orderBy: [{ severity: 'desc' }, { detectedAt: 'desc' }],
+                take: 30,
+            });
+            return {
+                total: anomalies.length,
+                by_severity: {
+                    critical: anomalies.filter(a => a.severity === 'critical').length,
+                    high: anomalies.filter(a => a.severity === 'high').length,
+                    medium: anomalies.filter(a => a.severity === 'medium').length,
+                    low: anomalies.filter(a => a.severity === 'low').length,
+                },
+                anomalies: anomalies.map(a => ({
+                    id: a.id, type: a.type, severity: a.severity,
+                    title: a.title, question: a.question,
+                    resource: a.resourceName, resourceType: a.resourceType,
+                    detectedAt: a.detectedAt,
+                })),
+            };
         }
 
         case 'get_inactive_matters': {

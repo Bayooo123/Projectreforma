@@ -50,6 +50,7 @@ model Workspace {
   activityLogs      WorkspaceActivityLog[]
   attendanceRecords AttendanceRecord[]
   matterQuestions   MatterQuestion[]
+  anomalies         WorkspaceAnomaly[]
   owner             User                  @relation("WorkspaceOwner", fields: [ownerId], references: [id])
   emailConfig       WorkspaceEmailConfig?
   members           WorkspaceMember[]
@@ -163,6 +164,7 @@ model User {
   attendanceRecords      AttendanceRecord[]
   calendarAppearances          CalendarEntry[]        @relation("CalendarAppearances")
   answeredMatterQuestions      MatterQuestion[]       @relation("MatterQuestionAnsweredBy")
+  resolvedAnomalies            WorkspaceAnomaly[]     @relation("AnomalyResolver")
   pushSubscriptions            PushSubscription[]
 
   @@index([email])
@@ -1060,4 +1062,28 @@ model MatterQuestion {
   @@index([workspaceId, status])
   @@index([matterId])
   @@index([calendarEntryId])
+}
+
+model WorkspaceAnomaly {
+  id           String    @id @default(cuid())
+  workspaceId  String
+  type         String    // SPARSE_BRIEF | PLACEHOLDER_CLIENT | MISSING_COURT_OUTCOME | MISSING_EXPENSE_PERIOD | UNSCHEDULED_MATTER
+  severity     String    @default("medium") // low | medium | high | critical
+  status       String    @default("open")   // open | acknowledged | resolved | dismissed
+  title        String
+  question     String
+  resourceType String?   // brief | client | matter | expense
+  resourceId   String?
+  resourceName String?
+  context      Json?
+  detectedAt   DateTime  @default(now())
+  resolvedAt   DateTime?
+  resolvedById String?
+
+  workspace    Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  resolvedBy   User?     @relation("AnomalyResolver", fields: [resolvedById], references: [id])
+
+  @@index([workspaceId, status])
+  @@index([workspaceId, type])
+  @@index([resourceType, resourceId])
 }

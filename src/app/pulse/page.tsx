@@ -7,6 +7,7 @@ import {
     getPulseFeedUser,
 } from '@/app/actions/pulse';
 import { getPendingMatterQuestions } from '@/app/actions/matterQuestions';
+import { getOpenAnomalies } from '@/app/actions/anomalies';
 import PulseClient from './PulseClient';
 
 export default async function PulsePage() {
@@ -22,12 +23,13 @@ export default async function PulsePage() {
         );
     }
 
-    const [firmStats, userStats, firmFeed, userFeed, pendingQuestions] = await Promise.all([
+    const [firmStats, userStats, firmFeed, userFeed, pendingQuestions, anomalies] = await Promise.all([
         getPulseFirmStats(workspaceId),
         getPulseUserStats(workspaceId),
         getPulseFeedFirmwide(workspaceId),
         getPulseFeedUser(workspaceId),
         getPendingMatterQuestions(workspaceId),
+        getOpenAnomalies(workspaceId),
     ]);
 
     const attentionCount = (firmFeed ?? []).filter(i => i.severity === 'urgent').length;
@@ -41,6 +43,7 @@ export default async function PulsePage() {
             userName={session.user.name || ''}
             attentionCount={attentionCount}
             pendingQuestions={pendingQuestions}
+            anomalies={anomalies}
         />
     );
 }

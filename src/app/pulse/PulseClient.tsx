@@ -20,6 +20,7 @@ import type {
     PulseIconType,
 } from '@/app/actions/pulse';
 import PendingQuestionsPanel from './PendingQuestionsPanel';
+import AnomalyPanel from './AnomalyPanel';
 
 const ICON_MAP: Record<PulseIconType, React.ElementType> = {
     alert: AlertCircle,
@@ -73,6 +74,7 @@ interface PulseClientProps {
     userName: string;
     attentionCount: number;
     pendingQuestions: PendingQuestion[];
+    anomalies: any[];
 }
 
 export default function PulseClient({
@@ -82,6 +84,7 @@ export default function PulseClient({
     userFeed,
     attentionCount,
     pendingQuestions,
+    anomalies,
 }: PulseClientProps) {
     const [view, setView] = useState<'firm' | 'user'>('firm');
     const [filter, setFilter] = useState<FilterType>('all');
@@ -208,6 +211,9 @@ export default function PulseClient({
 
             {/* Feed Area */}
             <div className={styles.feedArea}>
+                {anomalies.length > 0 && (
+                    <AnomalyPanel anomalies={anomalies} />
+                )}
                 {pendingQuestions.length > 0 && (
                     <PendingQuestionsPanel questions={pendingQuestions} />
                 )}

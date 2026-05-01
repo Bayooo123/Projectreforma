@@ -25,7 +25,8 @@
       "Bash(awk '/^model Brief/,/^}/' \"c:\\\\Users\\\\DELL\\\\.gemini\\\\antigravity\\\\scratch\\\\reforma-os\\\\prisma\\\\schema.prisma\")",
       "Bash(awk '/^model Matter/,/^}/' \"c:\\\\Users\\\\DELL\\\\.gemini\\\\antigravity\\\\scratch\\\\reforma-os\\\\prisma\\\\schema.prisma\")",
       "Bash(npx prisma *)",
-      "Bash(grep \"\\\\.ts$\")"
+      "Bash(grep \"\\\\.ts$\")",
+      "Bash(find c:\\\\\\\\Users\\\\\\\\DELL\\\\\\\\.gemini\\\\\\\\antigravity\\\\\\\\scratch\\\\\\\\reforma-os -name \"*riefs*\" -type f)"
     ]
   }
 }
