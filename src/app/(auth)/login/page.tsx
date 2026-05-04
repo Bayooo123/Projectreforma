@@ -127,7 +127,7 @@ function LoginForm() {
                                     type={showPassword ? 'text' : 'password'}
                                     autoComplete="current-password"
                                     required
-                                    className={styles.input}
+                                    className={styles.passwordInput}
                                     placeholder="••••••••"
                                 />
                                 <button
