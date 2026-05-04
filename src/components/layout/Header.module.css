@@ -159,19 +159,45 @@
 /* Mobile Responsiveness */
 @media (max-width: 768px) {
     .header {
-        padding: 0 16px;
-        height: 60px;
+        padding: 0 14px;
+        height: 56px;
     }
 
     .searchContainer {
-        display: none; /* Hidden on mobile to save space, moved to other navigation elements */
+        display: none;
     }
 
     .workspaceName {
-        font-size: 14px;
-        max-width: 120px;
+        font-size: 13px;
+        max-width: 110px;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
+    }
+
+    .userInfo {
+        display: none;
+    }
+
+    .rightSection {
+        gap: 4px;
+    }
+
+    .iconBtn {
+        width: 40px;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .profile {
+        gap: 6px;
+    }
+
+    .avatar {
+        width: 34px;
+        height: 34px;
+        font-size: 13px;
     }
 }

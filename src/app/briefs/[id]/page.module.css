@@ -419,3 +419,93 @@
     color: var(--text-primary);
     font-weight: 500;
 }
+
+/* ── Mobile ─────────────────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+    .page {
+        gap: 1rem;
+    }
+
+    /* Header: stack back link above action buttons */
+    .topRow {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.75rem;
+    }
+
+    .actions {
+        width: 100%;
+        gap: 0.5rem;
+    }
+
+    .editBtn,
+    .draftBtn {
+        flex: 1;
+        justify-content: center;
+        padding: 0.6rem 0.75rem;
+        font-size: 13px;
+    }
+
+    /* Smaller title */
+    .title {
+        font-size: 1.1rem;
+        line-height: 1.35;
+    }
+
+    .titleRow {
+        gap: 0.5rem;
+        flex-wrap: wrap;
+    }
+
+    /* Meta row wraps on mobile */
+    .metaRow {
+        flex-wrap: wrap;
+        gap: 0.6rem 1rem;
+        font-size: 12px;
+    }
+
+    /* Info grid: single column */
+    .infoGrid {
+        grid-template-columns: 1fr;
+        gap: 0.75rem;
+    }
+
+    /* Compact info row: tighter on mobile */
+    .compactInfoRow {
+        gap: 0.75rem;
+        padding: 0.65rem 0.85rem;
+    }
+
+    .compactInfoItem {
+        font-size: 12px;
+    }
+
+    /* Documents header: stack upload button */
+    .documentsHeader {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.65rem;
+    }
+
+    .uploadBtn {
+        width: 100%;
+        justify-content: center;
+        padding: 0.6rem 1rem;
+    }
+
+    /* Document card: keep horizontal but tighten */
+    .documentCard {
+        gap: 0.65rem;
+        padding: 0.75rem;
+    }
+
+    .documentIcon {
+        width: 34px;
+        height: 34px;
+        flex-shrink: 0;
+    }
+
+    .documentActions {
+        gap: 0.35rem;
+    }
+}
