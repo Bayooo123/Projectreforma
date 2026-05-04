@@ -241,7 +241,6 @@ export default function BriefDetailClient({ brief }: BriefDetailClientProps) {
                             disabled={isSummarizing}
                         >
                             {isSummarizing ? <Loader size={16} className="animate-spin" /> : <Sparkles size={16} />}
-                            {isSummarizing ? 'Summarizing...' : 'Summarize with AI'}
                         </button>
                         <button className={styles.editBtn} onClick={() => setIsEditModalOpen(true)}>
                             <Edit size={16} />
