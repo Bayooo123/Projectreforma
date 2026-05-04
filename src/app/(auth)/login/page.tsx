@@ -1,8 +1,8 @@
 'use client';
 
-import { useActionState, useEffect, Suspense } from 'react';
+import { useActionState, useEffect, Suspense, useState } from 'react';
 import { authenticate } from '@/app/lib/actions';
-import { Loader2, Shield, Users } from 'lucide-react';
+import { Loader2, Shield, Users, Eye, EyeOff } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useSearchParams } from 'next/navigation';
@@ -10,6 +10,7 @@ import styles from '../auth.module.css';
 
 function LoginForm() {
     const [state, dispatch, isPending] = useActionState(authenticate, undefined);
+    const [showPassword, setShowPassword] = useState(false);
     const searchParams = useSearchParams();
     const queryMessage = searchParams.get('message');
     const queryError = searchParams.get('error');
@@ -119,15 +120,25 @@ function LoginForm() {
                             <label htmlFor="password" className={styles.label}>
                                 Password
                             </label>
-                            <input
-                                id="password"
-                                name="password"
-                                type="password"
-                                autoComplete="current-password"
-                                required
-                                className={styles.input}
-                                placeholder="••••••••"
-                            />
+                            <div className={styles.passwordWrapper}>
+                                <input
+                                    id="password"
+                                    name="password"
+                                    type={showPassword ? 'text' : 'password'}
+                                    autoComplete="current-password"
+                                    required
+                                    className={styles.input}
+                                    placeholder="••••••••"
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPassword(v => !v)}
+                                    className={styles.passwordToggle}
+                                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                                >
+                                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                                </button>
+                            </div>
                         </div>
 
                         <button

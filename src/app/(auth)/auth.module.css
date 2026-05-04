@@ -338,6 +338,32 @@
     color: #047857;
 }
 
+.passwordWrapper {
+    position: relative;
+}
+
+.passwordWrapper .input {
+    padding-right: 2.5rem;
+}
+
+.passwordToggle {
+    position: absolute;
+    right: 0.75rem;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #94a3b8;
+    display: flex;
+    align-items: center;
+    padding: 0;
+}
+
+.passwordToggle:hover {
+    color: #64748b;
+}
+
 @media (max-width: 1024px) {
     .brandingSide {
         display: none;
