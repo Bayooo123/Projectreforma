@@ -193,7 +193,6 @@ export default function BriefListClient({ initialBriefs, workspaceId }: Omit<Bri
                                 <th>Client Name</th>
                                 <th>Lawyer-in-Charge</th>
                                 <th>Category</th>
-                                <th>Due date</th>
                                 <th>Status</th>
                                 <th>Actions</th>
                             </tr>
@@ -229,7 +228,6 @@ export default function BriefListClient({ initialBriefs, workspaceId }: Omit<Bri
                                     <td className={styles.clientName}>{brief.client?.name ? toTitleCase(brief.client.name) : 'Unassigned'}</td>
                                     <td className={styles.lawyerName}>{brief.lawyerInCharge?.name || brief.lawyer?.name || 'Unassigned'}</td>
                                     <td>{brief.category}</td>
-                                    <td className={styles.dateCell}>{brief.dueDate ? new Date(brief.dueDate).toLocaleDateString() : '-'}</td>
                                     <td>
                                         <span className={`${styles.statusBadge} ${styles[brief.status.toLowerCase()]}`}>
                                             <span className={styles.statusDot}></span>
@@ -339,10 +337,6 @@ export default function BriefListClient({ initialBriefs, workspaceId }: Omit<Bri
                                 <div className={styles.cardRow}>
                                     <span className={styles.cardLabel}>Lawyer</span>
                                     <span className={styles.cardValue}>{brief.lawyerInCharge?.name || brief.lawyer?.name || 'Unassigned'}</span>
-                                </div>
-                                <div className={styles.cardRow}>
-                                    <span className={styles.cardLabel}>Due Date</span>
-                                    <span className={styles.cardValue}>{brief.dueDate ? new Date(brief.dueDate).toLocaleDateString() : '-'}</span>
                                 </div>
                             </div>
 

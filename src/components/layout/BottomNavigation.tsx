@@ -3,11 +3,8 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
-  LayoutDashboard,
   FileText,
   Gavel,
-  Search,
-  MessageSquare,
   Plus
 } from 'lucide-react';
 import styles from './BottomNavigation.module.css';
@@ -18,11 +15,8 @@ const BottomNavigation = () => {
     const [showFabMenu, setShowFabMenu] = useState(false);
 
     const navItems = [
-        { name: 'Home', href: '/management', icon: LayoutDashboard },
         { name: 'Briefs', href: '/briefs', icon: FileText },
-        // FAB goes in the middle effectively, so we have a visual gap or just center it
         { name: 'Calendar', href: '/calendar', icon: Gavel },
-        { name: 'AI', href: '/chat', icon: MessageSquare },
     ];
 
     const isActive = (path: string) => {
@@ -48,7 +42,7 @@ const BottomNavigation = () => {
 
             <div className={styles.bottomNav}>
                 <div className={styles.navItemsContainer}>
-                    {navItems.slice(0, 2).map((item) => (
+                    {navItems.slice(0, 1).map((item) => (
                         <Link
                             key={item.href}
                             href={item.href}
@@ -69,7 +63,7 @@ const BottomNavigation = () => {
                         </button>
                     </div>
 
-                    {navItems.slice(2, 4).map((item) => (
+                    {navItems.slice(1, 2).map((item) => (
                         <Link
                             key={item.href}
                             href={item.href}

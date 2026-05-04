@@ -6,6 +6,7 @@ import Header from '@/components/layout/Header';
 import BottomNavigation from '@/components/layout/BottomNavigation';
 // import BicaWidget from '@/components/bica/BicaWidget'; // deactivated — replaced by Eureka
 import EurekaWidget from '@/components/eureka/EurekaWidget';
+import ProactiveAgent from '@/components/proactive/ProactiveAgent';
 import styles from './AppLayout.module.css';
 
 interface AppLayoutProps {
@@ -33,6 +34,7 @@ export default function AppLayout({ children, user, workspace }: AppLayoutProps)
             </div>
             {/* <BicaWidget /> — deactivated, replaced by Eureka */}
             <EurekaWidget />
+            <ProactiveAgent />
         </div>
     );
 }

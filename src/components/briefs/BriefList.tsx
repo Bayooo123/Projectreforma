@@ -170,7 +170,6 @@ const BriefList = forwardRef<BriefListRef, BriefListProps>(({ onUpload, workspac
                                     <th>Client Name</th>
                                     <th>Lawyer-in-Charge</th>
                                     <th>Category</th>
-                                    <th>Due date</th>
                                     <th>Status</th>
                                     <th>Actions</th>
                                 </tr>
@@ -191,7 +190,6 @@ const BriefList = forwardRef<BriefListRef, BriefListProps>(({ onUpload, workspac
                                         <td className={styles.clientName}>{brief.client?.name || 'Unassigned'}</td>
                                         <td className={styles.lawyerName}>{brief.lawyerInCharge?.name || brief.lawyer?.name || 'Unassigned'}</td>
                                         <td>{brief.category}</td>
-                                        <td className={styles.dateCell}>{brief.dueDate ? new Date(brief.dueDate).toLocaleDateString() : '-'}</td>
                                         <td>
                                             <span className={`${styles.statusBadge} ${styles[brief.status.toLowerCase()]}`}>
                                                 <span className={styles.statusDot}></span>

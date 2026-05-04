@@ -21,7 +21,7 @@ export default function BriefTableSkeleton() {
                     <thead>
                         <tr>
                             <th className={styles.checkboxCell}><div className="h-4 w-4 bg-slate-200 dark:bg-slate-700 rounded"></div></th>
-                            {['No.', 'Brief Name', 'Client Name', 'Lawyer', 'Category', 'Due date', 'Status', 'Actions'].map((h) => (
+                            {['No.', 'Brief Name', 'Client Name', 'Lawyer', 'Category', 'Status', 'Actions'].map((h) => (
                                 <th key={h}><div className="h-4 w-20 bg-slate-200 dark:bg-slate-700 rounded animate-pulse"></div></th>
                             ))}
                         </tr>
