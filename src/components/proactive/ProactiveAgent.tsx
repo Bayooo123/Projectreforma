@@ -154,7 +154,7 @@ export default function ProactiveAgent() {
             <button
                 className={`${styles.toggle} ${hasCritical ? styles.toggleCritical : hasHigh ? styles.toggleHigh : badgeCount > 0 ? styles.toggleActive : ''}`}
                 onClick={() => setOpen(o => !o)}
-                title="Forma — Proactive Agent"
+                title="Reforma — Proactive Agent"
             >
                 <Bell size={20} />
                 {badgeCount > 0 && (
@@ -175,7 +175,7 @@ export default function ProactiveAgent() {
                         <span className={styles.headerDot} />
                         <div>
                             <div className={styles.headerTitle}>
-                                {view === 'list' ? 'Forma' : (activeAnomaly?.title ?? 'Resolving')}
+                                {view === 'list' ? 'Reforma' : (activeAnomaly?.title ?? 'Resolving')}
                             </div>
                             <div className={styles.headerSub}>
                                 {view === 'list'
@@ -245,7 +245,7 @@ export default function ProactiveAgent() {
                                     className={`${styles.msg} ${m.role === 'user' ? styles.msgUser : styles.msgAssistant}`}
                                 >
                                     {m.role === 'assistant' && (
-                                        <div className={styles.msgLabel}>Forma</div>
+                                        <div className={styles.msgLabel}>Reforma</div>
                                     )}
                                     <div className={styles.msgBubble}>{m.content}</div>
                                 </div>

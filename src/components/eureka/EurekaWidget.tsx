@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import styles from './EurekaWidget.module.css';
 
@@ -9,40 +10,107 @@ interface Message {
     content: string;
 }
 
+interface ChatSession {
+    id: string;
+    title: string;
+    createdAt: number;
+    messages: Message[];
+}
+
 interface Position { bottom: number; left: number; }
 const DEFAULT_POS: Position = { bottom: 84, left: 24 };
 const TOGGLE_OFFSET = 60;
+const MAX_SESSIONS = 40;
 
-const HISTORY_KEY = 'eureka_history';
-const MAX_HISTORY = 50;
+function storageKey(userId: string, workspaceId: string) {
+    return `eureka_chats_${userId}_${workspaceId}`;
+}
 
-function loadHistory(): Message[] {
+function loadSessions(userId: string, workspaceId: string): ChatSession[] {
     if (typeof window === 'undefined') return [];
     try {
-        const raw = localStorage.getItem(HISTORY_KEY);
+        const raw = localStorage.getItem(storageKey(userId, workspaceId));
         if (!raw) return [];
         const parsed = JSON.parse(raw);
-        return Array.isArray(parsed) ? parsed.slice(-MAX_HISTORY) : [];
+        return Array.isArray(parsed) ? parsed : [];
     } catch {
         return [];
     }
 }
 
-function saveHistory(messages: Message[]) {
+function saveSessions(userId: string, workspaceId: string, sessions: ChatSession[]) {
     try {
-        localStorage.setItem(HISTORY_KEY, JSON.stringify(messages.slice(-MAX_HISTORY)));
+        const trimmed = [...sessions]
+            .sort((a, b) => b.createdAt - a.createdAt)
+            .slice(0, MAX_SESSIONS);
+        localStorage.setItem(storageKey(userId, workspaceId), JSON.stringify(trimmed));
     } catch {}
 }
 
+function makeId() {
+    return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
+}
+
+function autoTitle(firstUserMessage: string): string {
+    const t = firstUserMessage.trim();
+    return t.length > 42 ? t.slice(0, 42) + '…' : t;
+}
+
+function relativeTime(ts: number): string {
+    const diff = Date.now() - ts;
+    const mins = Math.floor(diff / 60000);
+    const hours = Math.floor(diff / 3600000);
+    const days = Math.floor(diff / 86400000);
+    if (mins < 1) return 'Just now';
+    if (mins < 60) return `${mins}m ago`;
+    if (hours < 24) return `${hours}h ago`;
+    if (days === 1) return 'Yesterday';
+    if (days < 7) return `${days}d ago`;
+    return new Date(ts).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+}
+
 export default function EurekaWidget() {
+    const { data: session } = useSession();
+    const userId = (session?.user as any)?.id as string | undefined;
+    const workspaceId = (session?.user as any)?.workspaceId as string | undefined;
+
     const [open, setOpen] = useState(false);
-    const [messages, setMessages] = useState<Message[]>(() => loadHistory());
+    const [sidebarOpen, setSidebarOpen] = useState(true);
+    const [sessions, setSessions] = useState<ChatSession[]>([]);
+    const [activeId, setActiveId] = useState<string | null>(null);
     const [input, setInput] = useState('');
     const [loading, setLoading] = useState(false);
     const [pos, setPos] = useState<Position>(DEFAULT_POS);
+    const [loaded, setLoaded] = useState(false);
+
     const bottomRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLTextAreaElement>(null);
-    const dragState = useRef<{ startX: number; startY: number; startLeft: number; startBottom: number } | null>(null);
+    const router = useRouter();
+
+    // One-time cleanup of the old unscoped key (removes contaminated shared history)
+    useEffect(() => {
+        try { localStorage.removeItem('eureka_history'); } catch {}
+    }, []);
+
+    // Load sessions once userId + workspaceId are known
+    useEffect(() => {
+        if (userId && workspaceId && !loaded) {
+            const s = loadSessions(userId, workspaceId);
+            setSessions(s);
+            if (s.length > 0) setActiveId(s[0].id);
+            setLoaded(true);
+        }
+    }, [userId, workspaceId, loaded]);
+
+    // Persist whenever sessions change (post-load)
+    useEffect(() => {
+        if (loaded && userId && workspaceId) {
+            saveSessions(userId, workspaceId, sessions);
+        }
+    }, [sessions, loaded, userId, workspaceId]);
+
+    const activeSession = sessions.find(s => s.id === activeId) ?? null;
+    const messages = activeSession?.messages ?? [];
 
     useEffect(() => {
         bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -50,33 +118,95 @@ export default function EurekaWidget() {
 
     useEffect(() => {
         if (open) inputRef.current?.focus();
-    }, [open]);
+    }, [open, activeId]);
 
-    useEffect(() => {
-        saveHistory(messages);
-    }, [messages]);
+    const startNewChat = () => {
+        const s: ChatSession = { id: makeId(), title: 'New Chat', createdAt: Date.now(), messages: [] };
+        setSessions(prev => [s, ...prev]);
+        setActiveId(s.id);
+        setInput('');
+        // On mobile collapse the sidebar after selecting new chat
+        if (typeof window !== 'undefined' && window.innerWidth <= 480) {
+            setSidebarOpen(false);
+        }
+    };
+
+    const selectSession = (id: string) => {
+        setActiveId(id);
+        if (typeof window !== 'undefined' && window.innerWidth <= 480) {
+            setSidebarOpen(false);
+        }
+    };
+
+    const deleteSession = (id: string, e: React.MouseEvent) => {
+        e.stopPropagation();
+        setSessions(prev => {
+            const next = prev.filter(s => s.id !== id);
+            if (activeId === id) setActiveId(next.length > 0 ? next[0].id : null);
+            return next;
+        });
+    };
+
+    const autoResize = (el: HTMLTextAreaElement) => {
+        el.style.height = 'auto';
+        el.style.height = `${Math.min(el.scrollHeight, 120)}px`;
+    };
 
     const send = async () => {
         const text = input.trim();
         if (!text || loading) return;
 
-        const userMsg: Message = { role: 'user', content: text };
-        const next = [...messages, userMsg];
-        setMessages(next);
         setInput('');
+        if (inputRef.current) inputRef.current.style.height = 'auto';
         setLoading(true);
+
+        const userMsg: Message = { role: 'user', content: text };
+        let targetId = activeId;
+        let priorMessages: Message[];
+
+        if (!targetId) {
+            const newSession: ChatSession = {
+                id: makeId(),
+                title: autoTitle(text),
+                createdAt: Date.now(),
+                messages: [userMsg],
+            };
+            setSessions(prev => [newSession, ...prev]);
+            setActiveId(newSession.id);
+            targetId = newSession.id;
+            priorMessages = [];
+        } else {
+            priorMessages = messages;
+            setSessions(prev => prev.map(s => {
+                if (s.id !== targetId) return s;
+                const updated = [...s.messages, userMsg];
+                return {
+                    ...s,
+                    messages: updated,
+                    title: s.messages.length === 0 ? autoTitle(text) : s.title,
+                };
+            }));
+        }
+
+        const apiMessages = [...priorMessages, userMsg];
 
         try {
             const res = await fetch('/api/eureka/chat', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ messages: next }),
+                body: JSON.stringify({ messages: apiMessages }),
             });
             const data = await res.json();
             if (data.error) throw new Error(data.error);
-            setMessages(prev => [...prev, { role: 'assistant', content: data.message }]);
+            const assistantMsg: Message = { role: 'assistant', content: data.message };
+            setSessions(prev => prev.map(s =>
+                s.id === targetId ? { ...s, messages: [...s.messages, assistantMsg] } : s
+            ));
         } catch (err: any) {
-            setMessages(prev => [...prev, { role: 'assistant', content: `Error: ${err.message ?? 'Something went wrong.'}` }]);
+            const errMsg: Message = { role: 'assistant', content: `Error: ${err.message ?? 'Something went wrong.'}` };
+            setSessions(prev => prev.map(s =>
+                s.id === targetId ? { ...s, messages: [...s.messages, errMsg] } : s
+            ));
         } finally {
             setLoading(false);
         }
@@ -111,80 +241,123 @@ export default function EurekaWidget() {
                 className={`${styles.panel} ${open ? styles.panelOpen : styles.panelClosed}`}
                 style={{ bottom: pos.bottom, left: pos.left }}
             >
-                {/* Header */}
-                <div className={styles.header} onPointerDown={onDragStart}>
-                    <div className={styles.headerLeft}>
-                        <span className={styles.headerDot} />
-                        <span className={styles.headerTitle}>Eureka</span>
-                        <span className={styles.headerSub}>Reforma Intelligence</span>
+                {/* Sidebar */}
+                <div className={`${styles.sidebar} ${sidebarOpen ? styles.sidebarVisible : styles.sidebarHidden}`}>
+                    <div className={styles.sidebarHeader}>
+                        <button className={styles.newChatBtn} onClick={startNewChat}>
+                            <PlusIcon />
+                            <span>New Chat</span>
+                        </button>
                     </div>
-                    <div className={styles.headerActions}>
-                        <button className={styles.iconBtn} onClick={() => { setMessages([]); localStorage.removeItem(HISTORY_KEY); }} title="Clear chat">
-                            <TrashIcon />
-                        </button>
-                        <button className={styles.iconBtn} onClick={() => setOpen(false)} title="Minimise">
-                            <MinusIcon />
-                        </button>
+                    <div className={styles.sessionList}>
+                        {sessions.length === 0 && (
+                            <p className={styles.noSessions}>No conversations yet</p>
+                        )}
+                        {sessions.map(s => (
+                            <div
+                                key={s.id}
+                                className={`${styles.sessionItem} ${s.id === activeId ? styles.sessionItemActive : ''}`}
+                                onClick={() => selectSession(s.id)}
+                                title={s.title}
+                            >
+                                <div className={styles.sessionTitle}>{s.title}</div>
+                                <div className={styles.sessionMeta}>{relativeTime(s.createdAt)}</div>
+                                <button
+                                    className={styles.sessionDelete}
+                                    onClick={(e) => deleteSession(s.id, e)}
+                                    title="Delete"
+                                >
+                                    <XSmallIcon />
+                                </button>
+                            </div>
+                        ))}
                     </div>
                 </div>
 
-                {/* Messages */}
-                <div className={styles.messages}>
-                    {messages.length === 0 && (
-                        <div className={styles.empty}>
-                            <div className={styles.emptyIcon}>⚡</div>
-                            <p className={styles.emptyTitle}>Ask Eureka anything</p>
-                            <div className={styles.suggestions}>
-                                {[
-                                    'Show upcoming deadlines this week',
-                                    'Which matters have had no activity in 30 days?',
-                                    'Which clients have overdue invoices?',
-                                    'Who appears in court most?',
-                                ].map(s => (
-                                    <button key={s} className={styles.suggestion} onClick={() => { setInput(s); inputRef.current?.focus(); }}>
-                                        {s}
-                                    </button>
-                                ))}
-                            </div>
+                {/* Chat area */}
+                <div className={styles.chatArea}>
+                    {/* Header */}
+                    <div className={styles.header} onPointerDown={onDragStart}>
+                        <div className={styles.headerLeft}>
+                            <button
+                                className={styles.iconBtn}
+                                onClick={() => setSidebarOpen(o => !o)}
+                                title={sidebarOpen ? 'Hide history' : 'Show history'}
+                            >
+                                <SidebarIcon />
+                            </button>
+                            <span className={styles.headerDot} />
+                            <span className={styles.headerTitle}>Eureka</span>
+                            <span className={styles.headerSub}>Reforma Intelligence</span>
                         </div>
-                    )}
-
-                    {messages.map((m, i) => (
-                        <div key={i} className={`${styles.message} ${m.role === 'user' ? styles.userMessage : styles.assistantMessage}`}>
-                            {m.role === 'assistant' && <span className={styles.messageLabel}>Eureka</span>}
-                            <div className={styles.messageContent}>
-                                <MessageText text={m.content} />
-                            </div>
+                        <div className={styles.headerActions}>
+                            <button className={styles.iconBtn} onClick={startNewChat} title="New chat">
+                                <PlusIcon />
+                            </button>
+                            <button className={styles.iconBtn} onClick={() => setOpen(false)} title="Minimise">
+                                <MinusIcon />
+                            </button>
                         </div>
-                    ))}
+                    </div>
 
-                    {loading && (
-                        <div className={`${styles.message} ${styles.assistantMessage}`}>
-                            <span className={styles.messageLabel}>Eureka</span>
-                            <div className={styles.messageContent}>
-                                <div className={styles.thinking}>
-                                    <span /><span /><span />
+                    {/* Messages */}
+                    <div className={styles.messages}>
+                        {messages.length === 0 && (
+                            <div className={styles.empty}>
+                                <div className={styles.emptyIcon}>⚡</div>
+                                <p className={styles.emptyTitle}>Ask Eureka anything</p>
+                                <div className={styles.suggestions}>
+                                    {[
+                                        'Show upcoming deadlines this week',
+                                        'Which matters have had no activity in 30 days?',
+                                        'Which clients have overdue invoices?',
+                                        'Who appears in court most?',
+                                    ].map(s => (
+                                        <button key={s} className={styles.suggestion} onClick={() => { setInput(s); inputRef.current?.focus(); }}>
+                                            {s}
+                                        </button>
+                                    ))}
                                 </div>
                             </div>
-                        </div>
-                    )}
-                    <div ref={bottomRef} />
-                </div>
+                        )}
 
-                {/* Input */}
-                <div className={styles.inputArea}>
-                    <textarea
-                        ref={inputRef}
-                        className={styles.input}
-                        value={input}
-                        onChange={e => setInput(e.target.value)}
-                        onKeyDown={onKeyDown}
-                        placeholder="Ask about matters, clients, finances, documents…"
-                        rows={1}
-                    />
-                    <button className={styles.sendBtn} onClick={send} disabled={!input.trim() || loading} title="Send">
-                        <SendIcon />
-                    </button>
+                        {messages.map((m, i) => (
+                            <div key={i} className={`${styles.message} ${m.role === 'user' ? styles.userMessage : styles.assistantMessage}`}>
+                                {m.role === 'assistant' && <span className={styles.messageLabel}>Eureka</span>}
+                                <div className={styles.messageContent}>
+                                    <MessageText text={m.content} />
+                                </div>
+                            </div>
+                        ))}
+
+                        {loading && (
+                            <div className={`${styles.message} ${styles.assistantMessage}`}>
+                                <span className={styles.messageLabel}>Eureka</span>
+                                <div className={styles.messageContent}>
+                                    <div className={styles.thinking}>
+                                        <span /><span /><span />
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                        <div ref={bottomRef} />
+                    </div>
+
+                    {/* Input */}
+                    <div className={styles.inputArea}>
+                        <textarea
+                            ref={inputRef}
+                            className={styles.input}
+                            value={input}
+                            onChange={e => { setInput(e.target.value); autoResize(e.target); }}
+                            onKeyDown={onKeyDown}
+                            placeholder="Ask about matters, clients, finances, documents…"
+                            rows={1}
+                        />
+                        <button className={styles.sendBtn} onClick={send} disabled={!input.trim() || loading} title="Send">
+                            <SendIcon />
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -303,10 +476,25 @@ function MinusIcon() {
         </svg>
     );
 }
-function TrashIcon() {
+function PlusIcon() {
     return (
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" />
+            <path d="M12 5v14M5 12h14" />
+        </svg>
+    );
+}
+function SidebarIcon() {
+    return (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="3" width="18" height="18" rx="2" />
+            <path d="M9 3v18" />
+        </svg>
+    );
+}
+function XSmallIcon() {
+    return (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M18 6 6 18M6 6l12 12" />
         </svg>
     );
 }

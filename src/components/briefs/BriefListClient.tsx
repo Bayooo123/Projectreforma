@@ -19,13 +19,45 @@ interface BriefListClientProps {
     onUpload?: () => void;
 }
 
+const BRIEFS_CACHE_KEY = (wsId: string) => `reforma_briefs_${wsId}`;
+
+function readBriefsCache(wsId: string): any[] {
+    try {
+        const raw = sessionStorage.getItem(BRIEFS_CACHE_KEY(wsId));
+        return raw ? JSON.parse(raw) : [];
+    } catch {
+        return [];
+    }
+}
+
+function writeBriefsCache(wsId: string, data: any[]) {
+    try {
+        sessionStorage.setItem(BRIEFS_CACHE_KEY(wsId), JSON.stringify(data));
+    } catch {}
+}
+
 export default function BriefListClient({ initialBriefs, workspaceId }: Omit<BriefListClientProps, 'onUpload'>) {
-    const [briefs, setBriefs] = useState<any[]>(initialBriefs);
+    const [briefs, setBriefs] = useState<any[]>(() => {
+        if (initialBriefs.length > 0) return initialBriefs;
+        if (typeof window !== 'undefined') return readBriefsCache(workspaceId);
+        return [];
+    });
     const [activeActionId, setActiveActionId] = useState<string | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState<string>('all');
     const [expandedBriefIds, setExpandedBriefIds] = useState<Set<string>>(new Set());
     const [movingBrief, setMovingBrief] = useState<any | null>(null);
+
+    // Persist to sessionStorage whenever briefs change
+    useEffect(() => {
+        if (briefs.length > 0) writeBriefsCache(workspaceId, briefs);
+    }, [briefs, workspaceId]);
+
+    // Keep cache warm with initialBriefs from server on each render
+    useEffect(() => {
+        if (initialBriefs.length > 0) writeBriefsCache(workspaceId, initialBriefs);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     // AUTOMATION: Background Polling (30 seconds)
     useEffect(() => {
@@ -34,6 +66,7 @@ export default function BriefListClient({ initialBriefs, workspaceId }: Omit<Bri
             const newBriefs = await getBriefs(workspaceId);
             if (newBriefs && Array.isArray(newBriefs)) {
                 setBriefs(newBriefs);
+                writeBriefsCache(workspaceId, newBriefs);
             }
         }, 30000);
         return () => clearInterval(interval);
