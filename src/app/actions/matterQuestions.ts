@@ -8,8 +8,22 @@ export async function getPendingMatterQuestions(workspaceId: string) {
     const session = await auth();
     if (!session?.user?.id) return [];
 
+    const userId = session.user.id;
+
+    // Route questions only to lawyers who are assigned to the matter
+    // (primary handler or appearing lawyer), so no one gets questions
+    // about matters they have no role in.
     return prisma.matterQuestion.findMany({
-        where: { workspaceId, status: 'pending' },
+        where: {
+            workspaceId,
+            status: 'pending',
+            matter: {
+                OR: [
+                    { lawyerInChargeId: userId },
+                    { lawyers: { some: { lawyerId: userId } } },
+                ],
+            },
+        },
         include: {
             matter: { select: { id: true, name: true, caseNumber: true, court: true } },
             calendarEntry: { select: { id: true, date: true, title: true, type: true } },

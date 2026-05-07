@@ -141,6 +141,7 @@ model User {
   briefsInCharge         Brief[]                @relation("LawyerInCharge")
   BriefActivityLog       BriefActivityLog[]
   briefLawyerChanges     BriefLawyerHistory[]   @relation("BriefLawyerChanges")
+  briefAssignments       BriefLawyer[]          @relation("BriefLawyerUser")
   clientCommunications   ClientCommunication[]
   complianceHistory      ComplianceHistory[]
   acknowledgedCompliance ComplianceTask[]       @relation("AcknowledgedBy")
@@ -504,6 +505,7 @@ model Brief {
   folders             Folder[]
   accessGrants        BriefAccessGrant[]
   workEntries         WorkEntry[]
+  briefLawyers        BriefLawyer[]
 
   @@index([lawyerId])
   @@index([lawyerInChargeId])
@@ -1114,6 +1116,21 @@ model WorkEntry {
 
   @@index([workspaceId, date])
   @@index([userId, date])
+}
+
+model BriefLawyer {
+  id        String   @id @default(cuid())
+  briefId   String
+  lawyerId  String
+  role      String   @default("assisting")
+  createdAt DateTime @default(now())
+
+  brief     Brief    @relation(fields: [briefId], references: [id], onDelete: Cascade)
+  lawyer    User     @relation("BriefLawyerUser", fields: [lawyerId], references: [id], onDelete: Cascade)
+
+  @@unique([briefId, lawyerId])
+  @@index([lawyerId])
+  @@index([briefId])
 }
 
 enum WorkEntryStatus {

@@ -319,6 +319,7 @@ export async function getMyBriefs(workspaceId: string): Promise<MyBrief[]> {
                     { lawyerInChargeId: userId },
                     { lawyerId: userId },
                     { matter: { lawyers: { some: { lawyerId: userId } } } },
+                    { briefLawyers: { some: { lawyerId: userId } } },
                 ],
             },
             select: {
@@ -358,7 +359,9 @@ export async function getMyBriefs(workspaceId: string): Promise<MyBrief[]> {
             client: b.client,
             lawyerInCharge: b.lawyerInCharge,
             documentCount: b._count.documents,
-            role: b.lawyerInChargeId === userId ? 'lead' : b.lawyerId === userId ? 'creator' : 'assisting',
+            role: b.lawyerInChargeId === userId ? 'lead'
+                : b.lawyerId === userId ? 'creator'
+                : 'assisting',
         }));
     } catch (e) {
         console.error('[Pulse] getMyBriefs error:', e);
