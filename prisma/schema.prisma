@@ -69,6 +69,7 @@ model WorkspaceMember {
   status       String             @default("active")
   isGuest      Boolean            @default(false)
   canDownload  Boolean            @default(true)
+  canDelete    Boolean            @default(false)
   expiresAt    DateTime?
   user         User               @relation(fields: [userId], references: [id], onDelete: Cascade)
   workspace    Workspace          @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
@@ -326,6 +327,7 @@ model Matter {
   nextCourtDate         DateTime?
   createdAt             DateTime              @default(now())
   updatedAt             DateTime              @updatedAt
+  deletedAt             DateTime?
   lastActivityAt        DateTime              @default(now())
   lastClientContact     DateTime?
   submittingLawyerId    String?
@@ -569,6 +571,7 @@ model Client {
   workspaceId          String
   createdAt            DateTime              @default(now())
   updatedAt            DateTime              @updatedAt
+  deletedAt            DateTime?
   briefs               Brief[]
   workspace            Workspace             @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   clientCommunications ClientCommunication[]

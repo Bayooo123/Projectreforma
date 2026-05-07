@@ -1,7 +1,8 @@
 import { prisma } from './prisma';
 
 export type ActivityResource =
-    | 'BRIEF' | 'DOCUMENT' | 'INVOICE' | 'PAYMENT' | 'EXPENSE' | 'COMPLIANCE';
+    | 'BRIEF' | 'DOCUMENT' | 'INVOICE' | 'PAYMENT' | 'EXPENSE' | 'COMPLIANCE'
+    | 'CLIENT' | 'MATTER' | 'COURT_DATE';
 
 export type ActivityAction =
     | 'CREATED' | 'UPDATED' | 'DELETED'

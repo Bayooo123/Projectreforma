@@ -2,7 +2,8 @@
 
 import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
-import { requireAuth } from '@/lib/auth-utils';
+import { requireAuth, requirePermission } from '@/lib/auth-utils';
+import { logActivity } from '@/lib/log-activity';
 import { Prisma } from '@prisma/client';
 import { applyTitleCaseToFields } from '@/lib/sentence-case';
 import { createNotification } from '@/app/actions/notifications';
@@ -30,7 +31,7 @@ export async function getClients(workspaceId: string, params: GetClientsParams =
 
     try {
         // Build Where Clause
-        const where: any = { workspaceId };
+        const where: any = { workspaceId, deletedAt: null };
 
         if (params.query) {
             where.OR = [
@@ -267,41 +268,29 @@ export async function updateClient(id: string, data: UpdateClientData) {
 }
 
 export async function deleteClient(id: string) {
-    await requireAuth();
+    const session = await requireAuth();
     try {
-        // Check if client has associated matters
         const client = await prisma.client.findUnique({
             where: { id },
-            include: {
-                _count: {
-                    select: {
-                        matters: true,
-                        invoices: true,
-                    },
-                },
-            },
+            select: { workspaceId: true, name: true },
         });
 
-        if (!client) {
-            return { success: false, error: 'Client not found' };
-        }
+        if (!client) return { success: false, error: 'Client not found' };
 
-        if (client._count.matters > 0 || client._count.invoices > 0) {
-            return {
-                success: false,
-                error: 'Cannot delete client with associated matters or invoices. Please archive instead.'
-            };
-        }
+        await requirePermission(client.workspaceId, 'DELETE_CLIENT');
 
-        await prisma.client.delete({
+        await prisma.client.update({
             where: { id },
+            data: { deletedAt: new Date() },
         });
+
+        logActivity({ workspaceId: client.workspaceId, userId: session.id!, resource: 'CLIENT', action: 'DELETED', resourceId: id, resourceName: client.name }).catch(() => {});
 
         revalidatePath('/management/clients');
         return { success: true };
-    } catch (error) {
+    } catch (error: any) {
         console.error('Error deleting client:', error);
-        return { success: false, error: 'Failed to delete client' };
+        return { success: false, error: error.message || 'Failed to delete client' };
     }
 }
 

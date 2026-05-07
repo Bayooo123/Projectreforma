@@ -3,6 +3,7 @@
 import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
 import { auth } from '@/auth';
+import { requireAuth, requirePermission } from '@/lib/auth-utils';
 import { logActivity } from '@/lib/log-activity';
 
 export async function logDocumentDownload(documentId: string) {
@@ -67,15 +68,26 @@ export async function createDocument(data: {
 }
 
 export async function deleteDocument(id: string, briefId: string) {
+    const session = await requireAuth();
     try {
-        await prisma.document.delete({
+        const doc = await prisma.document.findUnique({
             where: { id },
+            select: { name: true, brief: { select: { workspaceId: true } } },
         });
+
+        if (!doc?.brief?.workspaceId) return { success: false, error: 'Document not found' };
+
+        await requirePermission(doc.brief.workspaceId, 'DELETE_BRIEF');
+
+        await prisma.document.delete({ where: { id } });
+
+        logActivity({ workspaceId: doc.brief.workspaceId, userId: session.id!, resource: 'DOCUMENT', action: 'DELETED', resourceId: id, resourceName: doc.name }).catch(() => {});
+
         revalidatePath(`/briefs/${briefId}`);
         revalidatePath('/briefs');
         return { success: true };
-    } catch (error) {
+    } catch (error: any) {
         console.error('Error deleting document:', error);
-        return { success: false, error: 'Failed to delete document' };
+        return { success: false, error: error?.message || 'Failed to delete document' };
     }
 }

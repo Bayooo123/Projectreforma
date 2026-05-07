@@ -5,7 +5,7 @@ import {
     Users, ShieldCheck, ClipboardList, Monitor, Activity,
     Plus, Trash2, Edit2, Check, X, ChevronDown,
     UserX, RefreshCw, Loader2, FileText, Download,
-    Ban, AlertTriangle, Clock, LogOut, Mail
+    Ban, AlertTriangle, Clock, LogOut, Mail, RotateCcw
 } from 'lucide-react';
 import {
     getGuestMembers, inviteGuestMember, updateGuestMember, revokeGuestMember,
@@ -13,9 +13,10 @@ import {
     getWorkspaceMembers, updateMemberRole, updateMemberDownloadPermission,
     getAuditLogs, getActiveSessions, forceLogoutUser,
     getWorkspaceBriefs, getActivityLogs,
+    toggleMemberCanDelete, getDeletedRecords, restoreRecord,
 } from '@/app/actions/it-management';
 
-type Tab = 'guests' | 'roles' | 'audit' | 'sessions' | 'activity';
+type Tab = 'guests' | 'roles' | 'audit' | 'sessions' | 'activity' | 'deleted';
 
 const ROLES = ['owner', 'admin', 'lawyer', 'paralegal', 'viewer'];
 
@@ -36,6 +37,7 @@ export default function ITManagementClient({ workspaceId }: { workspaceId: strin
         { id: 'audit', label: 'Audit Log', icon: ClipboardList },
         { id: 'sessions', label: 'Session Control', icon: Monitor },
         { id: 'activity', label: 'Activity Log', icon: Activity },
+        { id: 'deleted', label: 'Deleted Records', icon: Trash2 },
     ];
 
     return (
@@ -77,6 +79,7 @@ export default function ITManagementClient({ workspaceId }: { workspaceId: strin
             {activeTab === 'audit' && <AuditLogTab />}
             {activeTab === 'sessions' && <SessionsTab />}
             {activeTab === 'activity' && <ActivityLogTab />}
+            {activeTab === 'deleted' && <DeletedRecordsTab />}
         </div>
     );
 }
@@ -352,6 +355,13 @@ function RolesTab() {
         });
     }
 
+    function toggleCanDelete(memberId: string, current: boolean) {
+        startTransition(async () => {
+            await toggleMemberCanDelete(memberId, !current);
+            reload();
+        });
+    }
+
     const roleColor: Record<string, string> = {
         owner: '#7c3aed', admin: '#1e293b', lawyer: '#0369a1',
         paralegal: '#0891b2', viewer: '#64748b',
@@ -424,6 +434,17 @@ function RolesTab() {
                                 >
                                     {member.canDownload ? <Download size={11} /> : <Ban size={11} />}
                                     {member.canDownload ? 'Downloads' : 'No Downloads'}
+                                </button>
+
+                                {/* canDelete toggle */}
+                                <button
+                                    onClick={() => toggleCanDelete(member.id, member.canDelete)}
+                                    disabled={isPending}
+                                    title={member.canDelete ? 'Click to revoke delete permission' : 'Click to grant delete permission'}
+                                    style={badgeStyle(member.canDelete ? '#fef2f2' : '#f8fafc', member.canDelete ? '#dc2626' : '#94a3b8') as React.CSSProperties}
+                                >
+                                    <Trash2 size={11} />
+                                    {member.canDelete ? 'Can Delete' : 'No Delete'}
                                 </button>
 
                                 {/* Role selector */}
@@ -679,6 +700,9 @@ const RESOURCE_COLORS: Record<string, { bg: string; color: string }> = {
     PAYMENT:    { bg: '#f0fdf4', color: '#15803d' },
     EXPENSE:    { bg: '#fff7ed', color: '#ea580c' },
     COMPLIANCE: { bg: '#faf5ff', color: '#7c3aed' },
+    CLIENT:     { bg: '#f0fdfa', color: '#0d9488' },
+    MATTER:     { bg: '#f5f3ff', color: '#6d28d9' },
+    COURT_DATE: { bg: '#fff1f2', color: '#e11d48' },
 };
 
 const ACTION_LABELS: Record<string, string> = {
@@ -792,6 +816,163 @@ function ActivityLogTab() {
                             </span>
                             <button onClick={() => load(page + 1)} disabled={page >= totalPages} style={iconBtnStyle}>Next →</button>
                         </div>
+                    )}
+                </>
+            )}
+        </div>
+    );
+}
+
+// ─── Deleted Records Tab ──────────────────────────────────────────────────────
+
+function DeletedRecordsTab() {
+    const [records, setRecords] = useState<{ briefs: any[]; clients: any[]; matters: any[] } | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [subTab, setSubTab] = useState<'briefs' | 'clients' | 'matters'>('briefs');
+    const [isPending, startTransition] = useTransition();
+    const [restoring, setRestoring] = useState<string | null>(null);
+
+    useEffect(() => { load(); }, []);
+
+    function load() {
+        setLoading(true);
+        getDeletedRecords().then(data => { setRecords(data); setLoading(false); });
+    }
+
+    function handleRestore(type: 'brief' | 'client' | 'matter', id: string) {
+        setRestoring(id);
+        startTransition(async () => {
+            await restoreRecord(type, id);
+            setRestoring(null);
+            load();
+        });
+    }
+
+    function fmt(d: string) {
+        return new Date(d).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+    }
+
+    const subTabs: { id: 'briefs' | 'clients' | 'matters'; label: string; count: number }[] = [
+        { id: 'briefs', label: 'Briefs', count: records?.briefs.length ?? 0 },
+        { id: 'clients', label: 'Clients', count: records?.clients.length ?? 0 },
+        { id: 'matters', label: 'Matters', count: records?.matters.length ?? 0 },
+    ];
+
+    return (
+        <div>
+            <div style={{ marginBottom: '1.25rem' }}>
+                <h2 style={{ fontWeight: 600, fontSize: '1rem', marginBottom: '0.25rem' }}>Deleted Records</h2>
+                <p style={{ fontSize: '0.8rem', color: '#64748b' }}>
+                    Restore soft-deleted briefs, clients, and matters. Records are retained for audit purposes until permanently removed.
+                </p>
+            </div>
+
+            <div style={{ display: 'flex', gap: '0.25rem', borderBottom: '1px solid #e2e8f0', marginBottom: '1.5rem' }}>
+                {subTabs.map(st => (
+                    <button
+                        key={st.id}
+                        onClick={() => setSubTab(st.id)}
+                        style={{
+                            padding: '0.5rem 1rem',
+                            background: 'none', border: 'none', cursor: 'pointer',
+                            fontSize: '0.8rem', fontWeight: subTab === st.id ? 600 : 400,
+                            color: subTab === st.id ? '#1e293b' : '#64748b',
+                            borderBottom: subTab === st.id ? '2px solid #1e293b' : '2px solid transparent',
+                            marginBottom: -1,
+                            display: 'flex', alignItems: 'center', gap: '0.4rem',
+                        }}
+                    >
+                        {st.label}
+                        {!loading && st.count > 0 && (
+                            <span style={{ ...badgeStyle('#fef2f2', '#dc2626'), fontSize: '0.7rem' }}>{st.count}</span>
+                        )}
+                    </button>
+                ))}
+            </div>
+
+            {loading ? (
+                <div style={{ textAlign: 'center', padding: '2rem' }}><Loader2 size={20} className="animate-spin" color="#94a3b8" /></div>
+            ) : (
+                <>
+                    {subTab === 'briefs' && (
+                        !records?.briefs.length ? (
+                            <div style={emptyStyle}>No deleted briefs.</div>
+                        ) : (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                {records.briefs.map(b => (
+                                    <div key={b.id} style={{ ...cardStyle, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                        <div>
+                                            <div style={{ fontWeight: 600, fontSize: '0.875rem' }}>{b.customTitle || b.name}</div>
+                                            <div style={{ fontSize: '0.78rem', color: '#94a3b8' }}>
+                                                {b.briefNumber} · Deleted {fmt(b.deletedAt)}
+                                            </div>
+                                        </div>
+                                        <button
+                                            onClick={() => handleRestore('brief', b.id)}
+                                            disabled={isPending || restoring === b.id}
+                                            style={btnStyle('#f0fdfa', '#0d9488')}
+                                        >
+                                            {restoring === b.id ? <Loader2 size={13} className="animate-spin" /> : <RotateCcw size={13} />}
+                                            Restore
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        )
+                    )}
+
+                    {subTab === 'clients' && (
+                        !records?.clients.length ? (
+                            <div style={emptyStyle}>No deleted clients.</div>
+                        ) : (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                {records.clients.map(c => (
+                                    <div key={c.id} style={{ ...cardStyle, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                        <div>
+                                            <div style={{ fontWeight: 600, fontSize: '0.875rem' }}>{c.name}</div>
+                                            <div style={{ fontSize: '0.78rem', color: '#94a3b8' }}>
+                                                {c.email}{c.company ? ` · ${c.company}` : ''} · Deleted {fmt(c.deletedAt)}
+                                            </div>
+                                        </div>
+                                        <button
+                                            onClick={() => handleRestore('client', c.id)}
+                                            disabled={isPending || restoring === c.id}
+                                            style={btnStyle('#f0fdfa', '#0d9488')}
+                                        >
+                                            {restoring === c.id ? <Loader2 size={13} className="animate-spin" /> : <RotateCcw size={13} />}
+                                            Restore
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        )
+                    )}
+
+                    {subTab === 'matters' && (
+                        !records?.matters.length ? (
+                            <div style={emptyStyle}>No deleted matters.</div>
+                        ) : (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                {records.matters.map(m => (
+                                    <div key={m.id} style={{ ...cardStyle, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                        <div>
+                                            <div style={{ fontWeight: 600, fontSize: '0.875rem' }}>{m.name}</div>
+                                            <div style={{ fontSize: '0.78rem', color: '#94a3b8' }}>
+                                                {m.caseNumber ? `${m.caseNumber} · ` : ''}Deleted {fmt(m.deletedAt)}
+                                            </div>
+                                        </div>
+                                        <button
+                                            onClick={() => handleRestore('matter', m.id)}
+                                            disabled={isPending || restoring === m.id}
+                                            style={btnStyle('#f0fdfa', '#0d9488')}
+                                        >
+                                            {restoring === m.id ? <Loader2 size={13} className="animate-spin" /> : <RotateCcw size={13} />}
+                                            Restore
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        )
                     )}
                 </>
             )}

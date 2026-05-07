@@ -2,7 +2,8 @@
 
 import { revalidatePath } from 'next/cache';
 import { prisma } from '@/lib/prisma';
-import { requireAuth } from '@/lib/auth-utils';
+import { requireAuth, requirePermission } from '@/lib/auth-utils';
+import { logActivity } from '@/lib/log-activity';
 import { createNotification } from '@/app/actions/notifications';
 import { scheduleCourtReminders } from '@/lib/courtReminders';
 
@@ -130,7 +131,7 @@ export async function createMatter(input: {
 export async function getMattersForWorkspace(workspaceId: string) {
     await requireAuth();
     return prisma.matter.findMany({
-        where: { workspaceId, status: 'active' },
+        where: { workspaceId, status: 'active', deletedAt: null },
         select: {
             id: true,
             name: true,
@@ -397,9 +398,24 @@ export async function updateMatter(
 }
 
 export async function deleteMatter(matterId: string) {
+    const session = await requireAuth();
     try {
-        await requireAuth();
-        await prisma.matter.delete({ where: { id: matterId } });
+        const matter = await prisma.matter.findUnique({
+            where: { id: matterId },
+            select: { workspaceId: true, name: true },
+        });
+
+        if (!matter) return { success: false, error: 'Matter not found' };
+
+        await requirePermission(matter.workspaceId, 'DELETE_MATTER');
+
+        await prisma.matter.update({
+            where: { id: matterId },
+            data: { deletedAt: new Date() },
+        });
+
+        logActivity({ workspaceId: matter.workspaceId, userId: session.id!, resource: 'MATTER', action: 'DELETED', resourceId: matterId, resourceName: matter.name }).catch(() => {});
+
         revalidatePath('/calendar');
         return { success: true };
     } catch (error: any) {

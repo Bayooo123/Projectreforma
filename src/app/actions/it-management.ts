@@ -430,3 +430,82 @@ export async function getWorkspaceBriefs() {
         take: 200,
     });
 }
+
+// ─── canDelete Permission Toggle ──────────────────────────────────────────────
+
+export async function toggleMemberCanDelete(memberId: string, canDelete: boolean) {
+    const { workspaceId, userId } = await requireAdmin();
+
+    const member = await prisma.workspaceMember.findFirst({
+        where: { id: memberId, workspaceId },
+        include: { user: { select: { email: true } } },
+    });
+    if (!member) throw new Error('Member not found');
+
+    await prisma.workspaceMember.update({
+        where: { id: memberId },
+        data: { canDelete },
+    });
+
+    await prisma.securityAuditLog.create({
+        data: {
+            userId,
+            event: 'permission_changed',
+            description: `Delete permission ${canDelete ? 'granted to' : 'revoked from'} ${member.user.email}`,
+            metadata: { memberId, canDelete },
+        },
+    });
+
+    revalidatePath('/management/it');
+    return { success: true };
+}
+
+// ─── Deleted Records (Restore) ────────────────────────────────────────────────
+
+export async function getDeletedRecords() {
+    const { workspaceId } = await requireAdmin();
+
+    const [briefs, clients, matters] = await Promise.all([
+        prisma.brief.findMany({
+            where: { workspaceId, deletedAt: { not: null } },
+            select: { id: true, name: true, briefNumber: true, customTitle: true, deletedAt: true },
+            orderBy: { deletedAt: 'desc' },
+        }),
+        prisma.client.findMany({
+            where: { workspaceId, deletedAt: { not: null } },
+            select: { id: true, name: true, email: true, company: true, deletedAt: true },
+            orderBy: { deletedAt: 'desc' },
+        }),
+        prisma.matter.findMany({
+            where: { workspaceId, deletedAt: { not: null } },
+            select: { id: true, name: true, caseNumber: true, deletedAt: true },
+            orderBy: { deletedAt: 'desc' },
+        }),
+    ]);
+
+    return { briefs, clients, matters };
+}
+
+export async function restoreRecord(type: 'brief' | 'client' | 'matter', id: string) {
+    const { workspaceId } = await requireAdmin();
+
+    if (type === 'brief') {
+        const record = await prisma.brief.findFirst({ where: { id, workspaceId } });
+        if (!record) throw new Error('Record not found');
+        await prisma.brief.update({ where: { id }, data: { deletedAt: null } });
+        revalidatePath('/briefs');
+    } else if (type === 'client') {
+        const record = await prisma.client.findFirst({ where: { id, workspaceId } });
+        if (!record) throw new Error('Record not found');
+        await prisma.client.update({ where: { id }, data: { deletedAt: null } });
+        revalidatePath('/management/clients');
+    } else if (type === 'matter') {
+        const record = await prisma.matter.findFirst({ where: { id, workspaceId } });
+        if (!record) throw new Error('Record not found');
+        await prisma.matter.update({ where: { id }, data: { deletedAt: null } });
+        revalidatePath('/calendar');
+    }
+
+    revalidatePath('/management/it');
+    return { success: true };
+}

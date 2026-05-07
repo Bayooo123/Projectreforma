@@ -51,7 +51,11 @@ export async function requirePermission(workspaceId: string, requiredPermission:
     const isWorkspaceOwner = workspace?.ownerId === user.id;
     const permissions = getPermissionsForRole(membership.role);
 
-    if (!isWorkspaceOwner && !permissions.includes(requiredPermission)) {
+    // canDelete flag grants delete permissions to a specific member regardless of role
+    const DELETE_PERMISSIONS: Permission[] = ['DELETE_BRIEF', 'DELETE_CLIENT', 'DELETE_MATTER'];
+    const hasExplicitDelete = (membership as any).canDelete === true && DELETE_PERMISSIONS.includes(requiredPermission);
+
+    if (!isWorkspaceOwner && !permissions.includes(requiredPermission) && !hasExplicitDelete) {
         throw new Error(`Forbidden: This action requires the ${requiredPermission} permission.`);
     }
 

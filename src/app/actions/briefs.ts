@@ -439,7 +439,7 @@ export async function deleteBrief(id: string) {
         // 1. Fetch brief to identify workspace
         const brief = await prisma.brief.findUnique({
             where: { id },
-            select: { workspaceId: true, status: true }
+            select: { workspaceId: true, status: true, name: true }
         });
 
         if (!brief) {
@@ -451,13 +451,18 @@ export async function deleteBrief(id: string) {
         await requirePermission(brief.workspaceId, 'DELETE_BRIEF');
 
         // 3. Soft Delete Logic
+        const { requireAuth } = await import('@/lib/auth-utils');
+        const session = await requireAuth();
+
         await prisma.brief.update({
             where: { id },
             data: {
                 deletedAt: new Date(),
-                status: 'archived' // meaningful status update
+                status: 'archived',
             }
         });
+
+        logActivity({ workspaceId: brief.workspaceId, userId: session.id!, resource: 'BRIEF', action: 'DELETED', resourceId: id, resourceName: brief.name }).catch(() => {});
 
         revalidatePath('/briefs');
         return { success: true, message: 'Brief moved to trash' };
