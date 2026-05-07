@@ -286,6 +286,86 @@ export async function getPulseFeedFirmwide(workspaceId: string): Promise<PulseIt
     }
 }
 
+export interface MyBrief {
+    id: string;
+    name: string;
+    customTitle: string | null;
+    briefNumber: string;
+    customBriefNumber: string | null;
+    status: string;
+    dueDate: Date | null;
+    category: string;
+    createdAt: Date;
+    summary: string | null;
+    lastSummarizedAt: Date | null;
+    client: { name: string } | null;
+    lawyerInCharge: { id: string; name: string | null } | null;
+    documentCount: number;
+    role: 'lead' | 'creator' | 'assisting';
+}
+
+export async function getMyBriefs(workspaceId: string): Promise<MyBrief[]> {
+    const caller = await assertWorkspaceMember(workspaceId);
+    if (!caller) return [];
+    const { userId } = caller;
+
+    try {
+        const briefs = await prisma.brief.findMany({
+            where: {
+                workspaceId,
+                status: 'active',
+                deletedAt: null,
+                OR: [
+                    { lawyerInChargeId: userId },
+                    { lawyerId: userId },
+                    { matter: { lawyers: { some: { lawyerId: userId } } } },
+                ],
+            },
+            select: {
+                id: true,
+                name: true,
+                customTitle: true,
+                briefNumber: true,
+                customBriefNumber: true,
+                status: true,
+                dueDate: true,
+                category: true,
+                createdAt: true,
+                summary: true,
+                lastSummarizedAt: true,
+                lawyerId: true,
+                lawyerInChargeId: true,
+                client: { select: { name: true } },
+                lawyerInCharge: { select: { id: true, name: true } },
+                _count: { select: { documents: true } },
+            },
+            orderBy: { updatedAt: 'desc' },
+            take: 20,
+        });
+
+        return briefs.map(b => ({
+            id: b.id,
+            name: b.name,
+            customTitle: b.customTitle,
+            briefNumber: b.briefNumber,
+            customBriefNumber: b.customBriefNumber,
+            status: b.status,
+            dueDate: b.dueDate,
+            category: b.category,
+            createdAt: b.createdAt,
+            summary: b.summary,
+            lastSummarizedAt: b.lastSummarizedAt,
+            client: b.client,
+            lawyerInCharge: b.lawyerInCharge,
+            documentCount: b._count.documents,
+            role: b.lawyerInChargeId === userId ? 'lead' : b.lawyerId === userId ? 'creator' : 'assisting',
+        }));
+    } catch (e) {
+        console.error('[Pulse] getMyBriefs error:', e);
+        return [];
+    }
+}
+
 export async function getPulseFeedUser(workspaceId: string): Promise<PulseItem[]> {
     const caller = await assertWorkspaceMember(workspaceId);
     if (!caller) return [];

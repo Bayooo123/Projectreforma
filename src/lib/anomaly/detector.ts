@@ -5,7 +5,8 @@ export type AnomalyType =
     | 'PLACEHOLDER_CLIENT'
     | 'MISSING_COURT_OUTCOME'
     | 'MISSING_EXPENSE_PERIOD'
-    | 'UNSCHEDULED_MATTER';
+    | 'UNSCHEDULED_MATTER'
+    | 'FILING_DEADLINE_RISK';
 
 export type AnomalySeverity = 'low' | 'medium' | 'high' | 'critical';
 
@@ -205,6 +206,55 @@ export async function detectAnomalies(workspaceId: string): Promise<DetectedAnom
             resourceId: m.id,
             resourceName: m.name,
             context: { court: m.court, lawyerInCharge: m.lawyerInCharge?.name },
+        });
+    }
+
+    // ── 6. FILING_DEADLINE_RISK ───────────────────────────────────────────
+    // Upcoming hearings where adjournedFor suggests filing work is required,
+    // but no documents have been uploaded to the related brief in the past 2 weeks
+    const FILING_KEYWORDS = ['written address', 'reply', 'statement of defence', 'further affidavit', 'filing', 'originating process', 'motion', 'processes', 'defence'];
+    const twoWeeksAgo = new Date(now.getTime() - 14 * 86_400_000);
+    const threeWeeksFromNow = new Date(now.getTime() + 21 * 86_400_000);
+
+    const upcomingFilingHearings = await prisma.calendarEntry.findMany({
+        where: {
+            type: 'COURT',
+            date: { gte: now, lte: threeWeeksFromNow },
+            matter: { workspaceId },
+            adjournedFor: { not: null },
+        },
+        select: {
+            id: true, date: true, adjournedFor: true,
+            matter: { select: { id: true, name: true, court: true, lawyerInCharge: { select: { name: true } } } },
+        },
+    });
+
+    for (const entry of upcomingFilingHearings) {
+        const adjFor = (entry.adjournedFor || '').toLowerCase();
+        if (!FILING_KEYWORDS.some(kw => adjFor.includes(kw))) continue;
+        if (!entry.matter) continue;
+        if (!isNew('FILING_DEADLINE_RISK', entry.id)) continue;
+
+        // Check if any brief linked to this matter has recent documents
+        const recentDocs = await prisma.document.count({
+            where: {
+                brief: { matterId: entry.matter.id, deletedAt: null },
+                uploadedAt: { gte: twoWeeksAgo },
+            },
+        });
+        if (recentDocs > 0) continue;
+
+        const daysLeft = Math.ceil((entry.date.getTime() - now.getTime()) / 86_400_000);
+        const dateStr = new Date(entry.date).toLocaleDateString('en-NG', { day: 'numeric', month: 'long', year: 'numeric' });
+        detected.push({
+            type: 'FILING_DEADLINE_RISK',
+            severity: daysLeft <= 7 ? 'critical' : 'high',
+            title: `Filing due — ${entry.matter.name}`,
+            question: `The next hearing for "${entry.matter.name}" on ${dateStr}${entry.matter.court ? ` at ${entry.matter.court}` : ''} is scheduled for "${entry.adjournedFor}". No documents have been filed in the past 2 weeks. Are the required processes ready to file?`,
+            resourceType: 'calendar_entry',
+            resourceId: entry.id,
+            resourceName: entry.matter.name,
+            context: { matterId: entry.matter.id, date: entry.date, adjournedFor: entry.adjournedFor, daysLeft, lawyerInCharge: entry.matter.lawyerInCharge?.name },
         });
     }
 

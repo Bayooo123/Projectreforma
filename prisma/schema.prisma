@@ -54,6 +54,7 @@ model Workspace {
   owner             User                  @relation("WorkspaceOwner", fields: [ownerId], references: [id])
   emailConfig       WorkspaceEmailConfig?
   members           WorkspaceMember[]
+  workEntries       WorkEntry[]
 
   @@index([slug])
   @@index([firmCode])
@@ -167,6 +168,7 @@ model User {
   answeredMatterQuestions      MatterQuestion[]       @relation("MatterQuestionAnsweredBy")
   resolvedAnomalies            WorkspaceAnomaly[]     @relation("AnomalyResolver")
   pushSubscriptions            PushSubscription[]
+  workEntries                  WorkEntry[]            @relation("UserWorkEntries")
 
   @@index([email])
   @@index([lawyerToken])
@@ -499,6 +501,7 @@ model Brief {
   tasks               Task[]
   folders             Folder[]
   accessGrants        BriefAccessGrant[]
+  workEntries         WorkEntry[]
 
   @@index([lawyerId])
   @@index([lawyerInChargeId])
@@ -1089,4 +1092,30 @@ model WorkspaceAnomaly {
   @@index([workspaceId, status])
   @@index([workspaceId, type])
   @@index([resourceType, resourceId])
+}
+
+model WorkEntry {
+  id            String          @id @default(cuid())
+  workspaceId   String
+  userId        String
+  briefId       String?
+  description   String
+  date          DateTime        @default(now())
+  status        WorkEntryStatus @default(PLANNED)
+  completedAt   DateTime?
+  completedNote String?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  workspace     Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user          User            @relation("UserWorkEntries", fields: [userId], references: [id], onDelete: Cascade)
+  brief         Brief?          @relation(fields: [briefId], references: [id])
+
+  @@index([workspaceId, date])
+  @@index([userId, date])
+}
+
+enum WorkEntryStatus {
+  PLANNED
+  IN_PROGRESS
+  COMPLETED
 }

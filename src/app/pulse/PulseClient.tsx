@@ -18,9 +18,13 @@ import type {
     PulseUserStats,
     PulseCategory,
     PulseIconType,
+    MyBrief,
 } from '@/app/actions/pulse';
+import type { WorkEntryWithRelations } from '@/app/actions/work-entries';
 import PendingQuestionsPanel from './PendingQuestionsPanel';
 import AnomalyPanel from './AnomalyPanel';
+import DailyFocusPanel from './DailyFocusPanel';
+import MyBriefsGrid from './MyBriefsGrid';
 
 const ICON_MAP: Record<PulseIconType, React.ElementType> = {
     alert: AlertCircle,
@@ -75,6 +79,10 @@ interface PulseClientProps {
     attentionCount: number;
     pendingQuestions: PendingQuestion[];
     anomalies: any[];
+    myBriefs: MyBrief[];
+    todayEntries: WorkEntryWithRelations[];
+    userId: string;
+    workspaceId: string;
 }
 
 export default function PulseClient({
@@ -85,6 +93,10 @@ export default function PulseClient({
     attentionCount,
     pendingQuestions,
     anomalies,
+    myBriefs,
+    todayEntries,
+    userId,
+    workspaceId,
 }: PulseClientProps) {
     const [view, setView] = useState<'firm' | 'user'>('firm');
     const [filter, setFilter] = useState<FilterType>('all');
@@ -211,6 +223,18 @@ export default function PulseClient({
 
             {/* Feed Area */}
             <div className={styles.feedArea}>
+                <DailyFocusPanel
+                    view={view}
+                    workspaceId={workspaceId}
+                    userId={userId}
+                    initialEntries={todayEntries}
+                    myBriefs={myBriefs}
+                />
+
+                {view === 'user' && myBriefs.length > 0 && (
+                    <MyBriefsGrid briefs={myBriefs} />
+                )}
+
                 {anomalies.length > 0 && (
                     <AnomalyPanel anomalies={anomalies} />
                 )}

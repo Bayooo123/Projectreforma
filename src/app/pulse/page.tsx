@@ -5,10 +5,12 @@ import {
     getPulseUserStats,
     getPulseFeedFirmwide,
     getPulseFeedUser,
+    getMyBriefs,
 } from '@/app/actions/pulse';
 import { getPendingMatterQuestions } from '@/app/actions/matterQuestions';
 import { getOpenAnomalies } from '@/app/actions/anomalies';
 import { runAnomalyScan } from '@/lib/anomaly/detector';
+import { getTodayWorkEntries } from '@/app/actions/work-entries';
 import PulseClient from './PulseClient';
 
 export default async function PulsePage() {
@@ -27,13 +29,15 @@ export default async function PulsePage() {
     // Run scan first (duplicate-safe), then fetch results in parallel with the rest
     await runAnomalyScan(workspaceId);
 
-    const [firmStats, userStats, firmFeed, userFeed, pendingQuestions, anomalies] = await Promise.all([
+    const [firmStats, userStats, firmFeed, userFeed, pendingQuestions, anomalies, myBriefs, todayEntries] = await Promise.all([
         getPulseFirmStats(workspaceId),
         getPulseUserStats(workspaceId),
         getPulseFeedFirmwide(workspaceId),
         getPulseFeedUser(workspaceId),
         getPendingMatterQuestions(workspaceId),
         getOpenAnomalies(workspaceId),
+        getMyBriefs(workspaceId),
+        getTodayWorkEntries(workspaceId),
     ]);
 
     const attentionCount = (firmFeed ?? []).filter(i => i.severity === 'urgent').length;
@@ -48,6 +52,10 @@ export default async function PulsePage() {
             attentionCount={attentionCount}
             pendingQuestions={pendingQuestions}
             anomalies={anomalies}
+            myBriefs={myBriefs}
+            todayEntries={todayEntries}
+            userId={session.user.id}
+            workspaceId={workspaceId}
         />
     );
 }
