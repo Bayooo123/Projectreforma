@@ -34,10 +34,10 @@ export default async function PulsePage() {
         getPulseUserStats(workspaceId),
         getPulseFeedFirmwide(workspaceId),
         getPulseFeedUser(workspaceId),
-        getPendingMatterQuestions(workspaceId),
-        getOpenAnomalies(workspaceId),
+        getPendingMatterQuestions(workspaceId).catch(e => { console.error('[Pulse] pendingQuestions failed:', e); return []; }),
+        getOpenAnomalies(workspaceId).catch(e => { console.error('[Pulse] anomalies failed:', e); return []; }),
         getMyBriefs(workspaceId),
-        getTodayWorkEntries(workspaceId),
+        getTodayWorkEntries(workspaceId).catch(e => { console.error('[Pulse] workEntries failed:', e); return []; }),
     ]);
 
     const attentionCount = (firmFeed ?? []).filter(i => i.severity === 'urgent').length;
