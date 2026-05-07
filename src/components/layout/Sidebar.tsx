@@ -10,7 +10,6 @@ import {
   Briefcase,
   BarChart2,
   ShieldCheck,
-  HelpCircle,
   LogOut,
   ShieldAlert,
   Terminal
@@ -26,6 +25,7 @@ interface SidebarProps {
     email?: string | null;
     image?: string | null;
     isPlatformAdmin?: boolean;
+    role?: string | null;
   };
   workspace?: {
     id: string;
@@ -38,17 +38,18 @@ const Sidebar = ({ user, workspace }: SidebarProps) => {
   const pathname = usePathname();
 
   useEffect(() => {
-    // Check for invoice follow-ups in background with a delay to prioritize navigation interactivity
     const timer = setTimeout(async () => {
       try {
         await checkOverdueInvoices();
       } catch (e) {
         console.error(e);
       }
-    }, 2000); // 2 second delay
+    }, 2000);
 
     return () => clearTimeout(timer);
   }, []);
+
+  const isAdminOrOwner = user?.role === 'admin' || user?.role === 'owner';
 
   const navItems = [
     { name: 'The Pulse', href: '/pulse', icon: Activity },
@@ -58,7 +59,7 @@ const Sidebar = ({ user, workspace }: SidebarProps) => {
     { name: 'Office Manager', href: '/management/office', icon: Briefcase },
     { name: 'Compliance', href: '/management/compliance', icon: ShieldCheck },
     { name: 'Analytics', href: '/analytics', icon: BarChart2 },
-    { name: 'IT Management', href: '/management/it', icon: Terminal },
+    ...(isAdminOrOwner ? [{ name: 'IT Management', href: '/management/it', icon: Terminal }] : []),
   ];
 
   const isActive = (path: string) => {
@@ -72,18 +73,15 @@ const Sidebar = ({ user, workspace }: SidebarProps) => {
     <aside className={styles.sidebar}>
       <div className={styles.logoContainer}>
         <h1 className={styles.logo}>Reforma</h1>
-
-        <div className={styles.firmBranding}>
-          {workspace?.letterheadUrl && workspace.letterheadUrl.match(/\.(jpeg|jpg|png|gif|webp)$/i) ? (
+        {workspace?.letterheadUrl && workspace.letterheadUrl.match(/\.(jpeg|jpg|png|gif|webp)$/i) && (
+          <div className={styles.firmBranding}>
             <img
               src={workspace.letterheadUrl}
               alt={workspace.name}
               className={styles.firmLogo}
             />
-          ) : (
-            <span className={styles.firmName}>{workspace?.name || 'Loading firm...'}</span>
-          )}
-        </div>
+          </div>
+        )}
       </div>
 
       <nav className={styles.nav}>
@@ -111,11 +109,6 @@ const Sidebar = ({ user, workspace }: SidebarProps) => {
           </Link>
         )}
 
-        <Link href="/help" className={styles.footerLink}>
-          <HelpCircle size={20} className={styles.navIcon} />
-          <span className={styles.navText}>Help</span>
-        </Link>
-
         <button
           className={styles.footerLink}
           onClick={() => signOut({ callbackUrl: '/login' })}
@@ -123,17 +116,6 @@ const Sidebar = ({ user, workspace }: SidebarProps) => {
           <LogOut size={20} className={styles.navIcon} />
           <span className={styles.navText}>Log out</span>
         </button>
-
-        {user && (
-          <div className={styles.userInfo}>
-            <div className={styles.userAvatar}>
-              {user.name?.[0] || 'U'}
-            </div>
-            <div className={styles.userDetails}>
-              <span className={styles.userName}>{user.name || 'User'}</span>
-            </div>
-          </div>
-        )}
       </div>
     </aside>
   );
