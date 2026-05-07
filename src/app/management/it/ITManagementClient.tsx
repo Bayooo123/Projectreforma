@@ -5,7 +5,7 @@ import {
     Users, ShieldCheck, ClipboardList, Monitor, Activity,
     Plus, Trash2, Edit2, Check, X, ChevronDown,
     UserX, RefreshCw, Loader2, FileText, Download,
-    Ban, AlertTriangle, Clock, LogOut, Mail, RotateCcw
+    Ban, AlertTriangle, Clock, LogOut, Mail, RotateCcw, GitBranch
 } from 'lucide-react';
 import {
     getGuestMembers, inviteGuestMember, updateGuestMember, revokeGuestMember,
@@ -14,9 +14,10 @@ import {
     getAuditLogs, getActiveSessions, forceLogoutUser,
     getWorkspaceBriefs, getActivityLogs,
     toggleMemberCanDelete, getDeletedRecords, restoreRecord,
+    getBriefAttributions, updateBriefAttribution,
 } from '@/app/actions/it-management';
 
-type Tab = 'guests' | 'roles' | 'audit' | 'sessions' | 'activity' | 'deleted';
+type Tab = 'guests' | 'roles' | 'audit' | 'sessions' | 'activity' | 'deleted' | 'attribution';
 
 const ROLES = ['owner', 'admin', 'lawyer', 'paralegal', 'viewer'];
 
@@ -38,6 +39,7 @@ export default function ITManagementClient({ workspaceId }: { workspaceId: strin
         { id: 'sessions', label: 'Session Control', icon: Monitor },
         { id: 'activity', label: 'Activity Log', icon: Activity },
         { id: 'deleted', label: 'Deleted Records', icon: Trash2 },
+        { id: 'attribution', label: 'Brief Attribution', icon: GitBranch },
     ];
 
     return (
@@ -80,6 +82,7 @@ export default function ITManagementClient({ workspaceId }: { workspaceId: strin
             {activeTab === 'sessions' && <SessionsTab />}
             {activeTab === 'activity' && <ActivityLogTab />}
             {activeTab === 'deleted' && <DeletedRecordsTab />}
+            {activeTab === 'attribution' && <BriefAttributionTab />}
         </div>
     );
 }
@@ -1065,4 +1068,248 @@ function badgeStyle(bg: string, color: string): React.CSSProperties {
         border: 'none',
         cursor: 'default',
     };
+}
+
+// ─── Brief Attribution Tab ────────────────────────────────────────────────────
+
+type BriefRow = {
+    id: string;
+    name: string;
+    ref: string;
+    category: string;
+    primaryId: string | null;
+    primaryName: string | null;
+    secondaries: { lawyerId: string; name: string }[];
+};
+
+type MemberOption = { id: string; name: string; email: string };
+
+function BriefAttributionTab() {
+    const [briefs, setBriefs] = useState<BriefRow[]>([]);
+    const [members, setMembers] = useState<MemberOption[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [search, setSearch] = useState('');
+    const [saving, setSaving] = useState<string | null>(null);
+    const [saved, setSaved] = useState<string | null>(null);
+    const [isPending, startTransition] = useTransition();
+
+    // local edits keyed by briefId
+    const [edits, setEdits] = useState<Record<string, { primaryId: string; sec1Id: string; sec2Id: string }>>({});
+
+    useEffect(() => {
+        getBriefAttributions().then(data => {
+            setBriefs(data.briefs);
+            setMembers(data.members);
+            // Seed edits from existing attribution
+            const init: typeof edits = {};
+            data.briefs.forEach(b => {
+                init[b.id] = {
+                    primaryId: b.primaryId ?? '',
+                    sec1Id: b.secondaries[0]?.lawyerId ?? '',
+                    sec2Id: b.secondaries[1]?.lawyerId ?? '',
+                };
+            });
+            setEdits(init);
+            setLoading(false);
+        });
+    }, []);
+
+    function handleChange(briefId: string, field: 'primaryId' | 'sec1Id' | 'sec2Id', value: string) {
+        setEdits(prev => ({ ...prev, [briefId]: { ...prev[briefId], [field]: value } }));
+    }
+
+    function handleSave(briefId: string) {
+        const e = edits[briefId];
+        if (!e) return;
+        setSaving(briefId);
+        startTransition(async () => {
+            await updateBriefAttribution(briefId, {
+                primaryId: e.primaryId || null,
+                secondary1Id: e.sec1Id || null,
+                secondary2Id: e.sec2Id || null,
+            });
+            setSaving(null);
+            setSaved(briefId);
+            setTimeout(() => setSaved(s => s === briefId ? null : s), 2000);
+        });
+    }
+
+    const filtered = briefs.filter(b =>
+        !search || b.name.toLowerCase().includes(search.toLowerCase()) || b.ref?.toLowerCase().includes(search.toLowerCase())
+    );
+
+    const unattributed = briefs.filter(b => !b.primaryId).length;
+
+    if (loading) return (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: '#94a3b8', padding: '2rem 0' }}>
+            <Loader2 size={16} className="animate-spin" /> Loading brief attributions...
+        </div>
+    );
+
+    return (
+        <div>
+            {/* Header */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+                <div>
+                    <h2 style={{ fontSize: '1rem', fontWeight: 700, color: '#1e293b', margin: 0 }}>Brief Attribution</h2>
+                    <p style={{ fontSize: '0.8rem', color: '#64748b', margin: '4px 0 0' }}>
+                        Assign Primary Handler and up to 2 Secondary lawyers for each active brief.
+                        {unattributed > 0 && (
+                            <span style={{ color: '#dc2626', fontWeight: 600, marginLeft: 6 }}>
+                                {unattributed} brief{unattributed !== 1 ? 's' : ''} have no primary handler.
+                            </span>
+                        )}
+                    </p>
+                </div>
+                <input
+                    type="text"
+                    placeholder="Search briefs..."
+                    value={search}
+                    onChange={e => setSearch(e.target.value)}
+                    style={{
+                        padding: '7px 12px', border: '1px solid #e2e8f0', borderRadius: 7,
+                        fontSize: 12, outline: 'none', width: 220, color: '#1e293b',
+                    }}
+                />
+            </div>
+
+            {/* Column headers */}
+            <div style={{
+                display: 'grid', gridTemplateColumns: '1fr 180px 180px 180px 80px',
+                gap: 10, padding: '6px 12px',
+                background: '#f8fafc', borderRadius: '7px 7px 0 0',
+                border: '1px solid #e2e8f0', borderBottom: 'none',
+            }}>
+                {['Brief', 'Primary Handler', 'Secondary 1', 'Secondary 2', ''].map(h => (
+                    <span key={h} style={{ fontSize: 10, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                        {h}
+                    </span>
+                ))}
+            </div>
+
+            {/* Rows */}
+            <div style={{ border: '1px solid #e2e8f0', borderRadius: '0 0 7px 7px', overflow: 'hidden' }}>
+                {filtered.length === 0 && (
+                    <div style={{ padding: '2rem', textAlign: 'center', color: '#94a3b8', fontSize: 13 }}>
+                        No briefs match your search.
+                    </div>
+                )}
+                {filtered.map((brief, i) => {
+                    const e = edits[brief.id] ?? { primaryId: '', sec1Id: '', sec2Id: '' };
+                    const isSaving = saving === brief.id;
+                    const isSaved = saved === brief.id;
+                    const isDirty =
+                        (e.primaryId || '') !== (brief.primaryId || '') ||
+                        (e.sec1Id || '') !== (brief.secondaries[0]?.lawyerId || '') ||
+                        (e.sec2Id || '') !== (brief.secondaries[1]?.lawyerId || '');
+
+                    return (
+                        <div
+                            key={brief.id}
+                            style={{
+                                display: 'grid', gridTemplateColumns: '1fr 180px 180px 180px 80px',
+                                gap: 10, padding: '10px 12px', alignItems: 'center',
+                                background: i % 2 === 0 ? '#fff' : '#fafafa',
+                                borderTop: i > 0 ? '1px solid #f1f5f9' : undefined,
+                            }}
+                        >
+                            {/* Brief name */}
+                            <div style={{ minWidth: 0 }}>
+                                <div style={{ fontSize: 12, fontWeight: 600, color: '#1e293b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                    {brief.name}
+                                </div>
+                                <div style={{ fontSize: 10, color: '#94a3b8', marginTop: 1 }}>
+                                    {brief.ref} · {brief.category}
+                                </div>
+                            </div>
+
+                            {/* Primary */}
+                            <LawyerSelect
+                                value={e.primaryId}
+                                members={members}
+                                excludeIds={[e.sec1Id, e.sec2Id].filter(Boolean)}
+                                placeholder="— No primary —"
+                                onChange={v => handleChange(brief.id, 'primaryId', v)}
+                                highlight={!e.primaryId}
+                            />
+
+                            {/* Secondary 1 */}
+                            <LawyerSelect
+                                value={e.sec1Id}
+                                members={members}
+                                excludeIds={[e.primaryId, e.sec2Id].filter(Boolean)}
+                                placeholder="— None —"
+                                onChange={v => handleChange(brief.id, 'sec1Id', v)}
+                            />
+
+                            {/* Secondary 2 */}
+                            <LawyerSelect
+                                value={e.sec2Id}
+                                members={members}
+                                excludeIds={[e.primaryId, e.sec1Id].filter(Boolean)}
+                                placeholder="— None —"
+                                onChange={v => handleChange(brief.id, 'sec2Id', v)}
+                            />
+
+                            {/* Save button */}
+                            <button
+                                onClick={() => handleSave(brief.id)}
+                                disabled={!isDirty || isSaving || isPending}
+                                style={{
+                                    padding: '5px 10px', borderRadius: 6, fontSize: 11, fontWeight: 600,
+                                    cursor: isDirty && !isSaving ? 'pointer' : 'default',
+                                    border: 'none',
+                                    background: isSaved ? '#f0fdfa' : isDirty ? '#1e293b' : '#f1f5f9',
+                                    color: isSaved ? '#0d9488' : isDirty ? '#fff' : '#94a3b8',
+                                    display: 'flex', alignItems: 'center', gap: 4, transition: 'all 0.15s',
+                                }}
+                            >
+                                {isSaving
+                                    ? <><Loader2 size={10} className="animate-spin" /> Saving</>
+                                    : isSaved
+                                        ? <><Check size={10} strokeWidth={3} /> Saved</>
+                                        : 'Save'
+                                }
+                            </button>
+                        </div>
+                    );
+                })}
+            </div>
+
+            <p style={{ fontSize: 10, color: '#94a3b8', marginTop: 10 }}>
+                Changes take effect immediately. Each user will see their updated My Briefs on Pulse after saving.
+            </p>
+        </div>
+    );
+}
+
+function LawyerSelect({
+    value, members, excludeIds, placeholder, onChange, highlight,
+}: {
+    value: string;
+    members: MemberOption[];
+    excludeIds: string[];
+    placeholder: string;
+    onChange: (v: string) => void;
+    highlight?: boolean;
+}) {
+    const available = members.filter(m => !excludeIds.includes(m.id) || m.id === value);
+    return (
+        <select
+            value={value}
+            onChange={e => onChange(e.target.value)}
+            style={{
+                width: '100%', padding: '5px 7px',
+                border: `1px solid ${highlight ? '#fca5a5' : '#e2e8f0'}`,
+                borderRadius: 6, fontSize: 11, color: value ? '#1e293b' : '#94a3b8',
+                background: highlight ? '#fff5f5' : '#fff',
+                outline: 'none', cursor: 'pointer',
+            }}
+        >
+            <option value="">{placeholder}</option>
+            {available.map(m => (
+                <option key={m.id} value={m.id}>{m.name}</option>
+            ))}
+        </select>
+    );
 }

@@ -509,3 +509,94 @@ export async function restoreRecord(type: 'brief' | 'client' | 'matter', id: str
     revalidatePath('/management/it');
     return { success: true };
 }
+
+// ─── Brief Attribution Management ────────────────────────────────────────────
+
+export async function getBriefAttributions() {
+    const { workspaceId } = await requireAdmin();
+
+    const [briefs, members] = await Promise.all([
+        prisma.brief.findMany({
+            where: { workspaceId, deletedAt: null, status: 'active' },
+            select: {
+                id: true, name: true, customTitle: true,
+                briefNumber: true, customBriefNumber: true, category: true,
+                lawyerInChargeId: true,
+                lawyerInCharge: { select: { id: true, name: true, email: true } },
+                briefLawyers: {
+                    select: { lawyerId: true, lawyer: { select: { id: true, name: true, email: true } } },
+                    orderBy: { createdAt: 'asc' },
+                },
+            },
+            orderBy: { name: 'asc' },
+        }),
+        prisma.workspaceMember.findMany({
+            where: { workspaceId, status: 'active', isGuest: false },
+            select: { user: { select: { id: true, name: true, email: true } } },
+            orderBy: { joinedAt: 'asc' },
+        }),
+    ]);
+
+    return {
+        briefs: briefs.map(b => ({
+            id: b.id,
+            name: b.customTitle || b.name,
+            ref: b.customBriefNumber || b.briefNumber,
+            category: b.category,
+            primaryId: b.lawyerInChargeId ?? null,
+            primaryName: b.lawyerInCharge?.name ?? b.lawyerInCharge?.email ?? null,
+            secondaries: b.briefLawyers.map(bl => ({
+                lawyerId: bl.lawyerId,
+                name: bl.lawyer.name ?? bl.lawyer.email,
+            })),
+        })),
+        members: members.map(m => ({
+            id: m.user.id,
+            name: m.user.name ?? m.user.email,
+            email: m.user.email,
+        })),
+    };
+}
+
+export async function updateBriefAttribution(
+    briefId: string,
+    data: { primaryId: string | null; secondary1Id: string | null; secondary2Id: string | null },
+) {
+    const { workspaceId } = await requireAdmin();
+
+    const brief = await prisma.brief.findFirst({
+        where: { id: briefId, workspaceId },
+        select: { id: true, matterId: true },
+    });
+    if (!brief) throw new Error('Brief not found');
+
+    await prisma.brief.update({
+        where: { id: briefId },
+        data: { lawyerInChargeId: data.primaryId ?? null },
+    });
+
+    if (brief.matterId && data.primaryId) {
+        await prisma.matter.update({
+            where: { id: brief.matterId },
+            data: { lawyerInChargeId: data.primaryId },
+        });
+    }
+
+    await prisma.briefLawyer.deleteMany({ where: { briefId } });
+
+    const secondaries = [data.secondary1Id, data.secondary2Id].filter((id): id is string => !!id);
+    for (const lawyerId of secondaries) {
+        await prisma.briefLawyer.create({ data: { briefId, lawyerId, role: 'assisting' } });
+        if (brief.matterId) {
+            await prisma.matterLawyer.upsert({
+                where: { matterId_lawyerId: { matterId: brief.matterId, lawyerId } },
+                create: { matterId: brief.matterId, lawyerId, role: 'assisting' },
+                update: {},
+            });
+        }
+    }
+
+    revalidatePath('/pulse');
+    revalidatePath('/management/it');
+    return { success: true };
+}
