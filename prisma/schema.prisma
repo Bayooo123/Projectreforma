@@ -53,8 +53,9 @@ model Workspace {
   anomalies         WorkspaceAnomaly[]
   owner             User                  @relation("WorkspaceOwner", fields: [ownerId], references: [id])
   emailConfig       WorkspaceEmailConfig?
-  members           WorkspaceMember[]
-  workEntries       WorkEntry[]
+  members              WorkspaceMember[]
+  workEntries          WorkEntry[]
+  litigationMilestones LitigationMilestone[]
 
   @@index([slug])
   @@index([firmCode])
@@ -352,6 +353,7 @@ model Matter {
   notifications         Notification[]
   tasks                 Task[]
   matterQuestions       MatterQuestion[]
+  litigationMilestones  LitigationMilestone[]
 
   @@index([workspaceId])
   @@index([lastActivityAt])
@@ -1118,4 +1120,49 @@ enum WorkEntryStatus {
   PLANNED
   IN_PROGRESS
   COMPLETED
+}
+
+enum LitigationMilestoneType {
+  WRIT_ISSUED
+  WRIT_SERVED
+  STATEMENT_OF_CLAIM
+  STATEMENT_OF_DEFENCE
+  REPLY_TO_DEFENCE
+  CLOSE_OF_PLEADINGS
+  HEARING_NOTICE
+  EXCHANGE_WITNESS_STATEMENTS
+  EVIDENCE_HEARING
+  FINAL_ADDRESSES
+  JUDGMENT
+  APPEAL_NOTICE
+  APPEAL_BRIEF
+}
+
+enum MilestoneStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  OVERDUE
+  WAIVED
+}
+
+model LitigationMilestone {
+  id          String                  @id @default(cuid())
+  matterId    String
+  workspaceId String
+  type        LitigationMilestoneType
+  status      MilestoneStatus         @default(PENDING)
+  dueDate     DateTime?
+  completedAt DateTime?
+  notes       String?
+  createdAt   DateTime                @default(now())
+  updatedAt   DateTime                @updatedAt
+
+  matter      Matter                  @relation(fields: [matterId], references: [id], onDelete: Cascade)
+  workspace   Workspace               @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([matterId, type])
+  @@index([matterId])
+  @@index([workspaceId, status])
+  @@index([dueDate])
 }

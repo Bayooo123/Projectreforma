@@ -6,6 +6,7 @@ import styles from './EventModal.module.css';
 import { CalendarEvent, LawyerSummary } from '@/types/legal';
 import { updateCalendarEntry } from '@/app/actions/matters';
 import { getLawyersForWorkspace } from '@/lib/briefs';
+import LitigationTimeline from '@/components/matters/LitigationTimeline';
 
 interface CourtEventModalProps {
     isOpen: boolean;
@@ -209,6 +210,10 @@ export default function CourtEventModal({ isOpen, onClose, event, workspaceId, o
                             <Gavel size={16} />
                             <span>Adjourned to: <strong>{new Date(event.adjournedTo).toLocaleDateString()}</strong></span>
                         </div>
+                    )}
+
+                    {event.matterId && (
+                        <LitigationTimeline matterId={event.matterId} />
                     )}
                 </div>
 

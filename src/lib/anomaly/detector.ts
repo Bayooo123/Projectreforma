@@ -6,7 +6,8 @@ export type AnomalyType =
     | 'MISSING_COURT_OUTCOME'
     | 'MISSING_EXPENSE_PERIOD'
     | 'UNSCHEDULED_MATTER'
-    | 'FILING_DEADLINE_RISK';
+    | 'FILING_DEADLINE_RISK'
+    | 'OVERDUE_MILESTONE';
 
 export type AnomalySeverity = 'low' | 'medium' | 'high' | 'critical';
 
@@ -255,6 +256,54 @@ export async function detectAnomalies(workspaceId: string): Promise<DetectedAnom
             resourceId: entry.id,
             resourceName: entry.matter.name,
             context: { matterId: entry.matter.id, date: entry.date, adjournedFor: entry.adjournedFor, daysLeft, lawyerInCharge: entry.matter.lawyerInCharge?.name },
+        });
+    }
+
+    // ── 7. OVERDUE_MILESTONE ─────────────────────────────────────────────────
+    // Mark newly overdue milestones and surface the most critical ones as anomalies
+    await prisma.litigationMilestone.updateMany({
+        where: {
+            workspaceId,
+            status: { in: ['PENDING', 'IN_PROGRESS'] },
+            dueDate: { lt: now },
+        },
+        data: { status: 'OVERDUE' },
+    });
+
+    const overdueMilestones = await prisma.litigationMilestone.findMany({
+        where: { workspaceId, status: 'OVERDUE' },
+        select: {
+            id: true, type: true, dueDate: true,
+            matter: { select: { id: true, name: true, lawyerInCharge: { select: { name: true } } } },
+        },
+        orderBy: { dueDate: 'asc' },
+        take: 20,
+    });
+
+    const { MILESTONE_CONFIG } = await import('@/lib/litigation/milestones');
+    for (const m of overdueMilestones) {
+        if (!m.matter) continue;
+        if (!isNew('OVERDUE_MILESTONE', m.id)) continue;
+        const cfg = MILESTONE_CONFIG[m.type as keyof typeof MILESTONE_CONFIG];
+        const daysOverdue = m.dueDate
+            ? Math.floor((now.getTime() - new Date(m.dueDate).getTime()) / 86_400_000)
+            : null;
+        detected.push({
+            type: 'OVERDUE_MILESTONE',
+            severity: daysOverdue && daysOverdue > 14 ? 'critical' : daysOverdue && daysOverdue > 7 ? 'high' : 'medium',
+            title: `Overdue: ${cfg?.label ?? m.type} — ${m.matter.name}`,
+            question: `The litigation milestone "${cfg?.label ?? m.type}" for matter "${m.matter.name}" ${m.dueDate ? `was due ${new Date(m.dueDate).toLocaleDateString('en-NG', { day: 'numeric', month: 'long', year: 'numeric' })}` : 'has no due date set'}. Has this step been completed? If so, please mark it done and note the completion date.`,
+            resourceType: 'litigation_milestone',
+            resourceId: m.id,
+            resourceName: m.matter.name,
+            context: {
+                milestoneType: m.type,
+                milestoneLabel: cfg?.label,
+                matterId: m.matter.id,
+                dueDate: m.dueDate,
+                daysOverdue,
+                lawyerInCharge: m.matter.lawyerInCharge?.name,
+            },
         });
     }
 

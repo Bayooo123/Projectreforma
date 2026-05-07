@@ -6,6 +6,7 @@ import { requireAuth, requirePermission } from '@/lib/auth-utils';
 import { logActivity } from '@/lib/log-activity';
 import { createNotification } from '@/app/actions/notifications';
 import { scheduleCourtReminders } from '@/lib/courtReminders';
+import { initializeMilestonesForMatter } from '@/app/actions/litigation-milestones';
 
 async function assertWorkspaceMembership(workspaceId: string) {
     const user = await requireAuth();
@@ -109,6 +110,9 @@ export async function createMatter(input: {
                 }
             }
         });
+
+        // Initialize the civil litigation milestone timeline for this matter
+        initializeMilestonesForMatter(matter.id, input.workspaceId).catch(() => {});
 
         await createNotification({
             workspaceId: input.workspaceId,

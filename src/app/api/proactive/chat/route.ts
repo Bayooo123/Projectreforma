@@ -41,6 +41,12 @@ const RESOLUTION_TOOLS = [
         proceedings: { type: 'string', description: 'Purpose of the hearing e.g. Cross-examination' },
     }, ['matterId', 'date']),
 
+    tool('complete_milestone', 'Mark a litigation milestone as completed and cascade due dates to subsequent milestones.', {
+        milestoneId: { type: 'string', description: 'The LitigationMilestone ID to mark completed' },
+        notes: { type: 'string', description: 'Brief note on what was done / filed' },
+        completedDate: { type: 'string', description: 'ISO date when the milestone was actually completed (defaults to today)' },
+    }, ['milestoneId']),
+
     tool('mark_resolved', 'Mark the current anomaly as resolved once the issue has been fixed.', {
         anomalyId: { type: 'string', description: 'The anomaly ID to mark resolved' },
         note: { type: 'string', description: 'Short note on how it was resolved' },
@@ -101,6 +107,19 @@ async function executeTool(name: string, input: Record<string, any>, workspaceId
                 },
             });
             return { success: true, id: entry.id, message: `Hearing scheduled for ${new Date(input.date).toLocaleDateString('en-NG', { dateStyle: 'long' })}.` };
+        }
+
+        case 'complete_milestone': {
+            const milestone = await prisma.litigationMilestone.findFirst({
+                where: { id: input.milestoneId, workspaceId },
+                select: { id: true, type: true },
+            });
+            if (!milestone) return { error: 'Milestone not found.' };
+            const completedAt = input.completedDate ? new Date(input.completedDate) : new Date();
+            const { completeMilestone } = await import('@/app/actions/litigation-milestones');
+            const result = await completeMilestone(milestone.id, input.notes, completedAt);
+            if (!result.success) return { error: result.error };
+            return { success: true, message: `Milestone marked complete. Subsequent deadline dates have been updated.` };
         }
 
         case 'mark_resolved': {
