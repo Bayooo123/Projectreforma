@@ -235,7 +235,7 @@ export async function sendWeeklyDigestForWorkspace(workspaceId: string): Promise
         const html = buildHtml(workspace.name, start, end, byDay);
         const subject = `Your Firm's Court Schedule — Week of ${start.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}`;
 
-        await mailService.send({ to: recipients, subject, html, from: 'Reforma Digest <digest@reforma.ng>' });
+        await mailService.send({ to: recipients, subject, html, from: 'Reforma <noreply@reforma.ng>' });
         return { sent: recipients.length, skipped: false };
 
     } catch (error: any) {
