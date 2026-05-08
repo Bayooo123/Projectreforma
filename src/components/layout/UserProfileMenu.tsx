@@ -84,7 +84,7 @@ const UserProfileMenu = ({ user, workspace }: UserProfileMenuProps) => {
                             {user.name || 'User'}
                         </span>
                         <span className={styles.userRole}>
-                            {workspace?.role || 'Member'}
+                            {workspace?.role || 'Associate'}
                         </span>
                     </div>
                     <ChevronDown

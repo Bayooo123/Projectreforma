@@ -17,6 +17,7 @@ export const ROLES = [
     { value: 'Deputy Head of Chamber', label: 'Deputy Head of Chamber', description: 'Deputy leadership role' },
     { value: 'Head of Chamber', label: 'Head of Chamber', description: 'Chamber leadership' },
     { value: 'Partner', label: 'Partner', description: 'Firm partner' },
+    { value: 'Principal Partner', label: 'Principal Partner', description: 'Senior founding partner of the firm' },
     { value: 'Managing Partner', label: 'Managing Partner', description: 'Managing partner of the firm' },
 ] as const;
 
