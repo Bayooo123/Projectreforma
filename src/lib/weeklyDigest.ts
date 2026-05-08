@@ -244,7 +244,15 @@ export async function sendWeeklyDigestForWorkspace(workspaceId: string): Promise
 }
 
 export async function sendWeeklyDigestAllWorkspaces() {
-    const workspaces = await prisma.workspace.findMany({ select: { id: true } });
+    const allowedIds = config.DIGEST_WORKSPACE_IDS
+        ? config.DIGEST_WORKSPACE_IDS.split(',').map(s => s.trim()).filter(Boolean)
+        : null;
+
+    const workspaces = await prisma.workspace.findMany({
+        where: allowedIds ? { id: { in: allowedIds } } : undefined,
+        select: { id: true },
+    });
+
     const results = await Promise.allSettled(workspaces.map(w => sendWeeklyDigestForWorkspace(w.id)));
     return results;
 }

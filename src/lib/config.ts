@@ -23,6 +23,7 @@ const envSchema = z.object({
 
     // Email Service (Resend)
     MAIL_FROM: z.string().default('Reforma <Registration@reforma.ng>'),
+    DIGEST_WORKSPACE_IDS: z.string().optional(),
 
     // BICA Integration
     BICA_PLATFORM_ID: z.string().default('reforma_os'),
