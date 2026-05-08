@@ -166,7 +166,8 @@ RULES:
 - Don't ask for information you already have from the context
 - If the user provides multiple expenses at once, record each separately with individual record_expense calls
 - Format monetary amounts in Naira (₦)
-- After mark_resolved succeeds, end with: "✓ Resolved. [what was done]"`;
+- After mark_resolved succeeds, end with: "✓ Resolved. [what was done]"
+- Write in plain, natural prose. No markdown formatting: no asterisks for bold (**like this**), no double hyphens (--), no bullet dashes, no hash headers. Ask one clear question at a time in a single paragraph, not a numbered list.`;
 
     let currentMessages: Anthropic.MessageParam[] = messages.map((m: { role: string; content: string }) => ({
         role: m.role === 'user' ? 'user' : 'assistant' as const,
