@@ -65,11 +65,12 @@ export function getClaudeTools() {
             document_id: { type: 'string', description: 'The document ID from Reforma' },
             question: { type: 'string', description: 'What to find or analyse in the document' },
         }, ['document_id', 'question']),
-        tool('create_client', 'Create a new client in the workspace.', {
+        tool('create_client', 'Create a new client in the workspace. If the client should be linked to an existing matter, provide matter_title and the link will be made automatically.', {
             name: { type: 'string', description: 'Full client name' },
             email: { type: 'string', description: 'Client email address' },
             phone: { type: 'string', description: 'Phone number (optional)' },
             company: { type: 'string', description: 'Company or organisation name (optional)' },
+            matter_title: { type: 'string', description: 'Matter title to link this client to (optional — will update the matter\'s client automatically)' },
         }, ['name', 'email']),
         tool('create_matter', 'Create a new matter (case) in the workspace.', {
             name: { type: 'string', description: 'Matter/case title' },
@@ -588,7 +589,22 @@ export async function executeTool(
                     ...(input.company && { company: input.company }),
                 },
             });
-            return { success: true, id: client.id, name: client.name, message: `Client "${client.name}" created successfully.` };
+            // Auto-link to matter if provided
+            let linkedMatter: string | null = null;
+            if (input.matter_title) {
+                const matter = await prisma.matter.findFirst({
+                    where: { name: { contains: input.matter_title, mode: 'insensitive' }, workspaceId },
+                    select: { id: true, name: true },
+                });
+                if (matter) {
+                    await prisma.matter.update({ where: { id: matter.id }, data: { clientId: client.id } });
+                    linkedMatter = matter.name;
+                }
+            }
+            return {
+                success: true, id: client.id, name: client.name,
+                message: `Client "${client.name}" created successfully.${linkedMatter ? ` Linked to matter "${linkedMatter}".` : ''}`,
+            };
         }
 
         case 'create_matter': {

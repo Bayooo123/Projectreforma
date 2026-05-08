@@ -202,6 +202,7 @@ export default function EurekaWidget() {
             setSessions(prev => prev.map(s =>
                 s.id === targetId ? { ...s, messages: [...s.messages, assistantMsg] } : s
             ));
+            if (data.mutated) router.refresh();
         } catch (err: any) {
             const errMsg: Message = { role: 'assistant', content: `Error: ${err.message ?? 'Something went wrong.'}` };
             setSessions(prev => prev.map(s =>

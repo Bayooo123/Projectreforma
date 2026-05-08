@@ -72,6 +72,11 @@ export async function POST(req: NextRequest) {
             })
         );
 
+        const MUTATION_TOOLS = new Set([
+            'create_client', 'create_matter', 'create_brief',
+            'create_court_date', 'update_matter', 'update_brief',
+        ]);
+
         let currentMessages = [...claudeMessages];
         let response = await client.messages.create({
             model: 'claude-sonnet-4-6',
@@ -82,6 +87,7 @@ export async function POST(req: NextRequest) {
         });
 
         let iterations = 0;
+        let mutated = false;
 
         while (response.stop_reason === 'tool_use' && iterations < 10) {
             iterations++;
@@ -92,6 +98,7 @@ export async function POST(req: NextRequest) {
 
             const toolResults = await Promise.all(
                 toolUseBlocks.map(async (block) => {
+                    if (MUTATION_TOOLS.has(block.name)) mutated = true;
                     const output = await executeTool(
                         block.name,
                         block.input as Record<string, any>,
@@ -122,7 +129,7 @@ export async function POST(req: NextRequest) {
         }
 
         const textBlock = response.content.find((b): b is Anthropic.TextBlock => b.type === 'text');
-        return NextResponse.json({ message: textBlock?.text || 'No response generated.' });
+        return NextResponse.json({ message: textBlock?.text || 'No response generated.', mutated });
 
     } catch (error: any) {
         console.error('[Eureka] Error:', error);
