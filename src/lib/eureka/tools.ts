@@ -109,9 +109,10 @@ export function getClaudeTools() {
         tool('get_client_health', 'Identify clients who have had no recent payments — useful for follow-up and relationship management.', {
             days: { type: 'number', description: 'Inactivity threshold in days (default 60)' },
         }),
-        tool('update_matter', 'Update fields on an existing matter — assign/change client, update court, judge, status, or lawyer in charge.', {
+        tool('update_matter', 'Update fields on an existing matter — rename it, assign/change client, update court, judge, status, or lawyer in charge.', {
             matter_id: { type: 'string', description: 'The matter ID to update' },
             matter_title: { type: 'string', description: 'Search by matter title if ID unknown' },
+            new_name: { type: 'string', description: 'Rename the matter to this new title' },
             client_name: { type: 'string', description: 'New client name to assign (will look up by name)' },
             client_id: { type: 'string', description: 'New client ID to assign directly' },
             court: { type: 'string', description: 'Update the court name' },
@@ -813,6 +814,7 @@ export async function executeTool(
                 updates.clientId = client.id;
             }
 
+            if (input.new_name) updates.name = input.new_name;
             if (input.court) updates.court = input.court;
             if (input.judge) updates.judge = input.judge;
             if (input.status) updates.status = input.status;
