@@ -12,11 +12,12 @@ function tool(name: string, description: string, properties: Record<string, any>
 }
 
 const RESOLUTION_TOOLS = [
-    tool('record_court_outcome', 'Record the proceedings and outcome for a past court hearing.', {
+    tool('record_court_outcome', 'Record the proceedings and outcome for a past court hearing. If the matter was adjourned, provide adjournedTo and the tool will automatically create the next calendar entry.', {
         calendarEntryId: { type: 'string', description: 'The calendar entry ID' },
         proceedings: { type: 'string', description: 'What the hearing was for / subject matter' },
         outcome: { type: 'string', description: 'What was decided or happened at the hearing' },
-        adjournedTo: { type: 'string', description: 'ISO date if the matter was adjourned to a new date' },
+        adjournedTo: { type: 'string', description: 'ISO date if the matter was adjourned to a new date — a new calendar entry will be created automatically' },
+        adjournedFor: { type: 'string', description: 'What the next hearing is for e.g. "Continuation of cross-examination"' },
     }, ['calendarEntryId']),
 
     tool('update_client_contact', 'Update a client\'s real contact details to replace placeholder data.', {
@@ -58,15 +59,38 @@ async function executeTool(name: string, input: Record<string, any>, workspaceId
         case 'record_court_outcome': {
             const entry = await prisma.calendarEntry.findFirst({
                 where: { id: input.calendarEntryId, matter: { workspaceId } },
-                select: { id: true },
+                select: { id: true, matterId: true, court: true, location: true, judge: true },
             });
             if (!entry) return { error: 'Calendar entry not found.' };
-            const data: any = {};
-            if (input.proceedings) data.proceedings = input.proceedings;
-            if (input.outcome) data.outcome = input.outcome;
-            if (input.adjournedTo) data.adjournedTo = new Date(input.adjournedTo);
-            await prisma.calendarEntry.update({ where: { id: entry.id }, data });
-            return { success: true, message: 'Court outcome recorded.' };
+
+            const updateData: any = {};
+            if (input.proceedings) updateData.proceedings = input.proceedings;
+            if (input.outcome) updateData.outcome = input.outcome;
+            if (input.adjournedTo) updateData.adjournedTo = new Date(input.adjournedTo);
+            await prisma.calendarEntry.update({ where: { id: entry.id }, data: updateData });
+
+            // Automatically create the next calendar entry when adjourned
+            let nextEntry = null;
+            if (input.adjournedTo && entry.matterId) {
+                nextEntry = await prisma.calendarEntry.create({
+                    data: {
+                        matterId: entry.matterId,
+                        date: new Date(input.adjournedTo),
+                        type: 'COURT',
+                        court: entry.court ?? undefined,
+                        location: entry.location ?? undefined,
+                        judge: entry.judge ?? undefined,
+                        adjournedFor: input.adjournedFor ?? 'Continuation of proceedings',
+                    },
+                });
+            }
+
+            return {
+                success: true,
+                message: nextEntry
+                    ? `Court outcome recorded. New hearing created for ${new Date(input.adjournedTo).toLocaleDateString('en-NG', { dateStyle: 'long' })} (ID: ${nextEntry.id}).`
+                    : 'Court outcome recorded.',
+            };
         }
 
         case 'update_client_contact': {
