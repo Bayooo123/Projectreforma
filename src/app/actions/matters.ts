@@ -430,9 +430,13 @@ export async function deleteMatter(matterId: string) {
 export async function updateCalendarEntry(
     entryId: string,
     patch: {
+        date?: string;
+        court?: string;
+        judge?: string;
         proceedings?: string;
         outcome?: string;
         adjournedFor?: string;
+        adjournedTo?: string | null;
         title?: string;
         appearingLawyerIds?: string[];
     }
@@ -442,10 +446,14 @@ export async function updateCalendarEntry(
         const updated = await prisma.calendarEntry.update({
             where: { id: entryId },
             data: {
-                proceedings: patch.proceedings ?? undefined,
-                outcome: patch.outcome ?? undefined,
-                adjournedFor: patch.adjournedFor ?? undefined,
-                title: patch.title ?? undefined,
+                ...(patch.date !== undefined && { date: new Date(patch.date) }),
+                ...(patch.court !== undefined && { court: patch.court }),
+                ...(patch.judge !== undefined && { judge: patch.judge }),
+                ...(patch.proceedings !== undefined && { proceedings: patch.proceedings }),
+                ...(patch.outcome !== undefined && { outcome: patch.outcome }),
+                ...(patch.adjournedFor !== undefined && { adjournedFor: patch.adjournedFor }),
+                ...(patch.adjournedTo !== undefined && { adjournedTo: patch.adjournedTo ? new Date(patch.adjournedTo) : null }),
+                ...(patch.title !== undefined && { title: patch.title }),
                 ...(patch.appearingLawyerIds !== undefined && {
                     appearances: {
                         set: patch.appearingLawyerIds.map(id => ({ id })),

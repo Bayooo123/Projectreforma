@@ -16,52 +16,109 @@ interface CourtEventModalProps {
     onUpdate?: (updatedEvent: Partial<CalendarEvent>) => void;
 }
 
+function toDatetimeLocal(date: Date | string): string {
+    const d = new Date(date);
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function toDateInput(date: Date | string | null | undefined): string {
+    if (!date) return '';
+    const d = new Date(date);
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
 export default function CourtEventModal({ isOpen, onClose, event, workspaceId, onUpdate }: CourtEventModalProps) {
-    const [appearances, setAppearances] = useState<LawyerSummary[]>(event.appearances ?? []);
-    const [isEditingAppearances, setIsEditingAppearances] = useState(false);
-    const [allLawyers, setAllLawyers] = useState<LawyerSummary[]>([]);
-    const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+    const [isEditing, setIsEditing] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [isLoadingLawyers, setIsLoadingLawyers] = useState(false);
+    const [allLawyers, setAllLawyers] = useState<LawyerSummary[]>([]);
+    const [appearances, setAppearances] = useState<LawyerSummary[]>(event.appearances ?? []);
 
-    // Reset state when event changes
+    // Edit form state
+    const [form, setForm] = useState({
+        date: toDatetimeLocal(event.date),
+        court: event.court ?? '',
+        judge: event.judge ?? '',
+        adjournedFor: event.adjournedFor ?? '',
+        adjournedTo: toDateInput(event.adjournedTo),
+        proceedings: event.proceedings ?? '',
+        outcome: event.outcome ?? '',
+    });
+    const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set(appearances.map(a => a.id)));
+
     useEffect(() => {
         setAppearances(event.appearances ?? []);
-        setIsEditingAppearances(false);
+        setIsEditing(false);
+        setForm({
+            date: toDatetimeLocal(event.date),
+            court: event.court ?? '',
+            judge: event.judge ?? '',
+            adjournedFor: event.adjournedFor ?? '',
+            adjournedTo: toDateInput(event.adjournedTo),
+            proceedings: event.proceedings ?? '',
+            outcome: event.outcome ?? '',
+        });
+        setSelectedIds(new Set((event.appearances ?? []).map((a: LawyerSummary) => a.id)));
     }, [event.id]);
 
-    const openEditMode = async () => {
-        setIsLoadingLawyers(true);
-        setIsEditingAppearances(true);
-        setSelectedIds(new Set(appearances.map(a => a.id)));
-        try {
-            const lawyers = await getLawyersForWorkspace(workspaceId);
-            setAllLawyers(lawyers as LawyerSummary[]);
-        } catch (e) {
-            console.error('Failed to load lawyers:', e);
-        } finally {
-            setIsLoadingLawyers(false);
+    const openEdit = async () => {
+        setIsEditing(true);
+        if (allLawyers.length === 0) {
+            setIsLoadingLawyers(true);
+            try {
+                const lawyers = await getLawyersForWorkspace(workspaceId);
+                setAllLawyers(lawyers as LawyerSummary[]);
+            } catch (e) {
+                console.error('Failed to load lawyers:', e);
+            } finally {
+                setIsLoadingLawyers(false);
+            }
         }
     };
 
-    const toggleLawyer = (id: string) => {
-        setSelectedIds(prev => {
-            const next = new Set(prev);
-            next.has(id) ? next.delete(id) : next.add(id);
-            return next;
+    const cancelEdit = () => {
+        setIsEditing(false);
+        setForm({
+            date: toDatetimeLocal(event.date),
+            court: event.court ?? '',
+            judge: event.judge ?? '',
+            adjournedFor: event.adjournedFor ?? '',
+            adjournedTo: toDateInput(event.adjournedTo),
+            proceedings: event.proceedings ?? '',
+            outcome: event.outcome ?? '',
         });
+        setSelectedIds(new Set(appearances.map(a => a.id)));
     };
 
-    const saveAppearances = async () => {
+    const save = async () => {
         setIsSaving(true);
         try {
-            const ids = Array.from(selectedIds);
-            const result = await updateCalendarEntry(event.id, { appearingLawyerIds: ids });
+            const result = await updateCalendarEntry(event.id, {
+                date: form.date,
+                court: form.court,
+                judge: form.judge,
+                adjournedFor: form.adjournedFor,
+                adjournedTo: form.adjournedTo || null,
+                proceedings: form.proceedings,
+                outcome: form.outcome,
+                appearingLawyerIds: Array.from(selectedIds),
+            });
             if (result.success) {
-                const newAppearances = allLawyers.filter(l => ids.includes(l.id));
-                setAppearances(newAppearances);
-                onUpdate?.({ appearances: newAppearances });
-                setIsEditingAppearances(false);
+                const newAppearances = allLawyers.filter(l => selectedIds.has(l.id));
+                setAppearances(newAppearances.length ? newAppearances : appearances);
+                onUpdate?.({
+                    date: new Date(form.date),
+                    court: form.court,
+                    judge: form.judge,
+                    adjournedFor: form.adjournedFor,
+                    adjournedTo: form.adjournedTo ? new Date(form.adjournedTo) : undefined,
+                    proceedings: form.proceedings,
+                    outcome: form.outcome,
+                    appearances: newAppearances,
+                });
+                setIsEditing(false);
             }
         } finally {
             setIsSaving(false);
@@ -71,13 +128,31 @@ export default function CourtEventModal({ isOpen, onClose, event, workspaceId, o
     if (!isOpen) return null;
 
     const date = new Date(event.date);
+    const inputStyle: React.CSSProperties = {
+        width: '100%', padding: '6px 8px', border: '1px solid #d1d5db',
+        borderRadius: 6, fontSize: '0.875rem', fontFamily: 'inherit',
+        background: '#fff', color: '#1e293b', outline: 'none',
+    };
+    const textareaStyle: React.CSSProperties = {
+        ...inputStyle, resize: 'vertical', minHeight: 90,
+    };
 
     return (
         <div className={styles.overlay}>
             <div className={styles.modal}>
                 <div className={styles.header}>
                     <div className={styles.badge}>Court Date</div>
-                    <button onClick={onClose} className={styles.closeBtn}><X size={20} /></button>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        {!isEditing && (
+                            <button
+                                onClick={openEdit}
+                                style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.8rem', color: 'var(--primary)', background: 'none', border: '1px solid var(--primary)', borderRadius: 6, padding: '4px 10px', cursor: 'pointer', fontWeight: 500 }}
+                            >
+                                <Pencil size={13} /> Edit
+                            </button>
+                        )}
+                        <button onClick={onClose} className={styles.closeBtn}><X size={20} /></button>
+                    </div>
                 </div>
 
                 <div className={styles.content}>
@@ -85,102 +160,92 @@ export default function CourtEventModal({ isOpen, onClose, event, workspaceId, o
                     <p className={styles.caseNumber}>{event.matter?.caseNumber || 'N/A'}</p>
 
                     <div className={styles.metaGrid}>
+                        {/* Date & Time */}
                         <div className={styles.metaItem}>
                             <Calendar size={16} />
-                            <div>
+                            <div style={{ flex: 1 }}>
                                 <label>Date &amp; Time</label>
-                                <p>{date.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })} at {date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}</p>
+                                {isEditing ? (
+                                    <input type="datetime-local" value={form.date} onChange={e => setForm(f => ({ ...f, date: e.target.value }))} style={inputStyle} />
+                                ) : (
+                                    <p>{date.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })} at {date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}</p>
+                                )}
                             </div>
                         </div>
+
+                        {/* Court */}
                         <div className={styles.metaItem}>
                             <MapPin size={16} />
-                            <div>
+                            <div style={{ flex: 1 }}>
                                 <label>Court</label>
-                                <p>{event.court || event.matter?.court || 'Not specified'}</p>
+                                {isEditing ? (
+                                    <input type="text" value={form.court} onChange={e => setForm(f => ({ ...f, court: e.target.value }))} placeholder="e.g. High Court of Lagos" style={inputStyle} />
+                                ) : (
+                                    <p>{event.court || event.matter?.court || 'Not specified'}</p>
+                                )}
                             </div>
                         </div>
+
+                        {/* Judge */}
                         <div className={styles.metaItem}>
                             <User size={16} />
-                            <div>
+                            <div style={{ flex: 1 }}>
                                 <label>Judge</label>
-                                <p>{event.judge || event.matter?.judge || '—'}</p>
+                                {isEditing ? (
+                                    <input type="text" value={form.judge} onChange={e => setForm(f => ({ ...f, judge: e.target.value }))} placeholder="e.g. Justice Odusanya" style={inputStyle} />
+                                ) : (
+                                    <p>{event.judge || event.matter?.judge || '—'}</p>
+                                )}
                             </div>
                         </div>
+
+                        {/* Adjourned For */}
                         <div className={styles.metaItem}>
                             <Clock size={16} />
-                            <div>
+                            <div style={{ flex: 1 }}>
                                 <label>Adjourned For</label>
-                                <p>{event.adjournedFor || 'Initial/General Hearing'}</p>
+                                {isEditing ? (
+                                    <input type="text" value={form.adjournedFor} onChange={e => setForm(f => ({ ...f, adjournedFor: e.target.value }))} placeholder="e.g. Continuation of cross-examination" style={inputStyle} />
+                                ) : (
+                                    <p>{event.adjournedFor || 'Initial/General Hearing'}</p>
+                                )}
                             </div>
                         </div>
                     </div>
 
                     {/* Appearing Counsel */}
                     <div className={styles.section}>
-                        <h3 className={styles.sectionTitle} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                            <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                                <Users size={16} /> Appearing Counsel
-                            </span>
-                            {!isEditingAppearances && (
-                                <button
-                                    onClick={openEditMode}
-                                    style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.75rem', color: 'var(--primary)', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 500 }}
-                                >
-                                    <Pencil size={13} /> Edit
-                                </button>
-                            )}
+                        <h3 className={styles.sectionTitle} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <Users size={16} /> Appearing Counsel
                         </h3>
 
-                        {isEditingAppearances ? (
-                            <div>
-                                {isLoadingLawyers ? (
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--text-secondary)', fontSize: '0.8rem', padding: '8px 0' }}>
-                                        <Loader size={14} className="animate-spin" /> Loading lawyers...
-                                    </div>
-                                ) : (
-                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, margin: '8px 0 12px' }}>
-                                        {allLawyers.map(lawyer => (
-                                            <button
-                                                key={lawyer.id}
-                                                onClick={() => toggleLawyer(lawyer.id)}
-                                                style={{
-                                                    padding: '5px 12px',
-                                                    borderRadius: 20,
-                                                    border: `1.5px solid ${selectedIds.has(lawyer.id) ? 'var(--primary)' : 'var(--border)'}`,
-                                                    background: selectedIds.has(lawyer.id) ? 'var(--primary-soft, rgba(5,150,105,0.1))' : 'transparent',
-                                                    color: selectedIds.has(lawyer.id) ? 'var(--primary)' : 'var(--text-secondary)',
-                                                    cursor: 'pointer',
-                                                    fontSize: '0.8rem',
-                                                    fontWeight: selectedIds.has(lawyer.id) ? 600 : 400,
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    gap: 5,
-                                                    transition: 'all 0.15s',
-                                                }}
-                                            >
-                                                {selectedIds.has(lawyer.id) && <Check size={12} />}
-                                                {lawyer.name || lawyer.email}
-                                            </button>
-                                        ))}
-                                    </div>
-                                )}
-                                <div style={{ display: 'flex', gap: 8 }}>
-                                    <button
-                                        onClick={saveAppearances}
-                                        disabled={isSaving}
-                                        style={{ padding: '6px 16px', borderRadius: 6, background: 'var(--primary)', color: '#fff', border: 'none', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}
-                                    >
-                                        {isSaving ? <><Loader size={12} className="animate-spin" /> Saving...</> : 'Save'}
-                                    </button>
-                                    <button
-                                        onClick={() => setIsEditingAppearances(false)}
-                                        disabled={isSaving}
-                                        style={{ padding: '6px 16px', borderRadius: 6, background: 'transparent', color: 'var(--text-secondary)', border: '1px solid var(--border)', cursor: 'pointer', fontSize: '0.8rem' }}
-                                    >
-                                        Cancel
-                                    </button>
+                        {isEditing ? (
+                            isLoadingLawyers ? (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--text-secondary)', fontSize: '0.8rem', padding: '8px 0' }}>
+                                    <Loader size={14} className="animate-spin" /> Loading lawyers...
                                 </div>
-                            </div>
+                            ) : (
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 8 }}>
+                                    {allLawyers.map(lawyer => (
+                                        <button
+                                            key={lawyer.id}
+                                            onClick={() => setSelectedIds(prev => { const n = new Set(prev); n.has(lawyer.id) ? n.delete(lawyer.id) : n.add(lawyer.id); return n; })}
+                                            style={{
+                                                padding: '5px 12px', borderRadius: 20,
+                                                border: `1.5px solid ${selectedIds.has(lawyer.id) ? 'var(--primary)' : 'var(--border)'}`,
+                                                background: selectedIds.has(lawyer.id) ? 'var(--primary-soft, rgba(5,150,105,0.1))' : 'transparent',
+                                                color: selectedIds.has(lawyer.id) ? 'var(--primary)' : 'var(--text-secondary)',
+                                                cursor: 'pointer', fontSize: '0.8rem',
+                                                fontWeight: selectedIds.has(lawyer.id) ? 600 : 400,
+                                                display: 'flex', alignItems: 'center', gap: 5, transition: 'all 0.15s',
+                                            }}
+                                        >
+                                            {selectedIds.has(lawyer.id) && <Check size={12} />}
+                                            {lawyer.name || lawyer.email}
+                                        </button>
+                                    ))}
+                                </div>
+                            )
                         ) : (
                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 8 }}>
                                 {appearances.length > 0 ? (
@@ -198,27 +263,83 @@ export default function CourtEventModal({ isOpen, onClose, event, workspaceId, o
                         )}
                     </div>
 
+                    {/* Proceedings */}
                     <div className={styles.section}>
                         <h3 className={styles.sectionTitle}><FileText size={16} /> Proceedings / Notes</h3>
-                        <div className={styles.notesBox}>
-                            {event.proceedings || 'No proceedings recorded for this date.'}
-                        </div>
+                        {isEditing ? (
+                            <textarea
+                                value={form.proceedings}
+                                onChange={e => setForm(f => ({ ...f, proceedings: e.target.value }))}
+                                placeholder="Record what happened at this hearing..."
+                                style={textareaStyle}
+                            />
+                        ) : (
+                            <div className={styles.notesBox}>
+                                {event.proceedings || 'No proceedings recorded for this date.'}
+                            </div>
+                        )}
                     </div>
 
-                    {event.adjournedTo && (
-                        <div className={styles.adjournedTo}>
-                            <Gavel size={16} />
-                            <span>Adjourned to: <strong>{new Date(event.adjournedTo).toLocaleDateString()}</strong></span>
-                        </div>
-                    )}
+                    {/* Outcome */}
+                    <div className={styles.section}>
+                        <h3 className={styles.sectionTitle}><Gavel size={16} /> Outcome</h3>
+                        {isEditing ? (
+                            <textarea
+                                value={form.outcome}
+                                onChange={e => setForm(f => ({ ...f, outcome: e.target.value }))}
+                                placeholder="What was decided or ordered by the court..."
+                                style={{ ...textareaStyle, minHeight: 60 }}
+                            />
+                        ) : (
+                            <div className={styles.notesBox}>
+                                {event.outcome || 'No outcome recorded.'}
+                            </div>
+                        )}
+                    </div>
 
-                    {event.matterId && (
-                        <LitigationTimeline matterId={event.matterId} />
-                    )}
+                    {/* Adjourned To */}
+                    <div className={styles.section}>
+                        <h3 className={styles.sectionTitle}><Calendar size={16} /> Next Hearing Date</h3>
+                        {isEditing ? (
+                            <input
+                                type="date"
+                                value={form.adjournedTo}
+                                onChange={e => setForm(f => ({ ...f, adjournedTo: e.target.value }))}
+                                style={{ ...inputStyle, maxWidth: 220 }}
+                            />
+                        ) : (
+                            event.adjournedTo ? (
+                                <div className={styles.adjournedTo}>
+                                    <Gavel size={16} />
+                                    <span>Adjourned to: <strong>{new Date(event.adjournedTo).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</strong></span>
+                                </div>
+                            ) : (
+                                <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', fontStyle: 'italic' }}>Not yet set</p>
+                            )
+                        )}
+                    </div>
+
+                    {event.matterId && <LitigationTimeline matterId={event.matterId} />}
                 </div>
 
                 <div className={styles.footer}>
-                    <button onClick={onClose} className={styles.primaryBtn}>Close</button>
+                    {isEditing ? (
+                        <>
+                            <button
+                                onClick={save}
+                                disabled={isSaving}
+                                className={styles.primaryBtn}
+                                style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+                            >
+                                {isSaving ? <><Loader size={14} className="animate-spin" /> Saving...</> : 'Save Changes'}
+                            </button>
+                            <button onClick={cancelEdit} disabled={isSaving} className={styles.secondaryBtn}>
+                                Cancel
+                            </button>
+                        </>
+                    ) : (
+                        <button onClick={onClose} className={styles.primaryBtn}>Close</button>
+                    )}
                 </div>
             </div>
         </div>
