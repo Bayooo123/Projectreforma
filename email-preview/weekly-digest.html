@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ASCOLP Weekly Court Digest — 11 May 2026</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600&family=Source+Serif+4:wght@400;600&display=swap');
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background-color: #F1F5F9;
+      font-family: 'IBM Plex Sans', system-ui, -apple-system, sans-serif;
+      font-size: 14px;
+      color: #111827;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .wrapper {
+      max-width: 620px;
+      margin: 40px auto;
+      background: #ffffff;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+    }
+
+    /* ── Header ── */
+    .header {
+      background: #064e3b;
+      padding: 32px 40px 28px;
+    }
+
+    .header-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
+
+    .brand {
+      font-family: 'Source Serif 4', Georgia, serif;
+      font-size: 22px;
+      font-weight: 600;
+      color: #ffffff;
+      letter-spacing: -0.3px;
+    }
+
+    .brand span {
+      color: #6EE7B7;
+    }
+
+    .digest-label {
+      font-size: 11px;
+      font-weight: 500;
+      color: #6EE7B7;
+      letter-spacing: 1.2px;
+      text-transform: uppercase;
+      background: rgba(110, 231, 183, 0.12);
+      padding: 4px 10px;
+      border-radius: 20px;
+      border: 1px solid rgba(110, 231, 183, 0.25);
+    }
+
+    .header-title {
+      font-family: 'Source Serif 4', Georgia, serif;
+      font-size: 26px;
+      font-weight: 600;
+      color: #ffffff;
+      line-height: 1.2;
+      margin-bottom: 6px;
+    }
+
+    .header-subtitle {
+      font-size: 13px;
+      color: rgba(255,255,255,0.55);
+      font-weight: 400;
+    }
+
+    .header-meta {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      margin-top: 20px;
+      padding-top: 20px;
+      border-top: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .meta-stat {
+      text-align: center;
+    }
+
+    .meta-stat .num {
+      font-size: 22px;
+      font-weight: 600;
+      color: #ffffff;
+      font-family: 'Source Serif 4', Georgia, serif;
+      line-height: 1;
+    }
+
+    .meta-stat .lbl {
+      font-size: 11px;
+      color: rgba(255,255,255,0.5);
+      margin-top: 3px;
+    }
+
+    .meta-divider {
+      width: 1px;
+      height: 36px;
+      background: rgba(255,255,255,0.12);
+    }
+
+    /* ── Intro ── */
+    .intro {
+      padding: 28px 40px 0;
+      color: #4B5563;
+      font-size: 13.5px;
+      line-height: 1.7;
+      border-bottom: none;
+    }
+
+    /* ── Day section ── */
+    .day-section {
+      padding: 28px 40px 0;
+    }
+
+    .day-label {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .day-label .day-name {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 1.1px;
+      text-transform: uppercase;
+      color: #059669;
+    }
+
+    .day-label .day-date {
+      font-size: 11px;
+      color: #9CA3AF;
+      font-weight: 400;
+    }
+
+    .day-label::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: #E2E8F0;
+    }
+
+    /* ── Matter card ── */
+    .matter-card {
+      background: #F8FAFC;
+      border: 1px solid #E2E8F0;
+      border-left: 3px solid #059669;
+      border-radius: 8px;
+      padding: 16px 18px;
+      margin-bottom: 10px;
+    }
+
+    .matter-card.judgment {
+      border-left-color: #F59E0B;
+      background: #FFFBEB;
+    }
+
+    .matter-name {
+      font-size: 14px;
+      font-weight: 600;
+      color: #111827;
+      margin-bottom: 6px;
+      line-height: 1.35;
+    }
+
+    .matter-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 10.5px;
+      font-weight: 600;
+      color: #92400E;
+      background: #FEF3C7;
+      border: 1px solid #FCD34D;
+      padding: 2px 8px;
+      border-radius: 20px;
+      margin-bottom: 8px;
+    }
+
+    .matter-badge svg {
+      width: 11px;
+      height: 11px;
+    }
+
+    .matter-detail {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .matter-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      font-size: 12.5px;
+      color: #4B5563;
+    }
+
+    .matter-row .icon {
+      width: 14px;
+      height: 14px;
+      flex-shrink: 0;
+      margin-top: 1px;
+      color: #9CA3AF;
+    }
+
+    .matter-row .value {
+      line-height: 1.4;
+    }
+
+    .counsel-tag {
+      display: inline-block;
+      font-size: 11.5px;
+      font-weight: 500;
+      color: #065f46;
+      background: #D1FAE5;
+      padding: 2px 8px;
+      border-radius: 20px;
+      margin-right: 4px;
+      margin-top: 2px;
+    }
+
+    /* ── Adjournment notice ── */
+    .notice {
+      margin: 0 40px;
+      padding: 12px 16px;
+      background: #EFF6FF;
+      border: 1px solid #BFDBFE;
+      border-left: 3px solid #3B82F6;
+      border-radius: 8px;
+      font-size: 12.5px;
+      color: #1E40AF;
+      line-height: 1.5;
+    }
+
+    .notice strong {
+      font-weight: 600;
+    }
+
+    /* ── Divider ── */
+    .section-gap {
+      height: 20px;
+    }
+
+    /* ── Footer ── */
+    .footer-bar {
+      margin: 28px 40px 0;
+      padding: 20px 0;
+      border-top: 1px solid #E2E8F0;
+    }
+
+    .footer-cta {
+      background: #064e3b;
+      color: #ffffff;
+      font-size: 13px;
+      font-weight: 500;
+      padding: 11px 24px;
+      border-radius: 8px;
+      text-decoration: none;
+      display: inline-block;
+      margin-bottom: 20px;
+    }
+
+    .footer-text {
+      font-size: 12px;
+      color: #9CA3AF;
+      line-height: 1.7;
+    }
+
+    .footer-text a {
+      color: #059669;
+      text-decoration: none;
+    }
+
+    .footer-brand {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid #F1F5F9;
+    }
+
+    .footer-brand .dot {
+      width: 8px;
+      height: 8px;
+      background: #059669;
+      border-radius: 50%;
+    }
+
+    .footer-brand .name {
+      font-family: 'Source Serif 4', Georgia, serif;
+      font-size: 13px;
+      font-weight: 600;
+      color: #064e3b;
+    }
+
+    .footer-brand .tagline {
+      font-size: 11.5px;
+      color: #9CA3AF;
+      margin-left: auto;
+    }
+
+    .bottom-pad { height: 32px; }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+
+    <!-- Header -->
+    <div class="header">
+      <div class="header-top">
+        <div class="brand">Re<span>forma</span></div>
+        <div class="digest-label">Weekly Digest</div>
+      </div>
+      <div class="header-title">Court Schedule</div>
+      <div class="header-subtitle">ASCOLP &nbsp;·&nbsp; Week of 11 – 17 May 2026</div>
+      <div class="header-meta">
+        <div class="meta-stat">
+          <div class="num">8</div>
+          <div class="lbl">Hearings</div>
+        </div>
+        <div class="meta-divider"></div>
+        <div class="meta-stat">
+          <div class="num">3</div>
+          <div class="lbl">Court Days</div>
+        </div>
+        <div class="meta-divider"></div>
+        <div class="meta-stat">
+          <div class="num">3</div>
+          <div class="lbl">Courts</div>
+        </div>
+        <div class="meta-divider"></div>
+        <div class="meta-stat">
+          <div class="num">1</div>
+          <div class="lbl">Judgment</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Intro -->
+    <div class="intro" style="padding-top:24px;">
+      Good evening. Here are all court appearances scheduled for your firm this week.
+      Please review the matters assigned to you and ensure all necessary preparations are in order.
+    </div>
+
+    <!-- Adjournment notice -->
+    <div class="section-gap"></div>
+    <div class="notice">
+      <strong>Adjournment Notice:</strong> Adegbite Gabriel Olushina &amp; 5 Ors. v. OAUTHC will no longer come up this Monday.
+      The matter has been adjourned to <strong>8 June 2026</strong> — National Industrial Court, Ibadan Division.
+    </div>
+
+    <!-- Monday 11 May -->
+    <div class="day-section">
+      <div class="day-label">
+        <span class="day-name">Monday</span>
+        <span class="day-date">11 May 2026</span>
+      </div>
+
+      <div class="matter-card">
+        <div class="matter-name">The State of Lagos v. Keystone Bank and Anor</div>
+        <div class="matter-detail">
+          <div class="matter-row">
+            <!-- location icon -->
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+            <span class="value">State High Court &nbsp;·&nbsp; Final report of settlement</span>
+          </div>
+          <div class="matter-row">
+            <!-- users icon -->
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+            <span class="value">
+              <span class="counsel-tag">Adebayo Gbadebo</span>
+              <span class="counsel-tag">Josephine Ogbinaka</span>
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Wednesday 13 May -->
+    <div class="day-section">
+      <div class="day-label">
+        <span class="day-name">Wednesday</span>
+        <span class="day-date">13 May 2026</span>
+      </div>
+
+      <div class="matter-card">
+        <div class="matter-name">Harry Akande v. Omisade (CA)</div>
+        <div class="matter-detail">
+          <div class="matter-row">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+            <span class="value">Court of Appeal, Lagos &nbsp;·&nbsp; Ruling on Application for Substitution of Deceased Appellant</span>
+          </div>
+          <div class="matter-row">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+            <span class="value"><span class="counsel-tag">Kolawole Abdulsalam</span></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="matter-card">
+        <div class="matter-name">Reachout Housing Development Ltd v. Awodun</div>
+        <div class="matter-detail">
+          <div class="matter-row">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+            <span class="value">FCT High Court, Jabi &nbsp;·&nbsp; Report of Settlement / Hearing</span>
+          </div>
+          <div class="matter-row">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+            <span class="value"><span class="counsel-tag">Omowumi Adeoye</span></span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Thursday 14 May -->
+    <div class="day-section">
+      <div class="day-label">
+        <span class="day-name">Thursday</span>
+        <span class="day-date">14 May 2026</span>
+      </div>
+
+      <!-- Judgment card -->
+      <div class="matter-card judgment">
+        <div class="matter-badge">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+          Judgment
+        </div>
+        <div class="matter-name">Ikeja Electric v. NERC &amp; Ors</div>
+        <div class="matter-detail">
+          <div class="matter-row">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+            <span class="value">Federal High Court, Ikoyi &nbsp;·&nbsp; Before Justice Kakaki</span>
+          </div>
+          <div class="matter-row">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+            <span class="value">
+              <span class="counsel-tag">Kola Abdulsalam</span>
+              <span class="counsel-tag">Adeola Adeoye</span>
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div class="matter-card">
+        <div class="matter-name">Owolabi v. Oriolowo</div>
+        <div class="matter-detail">
+          <div class="matter-row">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+            <span class="value">High Court of Lagos, Osbourne &nbsp;·&nbsp; Before Justice Oshin &nbsp;·&nbsp; Hearing</span>
+          </div>
+          <div class="matter-row">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+            <span class="value">
+              <span class="counsel-tag">Adeola Adeoye</span>
+              <span class="counsel-tag">Benjamin Adeyanju</span>
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div class="matter-card">
+        <div class="matter-name">Miles Drivers v. Innovative Logistics</div>
+        <div class="matter-detail">
+          <div class="matter-row">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+            <span class="value">Magistrate Court &nbsp;·&nbsp; Adoption of Written Address</span>
+          </div>
+          <div class="matter-row">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+            <span class="value"><span class="counsel-tag">Josephine Ogbinaka</span></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="matter-card">
+        <div class="matter-name">Ogbonna v. RCCG</div>
+        <div class="matter-detail">
+          <div class="matter-row">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+            <span class="value">Adoption of Written Address</span>
+          </div>
+          <div class="matter-row">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+            <span class="value"><span class="counsel-tag">Iniobong Inieke Umoh</span></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="matter-card">
+        <div class="matter-name">COP v. Emordi</div>
+        <div class="matter-detail">
+          <div class="matter-row">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+            <span class="value">Adoption of Written Address</span>
+          </div>
+          <div class="matter-row">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+            <span class="value"><span class="counsel-tag">Maureen Omaegbu</span></span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer-bar">
+      <a href="#" class="footer-cta">Open Reforma Workspace →</a>
+      <div class="footer-text">
+        This digest is automatically generated from your firm's live data on Reforma every Friday and Sunday evening.
+        Matter details, proceedings history, and documents are available in your workspace.<br /><br />
+        You are receiving this as a member of <strong>ASCOLP's</strong> workspace on Reforma.
+        To manage your notification preferences, visit your account settings.
+      </div>
+      <div class="footer-brand">
+        <div class="dot"></div>
+        <div class="name">Reforma</div>
+        <div class="tagline">Practice Management for Nigerian Law Firms</div>
+      </div>
+    </div>
+
+    <div class="bottom-pad"></div>
+  </div>
+</body>
+</html>
