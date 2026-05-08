@@ -202,8 +202,9 @@ export async function sendWeeklyDigestForWorkspace(workspaceId: string): Promise
 
         if (!entries.length) return { sent: 0, skipped: true };
 
-        const enriched: DigestEntry[] = await Promise.all(entries.map(async entry => {
-            if (!entry.matter) return null;
+        const enriched: DigestEntry[] = [];
+        for (const entry of entries) {
+            if (!entry.matter) continue;
             const lastAppearance = await prisma.calendarEntry.findFirst({
                 where: { matterId: entry.matter.id, appearances: { some: {} }, date: { lt: new Date() } },
                 orderBy: { date: 'desc' },
@@ -214,7 +215,7 @@ export async function sendWeeklyDigestForWorkspace(workspaceId: string): Promise
             const purpose = entry.adjournedFor || entry.proceedings || '';
             const isJudgment = /judgment|ruling/i.test(purpose);
 
-            return {
+            enriched.push({
                 date: entry.date,
                 matterName: entry.matter.name,
                 court: entry.court || entry.matter.court,
@@ -222,8 +223,8 @@ export async function sendWeeklyDigestForWorkspace(workspaceId: string): Promise
                 judge: entry.judge || entry.matter.judge,
                 counsel: counsel.length ? counsel : (entry.matter.lawyerInCharge?.name ? [entry.matter.lawyerInCharge.name] : []),
                 isJudgment,
-            };
-        })).then(r => r.filter((e): e is NonNullable<typeof e> => e !== null) as DigestEntry[]);
+            });
+        }
 
         const byDay = new Map<string, DigestEntry[]>();
         for (const entry of enriched) {
