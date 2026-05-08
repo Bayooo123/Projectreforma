@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, Clock, Tag, User, Building, Calendar, Upload, Loader, FileText, Trash2, Edit, Sparkles, Folder, FolderPlus, FolderInput, CornerUpLeft } from 'lucide-react';
 import { getBriefDisplayTitle, getBriefDisplayNumber } from '@/lib/brief-display';
@@ -88,6 +88,7 @@ import BriefTimeline from '@/components/briefs/BriefTimeline';
 
 export default function BriefDetailClient({ brief }: BriefDetailClientProps) {
     const router = useRouter();
+    const searchParams = useSearchParams();
     const [documents, setDocuments] = useState(brief.documents);
     const [folders, setFolders] = useState(brief.folders || []);
     const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
@@ -98,7 +99,9 @@ export default function BriefDetailClient({ brief }: BriefDetailClientProps) {
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [summary, setSummary] = useState<string | null>(brief.summary);
     const [isSummarizing, setIsSummarizing] = useState(false);
-    const [activeTab, setActiveTab] = useState<'timeline' | 'documents'>('timeline');
+    const [activeTab, setActiveTab] = useState<'timeline' | 'documents'>(
+        searchParams.get('tab') === 'documents' ? 'documents' : 'timeline'
+    );
 
     useEffect(() => {
         logBriefViewed(brief.id).catch(() => {});

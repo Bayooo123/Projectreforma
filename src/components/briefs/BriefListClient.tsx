@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
-import { Search, Filter, MoreVertical, Plus, Trash2, Eye, Briefcase, MessageSquare, Edit, FolderTree, ChevronDown, ChevronRight, Share2 } from 'lucide-react';
+import { Search, Filter, MoreVertical, Plus, Trash2, Eye, Briefcase, MessageSquare, Edit, FolderTree, ChevronDown, ChevronRight, Share2, FileText } from 'lucide-react';
 import styles from './BriefList.module.css';
 import { deleteBrief, getBriefs } from '@/app/actions/briefs'; // Only import actions needed
 import EditBriefModal from './EditBriefModal';
@@ -268,6 +268,14 @@ export default function BriefListClient({ initialBriefs, workspaceId }: Omit<Bri
                                         </span>
                                     </td>
                                     <td className={styles.actionCell}>
+                                        <Link
+                                            href={`/briefs/${brief.id}?tab=documents`}
+                                            className={styles.actionBtn}
+                                            title="View Documents"
+                                            style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none' }}
+                                        >
+                                            <FileText size={16} />
+                                        </Link>
                                         <button
                                             className={styles.actionBtn}
                                             onClick={() => toggleActions(brief.id)}

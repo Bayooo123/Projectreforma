@@ -258,6 +258,9 @@
 
 .actionCell {
     position: relative;
+    display: flex;
+    align-items: center;
+    gap: 2px;
 }
 
 .actionBtn {
