@@ -25,9 +25,6 @@ interface DigestEntry {
     isJudgment: boolean;
 }
 
-function dayLabel(date: Date): string {
-    return date.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-}
 
 function buildHtml(workspaceName: string, weekStart: Date, weekEnd: Date, byDay: Map<string, DigestEntry[]>): string {
     const appUrl = config.NEXT_PUBLIC_APP_URL;
@@ -163,16 +160,21 @@ export async function sendWeeklyDigestForWorkspace(workspaceId: string): Promise
     try {
         const { start, end } = getNextWeekRange();
 
+        const EXCLUDED_ROLES = new Set(['viewer', 'admin', 'paralegal']);
+
         const workspace = await prisma.workspace.findUnique({
             where: { id: workspaceId },
             select: {
                 name: true,
-                members: { select: { user: { select: { email: true } } } },
+                members: { select: { role: true, user: { select: { email: true } } } },
             },
         });
         if (!workspace) return { sent: 0, skipped: true };
 
-        const recipients = workspace.members.map(m => m.user.email).filter(Boolean) as string[];
+        const recipients = workspace.members
+            .filter(m => !EXCLUDED_ROLES.has(m.role ?? ''))
+            .map(m => m.user.email)
+            .filter(Boolean) as string[];
         if (!recipients.length) return { sent: 0, skipped: true };
 
         const entries = await prisma.calendarEntry.findMany({
@@ -208,6 +210,10 @@ export async function sendWeeklyDigestForWorkspace(workspaceId: string): Promise
             const lastAppearance = await prisma.calendarEntry.findFirst({
                 where: { matterId: entry.matter.id, appearances: { some: {} }, date: { lt: new Date() } },
                 orderBy: { date: 'desc' },
+                select: { appearances: { select: { name: true, email: true } } },
+            }) ?? await prisma.calendarEntry.findFirst({
+                where: { matterId: entry.matter.id, appearances: { some: {} } },
+                orderBy: { date: 'asc' },
                 select: { appearances: { select: { name: true, email: true } } },
             });
 
