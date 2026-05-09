@@ -181,12 +181,13 @@ export async function getBriefStats(workspaceId: string) {
 /**
  * Create a client quickly (for use in brief creation)
  */
-export async function createClientQuick(workspaceId: string, name: string, email?: string) {
+export async function createClientQuick(workspaceId: string, name: string, email?: string, phone?: string) {
     try {
         const client = await prisma.client.create({
             data: {
                 name,
                 email: email || `${name.toLowerCase().replace(/\s+/g, '.')}@client.com`,
+                phone: phone || null,
                 workspaceId,
             },
         });

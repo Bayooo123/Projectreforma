@@ -48,6 +48,7 @@ const EditBriefModal = ({ isOpen, onClose, onSuccess, brief, workspaceId }: Edit
     // Quick client creation
     const [showQuickClient, setShowQuickClient] = useState(false);
     const [quickClientName, setQuickClientName] = useState('');
+    const [quickClientPhone, setQuickClientPhone] = useState('');
     const [quickClientEmail, setQuickClientEmail] = useState('');
     const [isCreatingClient, setIsCreatingClient] = useState(false);
 
@@ -92,12 +93,13 @@ const EditBriefModal = ({ isOpen, onClose, onSuccess, brief, workspaceId }: Edit
         if (!quickClientName.trim()) { alert('Please enter a client name'); return; }
         setIsCreatingClient(true);
         try {
-            const result = await createClientQuick(workspaceId, quickClientName.trim(), quickClientEmail.trim() || undefined);
+            const result = await createClientQuick(workspaceId, quickClientName.trim(), quickClientEmail.trim() || undefined, quickClientPhone.trim() || undefined);
             if (result.success && result.client) {
                 setClients(prev => [...prev, result.client as Client]);
                 setSelectedClientId(result.client.id);
                 setShowQuickClient(false);
                 setQuickClientName('');
+                setQuickClientPhone('');
                 setQuickClientEmail('');
             } else {
                 alert('Failed to create client. Please try again.');
@@ -249,9 +251,16 @@ const EditBriefModal = ({ isOpen, onClose, onSuccess, brief, workspaceId }: Edit
                                                 autoFocus
                                             />
                                             <input
+                                                type="tel"
+                                                className={styles.input}
+                                                placeholder="Phone number (e.g. +234 803 000 0000)"
+                                                value={quickClientPhone}
+                                                onChange={e => setQuickClientPhone(e.target.value)}
+                                            />
+                                            <input
                                                 type="email"
                                                 className={styles.input}
-                                                placeholder="Email (optional — placeholder used if blank)"
+                                                placeholder="Email (optional)"
                                                 value={quickClientEmail}
                                                 onChange={e => setQuickClientEmail(e.target.value)}
                                             />
