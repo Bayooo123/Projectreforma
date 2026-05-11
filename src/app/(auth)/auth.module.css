@@ -384,6 +384,74 @@
     color: #64748b;
 }
 
+/* ── Dark Mode ─────────────────────────────────────────────────────────── */
+:global(.dark) .formSide {
+    background: var(--surface);
+}
+
+:global(.dark) .formTitle {
+    color: var(--text-primary);
+}
+
+:global(.dark) .formSubtitle {
+    color: var(--text-secondary);
+}
+
+:global(.dark) .label {
+    color: var(--text-secondary);
+}
+
+:global(.dark) .input,
+:global(.dark) .select {
+    background: var(--surface-subtle);
+    border-color: var(--border);
+    color: var(--text-primary) !important;
+}
+
+:global(.dark) .input::placeholder {
+    color: var(--text-tertiary);
+}
+
+:global(.dark) .passwordInput {
+    background: var(--surface-subtle);
+    border-color: var(--border);
+    color: var(--text-primary);
+}
+
+:global(.dark) .passwordInput::placeholder {
+    color: var(--text-tertiary);
+}
+
+:global(.dark) .passwordToggle {
+    color: var(--text-tertiary);
+}
+
+:global(.dark) .error {
+    background: var(--danger-bg);
+    border-color: var(--danger);
+    color: #fca5a5;
+}
+
+:global(.dark) .hint {
+    color: var(--text-tertiary);
+}
+
+:global(.dark) .terms {
+    color: var(--text-tertiary);
+}
+
+:global(.dark) .checkboxLabel {
+    color: var(--text-secondary);
+}
+
+:global(.dark) .checkboxInput {
+    border-color: var(--border);
+}
+
+:global(.dark) .footerLink {
+    color: var(--primary);
+}
+
 @media (max-width: 1024px) {
     .brandingSide {
         display: none;

@@ -61,7 +61,7 @@
     align-items: center;
     gap: 6px;
     padding: 8px 16px;
-    background: #10b981;
+    background: var(--primary);
     color: white;
     border: none;
     border-radius: 8px;
@@ -72,7 +72,7 @@
 }
 
 .downloadBtn:hover {
-    background: #059669;
+    background: var(--primary-dark);
 }
 
 /* ─── Alert Banner ─── */
@@ -168,9 +168,9 @@
     margin-bottom: 8px;
 }
 
-.kpiValue.accent { color: #dc2626; }
-.kpiValue.warning { color: #d97706; }
-.kpiValue.danger { color: #ef4444; }
+.kpiValue.accent { color: var(--danger); }
+.kpiValue.warning { color: var(--warning); }
+.kpiValue.danger { color: var(--danger); }
 
 .kpiSubtext {
     font-size: 0.72rem;
@@ -182,7 +182,7 @@
 
 .kpiGrowthPositive {
     font-size: 0.72rem;
-    color: #16a34a;
+    color: var(--success);
     font-weight: 600;
     display: flex;
     align-items: center;
@@ -191,7 +191,7 @@
 
 .kpiGrowthNegative {
     font-size: 0.72rem;
-    color: #dc2626;
+    color: var(--danger);
     font-weight: 600;
     display: flex;
     align-items: center;
@@ -370,7 +370,7 @@
 .barFill {
     height: 100%;
     border-radius: 99px;
-    background: #dc2626;
+    background: var(--danger);
     transition: width 0.8s ease;
 }
 
@@ -433,7 +433,7 @@
 
 .monoValue {
     font-weight: 700;
-    color: #dc2626;
+    color: var(--danger);
 }
 
 .statusTag {
@@ -448,19 +448,23 @@
 }
 
 .statusPaid {
-    background: #dcfce7;
-    color: #15803d;
+    background: var(--status-active-bg);
+    color: var(--status-active-text);
 }
 
 .statusPartly {
-    background: #fef3c7;
-    color: #b45309;
+    background: var(--status-inactive-bg);
+    color: var(--status-inactive-text);
 }
 
 .statusUnpaid {
-    background: #fee2e2;
-    color: #b91c1c;
+    background: var(--danger-bg);
+    color: var(--danger);
 }
+
+:global(.dark) .statusPaid { background: rgba(16,185,129,0.15); color: #6ee7b7; }
+:global(.dark) .statusPartly { background: rgba(251,191,36,0.15); color: #fbbf24; }
+:global(.dark) .statusUnpaid { background: rgba(239,68,68,0.15); color: #fca5a5; }
 
 /* ─── Expense Row ─── */
 .expenseRow {

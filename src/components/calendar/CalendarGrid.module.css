@@ -47,7 +47,7 @@
 .iconBtn:not(:disabled):hover {
     background-color: var(--surface-subtle);
     color: var(--text-primary);
-    border-color: var(--slate-400);
+    border-color: var(--slate-400, #CBD5E1);
 }
 
 .todayBtn {
@@ -63,7 +63,7 @@
 
 .todayBtn:not(:disabled):hover {
     background-color: var(--surface-subtle);
-    border-color: var(--slate-400);
+    border-color: var(--slate-400, #CBD5E1);
 }
 
 .calendarWrapper {

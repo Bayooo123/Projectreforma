@@ -116,9 +116,11 @@
   --ease-fluid: cubic-bezier(0.4, 0, 0.2, 1);
   --ease-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
 
-  /* Landing Page */
-  --bg-page: #F1F5F9;
-  --bg-nav: rgba(255, 255, 255, 0.95);
+  /* Semantic aliases — admin / shared components */
+  --maroon-600: #991B1B;
+  --slate-400: #CBD5E1;
+  --text-muted: #6B7280;
+  --bg-card: #FFFFFF;
   --border-color: #E2E8F0;
   --text-lp-primary: #111827;
   --text-lp-secondary: #4B5563;
@@ -225,6 +227,13 @@
   --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.5);
   --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.5);
   --shadow-soft: 0 20px 40px -10px rgba(0, 0, 0, 0.7);
+
+  /* Semantic aliases — dark mode */
+  --maroon-600: #DC2626;
+  --slate-400: #6B7280;
+  --text-muted: #9CA3AF;
+  --bg-card: #1F2937;
+  --border-color: #374151;
 
   /* Landing Page Overrides */
   --bg-page: #111827;

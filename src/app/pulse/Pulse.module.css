@@ -107,6 +107,7 @@
 .statValUrgent {
     color: #A32D2D;
 }
+:global(.dark) .statValUrgent { color: #fca5a5; }
 
 .statDelta {
     font-size: 10px;
@@ -116,10 +117,12 @@
 .deltaUp {
     color: #3B6D11;
 }
+:global(.dark) .deltaUp { color: #86efac; }
 
 .deltaDown {
     color: #A32D2D;
 }
+:global(.dark) .deltaDown { color: #fca5a5; }
 
 .deltaNeutral {
     color: var(--text-tertiary, #9CA3AF);
@@ -169,8 +172,8 @@
 }
 
 .filterChip:hover {
-    border-color: #1D9E75;
-    color: #0F6E56;
+    border-color: var(--primary, #1D9E75);
+    color: var(--primary, #0F6E56);
 }
 
 .filterChipOn {
@@ -214,6 +217,10 @@
     border-color: #C4C9D4;
     box-shadow: 0 1px 4px rgba(15, 23, 42, 0.07);
 }
+:global(.dark) .pulseCard:hover {
+    border-color: var(--border);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+}
 
 /* Severity left-border variants — must come after .pulseCard */
 .card_urgent {
@@ -221,24 +228,28 @@
     border-radius: 0 10px 10px 0;
     padding-left: 11px;
 }
+:global(.dark) .card_urgent { border-left-color: #f87171; }
 
 .card_warning {
     border-left: 3px solid #EF9F27;
     border-radius: 0 10px 10px 0;
     padding-left: 11px;
 }
+:global(.dark) .card_warning { border-left-color: #fbbf24; }
 
 .card_info {
     border-left: 3px solid #378ADD;
     border-radius: 0 10px 10px 0;
     padding-left: 11px;
 }
+:global(.dark) .card_info { border-left-color: #60a5fa; }
 
 .card_success {
     border-left: 3px solid #5DCAA5;
     border-radius: 0 10px 10px 0;
     padding-left: 11px;
 }
+:global(.dark) .card_success { border-left-color: #34d399; }
 
 /* ─── Icon Wrapper ─── */
 .iconWrap {
@@ -256,21 +267,25 @@
     background: #FCEBEB;
     color: #A32D2D;
 }
+:global(.dark) .ic_urgent { background: rgba(239,68,68,0.15); color: #fca5a5; }
 
 .ic_warning {
     background: #FAEEDA;
     color: #854F0B;
 }
+:global(.dark) .ic_warning { background: rgba(245,158,11,0.15); color: #fbbf24; }
 
 .ic_info {
     background: #E6F1FB;
     color: #185FA5;
 }
+:global(.dark) .ic_info { background: rgba(59,130,246,0.15); color: #93c5fd; }
 
 .ic_success {
     background: #E1F5EE;
     color: #0F6E56;
 }
+:global(.dark) .ic_success { background: rgba(16,185,129,0.15); color: #6ee7b7; }
 
 /* ─── Card Body ─── */
 .cardBody {
@@ -327,41 +342,49 @@
     background: #EEEDFE;
     color: #3C3489;
 }
+:global(.dark) .chip_matter { background: rgba(99,91,222,0.2); color: #c4b5fd; }
 
 .chip_billing {
     background: #EAF3DE;
     color: #27500A;
 }
+:global(.dark) .chip_billing { background: rgba(22,163,74,0.15); color: #86efac; }
 
 .chip_calendar {
     background: #E6F1FB;
     color: #0C447C;
 }
+:global(.dark) .chip_calendar { background: rgba(37,99,235,0.15); color: #93c5fd; }
 
 .chip_compliance {
     background: #FAEEDA;
     color: #633806;
 }
+:global(.dark) .chip_compliance { background: rgba(245,158,11,0.15); color: #fde68a; }
 
 .chip_client {
     background: #E1F5EE;
     color: #085041;
 }
+:global(.dark) .chip_client { background: rgba(5,150,105,0.15); color: #6ee7b7; }
 
 .chip_eureka {
     background: #FBEAF0;
     color: #72243E;
 }
+:global(.dark) .chip_eureka { background: rgba(219,39,119,0.15); color: #f9a8d4; }
 
 .chip_firm {
     background: #F1EFE8;
     color: #444441;
 }
+:global(.dark) .chip_firm { background: rgba(107,114,128,0.15); color: #d1d5db; }
 
 .chip_user {
     background: #EEEDFE;
     color: #534AB7;
 }
+:global(.dark) .chip_user { background: rgba(99,91,222,0.2); color: #c4b5fd; }
 
 /* ─── Lawyer Avatars ─── */
 .lawyersRow {
