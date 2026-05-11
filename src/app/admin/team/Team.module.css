@@ -1,0 +1,254 @@
+.container {
+    max-width: 860px;
+}
+
+.header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 28px;
+}
+
+.title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #111827;
+    margin: 0 0 4px;
+}
+
+.subtitle {
+    font-size: 0.875rem;
+    color: #6B7280;
+    margin: 0;
+}
+
+/* Invite card */
+.inviteCard {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 24px 28px;
+    margin-bottom: 32px;
+}
+
+.inviteForm {
+    display: flex;
+    gap: 10px;
+    margin-top: 14px;
+}
+
+.emailInput {
+    flex: 1;
+    padding: 10px 14px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    font-family: inherit;
+    color: #111827;
+    outline: none;
+    background: #fafafa;
+}
+
+.emailInput:focus {
+    border-color: #064e3b;
+    background: #fff;
+}
+
+.inviteBtn {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 10px 20px;
+    background: #064e3b;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.inviteBtn:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+}
+
+.spin {
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+.errorMsg {
+    margin: 10px 0 0;
+    font-size: 0.8rem;
+    color: #ef4444;
+}
+
+.successMsg {
+    margin: 10px 0 0;
+    font-size: 0.8rem;
+    color: #059669;
+    font-weight: 500;
+}
+
+/* Sections */
+.section {
+    margin-bottom: 32px;
+}
+
+.sectionTitle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #374151;
+    margin: 0 0 14px;
+}
+
+.sectionDesc {
+    font-size: 0.85rem;
+    color: #6B7280;
+    margin: 4px 0 0;
+}
+
+.sectionIcon {
+    color: #064e3b;
+}
+
+/* Table rows */
+.table {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 20px;
+    border-bottom: 1px solid #f3f4f6;
+}
+
+.row:last-child {
+    border-bottom: none;
+}
+
+.pendingRow {
+    background: #fffbeb;
+}
+
+.avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: #064e3b;
+    color: #fff;
+    font-weight: 700;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.pendingAvatar {
+    background: #d97706;
+}
+
+.rowInfo {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.rowName {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #111827;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.rowEmail {
+    font-size: 0.78rem;
+    color: #6B7280;
+}
+
+.rowMeta {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.78rem;
+    color: #9CA3AF;
+    white-space: nowrap;
+}
+
+.removeBtn {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 6px 12px;
+    background: transparent;
+    color: #ef4444;
+    border: 1px solid #fca5a5;
+    border-radius: 6px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.removeBtn:hover {
+    background: #fef2f2;
+}
+
+.removeBtn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.revokeBtn {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 6px 12px;
+    background: transparent;
+    color: #6B7280;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.revokeBtn:hover {
+    background: #f9fafb;
+    color: #374151;
+}
+
+.revokeBtn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.empty {
+    padding: 32px;
+    text-align: center;
+    color: #9CA3AF;
+    font-size: 0.875rem;
+}

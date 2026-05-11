@@ -97,6 +97,21 @@ model BriefAccessGrant {
   @@index([briefId])
 }
 
+model AdminInvite {
+  id          String    @id @default(cuid())
+  email       String
+  invitedById String
+  status      String    @default("pending")
+  tokenHash   String    @unique
+  expiresAt   DateTime
+  createdAt   DateTime  @default(now())
+  acceptedAt  DateTime?
+  invitedBy   User      @relation(fields: [invitedById], references: [id])
+
+  @@index([tokenHash])
+  @@index([email])
+}
+
 model Invitation {
   id          String    @id @default(cuid())
   workspaceId String
@@ -150,6 +165,7 @@ model User {
   emailVerifications     EmailVerification[]
   expenseAuditLogs       ExpenseAuditLog[]
   invitations            Invitation[]
+  adminInvites           AdminInvite[]
   mattersInCharge        Matter[]               @relation("MatterLawyerInCharge")
   activityLogs           MatterActivityLog[]
   matterLawyer           MatterLawyer[]
