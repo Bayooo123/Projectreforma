@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import { auth } from '@/auth';
 import AdminSidebar from '@/components/layout/AdminSidebar';
+import AdminHeader from '@/components/layout/AdminHeader';
 import styles from './admin.module.css';
 
 interface AdminLayoutProps {
@@ -16,14 +17,13 @@ export default async function AdminLayout({ children }: AdminLayoutProps) {
 
     return (
         <div className={styles.shell}>
-            <aside className={styles.sidebar}>
-                <AdminSidebar user={session.user} />
-            </aside>
-            <main className={styles.main}>
+            <AdminSidebar user={session.user} />
+            <div className={styles.main}>
+                <AdminHeader user={session.user} />
                 <div className={styles.content}>
                     {children}
                 </div>
-            </main>
+            </div>
         </div>
     );
 }
