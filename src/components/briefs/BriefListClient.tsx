@@ -43,6 +43,7 @@ export default function BriefListClient({ initialBriefs, workspaceId }: Omit<Bri
         return [];
     });
     const [activeActionId, setActiveActionId] = useState<string | null>(null);
+    const [menuPos, setMenuPos] = useState<{ top: number; right: number } | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState<string>('all');
     const [expandedBriefIds, setExpandedBriefIds] = useState<Set<string>>(new Set());
@@ -105,8 +106,15 @@ export default function BriefListClient({ initialBriefs, workspaceId }: Omit<Bri
         }
     };
 
-    const toggleActions = (id: string) => {
-        setActiveActionId(activeActionId === id ? null : id);
+    const toggleActions = (id: string, e: React.MouseEvent<HTMLButtonElement>) => {
+        if (activeActionId === id) {
+            setActiveActionId(null);
+            setMenuPos(null);
+            return;
+        }
+        const rect = e.currentTarget.getBoundingClientRect();
+        setActiveActionId(id);
+        setMenuPos({ top: rect.bottom + 6, right: window.innerWidth - rect.right });
     };
 
     const toggleExpand = (id: string, e: React.MouseEvent) => {
@@ -252,9 +260,18 @@ export default function BriefListClient({ initialBriefs, workspaceId }: Omit<Bri
                                     </td>
                                     <td>
                                         <div className={styles.briefInfo}>
-                                            <Link href={`/briefs/${brief.id}`} className={styles.briefName}>
-                                                {getBriefDisplayTitle(brief)}
-                                            </Link>
+                                            <div className={styles.briefTitleRow}>
+                                                <Link href={`/briefs/${brief.id}`} className={styles.briefName}>
+                                                    {getBriefDisplayTitle(brief)}
+                                                </Link>
+                                                <Link
+                                                    href={`/briefs/${brief.id}?tab=documents`}
+                                                    className={styles.docsIconBtn}
+                                                    title="View Documents"
+                                                >
+                                                    <FileText size={14} />
+                                                </Link>
+                                            </div>
                                             <span className={styles.briefRef}>{brief.ref}</span>
                                         </div>
                                     </td>
@@ -268,69 +285,64 @@ export default function BriefListClient({ initialBriefs, workspaceId }: Omit<Bri
                                         </span>
                                     </td>
                                     <td className={styles.actionCell}>
-                                        <Link
-                                            href={`/briefs/${brief.id}?tab=documents`}
-                                            className={styles.actionBtn}
-                                            title="View Documents"
-                                            style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none' }}
-                                        >
-                                            <FileText size={16} />
-                                        </Link>
                                         <button
                                             className={styles.actionBtn}
-                                            onClick={() => toggleActions(brief.id)}
+                                            onClick={(e) => toggleActions(brief.id, e)}
                                         >
                                             <MoreVertical size={18} />
                                         </button>
-                                        {activeActionId === brief.id && (
-                                            <div className={styles.actionMenu}>
-                                                <Link href={`/briefs/${brief.id}`} className={styles.menuItem}>
-                                                    <Eye size={14} /> Open Brief
-                                                </Link>
-                                                <button
-                                                    className={styles.menuItem}
-                                                    onClick={() => {
-                                                        setMovingBrief(brief);
-                                                        setActiveActionId(null);
-                                                    }}
-                                                >
-                                                    <Share2 size={14} /> Move to Parent Brief
-                                                </button>
-                                                <button
-                                                    className={styles.menuItem}
-                                                    onClick={() => {
-                                                        setActivityBrief(brief);
-                                                        setActiveActionId(null);
-                                                    }}
-                                                >
-                                                    <MessageSquare size={14} /> Add Comment/Activity
-                                                </button>
-                                                <button
-                                                    className={styles.menuItem}
-                                                    onClick={() => {
-                                                        setEditingBrief(brief);
-                                                        setActiveActionId(null);
-                                                    }}
-                                                >
-                                                    <Edit size={14} /> Edit Brief Details
-                                                </button>
-                                                <button
-                                                    className={`${styles.menuItem} ${styles.deleteItem}`}
-                                                    onClick={() => {
-                                                        handleDelete(brief.id);
-                                                        setActiveActionId(null);
-                                                    }}
-                                                >
-                                                    <Trash2 size={14} /> Delete Brief
-                                                </button>
-                                            </div>
-                                        )}
                                     </td>
                                 </tr>
                             ))}
                         </tbody>
                     </table>
                 </div>
+
+                {/* Fixed-position dropdown — escapes table overflow clipping */}
+                {activeActionId && menuPos && (() => {
+                    const brief = briefs.find(b => b.id === activeActionId);
+                    if (!brief) return null;
+                    return (
+                        <>
+                            <div
+                                style={{ position: 'fixed', inset: 0, zIndex: 99 }}
+                                onClick={() => { setActiveActionId(null); setMenuPos(null); }}
+                            />
+                            <div
+                                className={styles.actionMenu}
+                                style={{ position: 'fixed', top: menuPos.top, right: menuPos.right, zIndex: 100 }}
+                            >
+                                <Link href={`/briefs/${brief.id}`} className={styles.menuItem}>
+                                    <Eye size={14} /> Open Brief
+                                </Link>
+                                <button
+                                    className={styles.menuItem}
+                                    onClick={() => { setMovingBrief(brief); setActiveActionId(null); setMenuPos(null); }}
+                                >
+                                    <Share2 size={14} /> Move to Parent Brief
+                                </button>
+                                <button
+                                    className={styles.menuItem}
+                                    onClick={() => { setActivityBrief(brief); setActiveActionId(null); setMenuPos(null); }}
+                                >
+                                    <MessageSquare size={14} /> Add Comment/Activity
+                                </button>
+                                <button
+                                    className={styles.menuItem}
+                                    onClick={() => { setEditingBrief(brief); setActiveActionId(null); setMenuPos(null); }}
+                                >
+                                    <Edit size={14} /> Edit Brief Details
+                                </button>
+                                <button
+                                    className={`${styles.menuItem} ${styles.deleteItem}`}
+                                    onClick={() => { handleDelete(brief.id); setActiveActionId(null); setMenuPos(null); }}
+                                >
+                                    <Trash2 size={14} /> Delete Brief
+                                </button>
+                            </div>
+                        </>
+                    );
+                })()}
 
                 {/* Mobile App Card View */}
                 <div className={styles.mobileCardsList}>
@@ -343,31 +355,13 @@ export default function BriefListClient({ initialBriefs, workspaceId }: Omit<Bri
                                     </Link>
                                     <div className={styles.cardSubtitle}>{brief.briefNumber} &middot; {brief.ref}</div>
                                 </div>
-                                <div style={{position: 'relative'}}>
-                                    <button
-                                        className={styles.actionBtn}
-                                        onClick={() => toggleActions(brief.id)}
-                                        style={{ width: '44px', height: '44px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                                    >
-                                        <MoreVertical size={20} />
-                                    </button>
-                                    {activeActionId === brief.id && (
-                                        <div className={styles.actionMenu}>
-                                            <Link href={`/briefs/${brief.id}`} className={styles.menuItem}>
-                                                <Eye size={16} /> Open
-                                            </Link>
-                                            <button className={styles.menuItem} onClick={() => { setActivityBrief(brief); setActiveActionId(null); }}>
-                                                <MessageSquare size={16} /> Activity
-                                            </button>
-                                            <button className={styles.menuItem} onClick={() => { setEditingBrief(brief); setActiveActionId(null); }}>
-                                                <Edit size={16} /> Edit
-                                            </button>
-                                            <button className={`${styles.menuItem} ${styles.deleteItem}`} onClick={() => { handleDelete(brief.id); setActiveActionId(null); }}>
-                                                <Trash2 size={16} /> Delete
-                                            </button>
-                                        </div>
-                                    )}
-                                </div>
+                                <button
+                                    className={styles.actionBtn}
+                                    onClick={(e) => toggleActions(brief.id, e)}
+                                    style={{ width: '44px', height: '44px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                                >
+                                    <MoreVertical size={20} />
+                                </button>
                             </div>
                             
                             <div className={styles.cardBody}>
