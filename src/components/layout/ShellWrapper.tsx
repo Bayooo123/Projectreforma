@@ -12,7 +12,6 @@ interface ShellWrapperProps {
     workspace: any;
 }
 
-// WizardTrigger: renders the branding wizard modal if needed.
 function WizardTrigger({ user, workspace, children }: { user: any, workspace: any, children: React.ReactNode }) {
     const pathname = usePathname();
     const searchParams = useSearchParams();
@@ -55,10 +54,14 @@ function WizardTrigger({ user, workspace, children }: { user: any, workspace: an
     );
 }
 
-// ShellWrapper: renders the authenticated app shell.
 export default function ShellWrapper({ children, user, workspace }: ShellWrapperProps) {
-    // We use the initial (lightweight) workspace for immediate shell rendering
-    // and let WizardTrigger hydrate the full details.
+    const pathname = usePathname();
+
+    // Admin routes own their entire shell — bypass app layout completely
+    if (pathname.startsWith('/admin')) {
+        return <>{children}</>;
+    }
+
     return (
         <Suspense fallback={<AppLayout user={user} workspace={workspace}>{children}</AppLayout>}>
             <WizardTrigger user={user} workspace={workspace}>
