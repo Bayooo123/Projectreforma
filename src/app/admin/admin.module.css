@@ -1,0 +1,19 @@
+.shell {
+    min-height: 100vh;
+    background: #f8fafc;
+}
+
+.sidebar {
+    /* AdminSidebar is position:fixed at 240px — no flex needed */
+}
+
+.main {
+    margin-left: 240px;
+    min-height: 100vh;
+    overflow-y: auto;
+}
+
+.content {
+    padding: 40px 48px;
+    max-width: 1100px;
+}

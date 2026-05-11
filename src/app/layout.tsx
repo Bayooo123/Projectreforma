@@ -63,7 +63,10 @@ export default async function RootLayout({
 
   // Routes that are authenticated but intentionally chrome-free (no sidebar/header shell)
   const CHROMELESS_ROUTES = ['/chat'];
-  const isChromelessRoute = CHROMELESS_ROUTES.includes(pathname) || CHROMELESS_ROUTES.some(r => pathname.startsWith(r + '/'));
+  const isChromelessRoute =
+    CHROMELESS_ROUTES.includes(pathname) ||
+    CHROMELESS_ROUTES.some(r => pathname.startsWith(r + '/')) ||
+    pathname.startsWith('/admin');
 
   // Determine if we should render the app shell
   const showShell = !!user && !isPublicRoute && !isChromelessRoute;

@@ -66,7 +66,7 @@ const AdminSidebar = ({ user }: AdminSidebarProps) => {
             <div className={styles.footer}>
                 <Link href="/briefs" className={styles.footerLink}>
                     <AppWindow size={20} className={styles.navIcon} />
-                    <span className={styles.navText}>Back to App</span>
+                    <span className={styles.navText}>Exit to Workspace</span>
                 </Link>
 
                 <button
