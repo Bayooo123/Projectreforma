@@ -77,6 +77,7 @@ export default function BriefListClient({ initialBriefs, workspaceId }: Omit<Bri
     const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
     const [editingBrief, setEditingBrief] = useState<any | null>(null);
     const [activityBrief, setActivityBrief] = useState<any | null>(null);
+    const [noDocToast, setNoDocToast] = useState<string | null>(null); // brief id currently showing toast
 
     const router = useRouter();
 
@@ -125,6 +126,18 @@ export default function BriefListClient({ initialBriefs, workspaceId }: Omit<Bri
             else next.add(id);
             return next;
         });
+    };
+
+    const handleDocsClick = (brief: any, e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const docCount = brief._count?.documents ?? 0;
+        if (docCount === 0) {
+            setNoDocToast(brief.id);
+            setTimeout(() => setNoDocToast(null), 3500);
+        } else {
+            router.push(`/briefs/${brief.id}?tab=documents`);
+        }
     };
 
     // Client-side filtering for immediate feedback on search input
@@ -264,14 +277,19 @@ export default function BriefListClient({ initialBriefs, workspaceId }: Omit<Bri
                                                 <Link href={`/briefs/${brief.id}`} className={styles.briefName}>
                                                     {getBriefDisplayTitle(brief)}
                                                 </Link>
-                                                <Link
-                                                    href={`/briefs/${brief.id}?tab=documents`}
+                                                <button
                                                     className={styles.docsIconBtn}
-                                                    title="View Documents"
+                                                    title={brief._count?.documents ? `${brief._count.documents} document(s)` : 'No documents yet'}
+                                                    onClick={(e) => handleDocsClick(brief, e)}
                                                 >
                                                     <FileText size={14} />
-                                                </Link>
+                                                </button>
                                             </div>
+                                            {noDocToast === brief.id && (
+                                                <div className={styles.noDocToast}>
+                                                    No documents yet — upload the first document
+                                                </div>
+                                            )}
                                             <span className={styles.briefRef}>{brief.ref}</span>
                                         </div>
                                     </td>

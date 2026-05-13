@@ -188,6 +188,9 @@
     border-radius: 4px;
     text-decoration: none;
     flex-shrink: 0;
+    background: none;
+    border: none;
+    cursor: pointer;
 }
 
 .briefTitleRow:hover .docsIconBtn,
@@ -199,6 +202,32 @@
 .briefRef {
     font-size: 0.75rem;
     color: var(--text-secondary);
+}
+
+.noDocToast {
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: #92400e;
+    background: #fffbeb;
+    border: 1px solid #fcd34d;
+    border-left: 3px solid #f59e0b;
+    border-radius: 5px;
+    padding: 5px 10px;
+    margin-top: 4px;
+    animation: fadeInToast 0.15s ease;
+    width: max-content;
+    max-width: 260px;
+}
+
+:global(.dark) .noDocToast {
+    background: rgba(245, 158, 11, 0.1);
+    border-color: rgba(245, 158, 11, 0.4);
+    color: #fbbf24;
+}
+
+@keyframes fadeInToast {
+    from { opacity: 0; transform: translateY(-4px); }
+    to   { opacity: 1; transform: translateY(0); }
 }
 
 .clientName,
