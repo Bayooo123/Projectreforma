@@ -1,0 +1,300 @@
+.page {
+    padding: 24px 28px 48px;
+    font-family: var(--font-ibm-plex-sans, 'IBM Plex Sans', sans-serif);
+}
+
+.header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.title {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0 0 4px;
+}
+
+.subtitle {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    margin: 0;
+}
+
+.refreshBtn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.refreshBtn:hover {
+    background: var(--surface-subtle);
+    color: var(--text-primary);
+}
+
+/* KPI strip */
+.kpiRow {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+    margin-bottom: 20px;
+}
+
+.kpiCard {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 20px;
+}
+
+.kpiValue {
+    font-size: 1.8rem;
+    font-weight: 800;
+    color: var(--text-primary);
+    line-height: 1;
+    margin-bottom: 6px;
+}
+
+.kpiLabel {
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+}
+
+/* Toolbar */
+.toolbar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+}
+
+.searchWrap {
+    position: relative;
+    flex: 1;
+    min-width: 200px;
+}
+
+.searchIcon {
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-secondary);
+}
+
+.searchInput {
+    width: 100%;
+    padding: 8px 12px 8px 32px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--surface);
+    color: var(--text-primary);
+    font-size: 0.82rem;
+    outline: none;
+    box-sizing: border-box;
+}
+
+.searchInput:focus {
+    border-color: var(--primary);
+}
+
+.filterGroup {
+    display: flex;
+    gap: 4px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 3px;
+}
+
+.filterBtn {
+    padding: 5px 12px;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.73rem;
+    font-weight: 600;
+    cursor: pointer;
+    background: transparent;
+    color: var(--text-secondary);
+    transition: all 0.15s;
+}
+
+.filterActive {
+    background: var(--primary);
+    color: white;
+}
+
+/* Table */
+.tableWrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: auto;
+}
+
+.table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.8rem;
+    min-width: 720px;
+}
+
+.table th {
+    padding: 11px 14px;
+    text-align: left;
+    font-size: 0.67rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--text-secondary);
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    white-space: nowrap;
+}
+
+.table td {
+    padding: 11px 14px;
+    border-bottom: 1px solid var(--border-subtle, #f1f5f9);
+    vertical-align: middle;
+    color: var(--text-primary);
+}
+
+:global(.dark) .table th {
+    background: var(--surface);
+}
+
+.table tr:last-child td {
+    border-bottom: none;
+}
+
+.rowEven td {
+    background: var(--background, #fafafa);
+}
+
+:global(.dark) .rowEven td {
+    background: rgba(255,255,255,0.02);
+}
+
+.table tbody tr:hover td {
+    background: var(--hover-bg, rgba(0,0,0,0.025));
+}
+
+/* Cell styles */
+.visitorCell {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.ipBadge {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    background: var(--surface-subtle, #f1f5f9);
+    padding: 2px 7px;
+    border-radius: 4px;
+}
+
+:global(.dark) .ipBadge {
+    background: rgba(255,255,255,0.08);
+}
+
+.sessionId {
+    font-size: 0.68rem;
+    color: var(--text-secondary);
+    font-family: 'IBM Plex Mono', monospace;
+}
+
+.locationCell {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    color: var(--text-primary);
+    font-size: 0.8rem;
+}
+
+.locationIcon {
+    color: var(--text-secondary);
+    flex-shrink: 0;
+}
+
+.deviceCell {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--text-primary);
+}
+
+.osBadge {
+    font-size: 0.68rem;
+    color: var(--text-secondary);
+    background: var(--surface-subtle, #f1f5f9);
+    padding: 1px 6px;
+    border-radius: 4px;
+}
+
+:global(.dark) .osBadge {
+    background: rgba(255,255,255,0.07);
+}
+
+.referrerCell {
+    font-size: 0.78rem;
+    color: var(--text-secondary);
+    max-width: 140px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.pageCell {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    font-family: 'IBM Plex Mono', monospace;
+}
+
+.timeCell {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    white-space: nowrap;
+}
+
+.empty {
+    text-align: center;
+    padding: 48px 20px !important;
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+}
+
+.footer {
+    margin-top: 12px;
+    font-size: 0.72rem;
+    color: var(--text-secondary);
+    text-align: right;
+}
+
+@media (max-width: 1100px) {
+    .kpiRow { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 640px) {
+    .page { padding: 16px 16px 48px; }
+    .kpiRow { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+}

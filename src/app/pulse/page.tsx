@@ -26,8 +26,8 @@ export default async function PulsePage() {
         );
     }
 
-    // Run scan first (duplicate-safe), then fetch results in parallel with the rest
-    await runAnomalyScan(workspaceId).catch(e => console.error('[Pulse] anomaly scan failed:', e));
+    // Fire-and-forget — scan runs in background, doesn't block page render
+    runAnomalyScan(workspaceId).catch(e => console.error('[Pulse] anomaly scan failed:', e));
 
     const [firmStats, userStats, firmFeed, userFeed, pendingQuestions, anomalies, myBriefs, todayEntries] = await Promise.all([
         getPulseFirmStats(workspaceId),

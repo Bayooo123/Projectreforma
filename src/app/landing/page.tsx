@@ -24,6 +24,7 @@ import Image from 'next/image';
 import styles from './landing.module.css';
 import { useEffect, useState, useRef } from 'react';
 import { joinWaitlist } from '../actions/waitlist';
+import SiteTracker from '@/components/analytics/SiteTracker';
 
 export default function LandingPage() {
     const [scrolled, setScrolled] = useState(false);
@@ -75,6 +76,7 @@ export default function LandingPage() {
 
     return (
         <div className={styles.landingPage}>
+            <SiteTracker page="/landing" />
             {/* Navigation */}
             <nav className={`${styles.nav} ${scrolled ? styles.navScrolled : ''}`}>
                 <div className={styles.navContainer}>

@@ -373,9 +373,11 @@ model Matter {
   litigationMilestones  LitigationMilestone[]
 
   @@index([workspaceId])
+  @@index([status])
   @@index([lastActivityAt])
   @@index([nextCourtDate])
   @@index([submittingLawyerId])
+  @@index([deletedAt])
 }
 
 model MatterLawyer {
@@ -416,6 +418,8 @@ model CalendarEntry {
   description            String?
   type                   CalendarEventType?      @default(COURT)
   matter                 Matter?                 @relation(fields: [matterId], references: [id], onDelete: Cascade, map: "CourtDate_matterId_fkey")
+  brief                  Brief?                  @relation(fields: [briefId], references: [id], onDelete: SetNull)
+  client                 Client?                 @relation(fields: [clientId], references: [id], onDelete: SetNull)
   scheduledNotifications ScheduledNotification[]
   appearances            User[]                  @relation("CalendarAppearances")
   matterQuestions        MatterQuestion[]
@@ -425,6 +429,7 @@ model CalendarEntry {
   @@index([date], map: "CourtDate_date_idx")
   @@index([matterId], map: "CourtDate_matterId_idx")
   @@index([submittingLawyerId], map: "CourtDate_submittingLawyerId_idx")
+  @@index([type], map: "CourtDate_type_idx")
 }
 
 model ScheduledNotification {
@@ -515,6 +520,7 @@ model Brief {
   workspace           Workspace            @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   activityLogs        BriefActivityLog[]
   lawyerChanges       BriefLawyerHistory[]
+  calendarEntries     CalendarEntry[]
   documents           Document[]
   notifications       Notification[]
   tasks               Task[]
@@ -526,8 +532,12 @@ model Brief {
   @@index([lawyerId])
   @@index([lawyerInChargeId])
   @@index([workspaceId])
+  @@index([clientId])
+  @@index([matterId])
+  @@index([parentBriefId])
   @@index([dueDate])
   @@index([status])
+  @@index([deletedAt])
   @@index([isLitigationDerived])
 }
 
@@ -596,6 +606,7 @@ model Client {
   updatedAt            DateTime              @updatedAt
   deletedAt            DateTime?
   briefs               Brief[]
+  calendarEntries      CalendarEntry[]
   workspace            Workspace             @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   clientCommunications ClientCommunication[]
   inboundEmails        InboundEmail[]
@@ -605,6 +616,8 @@ model Client {
 
   @@index([email])
   @@index([workspaceId])
+  @@index([status])
+  @@index([deletedAt])
 }
 
 model Invoice {
@@ -869,6 +882,26 @@ model Waitlist {
   updatedAt DateTime @updatedAt
 
   @@index([email])
+}
+
+model SiteVisit {
+  id        String   @id @default(cuid())
+  ip        String?
+  city      String?
+  country   String?
+  region    String?
+  userAgent String?
+  device    String?
+  browser   String?
+  os        String?
+  referrer  String?
+  page      String   @default("/")
+  sessionId String?
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([sessionId])
+  @@index([ip])
 }
 
 model ComplianceObligation {

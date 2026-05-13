@@ -10,11 +10,13 @@ import { revalidatePath } from 'next/cache';
 export async function getPlatformStats() {
     await requirePlatformAdmin();
 
-    const [workspacesCount, usersCount, waitlistCount, briefsCount] = await Promise.all([
+    const [workspacesCount, usersCount, waitlistCount, briefsCount, totalVisits, uniqueVisitors] = await Promise.all([
         prisma.workspace.count(),
         prisma.user.count(),
         prisma.waitlist.count(),
         prisma.brief.count(),
+        prisma.siteVisit.count(),
+        prisma.siteVisit.groupBy({ by: ['sessionId'], _count: true }).then(r => r.length),
     ]);
 
     return {
@@ -22,7 +24,31 @@ export async function getPlatformStats() {
         users: usersCount,
         waitlist: waitlistCount,
         briefs: briefsCount,
+        totalVisits,
+        uniqueVisitors,
     };
+}
+
+export async function getSiteVisits(limit = 200) {
+    await requirePlatformAdmin();
+    return prisma.siteVisit.findMany({
+        orderBy: { createdAt: 'desc' },
+        take: limit,
+        select: {
+            id: true,
+            ip: true,
+            city: true,
+            country: true,
+            region: true,
+            browser: true,
+            os: true,
+            device: true,
+            referrer: true,
+            page: true,
+            sessionId: true,
+            createdAt: true,
+        },
+    });
 }
 
 /**

@@ -10,7 +10,7 @@ export async function getCourtEntriesForWorkspace(workspaceId: string) {
             type: 'COURT',
             OR: [
                 { matter: { workspaceId } },
-                { clientId: { in: (await prisma.client.findMany({ where: { workspaceId }, select: { id: true } })).map(c => c.id) } },
+                { client: { workspaceId } },
             ],
         },
         select: {
@@ -36,39 +36,19 @@ export async function getCourtEntriesForWorkspace(workspaceId: string) {
  */
 export async function getCalendarEvents(workspaceId: string, startDate?: Date, endDate?: Date) {
     try {
-        // Restore legacy visibility: some historical entries were created
-        // with briefId/clientId only (no matter relation).
-        const [matters, briefs, clients] = await Promise.all([
-            prisma.matter.findMany({
-                where: { workspaceId },
-                select: { id: true },
-            }),
-            prisma.brief.findMany({
-                where: { workspaceId },
-                select: { id: true },
-            }),
-            prisma.client.findMany({
-                where: { workspaceId },
-                select: { id: true },
-            }),
-        ]);
-
-        const matterIds = matters.map(m => m.id);
-        const briefIds = briefs.map(b => b.id);
-        const clientIds = clients.map(c => c.id);
-
         const events = await prisma.calendarEntry.findMany({
             where: {
                 OR: [
-                    { matter: { workspaceId: workspaceId } },
-                    ...(matterIds.length ? [{ matterId: { in: matterIds } }] : []),
-                    ...(briefIds.length ? [{ briefId: { in: briefIds } }] : []),
-                    ...(clientIds.length ? [{ clientId: { in: clientIds } }] : []),
+                    { matter: { workspaceId } },
+                    { brief: { workspaceId } },
+                    { client: { workspaceId } },
                 ],
-                date: {
-                    gte: startDate || undefined,
-                    lte: endDate || undefined
-                }
+                ...(startDate || endDate ? {
+                    date: {
+                        ...(startDate ? { gte: startDate } : {}),
+                        ...(endDate ? { lte: endDate } : {}),
+                    }
+                } : {}),
             },
             include: {
                 matter: {

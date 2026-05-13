@@ -4,7 +4,9 @@ import {
     Users,
     Clock,
     FileText,
-    ArrowUpRight
+    ArrowUpRight,
+    Eye,
+    MousePointerClick
 } from 'lucide-react';
 import styles from './page.module.css';
 import Link from 'next/link';
@@ -44,6 +46,22 @@ export default async function AdminDashboard() {
             icon: FileText,
             color: '#10b981',
             link: '#'
+        },
+        {
+            title: 'Site Visits',
+            value: stats.totalVisits,
+            desc: 'Total hits on reforma.ng',
+            icon: Eye,
+            color: '#ec4899',
+            link: '/admin/visitors'
+        },
+        {
+            title: 'Unique Visitors',
+            value: stats.uniqueVisitors,
+            desc: 'Distinct sessions tracked',
+            icon: MousePointerClick,
+            color: '#f97316',
+            link: '/admin/visitors'
         },
     ];
 

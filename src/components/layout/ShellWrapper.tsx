@@ -1,8 +1,9 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import AppLayout from "./AppLayout";
 import BrandingWizardModal from "@/components/management/BrandingWizardModal";
-import GeofenceCheck from "@/components/attendance/GeofenceCheck";
+const GeofenceCheck = dynamic(() => import("@/components/attendance/GeofenceCheck"), { ssr: false });
 import { useEffect, useState, Suspense } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 

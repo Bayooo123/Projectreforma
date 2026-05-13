@@ -60,7 +60,7 @@ export default function BriefListClient({ initialBriefs, workspaceId }: Omit<Bri
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    // AUTOMATION: Background Polling (30 seconds)
+    // AUTOMATION: Background Polling (90 seconds)
     useEffect(() => {
         const interval = setInterval(async () => {
             const { getBriefs } = await import('@/app/actions/briefs');
@@ -69,7 +69,7 @@ export default function BriefListClient({ initialBriefs, workspaceId }: Omit<Bri
                 setBriefs(newBriefs);
                 writeBriefsCache(workspaceId, newBriefs);
             }
-        }, 30000);
+        }, 90000);
         return () => clearInterval(interval);
     }, [workspaceId]);
 

@@ -1,13 +1,14 @@
 "use client";
 
 import { ReactNode } from 'react';
+import dynamic from 'next/dynamic';
 import Sidebar from '@/components/layout/Sidebar';
 import Header from '@/components/layout/Header';
 import BottomNavigation from '@/components/layout/BottomNavigation';
-// import BicaWidget from '@/components/bica/BicaWidget'; // deactivated — replaced by Eureka
-import EurekaWidget from '@/components/eureka/EurekaWidget';
-import ProactiveAgent from '@/components/proactive/ProactiveAgent';
 import styles from './AppLayout.module.css';
+
+const EurekaWidget = dynamic(() => import('@/components/eureka/EurekaWidget'), { ssr: false });
+const ProactiveAgent = dynamic(() => import('@/components/proactive/ProactiveAgent'), { ssr: false });
 
 interface AppLayoutProps {
     children: ReactNode;

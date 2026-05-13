@@ -27,7 +27,7 @@ export function FirmPulse() {
         };
 
         fetchActivities();
-        const interval = setInterval(fetchActivities, 30000); // Poll every 30s
+        const interval = setInterval(fetchActivities, 90000); // Poll every 90s
         return () => clearInterval(interval);
     }, []);
 

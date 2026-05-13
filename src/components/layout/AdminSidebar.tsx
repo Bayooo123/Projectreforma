@@ -9,7 +9,8 @@ import {
     Clock,
     LogOut,
     AppWindow,
-    Shield
+    Shield,
+    Eye
 } from 'lucide-react';
 import styles from './AdminSidebar.module.css';
 import { signOut } from 'next-auth/react';
@@ -30,6 +31,7 @@ const AdminSidebar = ({ user }: AdminSidebarProps) => {
         { name: 'Waitlist', href: '/admin/waitlist', icon: Clock },
         { name: 'Workspaces', href: '/admin/workspaces', icon: Building2 },
         { name: 'Users', href: '/admin/users', icon: Users },
+        { name: 'Visitors', href: '/admin/visitors', icon: Eye },
         { name: 'Team', href: '/admin/team', icon: Shield },
     ];
 

@@ -82,6 +82,7 @@ export async function getBriefs(workspaceId: string) {
             orderBy: {
                 updatedAt: 'desc',
             },
+            take: 500,
         });
 
         return briefs;
@@ -101,7 +102,16 @@ export async function getBriefById(id: string) {
                 deletedAt: null
             },
             include: {
-                client: true,
+                client: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true,
+                        phone: true,
+                        company: true,
+                        status: true,
+                    },
+                },
                 lawyer: {
                     select: {
                         id: true,
@@ -116,14 +126,27 @@ export async function getBriefById(id: string) {
                         email: true,
                     },
                 },
-                matter: true,
-                documents: true,
+                matter: {
+                    select: {
+                        id: true,
+                        name: true,
+                        caseNumber: true,
+                        status: true,
+                        court: true,
+                        judge: true,
+                    },
+                },
+                documents: {
+                    orderBy: { uploadedAt: 'desc' },
+                    take: 200,
+                },
                 folders: {
                     include: {
                         _count: {
                             select: { documents: true }
                         }
-                    }
+                    },
+                    take: 100,
                 },
                 workspace: {
                     select: {
