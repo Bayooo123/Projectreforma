@@ -22,11 +22,15 @@ interface Props {
 }
 
 function isImage(type: string, url: string) {
-    return /image|png|jpg|jpeg|gif|webp|svg/i.test(type) || /\.(png|jpg|jpeg|gif|webp|svg)$/i.test(url);
+    return /image|png|jpg|jpeg|gif|webp|svg/i.test(type) || /\.(png|jpg|jpeg|gif|webp|svg)(\?|$)/i.test(url);
 }
 
 function isPdf(type: string, url: string) {
-    return /pdf/i.test(type) || /\.pdf$/i.test(url);
+    return /pdf/i.test(type) || /\.pdf(\?|$)/i.test(url);
+}
+
+function proxyUrl(url: string) {
+    return `/api/doc-proxy?url=${encodeURIComponent(url)}`;
 }
 
 export default function BriefDocsQuickView({ briefId, briefName, onClose, onUpload }: Props) {
@@ -114,13 +118,15 @@ export default function BriefDocsQuickView({ briefId, briefName, onClose, onUplo
                             </div>
                         ) : doc && isPdf(doc.type, doc.url) ? (
                             <iframe
-                                src={doc.url}
+                                key={doc.id}
+                                src={proxyUrl(doc.url)}
                                 className={styles.iframe}
                                 title={doc.name}
                             />
                         ) : doc && isImage(doc.type, doc.url) ? (
                             <img
-                                src={doc.url}
+                                key={doc.id}
+                                src={proxyUrl(doc.url)}
                                 alt={doc.name}
                                 className={styles.imageViewer}
                             />
@@ -128,9 +134,13 @@ export default function BriefDocsQuickView({ briefId, briefName, onClose, onUplo
                             <div className={styles.center}>
                                 <FileText size={44} className={styles.emptyIcon} />
                                 <p className={styles.emptyTitle}>{doc.name}</p>
-                                <p className={styles.emptyText}>This file type cannot be previewed in the browser.</p>
-                                <a href={doc.url} download={doc.name} className={styles.uploadBtn}>
-                                    <Download size={14} /> Download to view
+                                <p className={styles.emptyText}>
+                                    {/docx?|xlsx?|pptx?/i.test(doc.name)
+                                        ? 'Word/Office files cannot preview in the browser.'
+                                        : 'This file type cannot be previewed.'}
+                                </p>
+                                <a href={doc.url} target="_blank" rel="noopener noreferrer" className={styles.uploadBtn}>
+                                    <ExternalLink size={14} /> Open file
                                 </a>
                             </div>
                         ) : null}
