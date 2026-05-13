@@ -12,6 +12,7 @@ import { useRouter } from 'next/navigation';
 import BriefUploadModal from './BriefUploadModal';
 import { getBriefDisplayTitle } from '@/lib/brief-display';
 import { toTitleCase } from '@/lib/sentence-case';
+import BriefDocsQuickView from './BriefDocsQuickView';
 
 interface BriefListClientProps {
     initialBriefs: any[];
@@ -77,7 +78,7 @@ export default function BriefListClient({ initialBriefs, workspaceId }: Omit<Bri
     const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
     const [editingBrief, setEditingBrief] = useState<any | null>(null);
     const [activityBrief, setActivityBrief] = useState<any | null>(null);
-    const [noDocToast, setNoDocToast] = useState<string | null>(null); // brief id currently showing toast
+    const [quickViewBrief, setQuickViewBrief] = useState<{ id: string; name: string } | null>(null);
 
     const router = useRouter();
 
@@ -131,13 +132,7 @@ export default function BriefListClient({ initialBriefs, workspaceId }: Omit<Bri
     const handleDocsClick = (brief: any, e: React.MouseEvent) => {
         e.preventDefault();
         e.stopPropagation();
-        const docCount = brief._count?.documents ?? 0;
-        if (docCount === 0) {
-            setNoDocToast(brief.id);
-            setTimeout(() => setNoDocToast(null), 3500);
-        } else {
-            router.push(`/briefs/${brief.id}?tab=documents`);
-        }
+        setQuickViewBrief({ id: brief.id, name: getBriefDisplayTitle(brief) });
     };
 
     // Client-side filtering for immediate feedback on search input
@@ -285,11 +280,6 @@ export default function BriefListClient({ initialBriefs, workspaceId }: Omit<Bri
                                                     <FileText size={14} />
                                                 </button>
                                             </div>
-                                            {noDocToast === brief.id && (
-                                                <div className={styles.noDocToast}>
-                                                    No documents yet — upload the first document
-                                                </div>
-                                            )}
                                             <span className={styles.briefRef}>{brief.ref}</span>
                                         </div>
                                     </td>
@@ -441,6 +431,18 @@ export default function BriefListClient({ initialBriefs, workspaceId }: Omit<Bri
                     getBriefs(workspaceId).then(setBriefs);
                 }}
             />
+
+            {quickViewBrief && (
+                <BriefDocsQuickView
+                    briefId={quickViewBrief.id}
+                    briefName={quickViewBrief.name}
+                    onClose={() => setQuickViewBrief(null)}
+                    onUpload={() => {
+                        setQuickViewBrief(null);
+                        setIsUploadModalOpen(true);
+                    }}
+                />
+            )}
         </div>
     );
 }
