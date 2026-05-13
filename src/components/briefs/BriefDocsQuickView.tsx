@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { X, ChevronLeft, ChevronRight, Download, ExternalLink, Loader2, FileText, Upload } from 'lucide-react';
 import { getDocuments } from '@/app/actions/documents';
 import styles from './BriefDocsQuickView.module.css';
@@ -29,14 +29,17 @@ function isPdf(type: string, url: string) {
     return /pdf/i.test(type) || /\.pdf(\?|$)/i.test(url);
 }
 
-function proxyUrl(url: string) {
-    return `/api/doc-proxy?url=${encodeURIComponent(url)}`;
+function isOffice(name: string) {
+    return /\.(docx?|xlsx?|pptx?)$/i.test(name);
 }
 
 export default function BriefDocsQuickView({ briefId, briefName, onClose, onUpload }: Props) {
     const [docs, setDocs] = useState<Doc[]>([]);
     const [index, setIndex] = useState(0);
     const [loading, setLoading] = useState(true);
+    // blobUrl: null = not fetched yet, 'loading' = fetching, string = ready, 'error' = failed
+    const [blobUrl, setBlobUrl] = useState<string | 'loading' | 'error' | null>(null);
+    const blobUrlRef = useRef<string | null>(null);
 
     useEffect(() => {
         getDocuments(briefId).then(data => {
@@ -44,6 +47,41 @@ export default function BriefDocsQuickView({ briefId, briefName, onClose, onUplo
             setLoading(false);
         });
     }, [briefId]);
+
+    const doc = docs[index] ?? null;
+
+    // Fetch current doc as blob whenever doc changes
+    useEffect(() => {
+        if (!doc) return;
+        if (isOffice(doc.name)) { setBlobUrl(null); return; }
+
+        setBlobUrl('loading');
+
+        // Revoke previous blob
+        if (blobUrlRef.current) {
+            URL.revokeObjectURL(blobUrlRef.current);
+            blobUrlRef.current = null;
+        }
+
+        fetch(doc.url)
+            .then(r => {
+                if (!r.ok) throw new Error('fetch failed');
+                return r.blob();
+            })
+            .then(blob => {
+                const url = URL.createObjectURL(blob);
+                blobUrlRef.current = url;
+                setBlobUrl(url);
+            })
+            .catch(() => setBlobUrl('error'));
+
+        return () => {
+            if (blobUrlRef.current) {
+                URL.revokeObjectURL(blobUrlRef.current);
+                blobUrlRef.current = null;
+            }
+        };
+    }, [doc?.id]);
 
     useEffect(() => {
         const handler = (e: KeyboardEvent) => {
@@ -54,8 +92,6 @@ export default function BriefDocsQuickView({ briefId, briefName, onClose, onUplo
         window.addEventListener('keydown', handler);
         return () => window.removeEventListener('keydown', handler);
     }, [docs.length, onClose]);
-
-    const doc = docs[index] ?? null;
 
     return (
         <div className={styles.overlay} onClick={onClose}>
@@ -116,17 +152,39 @@ export default function BriefDocsQuickView({ briefId, briefName, onClose, onUplo
                                     <Upload size={14} /> Upload Document
                                 </button>
                             </div>
+                        ) : doc && isOffice(doc.name) ? (
+                            <div className={styles.center}>
+                                <FileText size={44} className={styles.emptyIcon} />
+                                <p className={styles.emptyTitle}>{doc.name}</p>
+                                <p className={styles.emptyText}>Word/Office files cannot preview in the browser.</p>
+                                <a href={doc.url} target="_blank" rel="noopener noreferrer" className={styles.uploadBtn}>
+                                    <ExternalLink size={14} /> Open file
+                                </a>
+                            </div>
+                        ) : blobUrl === 'loading' || blobUrl === null ? (
+                            <div className={styles.center}>
+                                <Loader2 size={28} className={styles.spinner} />
+                                <span>Opening document…</span>
+                            </div>
+                        ) : blobUrl === 'error' ? (
+                            <div className={styles.center}>
+                                <FileText size={44} className={styles.emptyIcon} />
+                                <p className={styles.emptyTitle}>Could not load document</p>
+                                <a href={doc!.url} target="_blank" rel="noopener noreferrer" className={styles.uploadBtn}>
+                                    <ExternalLink size={14} /> Open directly
+                                </a>
+                            </div>
                         ) : doc && isPdf(doc.type, doc.url) ? (
                             <iframe
                                 key={doc.id}
-                                src={proxyUrl(doc.url)}
+                                src={blobUrl}
                                 className={styles.iframe}
                                 title={doc.name}
                             />
                         ) : doc && isImage(doc.type, doc.url) ? (
                             <img
                                 key={doc.id}
-                                src={proxyUrl(doc.url)}
+                                src={blobUrl}
                                 alt={doc.name}
                                 className={styles.imageViewer}
                             />
@@ -134,11 +192,7 @@ export default function BriefDocsQuickView({ briefId, briefName, onClose, onUplo
                             <div className={styles.center}>
                                 <FileText size={44} className={styles.emptyIcon} />
                                 <p className={styles.emptyTitle}>{doc.name}</p>
-                                <p className={styles.emptyText}>
-                                    {/docx?|xlsx?|pptx?/i.test(doc.name)
-                                        ? 'Word/Office files cannot preview in the browser.'
-                                        : 'This file type cannot be previewed.'}
-                                </p>
+                                <p className={styles.emptyText}>This file type cannot be previewed.</p>
                                 <a href={doc.url} target="_blank" rel="noopener noreferrer" className={styles.uploadBtn}>
                                     <ExternalLink size={14} /> Open file
                                 </a>
