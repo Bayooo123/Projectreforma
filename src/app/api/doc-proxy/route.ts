@@ -38,9 +38,6 @@ export async function GET(req: NextRequest) {
             headers: {
                 'Content-Type': contentType,
                 'Content-Disposition': 'inline',
-                // Remove blocking headers — allow embedding in our own iframe
-                'X-Frame-Options': 'SAMEORIGIN',
-                'Content-Security-Policy': "default-src 'self'",
                 'Cache-Control': 'private, max-age=300',
             },
         });
