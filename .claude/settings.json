@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node -e ' *)",
+      "Bash(start \"\" \"c:\\\\Users\\\\DELL\\\\.gemini\\\\antigravity\\\\scratch\\\\reforma-os\\\\email-preview\\\\weekly-digest.html\")",
+      "Bash(findstr \"CRON_SECRET\")",
+      "Bash(node --loader ts-node/esm -e ' *)",
+      "Bash(grep -E \"\\\\.\\(ts|tsx\\)$\")",
+      "Bash(grep -rn \"#[0-9A-Fa-f]\\\\{3,6\\\\}\" src --include=\"*.module.css\")",
+      "Bash(node -e 'const {PrismaClient}=require\\('\\\\''@prisma/client'\\\\''\\);const p=new PrismaClient\\(\\);p.document.findFirst\\({select:{url:true}}\\).then\\(d=>console.log\\(d?.url\\)\\).finally\\(\\(\\)=>p.$disconnect\\(\\)\\)')",
+      "Bash(del \"src\\\\lib\\\\services\\\\summarizer.ts\")",
+      "Bash(rm \"c:/Users/DELL/.gemini/antigravity/scratch/reforma-os/src/lib/services/summarizer.ts\")"
+    ],
+    "additionalDirectories": [
+      "c:\\Users\\DELL\\.gemini\\antigravity\\scratch\\reforma-os\\src\\lib\\services"
+    ]
+  }
+}

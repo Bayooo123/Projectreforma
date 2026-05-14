@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Clock, Tag, User, Building, Calendar, Upload, Loader, FileText, Trash2, Edit, Sparkles, Folder, FolderPlus, FolderInput, CornerUpLeft } from 'lucide-react';
+import { ArrowLeft, Clock, Tag, User, Building, Calendar, Upload, Loader, FileText, Trash2, Edit, Folder, FolderPlus, FolderInput, CornerUpLeft } from 'lucide-react';
 import { getBriefDisplayTitle, getBriefDisplayNumber } from '@/lib/brief-display';
 import DocumentUpload from '@/components/briefs/DocumentUpload';
 import DocumentPreview from '@/components/briefs/DocumentPreview';
@@ -22,8 +22,6 @@ interface Brief {
     dueDate: Date | null;
     createdAt: Date;
     updatedAt: Date;
-    summary: string | null;
-    lastSummarizedAt: Date | null;
     isLitigationDerived: boolean;
     customTitle: string | null;
     customBriefNumber: string | null;
@@ -83,7 +81,7 @@ interface BriefDetailClientProps {
 
 import { getDocuments } from '@/app/actions/documents';
 import { getFolders, deleteFolder } from '@/app/actions/folders';
-import { summarizeBrief, logBriefViewed } from '@/app/actions/briefs';
+import { logBriefViewed } from '@/app/actions/briefs';
 import BriefTimeline from '@/components/briefs/BriefTimeline';
 
 export default function BriefDetailClient({ brief }: BriefDetailClientProps) {
@@ -97,8 +95,6 @@ export default function BriefDetailClient({ brief }: BriefDetailClientProps) {
     const [isCreateFolderModalOpen, setIsCreateFolderModalOpen] = useState(false);
     const [movingDoc, setMovingDoc] = useState<typeof documents[0] | null>(null);
     const [isRefreshing, setIsRefreshing] = useState(false);
-    const [summary, setSummary] = useState<string | null>(brief.summary);
-    const [isSummarizing, setIsSummarizing] = useState(false);
     const [activeTab, setActiveTab] = useState<'timeline' | 'documents'>(
         searchParams.get('tab') === 'documents' ? 'documents' : 'timeline'
     );
@@ -129,22 +125,6 @@ export default function BriefDetailClient({ brief }: BriefDetailClientProps) {
             setDocuments(prev => [...newDocs, ...prev]);
         }
         refreshData(true);
-    };
-
-    const handleSummarize = async () => {
-        setIsSummarizing(true);
-        try {
-            const result = await summarizeBrief(brief.id);
-            if (result.success && result.summary) {
-                setSummary(result.summary);
-            } else {
-                console.error('Summarization failed:', result.error);
-            }
-        } catch (err) {
-            console.error('Error in summarization:', err);
-        } finally {
-            setIsSummarizing(false);
-        }
     };
 
     const handleDeleteFolder = async (folderId: string, folderName: string) => {
@@ -238,13 +218,6 @@ export default function BriefDetailClient({ brief }: BriefDetailClientProps) {
                         <span>Back to Briefs</span>
                     </Link>
                     <div className={styles.actions}>
-                        <button 
-                            className={styles.summarizeBtn} 
-                            onClick={handleSummarize}
-                            disabled={isSummarizing}
-                        >
-                            {isSummarizing ? <Loader size={16} className="animate-spin" /> : <Sparkles size={16} />}
-                        </button>
                         <button className={styles.editBtn} onClick={() => setIsEditModalOpen(true)}>
                             <Edit size={16} />
                             Edit Brief
@@ -296,32 +269,12 @@ export default function BriefDetailClient({ brief }: BriefDetailClientProps) {
                     )}
                 </div>
 
-                {(brief.description || summary) && (
+                {brief.description && (
                     <div className={styles.descriptionRow}>
-                        {brief.description && (
-                            <div className={styles.descriptionBox}>
-                                <h3 className={styles.descriptionTitle}>Description</h3>
-                                <p className={styles.descriptionText}>{brief.description}</p>
-                            </div>
-                        )}
-                        {summary && (
-                            <div className={styles.summaryBox}>
-                                <div className={styles.summaryHeader}>
-                                    <Sparkles size={14} className={styles.summaryIcon} />
-                                    <h3 className={styles.summaryTitle}>AI Intelligence Summary</h3>
-                                </div>
-                                <div className={styles.summaryText}>
-                                    {summary.split('\n').map((line, i) => (
-                                        <p key={i} className="mb-2">{line}</p>
-                                    ))}
-                                </div>
-                                {brief.lastSummarizedAt && (
-                                    <span className={styles.summaryTime}>
-                                        Last updated: {formatDate(brief.lastSummarizedAt)}
-                                    </span>
-                                )}
-                            </div>
-                        )}
+                        <div className={styles.descriptionBox}>
+                            <h3 className={styles.descriptionTitle}>Description</h3>
+                            <p className={styles.descriptionText}>{brief.description}</p>
+                        </div>
                     </div>
                 )}
             </div>

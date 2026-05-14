@@ -507,8 +507,6 @@ model Brief {
   isLitigationDerived Boolean              @default(false)
   lawyerInChargeId    String?
   deletedAt           DateTime?
-  lastSummarizedAt    DateTime?
-  summary             String?
   briefId             String?
   parentBriefId       String?
   parentBrief         Brief?               @relation("BriefHierarchy", fields: [parentBriefId], references: [id])
@@ -528,6 +526,7 @@ model Brief {
   accessGrants        BriefAccessGrant[]
   workEntries         WorkEntry[]
   briefLawyers        BriefLawyer[]
+  timelineEvents      DocumentTimelineEvent[]
 
   @@index([lawyerId])
   @@index([lawyerInChargeId])
@@ -552,9 +551,10 @@ model Document {
   uploadedAt DateTime        @default(now())
   ocrStatus  String          @default("pending")
   ocrText    String?
-  brief      Brief           @relation(fields: [briefId], references: [id], onDelete: Cascade)
-  folder     Folder?         @relation(fields: [folderId], references: [id], onDelete: Cascade)
-  chunks     DocumentChunk[]
+  brief          Brief                  @relation(fields: [briefId], references: [id], onDelete: Cascade)
+  folder         Folder?                @relation(fields: [folderId], references: [id], onDelete: Cascade)
+  chunks         DocumentChunk[]
+  timelineEvents DocumentTimelineEvent[]
 
   @@index([briefId])
   @@index([folderId])
@@ -588,6 +588,24 @@ model DocumentChunk {
   document   Document               @relation(fields: [documentId], references: [id], onDelete: Cascade)
 
   @@index([documentId])
+}
+
+model DocumentTimelineEvent {
+  id           String    @id @default(cuid())
+  briefId      String
+  documentId   String
+  documentName String
+  eventDate    DateTime?
+  eventDateRaw String
+  description  String
+  createdAt    DateTime  @default(now())
+
+  brief    Brief    @relation(fields: [briefId], references: [id], onDelete: Cascade)
+  document Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@index([briefId])
+  @@index([documentId])
+  @@index([eventDate])
 }
 
 model Client {

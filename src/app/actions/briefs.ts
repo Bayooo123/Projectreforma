@@ -544,19 +544,6 @@ export async function assignLawyer(briefId: string, lawyerId: string) {
     }
 }
 
-export async function summarizeBrief(briefId: string) {
-    await requireAuth();
-    try {
-        const { BriefSummarizer } = await import('@/lib/services/summarizer');
-        const summary = await BriefSummarizer.summarize(briefId);
-        
-        revalidatePath(`/briefs/${briefId}`);
-        return { success: true, summary };
-    } catch (error: any) {
-        console.error('[summarizeBrief] Action Error:', error);
-        return { success: false, error: error.message || 'Summarization failed' };
-    }
-}
 export async function reassignBriefHierarchy(briefId: string, parentBriefId: string | null) {
     const session = await requireAuth();
     
@@ -657,7 +644,7 @@ export type TimelineEventType =
     | 'brief_created' | 'brief_due'
     | 'court_hearing' | 'court_adjourned' | 'meeting'
     | 'task_created' | 'task_completed' | 'task_due'
-    | 'document_uploaded' | 'activity';
+    | 'document_uploaded' | 'activity' | 'doc_event';
 
 export interface TimelineEvent {
     id: string;
@@ -666,6 +653,7 @@ export interface TimelineEvent {
     title: string;
     description?: string;
     actor?: string;
+    source?: string;
     isFuture: boolean;
     isToday: boolean;
 }
@@ -681,7 +669,7 @@ export async function getBriefTimeline(briefId: string): Promise<TimelineEvent[]
 
     const matterId = brief.matterId;
 
-    const [calendarEntries, tasks, documents, activityLogs] = await Promise.all([
+    const [calendarEntries, tasks, documents, activityLogs, docTimelineEvents] = await Promise.all([
         prisma.calendarEntry.findMany({
             where: { OR: [{ briefId }, ...(matterId ? [{ matterId }] : [])] },
             select: {
@@ -709,6 +697,11 @@ export async function getBriefTimeline(briefId: string): Promise<TimelineEvent[]
             where: { briefId, activityType: { not: 'viewed' } },
             select: { id: true, timestamp: true, activityType: true, description: true, performedBy: true },
             orderBy: { timestamp: 'asc' },
+        }),
+        prisma.documentTimelineEvent.findMany({
+            where: { briefId },
+            select: { id: true, eventDate: true, eventDateRaw: true, description: true, documentName: true },
+            orderBy: { eventDate: 'asc' },
         }),
     ]);
 
@@ -764,6 +757,19 @@ export async function getBriefTimeline(briefId: string): Promise<TimelineEvent[]
 
     for (const a of activityLogs) {
         events.push({ id: `act_${a.id}`, date: a.timestamp, type: 'activity', title: a.description, actor: a.performedBy ?? undefined, ...classify(a.timestamp) });
+    }
+
+    for (const e of docTimelineEvents) {
+        const date = e.eventDate ?? null;
+        if (!date) continue;
+        events.push({
+            id: `dte_${e.id}`,
+            date,
+            type: 'doc_event',
+            title: e.description,
+            source: e.documentName,
+            ...classify(date),
+        });
     }
 
     return events.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());

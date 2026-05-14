@@ -57,6 +57,13 @@ export async function POST(req: NextRequest) {
                     ocrStatus: 'completed'
                 }
             });
+
+            // Fire-and-forget: extract timeline events from document content
+            import('@/lib/services/doc-timeline-extractor').then(({ extractDocumentTimeline }) =>
+                extractDocumentTimeline(documentId, file.name, briefId, extractedText)
+                    .catch(e => console.error('[Ingest] Timeline extraction failed:', e))
+            ).catch(() => {});
+
         } catch (extractError) {
             console.warn('[Ingest] Text extraction failed (non-fatal):', extractError);
             // Mark as failed but don't rollback the upload

@@ -215,3 +215,13 @@
     margin-top: 0.15rem;
     font-weight: 500;
 }
+
+.source {
+    font-size: 0.65rem;
+    color: #7c3aed;
+    margin-top: 0.15rem;
+    font-style: italic;
+    display: flex;
+    align-items: center;
+    gap: 3px;
+}

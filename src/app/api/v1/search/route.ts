@@ -44,8 +44,7 @@ export async function GET(req: NextRequest) {
                     OR: [
                         { name: { contains: query, mode: 'insensitive' } },
                         { briefNumber: { contains: query, mode: 'insensitive' } },
-                        { description: { contains: query, mode: 'insensitive' } },
-                        { summary: { contains: query, mode: 'insensitive' } }
+                        { description: { contains: query, mode: 'insensitive' } }
                     ]
                 },
                 take: 10

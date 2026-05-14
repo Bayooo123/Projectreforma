@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Gavel, CalendarX, Users, CheckCircle2, Clock, FileText, Activity, BookOpen, Flag, Loader } from 'lucide-react';
+import { Gavel, CalendarX, Users, CheckCircle2, Clock, FileText, Activity, BookOpen, Flag, Loader, ScrollText } from 'lucide-react';
 import { getBriefTimeline, TimelineEvent, TimelineEventType } from '@/app/actions/briefs';
 import styles from './BriefTimeline.module.css';
 
@@ -16,6 +16,7 @@ const CONFIG: Record<TimelineEventType, { label: string; color: string; bg: stri
     task_due:         { label: 'Deadline',  color: '#ea580c', bg: '#fff7ed', Icon: Clock },
     document_uploaded:{ label: 'Document',  color: '#475569', bg: '#f8fafc', Icon: FileText },
     activity:         { label: 'Activity',  color: '#6b7280', bg: '#f9fafb', Icon: Activity },
+    doc_event:        { label: 'Alleged',   color: '#7c3aed', bg: '#f5f3ff', Icon: ScrollText },
 };
 
 type Group = { monthKey: string; label: string; events: Array<TimelineEvent | 'TODAY'> };
@@ -135,6 +136,12 @@ export default function BriefTimeline({ briefId }: BriefTimelineProps) {
 
                                     <p className={styles.title}>{item.title}</p>
                                     {item.description && <p className={styles.desc}>{item.description}</p>}
+                                    {item.source && (
+                                        <p className={styles.source}>
+                                            <ScrollText size={10} style={{ display: 'inline', marginRight: 3 }} />
+                                            {item.source}
+                                        </p>
+                                    )}
                                     {item.actor && <p className={styles.actor}>{item.actor}</p>}
                                 </div>
                             </div>
