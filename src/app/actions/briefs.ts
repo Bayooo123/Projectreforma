@@ -1,7 +1,7 @@
 'use server';
 
 import { prisma } from '@/lib/prisma';
-import { revalidatePath, unstable_noStore as noStore } from 'next/cache';
+import { revalidatePath } from 'next/cache';
 import { requireAuth } from '@/lib/auth-utils';
 import { applySentenceCaseToFields, applyTitleCaseToFields } from '@/lib/sentence-case';
 import { logActivity } from '@/lib/log-activity';
@@ -94,7 +94,6 @@ export async function getBriefs(workspaceId: string) {
 
 export async function getBriefById(id: string) {
     await requireAuth();
-    noStore(); // Force dynamic fetching
     try {
         const brief = await prisma.brief.findUnique({
             where: {
@@ -136,7 +135,19 @@ export async function getBriefById(id: string) {
                         judge: true,
                     },
                 },
+                // Explicitly exclude ocrText — it can be megabytes per document
+                // and is never displayed in the brief header view
                 documents: {
+                    select: {
+                        id: true,
+                        name: true,
+                        url: true,
+                        type: true,
+                        size: true,
+                        uploadedAt: true,
+                        ocrStatus: true,
+                        folderId: true,
+                    },
                     orderBy: { uploadedAt: 'desc' },
                     take: 200,
                 },
