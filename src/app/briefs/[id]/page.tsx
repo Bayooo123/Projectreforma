@@ -1,6 +1,6 @@
 import { auth } from '@/auth';
 import { redirect, notFound } from 'next/navigation';
-import { getBriefById } from '@/app/actions/briefs';
+import { getBriefById, getBriefTimeline } from '@/app/actions/briefs';
 import BriefDetailClient from './BriefDetailClient';
 
 interface BriefDetailPageProps {
@@ -13,8 +13,13 @@ export default async function BriefDetailPage(props: BriefDetailPageProps) {
 
     if (!session?.user) redirect('/login');
 
-    const brief = await getBriefById(id);
+    // Fetch brief metadata and timeline in parallel — no waterfalls
+    const [brief, initialTimeline] = await Promise.all([
+        getBriefById(id),
+        getBriefTimeline(id),
+    ]);
+
     if (!brief) notFound();
 
-    return <BriefDetailClient brief={brief} />;
+    return <BriefDetailClient brief={brief} initialTimeline={initialTimeline} />;
 }

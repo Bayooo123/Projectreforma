@@ -651,28 +651,25 @@ export async function logBriefViewed(briefId: string) {
 
 // ── Timeline extraction backfill ─────────────────────────────────────────────
 
-export async function backfillBriefTimeline(briefId: string): Promise<{ processed: number; found: number; skipped: number }> {
+export async function backfillBriefTimeline(briefId: string): Promise<{ processed: number; found: number }> {
     await requireAuth();
 
-    const allDocs = await prisma.document.findMany({
+    const docs = await prisma.document.findMany({
         where: { briefId },
-        select: { id: true, name: true, ocrText: true, ocrStatus: true },
+        select: { id: true, name: true, url: true, type: true, ocrText: true },
     });
 
-    const documents = allDocs.filter(d => d.ocrStatus === 'completed' && d.ocrText && d.ocrText.trim().length >= 50);
-    const skipped = allDocs.length - documents.length;
-
-    if (documents.length === 0) return { processed: 0, found: 0, skipped };
+    if (docs.length === 0) return { processed: 0, found: 0 };
 
     const { extractDocumentTimeline } = await import('@/lib/services/doc-timeline-extractor');
 
     let totalFound = 0;
-    for (const doc of documents) {
-        const count = await extractDocumentTimeline(doc.id, doc.name, briefId, doc.ocrText!);
+    for (const doc of docs) {
+        const count = await extractDocumentTimeline(doc.id, doc.name, briefId, doc.ocrText ?? null, doc.url, doc.type);
         totalFound += count;
     }
 
-    return { processed: documents.length, found: totalFound, skipped };
+    return { processed: docs.length, found: totalFound };
 }
 
 // ── Timeline ─────────────────────────────────────────────────────────────────

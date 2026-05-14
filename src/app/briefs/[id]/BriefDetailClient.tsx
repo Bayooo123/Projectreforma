@@ -77,14 +77,15 @@ interface Brief {
 
 interface BriefDetailClientProps {
     brief: Brief;
+    initialTimeline: TimelineEvent[];
 }
 
 import { getDocuments } from '@/app/actions/documents';
 import { getFolders, deleteFolder } from '@/app/actions/folders';
-import { logBriefViewed } from '@/app/actions/briefs';
+import { logBriefViewed, TimelineEvent } from '@/app/actions/briefs';
 import BriefTimeline from '@/components/briefs/BriefTimeline';
 
-export default function BriefDetailClient({ brief }: BriefDetailClientProps) {
+export default function BriefDetailClient({ brief, initialTimeline }: BriefDetailClientProps) {
     const router = useRouter();
     const searchParams = useSearchParams();
     const [documents, setDocuments] = useState(brief.documents);
@@ -305,7 +306,7 @@ export default function BriefDetailClient({ brief }: BriefDetailClientProps) {
                     ))}
                 </div>
 
-                {activeTab === 'timeline' && <BriefTimeline briefId={brief.id} />}
+                {activeTab === 'timeline' && <BriefTimeline briefId={brief.id} initialEvents={initialTimeline} />}
 
                 {activeTab === 'documents' && <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>

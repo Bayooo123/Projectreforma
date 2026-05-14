@@ -58,19 +58,24 @@ export async function POST(req: NextRequest) {
                 }
             });
 
-            // Fire-and-forget: extract timeline events from document content
+            // Fire-and-forget: extract timeline events (vision + text)
             import('@/lib/services/doc-timeline-extractor').then(({ extractDocumentTimeline }) =>
-                extractDocumentTimeline(documentId, file.name, briefId, extractedText)
+                extractDocumentTimeline(documentId, file.name, briefId, extractedText, blob.url, file.type.split('/')[1] || '')
                     .catch(e => console.error('[Ingest] Timeline extraction failed:', e))
             ).catch(() => {});
 
         } catch (extractError) {
             console.warn('[Ingest] Text extraction failed (non-fatal):', extractError);
-            // Mark as failed but don't rollback the upload
             await prisma.document.update({
                 where: { id: documentId },
                 data: { ocrStatus: 'failed' }
             });
+
+            // Still attempt timeline extraction via vision even when text extraction failed
+            import('@/lib/services/doc-timeline-extractor').then(({ extractDocumentTimeline }) =>
+                extractDocumentTimeline(documentId, file.name, briefId, null, blob.url, file.type.split('/')[1] || '')
+                    .catch(e => console.error('[Ingest] Vision timeline extraction failed:', e))
+            ).catch(() => {});
         }
 
         // 4. Vectorization is skipped for now (requires pgvector + API key)
