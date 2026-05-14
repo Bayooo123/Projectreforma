@@ -638,6 +638,31 @@ export async function logBriefViewed(briefId: string) {
     } catch {}
 }
 
+// ── Timeline extraction backfill ─────────────────────────────────────────────
+
+export async function backfillBriefTimeline(briefId: string): Promise<{ processed: number; found: number }> {
+    await requireAuth();
+
+    const documents = await prisma.document.findMany({
+        where: { briefId, ocrStatus: 'completed', ocrText: { not: null } },
+        select: { id: true, name: true, ocrText: true },
+    });
+
+    if (documents.length === 0) return { processed: 0, found: 0 };
+
+    const { extractDocumentTimeline } = await import('@/lib/services/doc-timeline-extractor');
+
+    let totalFound = 0;
+    for (const doc of documents) {
+        const before = await prisma.documentTimelineEvent.count({ where: { documentId: doc.id } });
+        await extractDocumentTimeline(doc.id, doc.name, briefId, doc.ocrText!);
+        const after = await prisma.documentTimelineEvent.count({ where: { documentId: doc.id } });
+        totalFound += after - before;
+    }
+
+    return { processed: documents.length, found: totalFound };
+}
+
 // ── Timeline ─────────────────────────────────────────────────────────────────
 
 export type TimelineEventType =

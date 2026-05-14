@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { Gavel, CalendarX, Users, CheckCircle2, Clock, FileText, Activity, BookOpen, Flag, Loader, ScrollText } from 'lucide-react';
-import { getBriefTimeline, TimelineEvent, TimelineEventType } from '@/app/actions/briefs';
+import { getBriefTimeline, backfillBriefTimeline, TimelineEvent, TimelineEventType } from '@/app/actions/briefs';
 import styles from './BriefTimeline.module.css';
 
 const CONFIG: Record<TimelineEventType, { label: string; color: string; bg: string; Icon: React.ElementType }> = {
@@ -55,10 +55,30 @@ interface BriefTimelineProps { briefId: string; }
 export default function BriefTimeline({ briefId }: BriefTimelineProps) {
     const [events, setEvents] = useState<TimelineEvent[]>([]);
     const [loading, setLoading] = useState(true);
+    const [analyzing, setAnalyzing] = useState(false);
+    const [analyzeMsg, setAnalyzeMsg] = useState<string | null>(null);
 
-    useEffect(() => {
-        getBriefTimeline(briefId).then(data => { setEvents(data); setLoading(false); });
-    }, [briefId]);
+    const load = () => getBriefTimeline(briefId).then(data => { setEvents(data); setLoading(false); });
+
+    useEffect(() => { load(); }, [briefId]);
+
+    const handleReanalyze = async () => {
+        setAnalyzing(true);
+        setAnalyzeMsg(null);
+        try {
+            const result = await backfillBriefTimeline(briefId);
+            setAnalyzeMsg(
+                result.processed === 0
+                    ? 'No documents with extracted text found.'
+                    : `Analysed ${result.processed} document${result.processed !== 1 ? 's' : ''} — ${result.found} new event${result.found !== 1 ? 's' : ''} added.`
+            );
+            await load();
+        } catch {
+            setAnalyzeMsg('Analysis failed. Please try again.');
+        } finally {
+            setAnalyzing(false);
+        }
+    };
 
     if (loading) {
         return (
@@ -69,19 +89,30 @@ export default function BriefTimeline({ briefId }: BriefTimelineProps) {
         );
     }
 
-    if (events.length === 0) {
-        return (
-            <div className={styles.empty}>
-                <Activity size={28} className={styles.emptyIcon} />
-                <p>No events recorded yet.</p>
-            </div>
-        );
-    }
-
     const groups = groupEvents(events);
 
     return (
         <div className={styles.root}>
+            {/* Toolbar */}
+            <div className={styles.toolbar}>
+                <button
+                    className={styles.reanalyzeBtn}
+                    onClick={handleReanalyze}
+                    disabled={analyzing}
+                    title="Re-read all documents and extract any dates/events found inside them"
+                >
+                    {analyzing ? <Loader size={13} className={styles.spinner} /> : <ScrollText size={13} />}
+                    {analyzing ? 'Analysing documents…' : 'Analyse documents'}
+                </button>
+                {analyzeMsg && <span className={styles.analyzeMsg}>{analyzeMsg}</span>}
+            </div>
+
+            {groups.length === 0 && (
+                <div className={styles.empty}>
+                    <Activity size={28} className={styles.emptyIcon} />
+                    <p>No events recorded yet. Upload documents or click Analyse documents.</p>
+                </div>
+            )}
             {groups.map(group => (
                 <div key={group.monthKey} className={styles.group}>
                     <div className={styles.monthLabel}>{group.label}</div>
