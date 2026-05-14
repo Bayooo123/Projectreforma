@@ -67,11 +67,11 @@ export default function BriefTimeline({ briefId }: BriefTimelineProps) {
         setAnalyzeMsg(null);
         try {
             const result = await backfillBriefTimeline(briefId);
-            setAnalyzeMsg(
-                result.processed === 0
-                    ? 'No documents with extracted text found.'
-                    : `Analysed ${result.processed} document${result.processed !== 1 ? 's' : ''} — ${result.found} new event${result.found !== 1 ? 's' : ''} added.`
-            );
+            const parts: string[] = [];
+            if (result.processed > 0) parts.push(`Analysed ${result.processed} document${result.processed !== 1 ? 's' : ''}`);
+            if (result.found > 0) parts.push(`${result.found} event${result.found !== 1 ? 's' : ''} found`);
+            if (result.skipped > 0) parts.push(`${result.skipped} skipped (no text extracted)`);
+            setAnalyzeMsg(parts.length ? parts.join(' · ') : 'No readable documents found. Try re-uploading the documents.');
             await load();
         } catch {
             setAnalyzeMsg('Analysis failed. Please try again.');

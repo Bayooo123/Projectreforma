@@ -640,27 +640,28 @@ export async function logBriefViewed(briefId: string) {
 
 // ── Timeline extraction backfill ─────────────────────────────────────────────
 
-export async function backfillBriefTimeline(briefId: string): Promise<{ processed: number; found: number }> {
+export async function backfillBriefTimeline(briefId: string): Promise<{ processed: number; found: number; skipped: number }> {
     await requireAuth();
 
-    const documents = await prisma.document.findMany({
-        where: { briefId, ocrStatus: 'completed', ocrText: { not: null } },
-        select: { id: true, name: true, ocrText: true },
+    const allDocs = await prisma.document.findMany({
+        where: { briefId },
+        select: { id: true, name: true, ocrText: true, ocrStatus: true },
     });
 
-    if (documents.length === 0) return { processed: 0, found: 0 };
+    const documents = allDocs.filter(d => d.ocrStatus === 'completed' && d.ocrText && d.ocrText.trim().length >= 50);
+    const skipped = allDocs.length - documents.length;
+
+    if (documents.length === 0) return { processed: 0, found: 0, skipped };
 
     const { extractDocumentTimeline } = await import('@/lib/services/doc-timeline-extractor');
 
     let totalFound = 0;
     for (const doc of documents) {
-        const before = await prisma.documentTimelineEvent.count({ where: { documentId: doc.id } });
-        await extractDocumentTimeline(doc.id, doc.name, briefId, doc.ocrText!);
-        const after = await prisma.documentTimelineEvent.count({ where: { documentId: doc.id } });
-        totalFound += after - before;
+        const count = await extractDocumentTimeline(doc.id, doc.name, briefId, doc.ocrText!);
+        totalFound += count;
     }
 
-    return { processed: documents.length, found: totalFound };
+    return { processed: documents.length, found: totalFound, skipped };
 }
 
 // ── Timeline ─────────────────────────────────────────────────────────────────
@@ -725,8 +726,11 @@ export async function getBriefTimeline(briefId: string): Promise<TimelineEvent[]
         }),
         prisma.documentTimelineEvent.findMany({
             where: { briefId },
-            select: { id: true, eventDate: true, eventDateRaw: true, description: true, documentName: true },
-            orderBy: { eventDate: 'asc' },
+            select: {
+                id: true, eventDate: true, eventDateRaw: true, description: true, documentName: true,
+                document: { select: { uploadedAt: true } },
+            },
+            orderBy: { createdAt: 'asc' },
         }),
     ]);
 
@@ -785,13 +789,15 @@ export async function getBriefTimeline(briefId: string): Promise<TimelineEvent[]
     }
 
     for (const e of docTimelineEvents) {
-        const date = e.eventDate ?? null;
-        if (!date) continue;
+        // Use parsed date if available; fall back to document upload date so the event is never lost
+        const date = e.eventDate ?? e.document.uploadedAt;
         events.push({
             id: `dte_${e.id}`,
             date,
             type: 'doc_event',
             title: e.description,
+            // Show the raw date text from the document so user sees what was written
+            description: e.eventDate ? undefined : `Date in document: "${e.eventDateRaw}"`,
             source: e.documentName,
             ...classify(date),
         });
