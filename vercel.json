@@ -14,12 +14,16 @@
             "schedule": "0 9 * * *"
         },
         {
-            "path": "/api/cron/weekly-digest",
-            "schedule": "0 19 * * 5"
+            "path": "/api/cron/week-in-court",
+            "schedule": "0 18 * * 5"
         },
         {
             "path": "/api/cron/weekly-digest",
-            "schedule": "30 20 * * 0"
+            "schedule": "0 20 * * 5"
+        },
+        {
+            "path": "/api/cron/weekly-digest",
+            "schedule": "0 7 * * 0"
         }
     ]
 }
