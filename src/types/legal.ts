@@ -38,6 +38,7 @@ export interface CalendarEvent {
     agenda?: string | null;
     description?: string | null;
     matterId: string | null;
+    submittingLawyerId?: string | null;
     matter?: {
         id: string;
         caseNumber: string | null;

@@ -417,6 +417,8 @@ model CalendarEntry {
   agenda                 String?
   description            String?
   type                   CalendarEventType?      @default(COURT)
+  deletedAt              DateTime?
+  deletedById            String?
   matter                 Matter?                 @relation(fields: [matterId], references: [id], onDelete: Cascade, map: "CourtDate_matterId_fkey")
   brief                  Brief?                  @relation(fields: [briefId], references: [id], onDelete: SetNull)
   client                 Client?                 @relation(fields: [clientId], references: [id], onDelete: SetNull)

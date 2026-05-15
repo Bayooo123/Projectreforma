@@ -31,6 +31,8 @@ export default async function CalendarPage() {
             initialEvents={events}
             workspaceId={data.workspace.id}
             userId={session.user.id!}
+            userRole={data.user.role ?? ''}
+            userEmail={session.user.email ?? ''}
         />
     );
 }

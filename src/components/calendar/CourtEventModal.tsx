@@ -1,19 +1,36 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { X, Calendar, MapPin, User, FileText, Gavel, Clock, Users, Check, Pencil, Loader } from 'lucide-react';
+import { X, Calendar, MapPin, User, FileText, Gavel, Clock, Users, Check, Pencil, Loader, Trash2 } from 'lucide-react';
 import styles from './EventModal.module.css';
 import { CalendarEvent, LawyerSummary } from '@/types/legal';
 import { updateCalendarEntry } from '@/app/actions/matters';
+import { deleteCalendarEntry } from '@/app/actions/calendar-events';
 import { getLawyersForWorkspace } from '@/lib/briefs';
 import LitigationTimeline from '@/components/matters/LitigationTimeline';
+
+const SPECIAL_DELETE_EMAIL = 'bayo@abiolasanniandco.com';
+
+function getSystemRole(role: string): string {
+    const r = role.toLowerCase();
+    if (r.includes('managing partner')) return 'owner';
+    if (r.includes('head of chambers') || r.includes('head of chamber')) return 'partner';
+    if (r.includes('partner')) return 'partner';
+    if (r.includes('manager') || r.includes('admin')) return 'admin';
+    if (r.includes('associate')) return 'associate';
+    return 'member';
+}
 
 interface CourtEventModalProps {
     isOpen: boolean;
     onClose: () => void;
     event: CalendarEvent;
     workspaceId: string;
+    userId: string;
+    userRole: string;
+    userEmail: string;
     onUpdate?: (updatedEvent: Partial<CalendarEvent>) => void;
+    onDelete?: (id: string) => void;
 }
 
 function toDatetimeLocal(date: Date | string): string {
@@ -29,12 +46,19 @@ function toDateInput(date: Date | string | null | undefined): string {
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
-export default function CourtEventModal({ isOpen, onClose, event, workspaceId, onUpdate }: CourtEventModalProps) {
+export default function CourtEventModal({ isOpen, onClose, event, workspaceId, userId, userRole, userEmail, onUpdate, onDelete }: CourtEventModalProps) {
     const [isEditing, setIsEditing] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
     const [isLoadingLawyers, setIsLoadingLawyers] = useState(false);
     const [allLawyers, setAllLawyers] = useState<LawyerSummary[]>([]);
     const [appearances, setAppearances] = useState<LawyerSummary[]>(event.appearances ?? []);
+
+    const systemRole = getSystemRole(userRole);
+    const canDelete =
+        ['owner', 'partner', 'admin'].includes(systemRole) ||
+        (event.submittingLawyerId != null && event.submittingLawyerId === userId) ||
+        userEmail === SPECIAL_DELETE_EMAIL;
 
     // Edit form state
     const [form, setForm] = useState({
@@ -62,6 +86,21 @@ export default function CourtEventModal({ isOpen, onClose, event, workspaceId, o
         });
         setSelectedIds(new Set((event.appearances ?? []).map((a: LawyerSummary) => a.id)));
     }, [event.id]);
+
+    const handleDelete = async () => {
+        if (!confirm('Delete this calendar entry? This action can be reversed by IT Management.')) return;
+        setIsDeleting(true);
+        try {
+            const result = await deleteCalendarEntry(event.id);
+            if (result.success) {
+                onDelete?.(event.id);
+            } else {
+                alert(result.error || 'Failed to delete entry');
+            }
+        } finally {
+            setIsDeleting(false);
+        }
+    };
 
     const openEdit = async () => {
         setIsEditing(true);
@@ -149,6 +188,16 @@ export default function CourtEventModal({ isOpen, onClose, event, workspaceId, o
                                 style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.8rem', color: 'var(--primary)', background: 'none', border: '1px solid var(--primary)', borderRadius: 6, padding: '4px 10px', cursor: 'pointer', fontWeight: 500 }}
                             >
                                 <Pencil size={13} /> Edit
+                            </button>
+                        )}
+                        {!isEditing && canDelete && (
+                            <button
+                                onClick={handleDelete}
+                                disabled={isDeleting}
+                                style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.8rem', color: '#dc2626', background: 'none', border: '1px solid #dc2626', borderRadius: 6, padding: '4px 10px', cursor: 'pointer', fontWeight: 500, opacity: isDeleting ? 0.6 : 1 }}
+                            >
+                                {isDeleting ? <Loader size={13} className="animate-spin" /> : <Trash2 size={13} />}
+                                {isDeleting ? 'Deleting...' : 'Delete'}
                             </button>
                         )}
                         <button onClick={onClose} className={styles.closeBtn}><X size={20} /></button>
