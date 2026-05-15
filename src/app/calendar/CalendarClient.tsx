@@ -16,6 +16,7 @@ import { getCalendarEvents } from '@/app/actions/calendar-events';
 
 function getSystemRole(role: string): string {
     const r = role.toLowerCase();
+    if (r.includes('owner')) return 'owner';
     if (r.includes('managing partner')) return 'owner';
     if (r.includes('head of chambers') || r.includes('head of chamber')) return 'partner';
     if (r.includes('partner')) return 'partner';
@@ -30,6 +31,7 @@ interface CalendarClientProps {
     userId: string;
     userRole: string;
     userEmail: string;
+    isOwner: boolean;
 }
 
 export default function CalendarClient({
@@ -38,6 +40,7 @@ export default function CalendarClient({
     userId,
     userRole,
     userEmail,
+    isOwner,
 }: CalendarClientProps) {
     const [events, setEvents] = useState<CalendarEvent[]>(initialEvents);
     const [currentDate, setCurrentDate] = useState(new Date());
@@ -50,7 +53,7 @@ export default function CalendarClient({
     const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
     const [isDeletedEntriesOpen, setIsDeletedEntriesOpen] = useState(false);
 
-    const canViewDeleted = ['owner', 'admin'].includes(getSystemRole(userRole));
+    const canViewDeleted = isOwner || ['owner', 'admin'].includes(getSystemRole(userRole));
 
     // Filters
     const [searchQuery, setSearchQuery] = useState('');
@@ -195,6 +198,7 @@ export default function CalendarClient({
                     userId={userId}
                     userRole={userRole}
                     userEmail={userEmail}
+                    isOwner={isOwner}
                     onUpdate={(patch) => {
                         setSelectedEvent(prev => prev ? { ...prev, ...patch } : prev);
                         setEvents(prev => prev.map(e => e.id === selectedEvent.id ? { ...e, ...patch } : e));
@@ -211,6 +215,7 @@ export default function CalendarClient({
                     userId={userId}
                     userRole={userRole}
                     userEmail={userEmail}
+                    isOwner={isOwner}
                     onDelete={handleEventDeleted}
                 />
             )}

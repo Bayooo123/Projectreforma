@@ -13,6 +13,7 @@ const SPECIAL_DELETE_EMAIL = 'bayo@abiolasanniandco.com';
 
 function getSystemRole(role: string): string {
     const r = role.toLowerCase();
+    if (r.includes('owner')) return 'owner';
     if (r.includes('managing partner')) return 'owner';
     if (r.includes('head of chambers') || r.includes('head of chamber')) return 'partner';
     if (r.includes('partner')) return 'partner';
@@ -29,6 +30,7 @@ interface CourtEventModalProps {
     userId: string;
     userRole: string;
     userEmail: string;
+    isOwner: boolean;
     onUpdate?: (updatedEvent: Partial<CalendarEvent>) => void;
     onDelete?: (id: string) => void;
 }
@@ -46,7 +48,7 @@ function toDateInput(date: Date | string | null | undefined): string {
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
-export default function CourtEventModal({ isOpen, onClose, event, workspaceId, userId, userRole, userEmail, onUpdate, onDelete }: CourtEventModalProps) {
+export default function CourtEventModal({ isOpen, onClose, event, workspaceId, userId, userRole, userEmail, isOwner, onUpdate, onDelete }: CourtEventModalProps) {
     const [isEditing, setIsEditing] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
@@ -56,6 +58,7 @@ export default function CourtEventModal({ isOpen, onClose, event, workspaceId, u
 
     const systemRole = getSystemRole(userRole);
     const canDelete =
+        isOwner ||
         ['owner', 'partner', 'admin'].includes(systemRole) ||
         (event.submittingLawyerId != null && event.submittingLawyerId === userId) ||
         userEmail === SPECIAL_DELETE_EMAIL;

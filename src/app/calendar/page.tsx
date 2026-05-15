@@ -33,6 +33,7 @@ export default async function CalendarPage() {
             userId={session.user.id!}
             userRole={data.user.role ?? ''}
             userEmail={session.user.email ?? ''}
+            isOwner={!!data.workspace.isOwner || !!session.user.isWorkspaceOwner || !!session.user.isPlatformAdmin}
         />
     );
 }

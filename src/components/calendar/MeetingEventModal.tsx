@@ -10,6 +10,7 @@ const SPECIAL_DELETE_EMAIL = 'bayo@abiolasanniandco.com';
 
 function getSystemRole(role: string): string {
     const r = role.toLowerCase();
+    if (r.includes('owner')) return 'owner';
     if (r.includes('managing partner')) return 'owner';
     if (r.includes('head of chambers') || r.includes('head of chamber')) return 'partner';
     if (r.includes('partner')) return 'partner';
@@ -25,14 +26,16 @@ interface MeetingEventModalProps {
     userId: string;
     userRole: string;
     userEmail: string;
+    isOwner: boolean;
     onDelete?: (id: string) => void;
 }
 
-export default function MeetingEventModal({ isOpen, onClose, event, userId, userRole, userEmail, onDelete }: MeetingEventModalProps) {
+export default function MeetingEventModal({ isOpen, onClose, event, userId, userRole, userEmail, isOwner, onDelete }: MeetingEventModalProps) {
     const [isDeleting, setIsDeleting] = useState(false);
 
     const systemRole = getSystemRole(userRole);
     const canDelete =
+        isOwner ||
         ['owner', 'partner', 'admin'].includes(systemRole) ||
         (event.submittingLawyerId != null && event.submittingLawyerId === userId) ||
         userEmail === SPECIAL_DELETE_EMAIL;
