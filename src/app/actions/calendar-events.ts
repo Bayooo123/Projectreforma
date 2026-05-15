@@ -162,7 +162,7 @@ export async function deleteCalendarEntry(entryId: string) {
         logActivity({
             workspaceId,
             userId: user.id!,
-            resource: 'CALENDAR_ENTRY',
+            resource: 'COURT_DATE',
             action: 'DELETED',
             resourceId: entryId,
             resourceName: entry ? 'Calendar Entry' : entryId,
@@ -199,7 +199,7 @@ export async function restoreCalendarEntry(entryId: string) {
         logActivity({
             workspaceId,
             userId: user.id!,
-            resource: 'CALENDAR_ENTRY',
+            resource: 'COURT_DATE',
             action: 'UPDATED',
             resourceId: entryId,
             resourceName: 'Calendar Entry (Restored)',
