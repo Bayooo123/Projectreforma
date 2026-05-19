@@ -2,17 +2,19 @@
 
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
-import { User, Building2, Lock, Loader, FileText, AlertCircle, Key, Copy, Trash2, Plus, Eye, EyeOff, Check, HardDrive } from 'lucide-react';
+import { User, Building2, Lock, Loader, FileText, AlertCircle, Key, Copy, Trash2, Plus, Eye, EyeOff, Check, HardDrive, CreditCard, CheckCircle, Clock, XCircle } from 'lucide-react';
 import { updateWorkspaceSettings, getWorkspaceSettings, getStorageUsage } from '@/app/actions/settings';
 import { getUserProfile, updateUserProfile } from '@/app/actions/members';
 import { getBankAccounts, createBankAccount, deleteBankAccount } from '@/app/actions/bank-accounts';
 import { generateApiKey, listApiKeys, revokeApiKey } from '@/app/actions/api-keys';
 import { sendPasswordResetFromSettings } from '@/app/actions/auth';
+import { getSubscriptionStatus, initiateSubscriptionPayment, checkPaymentStatus, getSubscriptionPayments } from '@/app/actions/subscriptions';
+import { BAND_LABELS, TIER_LABELS, SUBSCRIPTION_PRICES, formatNaira, type SubscriptionBand, type SubscriptionTier } from '@/lib/subscriptionPricing';
 import styles from './page.module.css';
 
 export default function SettingsPage() {
     const { data: session } = useSession();
-    const [activeTab, setActiveTab] = useState<'profile' | 'firm' | 'apikeys' | 'security' | 'storage'>('profile');
+    const [activeTab, setActiveTab] = useState<'profile' | 'firm' | 'apikeys' | 'security' | 'storage' | 'subscription'>('profile');
 
     // Config State
     const [isLoading, setIsLoading] = useState(true);
@@ -46,6 +48,14 @@ export default function SettingsPage() {
     // Storage State
     const [storageData, setStorageData] = useState<any>(null);
     const [isLoadingStorage, setIsLoadingStorage] = useState(false);
+
+    // Subscription State
+    const [subscription, setSubscription] = useState<any>(null);
+    const [subPayments, setSubPayments] = useState<any[]>([]);
+    const [isLoadingSub, setIsLoadingSub] = useState(false);
+    const [isInitiatingPayment, setIsInitiatingPayment] = useState(false);
+    const [selectedBand, setSelectedBand] = useState<SubscriptionBand>('A');
+    const [selectedTier, setSelectedTier] = useState<SubscriptionTier>('solo');
 
     const loadProfile = async () => {
         const res = await getUserProfile();
@@ -91,12 +101,44 @@ export default function SettingsPage() {
         setIsLoadingStorage(false);
     };
 
+    const loadSubscription = async (workspaceId: string) => {
+        setIsLoadingSub(true);
+        const [status, payments] = await Promise.all([
+            getSubscriptionStatus(workspaceId),
+            getSubscriptionPayments(workspaceId),
+        ]);
+        setSubscription(status);
+        setSubPayments(payments);
+        if (status?.subscriptionBand) setSelectedBand(status.subscriptionBand as SubscriptionBand);
+        if (status?.subscriptionTier) setSelectedTier(status.subscriptionTier as SubscriptionTier);
+        setIsLoadingSub(false);
+    };
+
+    const handleInitiatePayment = async () => {
+        if (!session?.user?.workspaceId) return;
+        setIsInitiatingPayment(true);
+        const res = await initiateSubscriptionPayment({
+            workspaceId: session.user.workspaceId,
+            band: selectedBand,
+            tier: selectedTier,
+        });
+        if (res.success && res.checkoutUrl) {
+            window.location.href = res.checkoutUrl;
+        } else {
+            alert(res.error || 'Failed to initiate payment. Please try again.');
+        }
+        setIsInitiatingPayment(false);
+    };
+
     useEffect(() => {
         if (session?.user?.workspaceId) {
             loadSettings(session.user.workspaceId);
             loadApiKeys();
             if (activeTab === 'storage') {
                 loadStorageData(session.user.workspaceId);
+            }
+            if (activeTab === 'subscription') {
+                loadSubscription(session.user.workspaceId);
             }
         }
         loadProfile();
@@ -246,6 +288,9 @@ export default function SettingsPage() {
                     </button>
                     <button className={`${styles.tab} ${activeTab === 'storage' ? styles.activeTab : ''}`} onClick={() => setActiveTab('storage')}>
                         <HardDrive size={18} /> Storage
+                    </button>
+                    <button className={`${styles.tab} ${activeTab === 'subscription' ? styles.activeTab : ''}`} onClick={() => setActiveTab('subscription')}>
+                        <CreditCard size={18} /> Subscription
                     </button>
                 </div>
             </div>
@@ -702,6 +747,155 @@ export default function SettingsPage() {
                             </div>
                         )}
                     </div>
+                )}
+                {activeTab === 'subscription' && (
+                    <>
+                        {isLoadingSub ? (
+                            <div className={styles.card} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', justifyContent: 'center', padding: '3rem' }}>
+                                <Loader className="spin" size={20} />
+                                <span style={{ color: 'var(--text-secondary)' }}>Loading subscription...</span>
+                            </div>
+                        ) : (
+                            <>
+                                {/* Current Status */}
+                                <div className={styles.card}>
+                                    <div className={styles.cardHeader}>
+                                        <CreditCard className={styles.icon} />
+                                        <h2>Current Subscription</h2>
+                                    </div>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.5rem' }}>
+                                        {subscription?.subscriptionStatus === 'active' ? (
+                                            <CheckCircle size={20} color="#10b981" />
+                                        ) : subscription?.subscriptionStatus === 'expired' ? (
+                                            <XCircle size={20} color="#ef4444" />
+                                        ) : (
+                                            <Clock size={20} color="#f59e0b" />
+                                        )}
+                                        <span style={{ fontWeight: 600, fontSize: '1.1rem', textTransform: 'capitalize' }}>
+                                            {subscription?.subscriptionStatus === 'active' ? 'Active' :
+                                             subscription?.subscriptionStatus === 'expired' ? 'Expired' : 'Free Plan'}
+                                        </span>
+                                    </div>
+                                    {subscription?.subscriptionStatus === 'active' && (
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
+                                            <span><strong>Band:</strong> {BAND_LABELS[subscription.subscriptionBand as SubscriptionBand]}</span>
+                                            <span><strong>Tier:</strong> {TIER_LABELS[subscription.subscriptionTier as SubscriptionTier]}</span>
+                                            <span><strong>Started:</strong> {new Date(subscription.subscriptionStartedAt).toLocaleDateString('en-NG', { dateStyle: 'long' })}</span>
+                                            <span><strong>Expires:</strong> {new Date(subscription.subscriptionExpiresAt).toLocaleDateString('en-NG', { dateStyle: 'long' })}</span>
+                                        </div>
+                                    )}
+                                    {subscription?.subscriptionStatus !== 'active' && (
+                                        <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+                                            You are currently on the free plan. Subscribe below to unlock full access for your firm.
+                                        </p>
+                                    )}
+                                </div>
+
+                                {/* Subscribe / Renew */}
+                                <div className={styles.card}>
+                                    <div className={styles.cardHeader}>
+                                        <CreditCard className={styles.icon} />
+                                        <h2>{subscription?.subscriptionStatus === 'active' ? 'Renew Subscription' : 'Subscribe'}</h2>
+                                    </div>
+                                    <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem', fontSize: '0.9rem' }}>
+                                        Select your State Band and firm size. Pricing follows the Legal Practitioners Remuneration Order, 2023.
+                                    </p>
+
+                                    {/* Band selector */}
+                                    <div className={styles.formGroup}>
+                                        <label>State Band</label>
+                                        <select
+                                            className={styles.select || styles.input}
+                                            value={selectedBand}
+                                            onChange={e => setSelectedBand(e.target.value as SubscriptionBand)}
+                                            title="State Band"
+                                            aria-label="State Band"
+                                        >
+                                            {(Object.keys(BAND_LABELS) as SubscriptionBand[]).map(band => (
+                                                <option key={band} value={band}>{BAND_LABELS[band]}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+
+                                    {/* Tier selector */}
+                                    <div className={styles.formGroup}>
+                                        <label>Firm Size</label>
+                                        <select
+                                            className={styles.select || styles.input}
+                                            value={selectedTier}
+                                            onChange={e => setSelectedTier(e.target.value as SubscriptionTier)}
+                                            title="Firm Size"
+                                            aria-label="Firm Size"
+                                        >
+                                            {(Object.keys(TIER_LABELS) as SubscriptionTier[]).map(tier => (
+                                                <option key={tier} value={tier}>{TIER_LABELS[tier]}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+
+                                    {/* Price display */}
+                                    <div style={{ padding: '1.25rem', background: 'var(--surface)', borderRadius: '10px', marginBottom: '1.5rem', border: '1px solid var(--border)' }}>
+                                        <div style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)', marginBottom: '0.25rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Annual Fee (excl. VAT)</div>
+                                        <div style={{ fontSize: '2rem', fontWeight: 700, color: 'var(--primary)' }}>
+                                            {formatNaira(SUBSCRIPTION_PRICES[selectedBand][selectedTier])}
+                                        </div>
+                                        <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '0.25rem' }}>per year · billed annually</div>
+                                    </div>
+
+                                    <button
+                                        className={styles.saveBtn}
+                                        onClick={handleInitiatePayment}
+                                        disabled={isInitiatingPayment}
+                                        style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+                                    >
+                                        {isInitiatingPayment
+                                            ? <><Loader className="spin" size={16} /> Redirecting to payment…</>
+                                            : <><CreditCard size={16} /> Pay with Monnify</>
+                                        }
+                                    </button>
+                                    <p style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)', marginTop: '0.75rem' }}>
+                                        You will be redirected to Monnify's secure checkout. Payment by card or bank transfer.
+                                    </p>
+                                </div>
+
+                                {/* Payment history */}
+                                {subPayments.length > 0 && (
+                                    <div className={styles.card}>
+                                        <div className={styles.cardHeader}>
+                                            <Clock className={styles.icon} />
+                                            <h2>Payment History</h2>
+                                        </div>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                            {subPayments.map(p => (
+                                                <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.75rem 1rem', background: 'var(--surface)', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                                                    <div>
+                                                        <div style={{ fontWeight: 600, fontSize: '0.95rem' }}>{BAND_LABELS[p.band as SubscriptionBand]} · {TIER_LABELS[p.tier as SubscriptionTier]}</div>
+                                                        <div style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)', marginTop: '0.2rem' }}>
+                                                            {new Date(p.createdAt).toLocaleDateString('en-NG', { dateStyle: 'medium' })}
+                                                            {p.paidAt && ` · Paid ${new Date(p.paidAt).toLocaleDateString('en-NG', { dateStyle: 'medium' })}`}
+                                                        </div>
+                                                    </div>
+                                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.25rem' }}>
+                                                        <span style={{ fontWeight: 600 }}>{formatNaira(p.amount)}</span>
+                                                        <span style={{
+                                                            fontSize: '0.75rem',
+                                                            padding: '0.2rem 0.5rem',
+                                                            borderRadius: '4px',
+                                                            background: p.status === 'paid' ? 'rgba(16,185,129,0.1)' : 'rgba(245,158,11,0.1)',
+                                                            color: p.status === 'paid' ? '#10b981' : '#f59e0b',
+                                                            textTransform: 'capitalize',
+                                                        }}>
+                                                            {p.status}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                            </>
+                        )}
+                    </>
                 )}
             </div>
         </div>

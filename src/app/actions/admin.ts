@@ -87,19 +87,22 @@ export async function listWorkspaces() {
     await requirePlatformAdmin();
 
     return prisma.workspace.findMany({
-        include: {
+        select: {
+            id: true,
+            name: true,
+            slug: true,
+            plan: true,
+            subscriptionStatus: true,
+            subscriptionBand: true,
+            subscriptionTier: true,
+            subscriptionExpiresAt: true,
+            createdAt: true,
             owner: {
-                select: {
-                    name: true,
-                    email: true,
-                }
+                select: { name: true, email: true },
             },
             _count: {
-                select: {
-                    members: true,
-                    briefs: true,
-                }
-            }
+                select: { members: true, briefs: true },
+            },
         },
         orderBy: { createdAt: 'desc' },
     });

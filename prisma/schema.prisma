@@ -37,25 +37,31 @@ model Workspace {
   geofenceLng       Float?
   geofenceRadius    Int                   @default(150)
   geofenceAddress   String?
-  bankAccounts      BankAccount[]
-  briefs            Brief[]
-  clients           Client[]
-  complianceTasks   ComplianceTask[]
-  draftingTemplates DraftingTemplate[]
-  expenses          Expense[]
-  invitations       Invitation[]
-  matters           Matter[]
-  tasks             Task[]
-  inboundEmails     InboundEmail[]
-  activityLogs      WorkspaceActivityLog[]
-  attendanceRecords AttendanceRecord[]
-  matterQuestions   MatterQuestion[]
-  anomalies         WorkspaceAnomaly[]
-  owner             User                  @relation("WorkspaceOwner", fields: [ownerId], references: [id])
-  emailConfig       WorkspaceEmailConfig?
-  members              WorkspaceMember[]
-  workEntries          WorkEntry[]
-  litigationMilestones LitigationMilestone[]
+  subscriptionStatus    String    @default("free")
+  subscriptionBand      String?
+  subscriptionTier      String?
+  subscriptionExpiresAt DateTime?
+  subscriptionStartedAt DateTime?
+  bankAccounts          BankAccount[]
+  briefs                Brief[]
+  clients               Client[]
+  complianceTasks       ComplianceTask[]
+  draftingTemplates     DraftingTemplate[]
+  expenses              Expense[]
+  invitations           Invitation[]
+  matters               Matter[]
+  tasks                 Task[]
+  inboundEmails         InboundEmail[]
+  activityLogs          WorkspaceActivityLog[]
+  attendanceRecords     AttendanceRecord[]
+  matterQuestions       MatterQuestion[]
+  anomalies             WorkspaceAnomaly[]
+  owner                 User                  @relation("WorkspaceOwner", fields: [ownerId], references: [id])
+  emailConfig           WorkspaceEmailConfig?
+  members               WorkspaceMember[]
+  workEntries           WorkEntry[]
+  litigationMilestones  LitigationMilestone[]
+  subscriptionPayments  SubscriptionPayment[]
 
   @@index([slug])
   @@index([firmCode])
@@ -684,6 +690,23 @@ model Payment {
 
   @@index([clientId])
   @@index([invoiceId])
+}
+
+model SubscriptionPayment {
+  id               String    @id @default(cuid())
+  workspaceId      String
+  amount           Float
+  band             String
+  tier             String
+  paymentReference String    @unique
+  monnifyReference String    @default("")
+  status           String    @default("pending")
+  paidAt           DateTime?
+  createdAt        DateTime  @default(now())
+  workspace        Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
+  @@index([paymentReference])
 }
 
 model Expense {

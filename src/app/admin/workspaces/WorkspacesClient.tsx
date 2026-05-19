@@ -19,6 +19,10 @@ interface Workspace {
     name: string;
     slug: string;
     plan: string;
+    subscriptionStatus: string;
+    subscriptionBand: string | null;
+    subscriptionTier: string | null;
+    subscriptionExpiresAt: Date | null;
     createdAt: Date;
     owner: {
         name: string | null;
@@ -29,6 +33,13 @@ interface Workspace {
         briefs: number;
     }
 }
+
+const STATUS_COLOR: Record<string, string> = {
+    active:  '#10b981',
+    expired: '#ef4444',
+    free:    '#f59e0b',
+    pending: '#6366f1',
+};
 
 export default function WorkspacesClient({ workspaces }: { workspaces: Workspace[] }) {
     const [searchTerm, setSearchTerm] = useState('');
@@ -73,8 +84,12 @@ export default function WorkspacesClient({ workspaces }: { workspaces: Workspace
                                         <span className={styles.slug}>/{ws.slug}</span>
                                     </div>
                                 </div>
-                                <div className={styles.planBadge} data-plan={ws.plan}>
-                                    {ws.plan.toUpperCase()}
+                                <div
+                                    className={styles.planBadge}
+                                    data-plan={ws.subscriptionStatus}
+                                    style={{ background: `${STATUS_COLOR[ws.subscriptionStatus] ?? '#6b7280'}20`, color: STATUS_COLOR[ws.subscriptionStatus] ?? '#6b7280' }}
+                                >
+                                    {ws.subscriptionStatus.toUpperCase()}
                                 </div>
                             </div>
 
@@ -91,6 +106,12 @@ export default function WorkspacesClient({ workspaces }: { workspaces: Workspace
                                     <Calendar size={14} />
                                     <span>Joined: {new Date(ws.createdAt).toLocaleDateString()}</span>
                                 </div>
+                                {ws.subscriptionStatus === 'active' && ws.subscriptionExpiresAt && (
+                                    <div className={styles.metaItem}>
+                                        <Briefcase size={14} />
+                                        <span>Band {ws.subscriptionBand} · {ws.subscriptionTier} · expires {new Date(ws.subscriptionExpiresAt).toLocaleDateString()}</span>
+                                    </div>
+                                )}
 
                                 <div className={styles.statsRow}>
                                     <div className={styles.stat}>
@@ -105,7 +126,7 @@ export default function WorkspacesClient({ workspaces }: { workspaces: Workspace
                             </div>
 
                             <div className={styles.cardFooter}>
-                                <button className={styles.viewBtn}>
+                                <button type="button" className={styles.viewBtn}>
                                     Manage Firm <ChevronRight size={16} />
                                 </button>
                             </div>

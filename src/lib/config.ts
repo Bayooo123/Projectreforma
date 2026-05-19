@@ -25,6 +25,12 @@ const envSchema = z.object({
     MAIL_FROM: z.string().default('Reforma <Registration@reforma.ng>'),
     DIGEST_WORKSPACE_IDS: z.string().optional(),
 
+    // Monnify Payment Gateway
+    MONNIFY_API_KEY: z.string().optional(),
+    MONNIFY_SECRET_KEY: z.string().optional(),
+    MONNIFY_CONTRACT_CODE: z.string().optional(),
+    MONNIFY_BASE_URL: z.string().default('https://sandbox.monnify.com'),
+
     // BICA Integration
     BICA_PLATFORM_ID: z.string().default('reforma_os'),
     BICA_SHARED_SECRET: z.string().default('dev_secret_keys'),
