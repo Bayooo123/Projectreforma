@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { Gavel, CalendarX, Users, CheckCircle2, Clock, FileText, Activity, BookOpen, Flag, Loader } from 'lucide-react';
-import { getBriefTimeline, TimelineEvent, TimelineEventType } from '@/app/actions/briefs';
+import { useState } from 'react';
+import { Gavel, CalendarX, Users, CheckCircle2, Clock, FileText, Activity, BookOpen, Flag, Loader, ScrollText } from 'lucide-react';
+import { getBriefTimeline, backfillBriefTimeline, TimelineEvent, TimelineEventType } from '@/app/actions/briefs';
 import styles from './BriefTimeline.module.css';
 
 const CONFIG: Record<TimelineEventType, { label: string; color: string; bg: string; Icon: React.ElementType }> = {
@@ -16,6 +16,7 @@ const CONFIG: Record<TimelineEventType, { label: string; color: string; bg: stri
     task_due:         { label: 'Deadline',  color: '#ea580c', bg: '#fff7ed', Icon: Clock },
     document_uploaded:{ label: 'Document',  color: '#475569', bg: '#f8fafc', Icon: FileText },
     activity:         { label: 'Activity',  color: '#6b7280', bg: '#f9fafb', Icon: Activity },
+    doc_event:        { label: 'Alleged',   color: '#7c3aed', bg: '#f5f3ff', Icon: ScrollText },
 };
 
 type Group = { monthKey: string; label: string; events: Array<TimelineEvent | 'TODAY'> };
@@ -29,7 +30,6 @@ function groupEvents(events: TimelineEvent[]): Group[] {
         const monthKey = `${d.getFullYear()}-${d.getMonth()}`;
         const label = d.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
 
-        // Insert TODAY divider before the first future/today event
         if (!todayInserted && (event.isFuture || event.isToday)) {
             todayInserted = true;
             let group = groups.find(g => g.monthKey === monthKey);
@@ -49,99 +49,124 @@ function formatDay(date: Date) {
     return new Date(date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
 }
 
-interface BriefTimelineProps { briefId: string; }
+interface BriefTimelineProps {
+    briefId: string;
+    initialEvents: TimelineEvent[];
+}
 
-export default function BriefTimeline({ briefId }: BriefTimelineProps) {
-    const [events, setEvents] = useState<TimelineEvent[]>([]);
-    const [loading, setLoading] = useState(true);
+export default function BriefTimeline({ briefId, initialEvents }: BriefTimelineProps) {
+    const [events, setEvents] = useState<TimelineEvent[]>(initialEvents);
+    const [analyzing, setAnalyzing] = useState(false);
+    const [analyzeMsg, setAnalyzeMsg] = useState<string | null>(null);
 
-    useEffect(() => {
-        getBriefTimeline(briefId).then(data => { setEvents(data); setLoading(false); });
-    }, [briefId]);
-
-    if (loading) {
-        return (
-            <div className={styles.loading}>
-                <Loader size={18} className={styles.spinner} />
-                Building timeline…
-            </div>
-        );
-    }
-
-    if (events.length === 0) {
-        return (
-            <div className={styles.empty}>
-                <Activity size={28} className={styles.emptyIcon} />
-                <p>No events recorded yet.</p>
-            </div>
-        );
-    }
+    const handleAnalyse = async () => {
+        setAnalyzing(true);
+        setAnalyzeMsg(null);
+        try {
+            const result = await backfillBriefTimeline(briefId);
+            // Refresh timeline after extraction
+            const fresh = await getBriefTimeline(briefId);
+            setEvents(fresh);
+            const msg = result.processed === 0
+                ? 'No documents found in this brief yet.'
+                : `${result.processed} document${result.processed !== 1 ? 's' : ''} analysed — ${result.found} event${result.found !== 1 ? 's' : ''} extracted from documents`;
+            setAnalyzeMsg(msg);
+        } catch {
+            setAnalyzeMsg('Analysis failed. Please try again.');
+        } finally {
+            setAnalyzing(false);
+        }
+    };
 
     const groups = groupEvents(events);
 
     return (
         <div className={styles.root}>
-            {groups.map(group => (
-                <div key={group.monthKey} className={styles.group}>
-                    <div className={styles.monthLabel}>{group.label}</div>
+            {/* Single action bar */}
+            <div className={styles.toolbar}>
+                <button
+                    className={styles.reanalyzeBtn}
+                    onClick={handleAnalyse}
+                    disabled={analyzing}
+                    title="Read all documents in this brief and extract every date and event mentioned inside them"
+                >
+                    {analyzing ? <Loader size={13} className={styles.spinner} /> : <ScrollText size={13} />}
+                    {analyzing ? 'Reading documents…' : 'Analyse documents'}
+                </button>
+                {analyzeMsg && <span className={styles.analyzeMsg}>{analyzeMsg}</span>}
+            </div>
 
-                    {group.events.map((item, idx) => {
-                        if (item === 'TODAY') {
+            {groups.length === 0 ? (
+                <div className={styles.empty}>
+                    <Activity size={28} className={styles.emptyIcon} />
+                    <p>No events yet. Click <strong>Analyse documents</strong> to extract dates from uploaded documents.</p>
+                </div>
+            ) : (
+                groups.map(group => (
+                    <div key={group.monthKey} className={styles.group}>
+                        <div className={styles.monthLabel}>{group.label}</div>
+
+                        {group.events.map((item) => {
+                            if (item === 'TODAY') {
+                                return (
+                                    <div key="today-divider" className={styles.todayDivider}>
+                                        <div className={styles.todayLine} />
+                                        <span className={styles.todayBadge}>Today</span>
+                                        <div className={styles.todayLine} />
+                                    </div>
+                                );
+                            }
+
+                            const cfg = CONFIG[item.type];
+                            const Icon = cfg.Icon;
+                            const isPast = !item.isFuture && !item.isToday;
+                            const rowClass = [
+                                styles.event,
+                                isPast ? styles.past : '',
+                                item.isToday ? styles.today : '',
+                                item.isFuture ? styles.future : '',
+                            ].filter(Boolean).join(' ');
+
                             return (
-                                <div key="today-divider" className={styles.todayDivider}>
-                                    <div className={styles.todayLine} />
-                                    <span className={styles.todayBadge}>Today</span>
-                                    <div className={styles.todayLine} />
-                                </div>
-                            );
-                        }
-
-                        const cfg = CONFIG[item.type];
-                        const Icon = cfg.Icon;
-                        const isPast = !item.isFuture && !item.isToday;
-                        const rowClass = [
-                            styles.event,
-                            isPast ? styles.past : '',
-                            item.isToday ? styles.today : '',
-                            item.isFuture ? styles.future : '',
-                        ].filter(Boolean).join(' ');
-
-                        return (
-                            <div key={item.id} className={rowClass}>
-                                {/* Date */}
-                                <div className={styles.dateCol}>
-                                    <span className={styles.dateDay}>{formatDay(new Date(item.date))}</span>
-                                </div>
-
-                                {/* Dot */}
-                                <div
-                                    className={styles.dot}
-                                    style={isPast ? undefined : { backgroundColor: cfg.color }}
-                                />
-
-                                {/* Card */}
-                                <div className={styles.card}>
-                                    <div
-                                        className={styles.badge}
-                                        style={isPast
-                                            ? { color: '#94a3b8', backgroundColor: '#f8fafc' }
-                                            : { color: cfg.color, backgroundColor: cfg.bg }
-                                        }
-                                    >
-                                        <Icon size={10} />
-                                        {cfg.label}
-                                        {item.isFuture && <span className={styles.upcomingTag}>upcoming</span>}
+                                <div key={item.id} className={rowClass}>
+                                    <div className={styles.dateCol}>
+                                        <span className={styles.dateDay}>{formatDay(new Date(item.date))}</span>
                                     </div>
 
-                                    <p className={styles.title}>{item.title}</p>
-                                    {item.description && <p className={styles.desc}>{item.description}</p>}
-                                    {item.actor && <p className={styles.actor}>{item.actor}</p>}
+                                    <div
+                                        className={styles.dot}
+                                        style={isPast ? undefined : { backgroundColor: cfg.color }}
+                                    />
+
+                                    <div className={styles.card}>
+                                        <div
+                                            className={styles.badge}
+                                            style={isPast
+                                                ? { color: '#94a3b8', backgroundColor: '#f8fafc' }
+                                                : { color: cfg.color, backgroundColor: cfg.bg }
+                                            }
+                                        >
+                                            <Icon size={10} />
+                                            {cfg.label}
+                                            {item.isFuture && <span className={styles.upcomingTag}>upcoming</span>}
+                                        </div>
+
+                                        <p className={styles.title}>{item.title}</p>
+                                        {item.description && <p className={styles.desc}>{item.description}</p>}
+                                        {item.source && (
+                                            <p className={styles.source}>
+                                                <ScrollText size={10} style={{ display: 'inline', marginRight: 3 }} />
+                                                {item.source}
+                                            </p>
+                                        )}
+                                        {item.actor && <p className={styles.actor}>{item.actor}</p>}
+                                    </div>
                                 </div>
-                            </div>
-                        );
-                    })}
-                </div>
-            ))}
+                            );
+                        })}
+                    </div>
+                ))
+            )}
         </div>
     );
 }

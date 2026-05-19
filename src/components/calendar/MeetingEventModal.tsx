@@ -1,16 +1,60 @@
 "use client";
 
-import { X, Calendar, MapPin, Users, FileText, Clock } from 'lucide-react';
+import { useState } from 'react';
+import { X, Calendar, MapPin, Users, FileText, Loader, Trash2 } from 'lucide-react';
 import styles from './EventModal.module.css';
 import { CalendarEvent } from '@/types/legal';
+import { deleteCalendarEntry } from '@/app/actions/calendar-events';
+
+const SPECIAL_DELETE_EMAIL = 'bayo@abiolasanniandco.com';
+
+function getSystemRole(role: string): string {
+    const r = role.toLowerCase();
+    if (r.includes('owner')) return 'owner';
+    if (r.includes('managing partner')) return 'owner';
+    if (r.includes('head of chambers') || r.includes('head of chamber')) return 'partner';
+    if (r.includes('partner')) return 'partner';
+    if (r.includes('manager') || r.includes('admin')) return 'admin';
+    if (r.includes('associate')) return 'associate';
+    return 'member';
+}
 
 interface MeetingEventModalProps {
     isOpen: boolean;
     onClose: () => void;
     event: CalendarEvent;
+    userId: string;
+    userRole: string;
+    userEmail: string;
+    isOwner: boolean;
+    onDelete?: (id: string) => void;
 }
 
-export default function MeetingEventModal({ isOpen, onClose, event }: MeetingEventModalProps) {
+export default function MeetingEventModal({ isOpen, onClose, event, userId, userRole, userEmail, isOwner, onDelete }: MeetingEventModalProps) {
+    const [isDeleting, setIsDeleting] = useState(false);
+
+    const systemRole = getSystemRole(userRole);
+    const canDelete =
+        isOwner ||
+        ['owner', 'partner', 'admin'].includes(systemRole) ||
+        (event.submittingLawyerId != null && event.submittingLawyerId === userId) ||
+        userEmail === SPECIAL_DELETE_EMAIL;
+
+    const handleDelete = async () => {
+        if (!confirm('Delete this meeting entry? This action can be reversed by IT Management.')) return;
+        setIsDeleting(true);
+        try {
+            const result = await deleteCalendarEntry(event.id);
+            if (result.success) {
+                onDelete?.(event.id);
+            } else {
+                alert(result.error || 'Failed to delete entry');
+            }
+        } finally {
+            setIsDeleting(false);
+        }
+    };
+
     if (!isOpen) return null;
 
     const date = new Date(event.date);
@@ -20,7 +64,19 @@ export default function MeetingEventModal({ isOpen, onClose, event }: MeetingEve
             <div className={styles.modal}>
                 <div className={styles.header}>
                     <div className={styles.badge} style={{ backgroundColor: '#2563eb' }}>Meeting</div>
-                    <button onClick={onClose} className={styles.closeBtn}><X size={20} /></button>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        {canDelete && (
+                            <button
+                                onClick={handleDelete}
+                                disabled={isDeleting}
+                                style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.8rem', color: '#dc2626', background: 'none', border: '1px solid #dc2626', borderRadius: 6, padding: '4px 10px', cursor: 'pointer', fontWeight: 500, opacity: isDeleting ? 0.6 : 1 }}
+                            >
+                                {isDeleting ? <Loader size={13} className="animate-spin" /> : <Trash2 size={13} />}
+                                {isDeleting ? 'Deleting...' : 'Delete'}
+                            </button>
+                        )}
+                        <button onClick={onClose} className={styles.closeBtn}><X size={20} /></button>
+                    </div>
                 </div>
 
                 <div className={styles.content}>

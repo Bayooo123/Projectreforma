@@ -1,28 +1,46 @@
 "use client";
 
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, Search, Users, Gavel } from 'lucide-react';
+import { Plus, Search, Users, Gavel, Trash2 } from 'lucide-react';
 import CalendarGrid from '@/components/calendar/CalendarGrid';
 import CourtEventModal from '@/components/calendar/CourtEventModal';
 import MeetingEventModal from '@/components/calendar/MeetingEventModal';
 import ScheduleMeetingModal from '@/components/calendar/ScheduleMeetingModal';
 import AddMatterModal from '@/components/calendar/AddMatterModal';
 import RecordProceedingModal from '@/components/calendar/RecordProceedingModal';
+import DeletedEntriesModal from '@/components/calendar/DeletedEntriesModal';
 import styles from './page.module.css';
 
 import { CalendarEvent } from '@/types/legal';
 import { getCalendarEvents } from '@/app/actions/calendar-events';
 
+function getSystemRole(role: string): string {
+    const r = role.toLowerCase();
+    if (r.includes('owner')) return 'owner';
+    if (r.includes('managing partner')) return 'owner';
+    if (r.includes('head of chambers') || r.includes('head of chamber')) return 'partner';
+    if (r.includes('partner')) return 'partner';
+    if (r.includes('manager') || r.includes('admin')) return 'admin';
+    if (r.includes('associate')) return 'associate';
+    return 'member';
+}
+
 interface CalendarClientProps {
     initialEvents: CalendarEvent[];
     workspaceId: string;
     userId: string;
+    userRole: string;
+    userEmail: string;
+    isOwner: boolean;
 }
 
 export default function CalendarClient({
     initialEvents,
     workspaceId,
     userId,
+    userRole,
+    userEmail,
+    isOwner,
 }: CalendarClientProps) {
     const [events, setEvents] = useState<CalendarEvent[]>(initialEvents);
     const [currentDate, setCurrentDate] = useState(new Date());
@@ -33,6 +51,9 @@ export default function CalendarClient({
     const [isScheduleMeetingModalOpen, setIsScheduleMeetingModalOpen] = useState(false);
     const [isRecordProceedingOpen, setIsRecordProceedingOpen] = useState(false);
     const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
+    const [isDeletedEntriesOpen, setIsDeletedEntriesOpen] = useState(false);
+
+    const canViewDeleted = isOwner || ['owner', 'admin'].includes(getSystemRole(userRole));
 
     // Filters
     const [searchQuery, setSearchQuery] = useState('');
@@ -80,6 +101,11 @@ export default function CalendarClient({
 
     const handleRefresh = () => fetchEvents(currentDate);
 
+    const handleEventDeleted = (id: string) => {
+        setEvents(prev => prev.filter(e => e.id !== id));
+        setSelectedEvent(null);
+    };
+
     return (
         <div className={styles.container}>
             <div className={styles.topToolbar}>
@@ -115,6 +141,15 @@ export default function CalendarClient({
                         <button className={styles.proceedingBtn} onClick={() => setIsRecordProceedingOpen(true)}>
                             <Gavel size={18} /> <span>Record Court Proceeding</span>
                         </button>
+                        {canViewDeleted && (
+                            <button
+                                className={styles.secondaryBtn}
+                                onClick={() => setIsDeletedEntriesOpen(true)}
+                                style={{ color: '#dc2626', borderColor: '#dc2626' }}
+                            >
+                                <Trash2 size={18} /> <span>Deleted Entries</span>
+                            </button>
+                        )}
                     </div>
                 </div>
             </div>
@@ -160,18 +195,37 @@ export default function CalendarClient({
                     onClose={() => setSelectedEvent(null)}
                     event={selectedEvent}
                     workspaceId={workspaceId}
+                    userId={userId}
+                    userRole={userRole}
+                    userEmail={userEmail}
+                    isOwner={isOwner}
                     onUpdate={(patch) => {
                         setSelectedEvent(prev => prev ? { ...prev, ...patch } : prev);
                         setEvents(prev => prev.map(e => e.id === selectedEvent.id ? { ...e, ...patch } : e));
                     }}
+                    onDelete={handleEventDeleted}
                 />
             )}
 
             {selectedEvent && selectedEvent.type === 'MEETING' && (
-                <MeetingEventModal 
+                <MeetingEventModal
                     isOpen={!!selectedEvent}
                     onClose={() => setSelectedEvent(null)}
                     event={selectedEvent}
+                    userId={userId}
+                    userRole={userRole}
+                    userEmail={userEmail}
+                    isOwner={isOwner}
+                    onDelete={handleEventDeleted}
+                />
+            )}
+
+            {canViewDeleted && (
+                <DeletedEntriesModal
+                    isOpen={isDeletedEntriesOpen}
+                    onClose={() => setIsDeletedEntriesOpen(false)}
+                    workspaceId={workspaceId}
+                    onRestored={handleRefresh}
                 />
             )}
         </div>

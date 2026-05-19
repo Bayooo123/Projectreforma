@@ -12,13 +12,13 @@ function tool(name: string, description: string, properties: Record<string, any>
 }
 
 const RESOLUTION_TOOLS = [
-    tool('record_court_outcome', 'Record the proceedings and outcome for a past court hearing. If the matter was adjourned, provide adjournedTo and the tool will automatically create the next calendar entry.', {
-        calendarEntryId: { type: 'string', description: 'The calendar entry ID' },
-        proceedings: { type: 'string', description: 'What the hearing was for / subject matter' },
-        outcome: { type: 'string', description: 'What was decided or happened at the hearing' },
-        adjournedTo: { type: 'string', description: 'ISO date if the matter was adjourned to a new date — a new calendar entry will be created automatically' },
-        adjournedFor: { type: 'string', description: 'What the next hearing is for e.g. "Continuation of cross-examination"' },
-    }, ['calendarEntryId']),
+    tool('record_court_outcome', 'Record the full proceedings and outcome for a past court hearing. If the matter was adjourned, provide adjournedTo and the tool will automatically create the next calendar entry.', {
+        calendarEntryId: { type: 'string', description: 'The calendar entry ID for the hearing being recorded' },
+        proceedings: { type: 'string', description: 'Complete verbatim narrative of everything that happened at the hearing — testimony given, documents tendered and admitted, applications made, witness names, exhibit numbers, any orders. Capture ALL detail the user provides, do not summarise.' },
+        outcome: { type: 'string', description: 'The final result of the hearing: adjournment, ruling, order, or conclusion (e.g. "Claimants case closed. Adjourned to 15 June 2026 for defence")' },
+        adjournedTo: { type: 'string', description: 'ISO date string if the matter was adjourned to a new date — a new calendar entry will be created automatically' },
+        adjournedFor: { type: 'string', description: 'Purpose of the next hearing e.g. "Defence" or "Continuation of cross-examination"' },
+    }, ['calendarEntryId', 'proceedings']),
 
     tool('update_client_contact', 'Update a client\'s real contact details to replace placeholder data.', {
         clientId: { type: 'string', description: 'The client ID' },
@@ -67,6 +67,7 @@ async function executeTool(name: string, input: Record<string, any>, workspaceId
             if (input.proceedings) updateData.proceedings = input.proceedings;
             if (input.outcome) updateData.outcome = input.outcome;
             if (input.adjournedTo) updateData.adjournedTo = new Date(input.adjournedTo);
+            if (input.adjournedFor) updateData.adjournedFor = input.adjournedFor;
             await prisma.calendarEntry.update({ where: { id: entry.id }, data: updateData });
 
             // Automatically create the next calendar entry when adjourned
@@ -191,7 +192,8 @@ RULES:
 - If the user provides multiple expenses at once, record each separately with individual record_expense calls
 - Format monetary amounts in Naira (₦)
 - After mark_resolved succeeds, end with: "✓ Resolved. [what was done]"
-- Write in plain, natural prose. No markdown formatting: no asterisks for bold (**like this**), no double hyphens (--), no bullet dashes, no hash headers. Ask one clear question at a time in a single paragraph, not a numbered list.`;
+- Write in plain, natural prose. No markdown formatting: no asterisks for bold (**like this**), no double hyphens (--), no bullet dashes, no hash headers. Ask one clear question at a time in a single paragraph, not a numbered list.
+- CRITICAL: When the user provides a detailed account of what happened at a court hearing, pass the FULL text verbatim as the proceedings field in record_court_outcome — never summarise or truncate it. The proceedings field must contain everything the user describes.`;
 
     let currentMessages: Anthropic.MessageParam[] = messages.map((m: { role: string; content: string }) => ({
         role: m.role === 'user' ? 'user' : 'assistant' as const,

@@ -1,7 +1,7 @@
 'use server';
 
 import { prisma } from '@/lib/prisma';
-import { revalidatePath, unstable_noStore as noStore } from 'next/cache';
+import { revalidatePath } from 'next/cache';
 import { requireAuth } from '@/lib/auth-utils';
 import { applySentenceCaseToFields, applyTitleCaseToFields } from '@/lib/sentence-case';
 import { logActivity } from '@/lib/log-activity';
@@ -94,7 +94,6 @@ export async function getBriefs(workspaceId: string) {
 
 export async function getBriefById(id: string) {
     await requireAuth();
-    noStore(); // Force dynamic fetching
     try {
         const brief = await prisma.brief.findUnique({
             where: {
@@ -136,7 +135,19 @@ export async function getBriefById(id: string) {
                         judge: true,
                     },
                 },
+                // Explicitly exclude ocrText — it can be megabytes per document
+                // and is never displayed in the brief header view
                 documents: {
+                    select: {
+                        id: true,
+                        name: true,
+                        url: true,
+                        type: true,
+                        size: true,
+                        uploadedAt: true,
+                        ocrStatus: true,
+                        folderId: true,
+                    },
                     orderBy: { uploadedAt: 'desc' },
                     take: 200,
                 },
@@ -544,19 +555,6 @@ export async function assignLawyer(briefId: string, lawyerId: string) {
     }
 }
 
-export async function summarizeBrief(briefId: string) {
-    await requireAuth();
-    try {
-        const { BriefSummarizer } = await import('@/lib/services/summarizer');
-        const summary = await BriefSummarizer.summarize(briefId);
-        
-        revalidatePath(`/briefs/${briefId}`);
-        return { success: true, summary };
-    } catch (error: any) {
-        console.error('[summarizeBrief] Action Error:', error);
-        return { success: false, error: error.message || 'Summarization failed' };
-    }
-}
 export async function reassignBriefHierarchy(briefId: string, parentBriefId: string | null) {
     const session = await requireAuth();
     
@@ -651,13 +649,36 @@ export async function logBriefViewed(briefId: string) {
     } catch {}
 }
 
+// ── Timeline extraction backfill ─────────────────────────────────────────────
+
+export async function backfillBriefTimeline(briefId: string): Promise<{ processed: number; found: number }> {
+    await requireAuth();
+
+    const docs = await prisma.document.findMany({
+        where: { briefId },
+        select: { id: true, name: true, url: true, type: true, ocrText: true },
+    });
+
+    if (docs.length === 0) return { processed: 0, found: 0 };
+
+    const { extractDocumentTimeline } = await import('@/lib/services/doc-timeline-extractor');
+
+    let totalFound = 0;
+    for (const doc of docs) {
+        const count = await extractDocumentTimeline(doc.id, doc.name, briefId, doc.ocrText ?? null, doc.url, doc.type);
+        totalFound += count;
+    }
+
+    return { processed: docs.length, found: totalFound };
+}
+
 // ── Timeline ─────────────────────────────────────────────────────────────────
 
 export type TimelineEventType =
     | 'brief_created' | 'brief_due'
     | 'court_hearing' | 'court_adjourned' | 'meeting'
     | 'task_created' | 'task_completed' | 'task_due'
-    | 'document_uploaded' | 'activity';
+    | 'document_uploaded' | 'activity' | 'doc_event';
 
 export interface TimelineEvent {
     id: string;
@@ -666,6 +687,7 @@ export interface TimelineEvent {
     title: string;
     description?: string;
     actor?: string;
+    source?: string;
     isFuture: boolean;
     isToday: boolean;
 }
@@ -681,7 +703,7 @@ export async function getBriefTimeline(briefId: string): Promise<TimelineEvent[]
 
     const matterId = brief.matterId;
 
-    const [calendarEntries, tasks, documents, activityLogs] = await Promise.all([
+    const [calendarEntries, tasks, documents, activityLogs, docTimelineEvents] = await Promise.all([
         prisma.calendarEntry.findMany({
             where: { OR: [{ briefId }, ...(matterId ? [{ matterId }] : [])] },
             select: {
@@ -709,6 +731,14 @@ export async function getBriefTimeline(briefId: string): Promise<TimelineEvent[]
             where: { briefId, activityType: { not: 'viewed' } },
             select: { id: true, timestamp: true, activityType: true, description: true, performedBy: true },
             orderBy: { timestamp: 'asc' },
+        }),
+        prisma.documentTimelineEvent.findMany({
+            where: { briefId },
+            select: {
+                id: true, eventDate: true, eventDateRaw: true, description: true, documentName: true,
+                document: { select: { uploadedAt: true } },
+            },
+            orderBy: { createdAt: 'asc' },
         }),
     ]);
 
@@ -764,6 +794,21 @@ export async function getBriefTimeline(briefId: string): Promise<TimelineEvent[]
 
     for (const a of activityLogs) {
         events.push({ id: `act_${a.id}`, date: a.timestamp, type: 'activity', title: a.description, actor: a.performedBy ?? undefined, ...classify(a.timestamp) });
+    }
+
+    for (const e of docTimelineEvents) {
+        // Use parsed date if available; fall back to document upload date so the event is never lost
+        const date = e.eventDate ?? e.document.uploadedAt;
+        events.push({
+            id: `dte_${e.id}`,
+            date,
+            type: 'doc_event',
+            title: e.description,
+            // Show the raw date text from the document so user sees what was written
+            description: e.eventDate ? undefined : `Date in document: "${e.eventDateRaw}"`,
+            source: e.documentName,
+            ...classify(date),
+        });
     }
 
     return events.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());

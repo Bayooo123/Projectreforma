@@ -296,8 +296,7 @@ export interface MyBrief {
     dueDate: Date | null;
     category: string;
     createdAt: Date;
-    summary: string | null;
-    lastSummarizedAt: Date | null;
+    description: string | null;
     client: { name: string } | null;
     lawyerInCharge: { id: string; name: string | null } | null;
     documentCount: number;
@@ -332,8 +331,7 @@ export async function getMyBriefs(workspaceId: string): Promise<MyBrief[]> {
                 dueDate: true,
                 category: true,
                 createdAt: true,
-                summary: true,
-                lastSummarizedAt: true,
+                description: true,
                 lawyerId: true,
                 lawyerInChargeId: true,
                 client: { select: { name: true } },
@@ -354,8 +352,7 @@ export async function getMyBriefs(workspaceId: string): Promise<MyBrief[]> {
             dueDate: b.dueDate,
             category: b.category,
             createdAt: b.createdAt,
-            summary: b.summary,
-            lastSummarizedAt: b.lastSummarizedAt,
+            description: b.description,
             client: b.client,
             lawyerInCharge: b.lawyerInCharge,
             documentCount: b._count.documents,

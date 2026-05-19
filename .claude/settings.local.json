@@ -26,7 +26,13 @@
       "Bash(awk '/^model Matter/,/^}/' \"c:\\\\Users\\\\DELL\\\\.gemini\\\\antigravity\\\\scratch\\\\reforma-os\\\\prisma\\\\schema.prisma\")",
       "Bash(npx prisma *)",
       "Bash(grep \"\\\\.ts$\")",
-      "Bash(find c:\\\\\\\\Users\\\\\\\\DELL\\\\\\\\.gemini\\\\\\\\antigravity\\\\\\\\scratch\\\\\\\\reforma-os -name \"*riefs*\" -type f)"
+      "Bash(find c:\\\\\\\\Users\\\\\\\\DELL\\\\\\\\.gemini\\\\\\\\antigravity\\\\\\\\scratch\\\\\\\\reforma-os -name \"*riefs*\" -type f)",
+      "Bash(node -e \"const l = require\\('lucide-react'\\); ['Bell','CalendarClock','Scale','Receipt','DollarSign','FileText','User','ArrowLeft','CheckCircle2','Send','X'].forEach\\(n => console.log\\(n, !!l[n]\\)\\)\")",
+      "Bash(taskkill /F /PID 16436)",
+      "PowerShell(Stop-Process -Id 16436 -Force -ErrorAction SilentlyContinue)",
+      "PowerShell(Get-NetTCPConnection -LocalPort 3000 -ErrorAction SilentlyContinue)",
+      "PowerShell(Get-NetTCPConnection -LocalPort 3000 -State Listen -ErrorAction SilentlyContinue)",
+      "PowerShell(Get-NetTCPConnection -LocalPort 3001 -State Listen -ErrorAction SilentlyContinue)"
     ]
   }
 }

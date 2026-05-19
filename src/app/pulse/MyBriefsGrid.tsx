@@ -69,11 +69,11 @@ export default function MyBriefsGrid({ briefs }: Props) {
                                 </span>
                             </div>
 
-                            {b.summary ? (
-                                <p style={summaryStyle}>{b.summary.slice(0, 110)}{b.summary.length > 110 ? '…' : ''}</p>
+                            {b.description ? (
+                                <p style={summaryStyle}>{b.description.slice(0, 110)}{b.description.length > 110 ? '…' : ''}</p>
                             ) : (
                                 <p style={{ ...summaryStyle, color: '#cbd5e1', fontStyle: 'italic' }}>
-                                    Summary not yet generated
+                                    No description
                                 </p>
                             )}
 

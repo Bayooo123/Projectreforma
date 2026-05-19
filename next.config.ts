@@ -45,7 +45,7 @@ const securityHeaders = [
             "frame-ancestors 'none'",
             "form-action 'self'",
             "base-uri 'self'",
-            "frame-src https://fladov.com https://www.fladov.com https://*.fladov.com https://www.youtube.com https://youtube.com"
+            "frame-src 'self' blob: https://fladov.com https://www.fladov.com https://*.fladov.com https://www.youtube.com https://youtube.com"
         ].join('; '),
     },
     // Prevent XSS in older browsers
@@ -64,9 +64,17 @@ const nextConfig: NextConfig = {
     async headers() {
         return [
             {
-                // Apply to all routes
+                // Apply security headers to all routes
                 source: '/(.*)',
                 headers: securityHeaders,
+            },
+            {
+                // Doc proxy: override X-Frame-Options so the iframe response
+                // itself is not blocked when rendered inside our own page
+                source: '/api/doc-proxy',
+                headers: [
+                    { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
+                ],
             },
         ];
     },

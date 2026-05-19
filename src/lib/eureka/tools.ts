@@ -242,7 +242,6 @@ export async function executeTool(
                 category: brief.category,
                 status: brief.status,
                 description: brief.description,
-                summary: brief.summary,
                 openedAt: brief.createdAt,
                 dueDate: brief.dueDate,
                 client: brief.client?.name ?? null,

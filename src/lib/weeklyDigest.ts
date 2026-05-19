@@ -218,7 +218,8 @@ export async function sendWeeklyDigestForWorkspace(workspaceId: string): Promise
             });
 
             const counsel = lastAppearance?.appearances.map(a => a.name || a.email || '').filter(Boolean) ?? [];
-            const purpose = entry.adjournedFor || entry.proceedings || '';
+            const rawPurpose = entry.adjournedFor || entry.proceedings || '';
+            const purpose = /to be filled|tbd|n\/a/i.test(rawPurpose) ? '' : rawPurpose;
             const isJudgment = /judgment|ruling/i.test(purpose);
 
             enriched.push({
