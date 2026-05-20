@@ -248,3 +248,183 @@
     border-color: var(--border);
     color: var(--text-primary);
 }
+
+/* ── Score Widget ─────────────────────────────────────────── */
+.scoreWidget {
+    display: flex;
+    align-items: center;
+    gap: 28px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-xl);
+    padding: 20px 28px;
+    margin-bottom: 24px;
+    box-shadow: var(--shadow-sm);
+    flex-wrap: wrap;
+}
+
+.scoreRing {
+    flex-shrink: 0;
+}
+
+.scoreDivider {
+    width: 1px;
+    height: 60px;
+    background: var(--border);
+    flex-shrink: 0;
+}
+
+.scoreStats {
+    flex: 1;
+    min-width: 200px;
+}
+
+.scoreMain {
+    margin-bottom: 10px;
+}
+
+.scorePrimary {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--primary);
+    font-family: Georgia, serif;
+    line-height: 1;
+}
+
+.scoreLabel {
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+.scorePills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 8px;
+}
+
+.pillOverdue {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 10px;
+    background: var(--danger-bg);
+    color: var(--danger);
+    border-radius: 100px;
+    font-size: 11.5px;
+    font-weight: 600;
+}
+
+.pillDueSoon {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 10px;
+    background: #FFFBEB;
+    color: #D97706;
+    border-radius: 100px;
+    font-size: 11.5px;
+    font-weight: 600;
+}
+
+.pillPending {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 10px;
+    background: #F3F4F6;
+    color: #6B7280;
+    border-radius: 100px;
+    font-size: 11.5px;
+    font-weight: 600;
+}
+
+.pillDone {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 10px;
+    background: var(--success-bg);
+    color: var(--success);
+    border-radius: 100px;
+    font-size: 11.5px;
+    font-weight: 600;
+}
+
+.scoreTiers {
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+    min-width: 200px;
+}
+
+.tierStat {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.tierStatLabel {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    width: 76px;
+    flex-shrink: 0;
+}
+
+.tierScore {
+    font-size: 11.5px;
+    font-weight: 700;
+    color: var(--text-primary);
+    width: 34px;
+    flex-shrink: 0;
+    text-align: right;
+}
+
+.tierBar {
+    flex: 1;
+    height: 5px;
+    background: var(--accent);
+    border-radius: 100px;
+    overflow: hidden;
+}
+
+.tierBarFill {
+    height: 100%;
+    background: var(--primary);
+    border-radius: 100px;
+    transition: width 0.5s ease;
+}
+
+/* ── Fee display in obligation cell ───────────────────────── */
+.feeDescription {
+    font-size: 11px;
+    color: var(--text-tertiary);
+    margin-top: 5px;
+    line-height: 1.4;
+}
+
+.feeLabel {
+    font-weight: 700;
+    color: #059669;
+}
+
+.emptyText {
+    font-size: 14px;
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+/* Dark mode additions */
+:global(.dark) .scoreWidget {
+    background: var(--surface);
+    border-color: var(--border);
+}
+
+:global(.dark) .pillPending {
+    background: rgba(255, 255, 255, 0.06);
+    color: #9CA3AF;
+}
+
+:global(.dark) .pillDueSoon {
+    background: rgba(217, 119, 6, 0.15);
+    color: #FCD34D;
+}

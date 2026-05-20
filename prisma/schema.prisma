@@ -957,6 +957,9 @@ model ComplianceObligation {
   frequency          String
   dueDateDescription String?
   jurisdiction       String           @default("Federal")
+  feeDescription     String?
+  feeSchedule        Json?
+  scope              String           @default("firm")
   createdAt          DateTime         @default(now())
   updatedAt          DateTime         @updatedAt
   tasks              ComplianceTask[]

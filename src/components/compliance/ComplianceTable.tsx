@@ -111,6 +111,12 @@ export default function ComplianceTable({ tasks, onUpdate, onEdit }: ComplianceT
                                 <div className={styles.obligationDesc}>
                                     {task.obligation.procedure}
                                 </div>
+                                {task.obligation.feeDescription && (
+                                    <div className={styles.feeDescription}>
+                                        <span className={styles.feeLabel}>Fee: </span>
+                                        {task.obligation.feeDescription}
+                                    </div>
+                                )}
                             </td>
                             <td className={styles.tableCell}>
                                 <span className={styles.regulatorBadge}>

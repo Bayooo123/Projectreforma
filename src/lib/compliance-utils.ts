@@ -43,3 +43,43 @@ export function calculateComplianceDueDate(description: string, year: number = n
 
     return null;
 }
+
+export function getNextCycleDueDate(frequency: string, currentDueDate: Date | null): Date | null {
+    if (!currentDueDate) return null;
+    const next = new Date(currentDueDate);
+    switch (frequency.toLowerCase()) {
+        case 'monthly':
+            next.setMonth(next.getMonth() + 1);
+            return next;
+        case 'quarterly':
+            next.setMonth(next.getMonth() + 3);
+            return next;
+        case 'annual':
+        case 'annually':
+            next.setFullYear(next.getFullYear() + 1);
+            return next;
+        default:
+            return null;
+    }
+}
+
+export function getNextCyclePeriodLabel(frequency: string, currentDueDate: Date | null): string {
+    if (!currentDueDate) return new Date().getFullYear().toString();
+    switch (frequency.toLowerCase()) {
+        case 'monthly': {
+            const d = new Date(currentDueDate);
+            d.setMonth(d.getMonth() + 1);
+            return d.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+        }
+        case 'quarterly': {
+            const d = new Date(currentDueDate);
+            d.setMonth(d.getMonth() + 3);
+            return `Q${Math.floor(d.getMonth() / 3) + 1} ${d.getFullYear()}`;
+        }
+        case 'annual':
+        case 'annually':
+            return String(new Date(currentDueDate).getFullYear() + 1);
+        default:
+            return new Date().getFullYear().toString();
+    }
+}
