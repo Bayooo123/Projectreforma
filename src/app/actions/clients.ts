@@ -301,6 +301,9 @@ export async function deleteClient(id: string) {
 export async function getClientStats(workspaceId: string) {
     await requireAuth();
     try {
+        const now = new Date();
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
         const [
             totalClients,
             activeClients,
@@ -308,6 +311,7 @@ export async function getClientStats(workspaceId: string) {
             activeMatters,
             totalInvoices,
             paidInvoices,
+            newClientsThisMonth,
         ] = await Promise.all([
             prisma.client.count({
                 where: { workspaceId },
@@ -338,6 +342,12 @@ export async function getClientStats(workspaceId: string) {
                 where: {
                     client: { workspaceId },
                     status: 'paid',
+                },
+            }),
+            prisma.client.count({
+                where: {
+                    workspaceId,
+                    createdAt: { gte: startOfMonth },
                 },
             }),
         ]);
@@ -400,6 +410,7 @@ export async function getClientStats(workspaceId: string) {
                 inactiveClients: totalClients - activeClients,
                 totalMatters,
                 activeMatters,
+                newClientsThisMonth,
                 totalInvoices,
                 paidInvoices,
                 pendingInvoices: totalInvoices - paidInvoices,

@@ -55,7 +55,7 @@ const ViewAllInvoicesModal = ({ isOpen, onClose, workspaceId, letterheadUrl }: V
                 getBankAccounts(workspaceId),
             ]);
             if (invoicesRes.success && invoicesRes.data) setInvoices(invoicesRes.data as any);
-            if (banksRes.success) setBankAccounts(banksRes.accounts);
+            if (banksRes.success) setBankAccounts(banksRes.accounts || []);
         } catch (error) {
             console.error('Error fetching invoices:', error);
         } finally {

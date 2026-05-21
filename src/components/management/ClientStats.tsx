@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Users, Briefcase, Loader } from 'lucide-react';
+import { Users, UserPlus, Loader } from 'lucide-react';
 import { getClientStats } from '@/app/actions/clients';
 import ViewAllInvoicesModal from './ViewAllInvoicesModal';
 import ViewAllPaymentsModal from './ViewAllPaymentsModal';
@@ -17,7 +17,7 @@ const ClientStats = ({ workspaceId, letterheadUrl }: ClientStatsProps) => {
     const router = useRouter();
     const [stats, setStats] = useState({
         totalClients: 0,
-        activeMatters: 0,
+        newClientsThisMonth: 0,
     });
     const [isLoading, setIsLoading] = useState(true);
     const [showInvoicesModal, setShowInvoicesModal] = useState(false);
@@ -31,7 +31,7 @@ const ClientStats = ({ workspaceId, letterheadUrl }: ClientStatsProps) => {
                 if (result.success && result.data) {
                     setStats({
                         totalClients: result.data.totalClients,
-                        activeMatters: result.data.activeMatters,
+                        newClientsThisMonth: result.data.newClientsThisMonth,
                     });
                 }
             } catch (error) {
@@ -74,17 +74,14 @@ const ClientStats = ({ workspaceId, letterheadUrl }: ClientStatsProps) => {
                 </div>
             </div>
 
-            {/* Active Matters -> Filter active_matters */}
-            <div
-                className={`${styles.statCard} cursor-pointer hover:shadow-md transition-all`}
-                onClick={() => handleCardClick('active_matters')}
-            >
-                <div className={styles.iconWrapper} style={{ backgroundColor: '#FEF3C7', color: '#D97706' }}>
-                    <Briefcase size={18} />
+            {/* New Clients This Month */}
+            <div className={styles.statCard}>
+                <div className={styles.iconWrapper} style={{ backgroundColor: '#D1FAE5', color: '#059669' }}>
+                    <UserPlus size={18} />
                 </div>
                 <div className={styles.content}>
-                    <p className={styles.label}>Active Litigation</p>
-                    <p className={styles.value}>{stats.activeMatters}</p>
+                    <p className={styles.label}>New This Month</p>
+                    <p className={styles.value}>{stats.newClientsThisMonth}</p>
                 </div>
             </div>
 
