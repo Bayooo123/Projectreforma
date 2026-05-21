@@ -66,52 +66,65 @@ export async function processScheduledNotifications(): Promise<{
                     priority = 'high';
                     type = 'compliance_reminder';
                 } else if (scheduledNotif.calendarEntry) {
-                    const { matter } = scheduledNotif.calendarEntry;
-                    if (!matter) {
-                        console.warn(`[Notification Processor] Calendar entry ${scheduledNotif.calendarEntry.id} has no associated matter`);
-                        continue;
-                    }
-                    const courtDate: Date = scheduledNotif.calendarEntry.date;
-
+                    const entry = scheduledNotif.calendarEntry;
+                    const { matter } = entry;
+                    const courtDate: Date = entry.date;
                     const daysMap: Record<string, number> = { three_day: 3, two_day: 2, day_of: 0 };
                     const daysAway = daysMap[scheduledNotif.notificationType] ?? 0;
+
+                    const caseName = matter?.name
+                        || entry.title
+                        || (entry.adjournedFor ? `Adjourned matter — ${entry.adjournedFor}` : 'Court Appearance');
+                    const caseNumber = matter?.caseNumber ?? undefined;
+                    const court = matter?.court ?? entry.court ?? undefined;
+                    relatedMatterId = matter?.id ?? relatedMatterId;
 
                     switch (scheduledNotif.notificationType) {
                         case 'three_day':
                             title = 'Matter Coming Up in 3 Days';
-                            message = `${matter.name}${matter.caseNumber ? ` (${matter.caseNumber})` : ''} is scheduled for ${courtDate.toLocaleDateString()}${matter.court ? ` at ${matter.court}` : ''}.`;
+                            message = `${caseName}${caseNumber ? ` (${caseNumber})` : ''} is scheduled for ${courtDate.toLocaleDateString()}${court ? ` at ${court}` : ''}.`;
                             priority = 'medium';
                             break;
                         case 'two_day':
                             title = 'Matter Coming Up in 2 Days';
-                            message = `${matter.name}${matter.caseNumber ? ` (${matter.caseNumber})` : ''} is scheduled for ${courtDate.toLocaleDateString()}${matter.court ? ` at ${matter.court}` : ''}. Please prepare accordingly.`;
+                            message = `${caseName}${caseNumber ? ` (${caseNumber})` : ''} is scheduled for ${courtDate.toLocaleDateString()}${court ? ` at ${court}` : ''}. Please prepare accordingly.`;
                             priority = 'high';
                             break;
                         case 'day_of':
                             title = 'Court is Today';
-                            message = `${matter.name}${matter.caseNumber ? ` (${matter.caseNumber})` : ''} is scheduled for today${matter.court ? ` at ${matter.court}` : ''}. Please record what happened in court after the hearing.`;
+                            message = `${caseName}${caseNumber ? ` (${caseNumber})` : ''} is scheduled for today${court ? ` at ${court}` : ''}. Please record what happened in court after the hearing.`;
                             priority = 'high';
                             break;
                         default:
                             title = 'Court Date Reminder';
-                            message = `${matter.name} has a court date scheduled.`;
+                            message = `${caseName} has a court date scheduled for ${courtDate.toLocaleDateString()}.`;
                     }
 
-                    if (recipient?.email) {
+                    if (recipient?.email && matter) {
                         emailSubject = daysAway === 0
-                            ? `Court today — ${matter.name}`
-                            : `Court in ${daysAway} day${daysAway > 1 ? 's' : ''} — ${matter.name}`;
+                            ? `Court today — ${caseName}`
+                            : `Court in ${daysAway} day${daysAway > 1 ? 's' : ''} — ${caseName}`;
                         emailHtml = courtReminderEmail({
                             lawyerName: recipient.name || recipient.email,
-                            matterName: matter.name,
-                            caseNumber: matter.caseNumber ?? undefined,
-                            court: matter.court ?? undefined,
-                            adjournedFor: scheduledNotif.calendarEntry.adjournedFor ?? undefined,
+                            matterName: caseName,
+                            caseNumber,
+                            court,
+                            adjournedFor: entry.adjournedFor ?? undefined,
                             courtDate,
                             daysAway,
                             appUrl: config.NEXT_PUBLIC_APP_URL,
                         });
                     }
+                }
+
+                if (!title) {
+                    console.warn(`[Notification Processor] Skipping notification ${scheduledNotif.id} — no title could be resolved`);
+                    await prisma.scheduledNotification.update({
+                        where: { id: scheduledNotif.id },
+                        data: { status: 'sent', sentAt: new Date() },
+                    });
+                    processed++;
+                    continue;
                 }
 
                 await createNotification({
