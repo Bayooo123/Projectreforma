@@ -156,6 +156,7 @@ export const getCurrentUserWithWorkspace = cache(async () => {
             image: session.user.image,
             role: session.user.role,
             workspaceId: session.user.workspaceId,
+            isPlatformAdmin: !!session.user.isPlatformAdmin,
         };
 
         // If we already have a workspaceId in the session, use the lightweight fetcher
