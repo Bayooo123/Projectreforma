@@ -51,18 +51,12 @@ async function findExpenseGaps(workspaceId: string): Promise<{ month: string; ye
     return gaps;
 }
 
+// detectAnomalies returns ALL currently active problem conditions — no DB deduplication.
+// runAnomalyScan is responsible for comparing against the DB to create/resolve records.
 export async function detectAnomalies(workspaceId: string): Promise<DetectedAnomaly[]> {
     const detected: DetectedAnomaly[] = [];
     const now = new Date();
     const threeDaysAgo = new Date(now.getTime() - 3 * 86_400_000);
-
-    // Pull existing open/acknowledged anomalies to avoid duplicates
-    const existing = await prisma.workspaceAnomaly.findMany({
-        where: { workspaceId, status: { in: ['open', 'acknowledged'] } },
-        select: { type: true, resourceId: true },
-    });
-    const existingSet = new Set(existing.map(e => `${e.type}::${e.resourceId}`));
-    const isNew = (type: AnomalyType, id: string) => !existingSet.has(`${type}::${id}`);
 
     // ── 1. SPARSE_BRIEF ────────────────────────────────────────────────────
     const sparseBriefs = await prisma.brief.findMany({
@@ -81,7 +75,6 @@ export async function detectAnomalies(workspaceId: string): Promise<DetectedAnom
 
     for (const b of sparseBriefs) {
         if (b._count.documents > 0) continue;
-        if (!isNew('SPARSE_BRIEF', b.id)) continue;
         const days = Math.floor((now.getTime() - new Date(b.createdAt).getTime()) / 86_400_000);
         detected.push({
             type: 'SPARSE_BRIEF',
@@ -109,7 +102,6 @@ export async function detectAnomalies(workspaceId: string): Promise<DetectedAnom
 
     // Get matter/invoice counts separately to avoid _count TS issues
     for (const c of placeholderClients) {
-        if (!isNew('PLACEHOLDER_CLIENT', c.id)) continue;
         const [matterCount, invoiceCount] = await Promise.all([
             prisma.matter.count({ where: { clientId: c.id, status: 'active' } }),
             prisma.invoice.count({ where: { clientId: c.id, NOT: { status: { in: ['paid', 'PAID'] } } } }),
@@ -150,7 +142,6 @@ export async function detectAnomalies(workspaceId: string): Promise<DetectedAnom
 
     for (const e of unproceedHearings) {
         if (!e.matter) continue;
-        if (!isNew('MISSING_COURT_OUTCOME', e.id)) continue;
         const dateStr = new Date(e.date).toLocaleDateString('en-NG', { day: 'numeric', month: 'long', year: 'numeric' });
         detected.push({
             type: 'MISSING_COURT_OUTCOME',
@@ -168,7 +159,6 @@ export async function detectAnomalies(workspaceId: string): Promise<DetectedAnom
     const gaps = await findExpenseGaps(workspaceId);
     for (const gap of gaps) {
         const pseudoId = `${workspaceId}-${gap.year}-${gap.monthNum}`;
-        if (!isNew('MISSING_EXPENSE_PERIOD', pseudoId)) continue;
         detected.push({
             type: 'MISSING_EXPENSE_PERIOD',
             severity: 'medium',
@@ -197,7 +187,6 @@ export async function detectAnomalies(workspaceId: string): Promise<DetectedAnom
     });
 
     for (const m of matters) {
-        if (!isNew('UNSCHEDULED_MATTER', m.id)) continue;
         detected.push({
             type: 'UNSCHEDULED_MATTER',
             severity: 'medium',
@@ -234,7 +223,6 @@ export async function detectAnomalies(workspaceId: string): Promise<DetectedAnom
         const adjFor = (entry.adjournedFor || '').toLowerCase();
         if (!FILING_KEYWORDS.some(kw => adjFor.includes(kw))) continue;
         if (!entry.matter) continue;
-        if (!isNew('FILING_DEADLINE_RISK', entry.id)) continue;
 
         // Check if any brief linked to this matter has recent documents
         const recentDocs = await prisma.document.count({
@@ -285,7 +273,6 @@ export async function detectAnomalies(workspaceId: string): Promise<DetectedAnom
         const { MILESTONE_CONFIG } = await import('@/lib/litigation/milestones');
         for (const m of overdueMilestones) {
             if (!m.matter) continue;
-            if (!isNew('OVERDUE_MILESTONE', m.id)) continue;
             const cfg = MILESTONE_CONFIG[m.type as keyof typeof MILESTONE_CONFIG];
             const daysOverdue = m.dueDate
                 ? Math.floor((now.getTime() - new Date(m.dueDate).getTime()) / 86_400_000)
@@ -315,11 +302,33 @@ export async function detectAnomalies(workspaceId: string): Promise<DetectedAnom
     return detected;
 }
 
-export async function runAnomalyScan(workspaceId: string): Promise<{ created: number; skipped: number }> {
-    const anomalies = await detectAnomalies(workspaceId);
-    let created = 0;
+export async function runAnomalyScan(workspaceId: string): Promise<{ created: number; resolved: number }> {
+    const [currentProblems, existing] = await Promise.all([
+        detectAnomalies(workspaceId),
+        prisma.workspaceAnomaly.findMany({
+            where: { workspaceId, status: { in: ['open', 'acknowledged'] } },
+            select: { id: true, type: true, resourceId: true },
+        }),
+    ]);
 
-    for (const a of anomalies) {
+    const currentKeys = new Set(currentProblems.map(p => `${p.type}::${p.resourceId}`));
+    const existingKeys = new Set(existing.map(e => `${e.type}::${e.resourceId}`));
+
+    // Auto-resolve any anomaly whose underlying condition is no longer true
+    const staleIds = existing
+        .filter(e => !currentKeys.has(`${e.type}::${e.resourceId}`))
+        .map(e => e.id);
+
+    if (staleIds.length > 0) {
+        await prisma.workspaceAnomaly.updateMany({
+            where: { id: { in: staleIds } },
+            data: { status: 'resolved', resolvedAt: new Date() },
+        });
+    }
+
+    // Create records only for problems not already tracked
+    const toCreate = currentProblems.filter(a => !existingKeys.has(`${a.type}::${a.resourceId}`));
+    for (const a of toCreate) {
         await prisma.workspaceAnomaly.create({
             data: {
                 workspaceId,
@@ -334,10 +343,9 @@ export async function runAnomalyScan(workspaceId: string): Promise<{ created: nu
                 context: a.context ?? {},
             },
         });
-        created++;
     }
 
-    return { created, skipped: 0 };
+    return { created: toCreate.length, resolved: staleIds.length };
 }
 
 export async function runAnomalyScanAllWorkspaces(): Promise<void> {
