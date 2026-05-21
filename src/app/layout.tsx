@@ -6,8 +6,7 @@ import "./globals.css";
 import ShellWrapper from "@/components/layout/ShellWrapper";
 import PageTransition from "@/components/layout/PageTransition";
 import NextTopLoader from 'nextjs-toploader';
-import { auth } from "@/auth";
-import { getCurrentUserWithWorkspace, getLightweightWorkspace } from "@/lib/workspace";
+import { getCurrentUserWithWorkspace } from "@/lib/workspace";
 import PWAInstallPrompt from "@/components/layout/PWAInstallPrompt";
 import { SessionProvider } from "next-auth/react";
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
@@ -48,11 +47,15 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const session = await auth();
-  const user = session?.user;
+  // Single cached call — child pages calling getCurrentUserWithWorkspace() get a cache hit
+  const [userData, headersList] = await Promise.all([
+    getCurrentUserWithWorkspace(),
+    headers(),
+  ]);
+  const user = userData?.user;
+  const workspaceData = userData?.workspace;
 
   // Resolve pathname server-side to avoid client-side layout toggling
-  const headersList = await headers();
   const rawPathname = headersList.get('x-pathname') || '';
   const pathname = rawPathname.replace(/\/$/, '') || '/'; // Normalize trailing slash
 
@@ -70,11 +73,6 @@ export default async function RootLayout({
 
   // Determine if we should render the app shell
   const showShell = !!user && !isPublicRoute && !isChromelessRoute;
-
-  // Resolve lightweight workspace data (branding only) ONLY IF necessary for initial theme/colors
-  // Note: we don't await the FULL user+workspace object here to avoid blocking
-  const workspaceId = session?.user?.workspaceId;
-  const workspaceData = workspaceId ? await getLightweightWorkspace(workspaceId) : null;
 
   return (
     <html lang="en" suppressHydrationWarning>
@@ -100,7 +98,7 @@ export default async function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <SessionProvider session={session}>
+          <SessionProvider>
             {showShell ? (
               // Authenticated shell — workspace parameter is now lightweight
               <ShellWrapper user={user} workspace={workspaceData}>

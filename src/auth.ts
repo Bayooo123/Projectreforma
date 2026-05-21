@@ -206,6 +206,7 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
 
                 token.jti = jti;
                 token.sessionVersion = sessionVersion;
+                token.lastVersionCheck = Date.now();
                 token.role = user.role;
                 token.workspaceId = user.workspaceId;
                 token.lawyerToken = user.lawyerToken;
@@ -234,15 +235,19 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
                 ]).catch(e => console.error('[Auth] Session record error:', e));
 
             } else if (token.sub) {
-                // Subsequent request — check if session was force-revoked
-                const dbUser = await prisma.user.findUnique({
-                    where: { id: token.sub },
-                    select: { sessionVersion: true },
-                });
+                // Subsequent request — only check DB every 60 s to avoid per-request queries
+                const now = Date.now();
+                const lastCheck = (token.lastVersionCheck as number) ?? 0;
+                if (now - lastCheck > 60_000) {
+                    const dbUser = await prisma.user.findUnique({
+                        where: { id: token.sub },
+                        select: { sessionVersion: true },
+                    });
 
-                if (!dbUser || (dbUser.sessionVersion as number) > (token.sessionVersion as number ?? 0)) {
-                    // sessionVersion was incremented (force-logout) — invalidate this JWT
-                    return null;
+                    if (!dbUser || (dbUser.sessionVersion as number) > (token.sessionVersion as number ?? 0)) {
+                        return null;
+                    }
+                    token.lastVersionCheck = now;
                 }
             }
             return token;

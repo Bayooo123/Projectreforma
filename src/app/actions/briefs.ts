@@ -82,7 +82,7 @@ export async function getBriefs(workspaceId: string) {
             orderBy: {
                 updatedAt: 'desc',
             },
-            take: 500,
+            take: 50,
         });
 
         return briefs;
