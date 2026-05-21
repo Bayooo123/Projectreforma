@@ -9,9 +9,10 @@ function JoinForm() {
     const token = searchParams.get('token') ?? '';
 
     const [step, setStep] = useState<'checking' | 'new_user' | 'existing_user' | 'done' | 'error'>('checking');
-    const [email, setEmail] = useState('');
+    const [invitedEmail, setInvitedEmail] = useState('');
     const [name, setName] = useState('');
     const [password, setPassword] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
     const [errorMsg, setErrorMsg] = useState('');
     const [loading, setLoading] = useState(false);
 
@@ -27,12 +28,13 @@ function JoinForm() {
             const data = await res.json();
             if (!res.ok) { setStep('error'); setErrorMsg(data.error); return; }
             if (data.requiresLogin) {
-                setEmail(data.email);
+                setInvitedEmail(data.email);
                 setStep('existing_user');
+            } else if (data.needsSignup) {
+                setInvitedEmail(data.email);
+                setStep('new_user');
             } else if (data.isNewUser) {
                 setStep('done');
-            } else {
-                setStep('new_user');
             }
         } catch {
             setStep('error');
@@ -44,8 +46,9 @@ function JoinForm() {
 
     const handleNewUser = async (e: React.FormEvent) => {
         e.preventDefault();
-        setLoading(true);
         setErrorMsg('');
+        if (password !== confirmPassword) { setErrorMsg('Passwords do not match.'); return; }
+        setLoading(true);
         try {
             const res = await fetch('/api/admin/invite/accept', {
                 method: 'POST',
@@ -104,16 +107,21 @@ function JoinForm() {
 
                     {step === 'new_user' && (
                         <>
-                            <h2 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#111827', margin: '0 0 8px' }}>Create your account</h2>
+                            <h2 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#111827', margin: '0 0 8px' }}>Create your admin account</h2>
                             <p style={{ color: '#6B7280', fontSize: '0.875rem', lineHeight: 1.6, margin: '0 0 20px' }}>
-                                Set up your Reforma HQ account to get started.
+                                You're creating a <strong>Reforma HQ</strong> platform admin account. This account is separate from any law firm workspace.
                             </p>
                             <form onSubmit={handleNewUser} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                                <input type="text" placeholder="Full name" value={name} onChange={e => setName(e.target.value)} required style={inputStyle} />
-                                <input type="password" placeholder="Choose a password (min 8 chars)" value={password} onChange={e => setPassword(e.target.value)} required style={inputStyle} />
+                                <div style={{ padding: '10px 12px', border: '1px solid #d1d5db', borderRadius: 8, fontSize: '0.9rem', background: '#f9fafb', color: '#6B7280', boxSizing: 'border-box' as const }}>
+                                    <span style={{ fontSize: '0.75rem', fontWeight: 600, display: 'block', marginBottom: 2, color: '#9CA3AF', textTransform: 'uppercase' as const, letterSpacing: '0.05em' }}>Account email</span>
+                                    {invitedEmail}
+                                </div>
+                                <input type="text" placeholder="Your full name" value={name} onChange={e => setName(e.target.value)} required style={inputStyle} />
+                                <input type="password" placeholder="Password (min 8 characters)" value={password} onChange={e => setPassword(e.target.value)} required style={inputStyle} />
+                                <input type="password" placeholder="Confirm password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} required style={inputStyle} />
                                 {errorMsg && <p style={{ color: '#ef4444', fontSize: '0.8rem', margin: 0 }}>{errorMsg}</p>}
                                 <button type="submit" disabled={loading} style={btnStyle}>
-                                    {loading ? 'Creating account...' : 'Create Account & Join'}
+                                    {loading ? 'Creating account...' : 'Create Admin Account'}
                                 </button>
                             </form>
                         </>
@@ -123,7 +131,7 @@ function JoinForm() {
                         <>
                             <h2 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#111827', margin: '0 0 8px' }}>Access granted</h2>
                             <p style={{ color: '#6B7280', fontSize: '0.875rem', lineHeight: 1.6, margin: '0 0 20px' }}>
-                                Platform admin access has been added to <strong>{email}</strong>. Log in to access Reforma HQ.
+                                Platform admin access has been added to <strong>{invitedEmail}</strong>. Log in to access Reforma HQ.
                             </p>
                             <button onClick={() => router.push('/login')} style={btnStyle}>Go to Login</button>
                         </>

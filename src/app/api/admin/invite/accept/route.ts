@@ -17,14 +17,19 @@ export async function POST(request: NextRequest) {
 
         const existingUser = await prisma.user.findUnique({ where: { email: invite.email } });
 
-        if (existingUser) {
-            // Grant admin to existing account — they must be logged in on the join page
-            await prisma.user.update({ where: { id: existingUser.id }, data: { isPlatformAdmin: true } });
-            await prisma.adminInvite.update({ where: { id: invite.id }, data: { status: 'accepted', acceptedAt: new Date() } });
-            return NextResponse.json({ success: true, requiresLogin: true, email: existingUser.email });
+        // ── Phase 1: token-only check (no name/password yet) ──────────────
+        if (!name && !password) {
+            if (existingUser) {
+                // Account already exists — just grant admin flag and redirect to login
+                await prisma.user.update({ where: { id: existingUser.id }, data: { isPlatformAdmin: true } });
+                await prisma.adminInvite.update({ where: { id: invite.id }, data: { status: 'accepted', acceptedAt: new Date() } });
+                return NextResponse.json({ success: true, requiresLogin: true, email: existingUser.email });
+            }
+            // New user — tell the client to show the signup form
+            return NextResponse.json({ success: true, needsSignup: true, email: invite.email });
         }
 
-        // New user — name and password required
+        // ── Phase 2: create the new admin account ─────────────────────────
         if (!name || !password) return NextResponse.json({ error: 'Name and password are required.' }, { status: 400 });
         if (password.length < 8) return NextResponse.json({ error: 'Password must be at least 8 characters.' }, { status: 400 });
 

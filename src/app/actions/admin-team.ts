@@ -58,7 +58,7 @@ export async function invitePlatformAdmin(email: string) {
     await mailService.send({
         to: normalised,
         subject: 'You have been invited to Reforma HQ',
-        from: 'Reforma <noreply@reforma.ng>',
+        from: config.MAIL_FROM,
         html: `<!DOCTYPE html>
 <html>
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
