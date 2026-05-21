@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { X, Loader } from 'lucide-react';
+import { X } from 'lucide-react';
 import { getAllPayments } from '@/app/actions/payments';
 import styles from './ViewAllModal.module.css';
 
@@ -77,9 +77,19 @@ const ViewAllPaymentsModal = ({ isOpen, onClose, workspaceId }: ViewAllPaymentsM
 
                 <div className={styles.content}>
                     {isLoading ? (
-                        <div className={styles.loading}>
-                            <Loader size={24} className="spin" />
-                            <p>Loading payments...</p>
+                        <div className={styles.tableWrapper}>
+                            <table className={styles.table}>
+                                <thead><tr><th>Date</th><th>Client</th><th>Invoice #</th><th>Amount</th><th>Method</th><th>Reference</th></tr></thead>
+                                <tbody>
+                                    {[1,2,3,4,5].map(i => (
+                                        <tr key={i}>
+                                            {[32,55,40,45,35,50].map((w, j) => (
+                                                <td key={j}><div style={{ height: 14, width: `${w}%`, borderRadius: 4, background: 'linear-gradient(90deg,var(--accent) 25%,var(--surface-subtle) 50%,var(--accent) 75%)', backgroundSize: '800px 100%', animation: 'shimmer 1.4s infinite linear' }} /></td>
+                                            ))}
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
                         </div>
                     ) : payments.length === 0 ? (
                         <div className={styles.empty}>

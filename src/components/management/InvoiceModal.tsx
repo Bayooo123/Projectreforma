@@ -1,15 +1,13 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { X, Plus, Trash2, FileText, DollarSign, Loader, Download, CreditCard } from 'lucide-react';
+import { X, Plus, Trash2, FileText, DollarSign, Loader, Download, CreditCard, AlertCircle, Settings } from 'lucide-react';
 import { createInvoice, generateInvoiceNumber, getClientMatters, getClientInvoices } from '@/app/actions/invoices';
-
-import { getBankAccounts } from '@/app/actions/bank-accounts';
+import { getBankAccountsWithWorkspaceName } from '@/app/actions/bank-accounts';
 import { getWorkspaceMembers } from '@/app/actions/members';
 import { generateInvoicePDF } from '@/lib/invoice-pdf';
 import { generateInvoiceDOCX } from '@/lib/invoice-docx';
 import styles from './InvoiceModal.module.css';
-
 import { Matter, Invoice } from '@/types/legal';
 
 interface InvoiceItem {
@@ -35,7 +33,7 @@ const InvoiceModal = ({ isOpen, onClose, clientName, clientId, workspaceId, lett
     const [securityChargeRate, setSecurityChargeRate] = useState(1.0);
     const [invoiceNumber, setInvoiceNumber] = useState('');
     const [matters, setMatters] = useState<any[]>([]);
-    const [isLoadingMatters, setIsLoadingMatters] = useState(false);
+    const [selectedMatterId, setSelectedMatterId] = useState('');
 
     const [invoices, setInvoices] = useState<Invoice[]>([]);
     const [isLoadingInvoices, setIsLoadingInvoices] = useState(false);
@@ -43,106 +41,50 @@ const InvoiceModal = ({ isOpen, onClose, clientName, clientId, workspaceId, lett
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isGeneratingPdf, setIsGeneratingPdf] = useState<string | null>(null);
 
-
-
-    // ... render updates ...
-    // Add dropdowns in form ...
-    // Add "Download Saved PDF" logic...
-
-    // NOTE: Since I cannot easily change Schema again so fast without risking user flow disruption (and I want to show results),
-    // I will simply add the UI selected Bank/Signatory to the PDF generator arguments.
-    // AND I will add "Preview PDF" to the create form.
-    // For saved invoices, it will fallback to displaying "No Bank Selected" (or first available) if I can't store it.
-    // Actually, I'll pass the bank details into the `notes` field for storage! 
-    // "Payment Instructions: Pay to GTBank... | Signatory: John Doe".
-    // This persists the data using existing fields. Smart.
-
-    // ...
-    // Implementation details below...
-
-
-    const fetchInvoices = async () => {
-        setIsLoadingInvoices(true);
-        try {
-            const result = await getClientInvoices(clientId);
-            if (result.success && result.data) {
-                setInvoices(result.data as any); // Cast because action returns partial type maybe
-            }
-        } catch (error) {
-            console.error('Failed to fetch invoices', error);
-        } finally {
-            setIsLoadingInvoices(false);
-        }
-    };
-
-
-
-    const addItem = () => {
-        setItems([...items, { description: '', amount: 0, quantity: 1 }]);
-    };
-
-    const removeItem = (index: number) => {
-        if (items.length > 1) {
-            setItems(items.filter((_, i) => i !== index));
-        }
-    };
-
-    const updateItem = (index: number, field: keyof InvoiceItem, value: string | number) => {
-        const newItems = [...items];
-        newItems[index] = { ...newItems[index], [field]: value };
-        setItems(newItems);
-    };
-
-    const calculateTotals = () => {
-        const subtotal = items.reduce((sum, item) => sum + (Number(item.amount || 0) * Number(item.quantity || 1) || 0), 0);
-        const vat = subtotal * (vatRate / 100);
-        const securityCharge = subtotal * (securityChargeRate / 100);
-        const total = subtotal + vat + securityCharge;
-
-        return { 
-            subtotal: Number(subtotal.toFixed(2)), 
-            vat: Number(vat.toFixed(2)), 
-            securityCharge: Number(securityCharge.toFixed(2)), 
-            total: Number(total.toFixed(2)) 
-        };
-    };
-
-    const formatCurrency = (amount: number) => {
-        return `₦${amount.toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-    };
-
-    const formatCurrencyFromKobo = (amount: number | string) => {
-        const num = typeof amount === 'string' ? parseFloat(amount) : amount;
-        return `₦${num.toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-    };
-
-    // Controlled State for Bill To
+    // Bill To
     const [billToName, setBillToName] = useState('');
-    const [billToAddress, setBillToAddress] = useState('');
-    const [billToCity, setBillToCity] = useState('');
-    const [billToState, setBillToState] = useState('');
-    const [attentionTo, setAttentionTo] = useState('');
-    const [notes, setNotes] = useState('');
+    const [dueDate, setDueDate] = useState('');
 
+    // Bank & Signatory
     const [bankAccounts, setBankAccounts] = useState<any[]>([]);
     const [signatories, setSignatories] = useState<any[]>([]);
     const [selectedBankId, setSelectedBankId] = useState('');
     const [selectedSignatoryId, setSelectedSignatoryId] = useState('');
+    const [workspaceName, setWorkspaceName] = useState('');
 
-    // Fetch Banks & Signatories
+    // Manual bank entry (when no accounts saved)
+    const [manualBankName, setManualBankName] = useState('');
+    const [manualAccountNumber, setManualAccountNumber] = useState('');
+    const [manualAccountName, setManualAccountName] = useState('');
+
+    // Initialize bill-to and invoice number on open
+    useEffect(() => {
+        if (isOpen) {
+            setBillToName(clientName);
+            generateInvoiceNumber(workspaceId).then(setInvoiceNumber).catch(() => {});
+        }
+    }, [isOpen, clientName, workspaceId]);
+
+    // Fetch banks, signatories, matters on open
     useEffect(() => {
         if (isOpen && workspaceId) {
             const loadData = async () => {
                 try {
                     const [banksRes, membersRes, mattersRes] = await Promise.all([
-                        getBankAccounts(workspaceId),
+                        getBankAccountsWithWorkspaceName(workspaceId),
                         getWorkspaceMembers(workspaceId),
-                        getClientMatters(clientId)
+                        getClientMatters(clientId),
                     ]);
 
-                    if (banksRes.success && banksRes.accounts) {
+                    if (banksRes.success) {
                         setBankAccounts(banksRes.accounts);
-                        if (banksRes.accounts.length > 0) setSelectedBankId(banksRes.accounts[0].id);
+                        setWorkspaceName(banksRes.workspaceName);
+                        if (banksRes.accounts.length > 0) {
+                            setSelectedBankId(banksRes.accounts[0].id);
+                        } else {
+                            // Pre-fill account name with firm name for manual entry
+                            setManualAccountName(banksRes.workspaceName);
+                        }
                     }
                     if (membersRes.success && membersRes.data) {
                         setSignatories(membersRes.data);
@@ -159,231 +101,97 @@ const InvoiceModal = ({ isOpen, onClose, clientName, clientId, workspaceId, lett
         }
     }, [isOpen, workspaceId, clientId]);
 
-    // ... existing list fetch logic ...
-
-    const handleDownloadPDF = async (invoice: Invoice | null) => {
-        let invoiceToUse = invoice;
-
-        if (!invoiceToUse) {
-            const savedInvoice = await saveDraft();
-            if (!savedInvoice) return;
-            invoiceToUse = savedInvoice;
+    // Fetch invoices whenever the list tab is active
+    useEffect(() => {
+        if (activeTab === 'list' && isOpen) {
+            fetchInvoices();
         }
+    }, [activeTab, isOpen]);
 
-        const targetId = invoiceToUse!.id;
-        setIsGeneratingPdf(targetId);
-
+    const fetchInvoices = async () => {
+        setIsLoadingInvoices(true);
         try {
-            const bank = bankAccounts.find(b => b.id === selectedBankId);
-            const signatory = signatories.find(s => s.id === selectedSignatoryId);
-
-            let pdfData: any = {};
-
-            // Reconstruct data from saved invoice
-            let subtotal = 0;
-            const pdfItems = invoiceToUse!.items.map((item: any) => {
-                const quantity = Number(item.quantity);
-                const amount = Number(item.amount);
-                subtotal += (amount * quantity);
-                return {
-                    description: item.description,
-                    quantity: quantity,
-                    amount: amount
-                };
-            });
-
-            const vat = subtotal * 0.075;
-            const security = subtotal * 0.01;
-            const total = subtotal + vat + security;
-
-            pdfData = {
-                invoiceNumber: invoiceToUse!.invoiceNumber,
-                date: new Date(invoiceToUse!.createdAt),
-                dueDate: invoiceToUse!.dueDate ? new Date(invoiceToUse!.dueDate) : undefined,
-                billTo: {
-                    name: invoiceToUse!.billToName,
-                    address: invoiceToUse!.billToAddress || undefined,
-                    city: invoiceToUse!.billToCity || undefined,
-                    state: invoiceToUse!.billToState || undefined,
-                    attentionTo: invoiceToUse!.attentionTo || undefined
-                },
-                items: pdfItems,
-                totals: {
-                    subtotal,
-                    vat: vat,
-                    securityCharge: security,
-                    total: invoiceToUse!.totalAmount
-                },
-                bankDetails: bank,
-                signatory: signatory
-            };
-
-            const pdfBlob = await generateInvoicePDF({
-                ...pdfData,
-                letterheadUrl: letterheadUrl
-            });
-
-            const url = URL.createObjectURL(pdfBlob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `Invoice-${pdfData.invoiceNumber}.pdf`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-
-            if (!invoice) {
-                alert('Invoice has been saved and downloaded.');
-                onClose();
+            const result = await getClientInvoices(clientId);
+            if (result.success && result.data) {
+                setInvoices(result.data as any);
             }
-
         } catch (error) {
-            console.error('Failed to generate PDF', error);
-            alert('Failed to generate PDF');
+            console.error('Failed to fetch invoices', error);
         } finally {
-            setIsGeneratingPdf(null);
+            setIsLoadingInvoices(false);
         }
     };
 
-
-
-    const handleDownloadDOCX = async (invoice: Invoice | null) => {
-        let invoiceToUse = invoice;
-
-        // Auto-save if draft
-        if (!invoiceToUse) {
-            // Provide visual feedback? "Saving..." handled by isSubmitting/isGeneratingPdf
-            const savedInvoice = await saveDraft();
-            if (!savedInvoice) return; // Save failed
-            invoiceToUse = savedInvoice;
-            // DO NOT CLOSE MODAL automatically here, user might want to keep editing? 
-            // Or at least switch to view mode?
-            // Ideally we should refresh the list or context.
-            // For now, we continue with generation.
-            // Note: savedInvoice might need to be cast to Invoice type if action result differs slightly?
-            // Assuming action returns full invoice object.
-        }
-
-        const targetId = invoiceToUse!.id + '-docx';
-        setIsGeneratingPdf(targetId);
-
-        try {
-            // Need to re-fetch or use saved invoice data.
-            // savedInvoice should have everything.
-
-            // Re-construct data for generator
-            // We need to parse items, sums etc.
-
-            let subtotal = 0;
-            const pdfItems = invoiceToUse!.items.map((item: any) => {
-                // If newly created, item.amount is in kobo (integer). verify.
-                // createInvoice returns the DB object (amount in kobo).
-                // generateInvoiceDOCX expects amount in kobo.
-                // UI items use fractional naira (e.g. 15000.00).
-
-                // If specific structure return from DB:
-                const quantity = Number(item.quantity);
-                const amount = Number(item.amount); // Kobo
-                subtotal += (amount * quantity);
-                return {
-                    description: item.description,
-                    quantity: quantity,
-                    amount: amount
-                };
-            });
-            const vat = subtotal * 0.075;
-            const security = subtotal * 0.01;
-            const total = subtotal + vat + security;
-
-            // Ensure bank details are passed if not in invoice object?
-            // The invoice object from DB typically doesn't have bank/signatory snapshot unless we store it.
-            // But we stored it in 'notes'.
-            // The generator might want structured bank/signatory.
-            // We can use the CURRENTLY SELECTED bank/signatory from state if we just saved it.
-            // OR parse from notes?
-            // Let's use the selected ones from state for now as fallback/primary.
-            const bank = bankAccounts.find(b => b.id === selectedBankId);
-            const signatory = signatories.find(s => s.id === selectedSignatoryId);
-
-            const data = {
-                invoiceNumber: invoiceToUse!.invoiceNumber,
-                date: new Date(invoiceToUse!.createdAt),
-                dueDate: invoiceToUse!.dueDate ? new Date(invoiceToUse!.dueDate) : undefined,
-                billTo: {
-                    name: invoiceToUse!.billToName,
-                    address: invoiceToUse!.billToAddress || undefined,
-                    city: invoiceToUse!.billToCity || undefined,
-                    state: invoiceToUse!.billToState || undefined,
-                    attentionTo: invoiceToUse!.attentionTo || undefined
-                },
-                items: pdfItems,
-                totals: { subtotal, vat, securityCharge: security, total: total }, // Use calculated total or DB total? DB total usually includes tax.
-                bankDetails: bank,
-                signatory: signatory,
-                letterheadUrl: letterheadUrl
-            };
-
-            const blob = await generateInvoiceDOCX(data);
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `Invoice-${data.invoiceNumber}.docx`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-
-            // If we just created it, maybe alert user?
-            if (!invoice) {
-                alert('Invoice has been saved and downloaded.');
-                onClose(); // Close after successful save & download? Matches "handleSubmit" behavior approx.
-            }
-
-        } catch (error) {
-            console.error('Error generating DOCX', error);
-            alert('Failed to generate Word document');
-        } finally {
-            setIsGeneratingPdf(null);
-        }
+    const addItem = () => setItems([...items, { description: '', amount: 0, quantity: 1 }]);
+    const removeItem = (index: number) => { if (items.length > 1) setItems(items.filter((_, i) => i !== index)); };
+    const updateItem = (index: number, field: keyof InvoiceItem, value: string | number) => {
+        const newItems = [...items];
+        newItems[index] = { ...newItems[index], [field]: value };
+        setItems(newItems);
     };
 
+    const calculateTotals = () => {
+        const subtotal = items.reduce((sum, item) => sum + (Number(item.amount || 0) * Number(item.quantity || 1) || 0), 0);
+        const vat = subtotal * (vatRate / 100);
+        const securityCharge = subtotal * (securityChargeRate / 100);
+        return {
+            subtotal: Number(subtotal.toFixed(2)),
+            vat: Number(vat.toFixed(2)),
+            securityCharge: Number(securityCharge.toFixed(2)),
+            total: Number((subtotal + vat + securityCharge).toFixed(2)),
+        };
+    };
+
+    const formatCurrency = (amount: number) =>
+        `₦${amount.toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+    const formatCurrencyFromKobo = (amount: number | string) => {
+        const num = typeof amount === 'string' ? parseFloat(amount) : amount;
+        return `₦${num.toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    };
+
+    // Returns the active bank details regardless of saved or manual entry
+    const getActiveBankDetails = () => {
+        if (selectedBankId) return bankAccounts.find(b => b.id === selectedBankId) || null;
+        if (manualAccountNumber.trim() && manualAccountName.trim()) {
+            return { bankName: manualBankName.trim() || '—', accountNumber: manualAccountNumber.trim(), accountName: manualAccountName.trim() };
+        }
+        return null;
+    };
+
+    const isBankSet = () => !!getActiveBankDetails();
+
+    const resetForm = () => {
+        setItems([{ description: '', amount: 0, quantity: 1 }]);
+        setBillToName(clientName);
+        setDueDate('');
+        setSelectedMatterId('');
+        generateInvoiceNumber(workspaceId).then(setInvoiceNumber).catch(() => {});
+    };
 
     const saveDraft = async (): Promise<any> => {
         setIsSubmitting(true);
-
-        // Append Bank Instructions to Notes to persist them!
-        const bank = bankAccounts.find(b => b.id === selectedBankId);
+        const bank = getActiveBankDetails();
         const signatory = signatories.find(s => s.id === selectedSignatoryId);
 
-        let finalNotes = notes;
+        let finalNotes = '';
         if (bank) {
-            finalNotes += `\n\nPAYMENT DETAILS:\nBank: ${bank.bankName}\nAccount Name: ${bank.accountName}\nAccount Number: ${bank.accountNumber}`;
+            finalNotes += `PAYMENT DETAILS:\nAccount Name: ${bank.accountName}\nBank: ${bank.bankName}\nAccount Number: ${bank.accountNumber}`;
         }
         if (signatory) {
             finalNotes += `\n\nSigned by: ${signatory.name}${signatory.jobTitle ? ' (' + signatory.jobTitle + ')' : ''}`;
         }
 
         try {
-            // Get due date from form if possible, or state if we bind it? 
-            // Currently due date is uncontrolled in the form `name="dueDate"`.
-            // We need to fetch it. Let's look up the input ref or just switch to controlled state for dueDate to be safe?
-            // Or just query selector? 
-            // Better: Switch dueDate to controlled state.
-            // For now, let's grab it via ID or Ref. But wait, we are in a function.
-            // Let's assume controlled state for consistency or querySelector.
-            const dueDateInput = document.querySelector('input[name="dueDate"]') as HTMLInputElement;
-            const dueDateVal = dueDateInput?.value ? new Date(dueDateInput.value) : undefined;
-
             const result = await createInvoice({
                 clientId,
-                matterId: (document.querySelector('select[name="matterId"]') as HTMLSelectElement)?.value || undefined,
-                billToName: billToName,
-                billToAddress, billToCity, billToState, attentionTo,
+                matterId: selectedMatterId || undefined,
+                billToName,
                 notes: finalNotes,
-                dueDate: dueDateVal,
+                dueDate: dueDate ? new Date(dueDate) : undefined,
                 items: items.map((item, index) => ({
                     description: item.description,
-                    amount: Number(item.amount), // Send as direct decimal/number
+                    amount: Number(item.amount),
                     quantity: Number(item.quantity),
                     order: index,
                 })),
@@ -391,16 +199,9 @@ const InvoiceModal = ({ isOpen, onClose, clientName, clientId, workspaceId, lett
                 securityChargeRate,
             });
 
-            if (result.success) {
-                // alert(`Invoice ${invoiceNumber} created!`); // Don't alert here, return result
-                // Update local list? The parent handles refresh via `onClose` usually? 
-                // Wait, if we just save-and-download, we might NOT want to close?
-                // But we need to switch mode to "edit" or at least know the ID.
-                return result.data; // Action returns the invoice in 'data' field
-            } else {
-                alert(`Error: ${result.error}`);
-                return null;
-            }
+            if (result.success) return result.data;
+            alert(`Error: ${result.error}`);
+            return null;
         } catch (error) {
             console.error('Error creating invoice:', error);
             alert('Failed to create invoice');
@@ -412,22 +213,110 @@ const InvoiceModal = ({ isOpen, onClose, clientName, clientId, workspaceId, lett
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
+        if (!isBankSet()) {
+            alert('A payment account is required before generating an invoice. Please select a saved account or enter account details.');
+            return;
+        }
         const invoice = await saveDraft();
         if (invoice) {
-            alert(`Invoice ${invoice.invoiceNumber} created!`);
-            setItems([{ description: '', amount: 0, quantity: 1 }]);
-            setBillToName(''); setBillToAddress(''); setBillToCity(''); setBillToState(''); setAttentionTo(''); setNotes('');
-            onClose();
+            resetForm();
+            // Switch to list tab so user can see (and download) the new invoice
+            setActiveTab('list');
         }
     };
 
-    // ... Calculations and Render ...
+    const buildPdfData = (invoiceToUse: any, bank: any, signatory: any) => {
+        let subtotal = 0;
+        const pdfItems = invoiceToUse.items.map((item: any) => {
+            const q = Number(item.quantity);
+            const a = Number(item.amount);
+            subtotal += a * q;
+            return { description: item.description, quantity: q, amount: a };
+        });
+        const vat = subtotal * 0.075;
+        const security = subtotal * 0.01;
+        return {
+            invoiceNumber: invoiceToUse.invoiceNumber,
+            date: new Date(invoiceToUse.createdAt),
+            dueDate: invoiceToUse.dueDate ? new Date(invoiceToUse.dueDate) : undefined,
+            billTo: { name: invoiceToUse.billToName },
+            items: pdfItems,
+            totals: { subtotal, vat, securityCharge: security, total: invoiceToUse.totalAmount },
+            bankDetails: bank,
+            signatory,
+            letterheadUrl,
+        };
+    };
+
+    const handleDownloadPDF = async (invoice: Invoice | null) => {
+        let invoiceToUse = invoice;
+        if (!invoiceToUse) {
+            if (!isBankSet()) {
+                alert('Please enter payment account details before generating the invoice.');
+                return;
+            }
+            const saved = await saveDraft();
+            if (!saved) return;
+            invoiceToUse = saved;
+        }
+        const targetId = (invoiceToUse as any).id;
+        setIsGeneratingPdf(targetId);
+        try {
+            const bank = bankAccounts.find(b => b.id === selectedBankId) || getActiveBankDetails();
+            const signatory = signatories.find(s => s.id === selectedSignatoryId);
+            const data = buildPdfData(invoiceToUse, bank, signatory);
+            const pdfBlob = await generateInvoicePDF(data);
+            const url = URL.createObjectURL(pdfBlob);
+            const a = document.createElement('a');
+            a.href = url; a.download = `Invoice-${data.invoiceNumber}.pdf`;
+            document.body.appendChild(a); a.click();
+            document.body.removeChild(a); URL.revokeObjectURL(url);
+            if (!invoice) { resetForm(); setActiveTab('list'); }
+        } catch (error) {
+            console.error('Failed to generate PDF', error);
+            alert('Failed to generate PDF');
+        } finally {
+            setIsGeneratingPdf(null);
+        }
+    };
+
+    const handleDownloadDOCX = async (invoice: Invoice | null) => {
+        let invoiceToUse = invoice;
+        if (!invoiceToUse) {
+            if (!isBankSet()) {
+                alert('Please enter payment account details before generating the invoice.');
+                return;
+            }
+            const saved = await saveDraft();
+            if (!saved) return;
+            invoiceToUse = saved;
+        }
+        const targetId = (invoiceToUse as any).id + '-docx';
+        setIsGeneratingPdf(targetId);
+        try {
+            const bank = bankAccounts.find(b => b.id === selectedBankId) || getActiveBankDetails();
+            const signatory = signatories.find(s => s.id === selectedSignatoryId);
+            const data = buildPdfData(invoiceToUse, bank, signatory);
+            const blob = await generateInvoiceDOCX(data);
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url; a.download = `Invoice-${data.invoiceNumber}.docx`;
+            document.body.appendChild(a); a.click();
+            document.body.removeChild(a); URL.revokeObjectURL(url);
+            if (!invoice) { resetForm(); setActiveTab('list'); }
+        } catch (error) {
+            console.error('Error generating DOCX', error);
+            alert('Failed to generate Word document');
+        } finally {
+            setIsGeneratingPdf(null);
+        }
+    };
+
     const totals = calculateTotals();
 
     return (
         <div className={styles.overlay} onClick={onClose}>
             <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
-                {/* Header ... */}
                 <div className={styles.header}>
                     <div>
                         <h2 className={styles.title}>Invoice Management</h2>
@@ -436,138 +325,106 @@ const InvoiceModal = ({ isOpen, onClose, clientName, clientId, workspaceId, lett
                     <button onClick={onClose} className={styles.closeBtn} disabled={isSubmitting}><X size={20} /></button>
                 </div>
 
-                {/* Tabs ... */}
                 <div className={styles.tabs}>
                     <button className={`${styles.tab} ${activeTab === 'create' ? styles.tabActive : ''}`} onClick={() => setActiveTab('create')} disabled={isSubmitting}>
-                        <Plus size={16} />
-                        Create Invoice
+                        <Plus size={16} /> Create Invoice
                     </button>
                     <button className={`${styles.tab} ${activeTab === 'list' ? styles.tabActive : ''}`} onClick={() => setActiveTab('list')} disabled={isSubmitting}>
-                        <FileText size={16} />
-                        View Invoices
+                        <FileText size={16} /> View Invoices
                     </button>
                 </div>
 
                 <div className={styles.content}>
+                    {/* ── CREATE TAB ── */}
                     {activeTab === 'create' && (
                         <form className={styles.createForm} onSubmit={handleSubmit}>
-                            {/* Invoice Details Grid */}
+
+                            {/* Invoice Number + Due Date */}
                             <div className={styles.formRow}>
                                 <div className={styles.formGroup}>
                                     <label className={styles.formLabel}>Invoice Number</label>
-                                    <input type="text" className={styles.input} value={invoiceNumber} disabled style={{ background: 'var(--background)', cursor: 'not-allowed' }} />
+                                    <input type="text" className={styles.input} value={invoiceNumber} disabled style={{ background: 'var(--surface-subtle)', cursor: 'not-allowed', opacity: 0.7 }} />
                                 </div>
                                 <div className={styles.formGroup}>
                                     <label className={styles.formLabel}>Due Date</label>
-                                    <input type="date" name="dueDate" className={styles.input} disabled={isSubmitting} />
+                                    <input type="date" className={styles.input} value={dueDate} onChange={e => setDueDate(e.target.value)} disabled={isSubmitting} />
                                 </div>
                             </div>
 
-                            {/* Signatory & Bank Selection */}
+                            {/* Signatory + Payment Account */}
                             <div className={styles.formRow}>
                                 <div className={styles.formGroup}>
                                     <label className={styles.formLabel}>Authorized Signatory</label>
-                                    <select
-                                        className={styles.input}
-                                        value={selectedSignatoryId}
-                                        onChange={e => setSelectedSignatoryId(e.target.value)}
-                                        disabled={isSubmitting}
-                                    >
+                                    <select className={styles.input} value={selectedSignatoryId} onChange={e => setSelectedSignatoryId(e.target.value)} disabled={isSubmitting}>
                                         <option value="">Select Signatory...</option>
                                         {signatories.map(s => (
-                                            <option key={s.id} value={s.id}>{s.name} {s.jobTitle ? `(${s.jobTitle})` : ''}</option>
+                                            <option key={s.id} value={s.id}>{s.name}{s.jobTitle ? ` (${s.jobTitle})` : ''}</option>
                                         ))}
                                     </select>
                                 </div>
+
+                                {/* Payment Account — smart: dropdown if saved, manual entry if not */}
                                 <div className={styles.formGroup}>
-                                    <label className={styles.formLabel}>Payment Account</label>
-                                    <select
-                                        className={styles.input}
-                                        value={selectedBankId}
-                                        onChange={e => setSelectedBankId(e.target.value)}
-                                        disabled={isSubmitting}
-                                    >
-                                        <option value="">Select Bank Account...</option>
-                                        {bankAccounts.map(b => (
-                                            <option key={b.id} value={b.id}>{b.bankName} - {b.currency}</option>
-                                        ))}
-                                    </select>
+                                    <label className={styles.formLabel}>
+                                        Payment Account <span style={{ color: 'var(--danger)' }}>*</span>
+                                    </label>
+                                    {bankAccounts.length > 0 ? (
+                                        <select
+                                            className={`${styles.input} ${!selectedBankId ? styles.inputError : ''}`}
+                                            value={selectedBankId}
+                                            onChange={e => setSelectedBankId(e.target.value)}
+                                            disabled={isSubmitting}
+                                            required
+                                        >
+                                            <option value="">— Select account —</option>
+                                            {bankAccounts.map(b => (
+                                                <option key={b.id} value={b.id}>
+                                                    {b.accountName} · {b.bankName} · {b.accountNumber}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    ) : (
+                                        <div className={styles.manualBankEntry}>
+                                            <div className={styles.bankWarning}>
+                                                <AlertCircle size={13} />
+                                                <span>No bank account saved in Settings.</span>
+                                                <a href="/management/settings" target="_blank" rel="noopener noreferrer" className={styles.bankLink}>
+                                                    <Settings size={11} /> Add one
+                                                </a>
+                                            </div>
+                                            <input className={styles.input} placeholder={`Account Name (e.g. ${workspaceName || 'Firm Name'})`} value={manualAccountName} onChange={e => setManualAccountName(e.target.value)} disabled={isSubmitting} required />
+                                            <input className={styles.input} placeholder="Bank Name (e.g. GTBank)" value={manualBankName} onChange={e => setManualBankName(e.target.value)} disabled={isSubmitting} style={{ marginTop: '0.375rem' }} />
+                                            <input className={styles.input} placeholder="Account Number" value={manualAccountNumber} onChange={e => setManualAccountNumber(e.target.value)} disabled={isSubmitting} style={{ marginTop: '0.375rem' }} required />
+                                        </div>
+                                    )}
                                 </div>
                             </div>
 
-                            {/* Matter Selection */}
+                            {/* Link to Matter */}
                             {matters.length > 0 && (
                                 <div className={styles.formGroup}>
                                     <label className={styles.formLabel}>Link to Matter (Optional)</label>
-                                    <select
-                                        name="matterId"
-                                        className={styles.input}
-                                        disabled={isSubmitting || isLoadingMatters}
-                                    >
+                                    <select className={styles.input} value={selectedMatterId} onChange={e => setSelectedMatterId(e.target.value)} disabled={isSubmitting}>
                                         <option value="">No matter selected</option>
-                                        {matters.map(matter => (
-                                            <option key={matter.id} value={matter.id}>
-                                                {matter.caseNumber} - {matter.name}
-                                            </option>
-                                        ))}
+                                        {matters.map(m => <option key={m.id} value={m.id}>{m.caseNumber} — {m.name}</option>)}
                                     </select>
                                 </div>
                             )}
 
                             {/* Bill To */}
                             <div className={styles.formGroup}>
-                                <label className={styles.formLabel}>Bill To (Name/Company) *</label>
+                                <label className={styles.formLabel}>Bill To *</label>
                                 <input
                                     className={styles.input}
                                     value={billToName}
                                     onChange={e => setBillToName(e.target.value)}
-                                    placeholder="The Managing Director, Arete Protea Global Services Ltd"
+                                    placeholder="e.g. The Managing Director, Arete Protea Global Services Ltd"
                                     required
                                     disabled={isSubmitting}
                                 />
                             </div>
-                            <div className={styles.formGroup}>
-                                <label className={styles.formLabel}>Address</label>
-                                <input
-                                    className={styles.input}
-                                    value={billToAddress}
-                                    onChange={e => setBillToAddress(e.target.value)}
-                                    placeholder="47b Royal Palm Drive, Osborne Foreshore Estate"
-                                    disabled={isSubmitting}
-                                />
-                            </div>
-                            <div className={styles.formRow}>
-                                <div className={styles.formGroup}>
-                                    <input
-                                        className={styles.input}
-                                        value={billToCity}
-                                        onChange={e => setBillToCity(e.target.value)}
-                                        placeholder="City"
-                                        disabled={isSubmitting}
-                                    />
-                                </div>
-                                <div className={styles.formGroup}>
-                                    <input
-                                        className={styles.input}
-                                        value={billToState}
-                                        onChange={e => setBillToState(e.target.value)}
-                                        placeholder="State"
-                                        disabled={isSubmitting}
-                                    />
-                                </div>
-                            </div>
-                            <div className={styles.formGroup}>
-                                <label className={styles.formLabel}>Attention To</label>
-                                <input
-                                    className={styles.input}
-                                    value={attentionTo}
-                                    onChange={e => setAttentionTo(e.target.value)}
-                                    placeholder="Contact Person"
-                                    disabled={isSubmitting}
-                                />
-                            </div>
 
-                            {/* Items */}
+                            {/* Line Items */}
                             <div className={styles.formGroup}>
                                 <label className={styles.formLabel}>Line Items</label>
                                 <div className={styles.lineItems}>
@@ -609,13 +466,7 @@ const InvoiceModal = ({ isOpen, onClose, clientName, clientId, workspaceId, lett
                                                 </div>
                                             </div>
                                             {items.length > 1 && (
-                                                <button
-                                                    type="button"
-                                                    onClick={() => removeItem(index)}
-                                                    className={styles.removeItemBtn}
-                                                    title="Remove item"
-                                                    disabled={isSubmitting}
-                                                >
+                                                <button type="button" onClick={() => removeItem(index)} className={styles.removeItemBtn} disabled={isSubmitting}>
                                                     <Trash2 size={18} />
                                                 </button>
                                             )}
@@ -627,229 +478,109 @@ const InvoiceModal = ({ isOpen, onClose, clientName, clientId, workspaceId, lett
                                 </button>
                             </div>
 
-                            {/* Tax Configuration */}
+                            {/* Tax rates */}
                             <div className={styles.formRow}>
                                 <div className={styles.formGroup}>
-                                    <label className={styles.formLabel}>VAT Rate (%)</label>
-                                    <input
-                                        type="number"
-                                        className={styles.input}
-                                        value={vatRate}
-                                        onChange={(e) => setVatRate(parseFloat(e.target.value) || 0)}
-                                        step="0.1"
-                                        disabled={isSubmitting}
-                                    />
+                                    <label className={styles.formLabel}>VAT (%)</label>
+                                    <input type="number" className={styles.input} value={vatRate} onChange={e => setVatRate(parseFloat(e.target.value) || 0)} step="0.1" disabled={isSubmitting} />
                                 </div>
                                 <div className={styles.formGroup}>
                                     <label className={styles.formLabel}>Security Charge (%)</label>
-                                    <input
-                                        type="number"
-                                        className={styles.input}
-                                        value={securityChargeRate}
-                                        onChange={(e) => setSecurityChargeRate(parseFloat(e.target.value) || 0)}
-                                        step="0.1"
-                                        disabled={isSubmitting}
-                                    />
+                                    <input type="number" className={styles.input} value={securityChargeRate} onChange={e => setSecurityChargeRate(parseFloat(e.target.value) || 0)} step="0.1" disabled={isSubmitting} />
                                 </div>
                             </div>
 
-                            {/* Totals Box... same as before */}
+                            {/* Totals */}
                             <div className={styles.totalsBox}>
                                 <div className={styles.totalRow}><span>Subtotal:</span><span>{formatCurrency(totals.subtotal)}</span></div>
                                 <div className={styles.totalRow}><span>VAT ({vatRate}%):</span><span>{formatCurrency(totals.vat)}</span></div>
-                                <div className={styles.totalRow}>
-                                    <span>Security Charges ({securityChargeRate}%):</span>
-                                    <span>{formatCurrency(totals.securityCharge)}</span>
-                                </div>
-                                <div className={`${styles.totalRow} ${styles.grandTotal}`}>
-                                    <span>TOTAL:</span>
-                                    <span>{formatCurrency(totals.total)}</span>
-                                </div>
-                            </div>
-
-                            {/* Notes */}
-                            <div className={styles.formGroup}>
-                                <label className={styles.formLabel}>Payment Instructions / Notes</label>
-                                <textarea
-                                    className={styles.textarea}
-                                    rows={2}
-                                    placeholder="Payment should be made in favour of..."
-                                    value={notes}
-                                    onChange={e => setNotes(e.target.value)}
-                                    disabled={isSubmitting}
-                                />
+                                <div className={styles.totalRow}><span>Security Charges ({securityChargeRate}%):</span><span>{formatCurrency(totals.securityCharge)}</span></div>
+                                <div className={`${styles.totalRow} ${styles.grandTotal}`}><span>TOTAL:</span><span>{formatCurrency(totals.total)}</span></div>
                             </div>
 
                             {/* Footer Actions */}
                             <div className={styles.formActions}>
-                                <button
-                                    type="button"
-                                    className={styles.iconBtn}
-                                    onClick={() => handleDownloadPDF(null)}
-                                    disabled={isGeneratingPdf === 'draft' || isSubmitting}
-                                    style={{
-                                        display: 'flex', alignItems: 'center', gap: '0.25rem',
-                                        padding: '0.5rem 0.75rem', fontSize: '0.875rem',
-                                        border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)',
-                                        background: 'var(--surface)', cursor: 'pointer'
-                                    }}
-                                >
-                                    {isGeneratingPdf === 'draft' ? <Loader className="spin" size={16} /> : <Download size={16} />}
-                                    Preview PDF
+                                <button type="button" className={styles.secondaryActionBtn} onClick={() => handleDownloadPDF(null)} disabled={!!isGeneratingPdf || isSubmitting}>
+                                    {isGeneratingPdf ? <Loader className="spin" size={16} /> : <Download size={16} />} PDF Preview
                                 </button>
-                                <button
-                                    type="button"
-                                    className={styles.iconBtn}
-                                    onClick={() => handleDownloadDOCX(null)}
-                                    disabled={isGeneratingPdf === 'draft-docx' || isSubmitting}
-                                    style={{
-                                        display: 'flex', alignItems: 'center', gap: '0.25rem',
-                                        padding: '0.5rem 0.75rem', fontSize: '0.875rem',
-                                        border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)',
-                                        background: 'var(--surface)', cursor: 'pointer'
-                                    }}
-                                >
-                                    {isGeneratingPdf === 'draft-docx' ? <Loader className="spin" size={16} /> : <FileText size={16} />}
-                                    Word
+                                <button type="button" className={styles.secondaryActionBtn} onClick={() => handleDownloadDOCX(null)} disabled={!!isGeneratingPdf || isSubmitting}>
+                                    {isGeneratingPdf ? <Loader className="spin" size={16} /> : <FileText size={16} />} Word
                                 </button>
                                 <div style={{ flex: 1 }} />
-                                <button type="button" className={styles.cancelBtn} onClick={onClose} disabled={isSubmitting}>
-                                    Cancel
-                                </button>
+                                <button type="button" className={styles.cancelBtn} onClick={onClose} disabled={isSubmitting}>Cancel</button>
                                 <button type="submit" className={styles.submitBtn} disabled={isSubmitting}>
-                                    {isSubmitting ? (
-                                        <>
-                                            <Loader size={18} className="spin" />
-                                            Creating...
-                                        </>
-                                    ) : (
-                                        <>
-                                            <DollarSign size={18} />
-                                            Create Invoice
-                                        </>
-                                    )}
+                                    {isSubmitting ? <><Loader size={18} className="spin" /> Creating...</> : <><DollarSign size={18} /> Create Invoice</>}
                                 </button>
                             </div>
                         </form>
                     )}
 
+                    {/* ── LIST TAB ── */}
                     {activeTab === 'list' && (
                         <div className={styles.invoiceList}>
                             {isLoadingInvoices ? (
-                                <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>
-                                    <Loader size={32} className="spin" />
-                                    <p>Loading invoices...</p>
+                                <div className={styles.skeletonList}>
+                                    {[1, 2, 3].map(i => (
+                                        <div key={i} className={styles.skeletonCard}>
+                                            <div className={styles.skeletonRow}>
+                                                <div className={styles.skeletonBlock} style={{ width: '40%', height: 18 }} />
+                                                <div className={styles.skeletonBlock} style={{ width: '25%', height: 18 }} />
+                                            </div>
+                                            <div className={styles.skeletonBlock} style={{ width: '60%', height: 13, marginTop: 8 }} />
+                                        </div>
+                                    ))}
                                 </div>
                             ) : invoices.length === 0 ? (
-                                <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>
-                                    <p>No invoices found for this client.</p>
+                                <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-secondary)' }}>
+                                    <FileText size={40} style={{ opacity: 0.2, marginBottom: '0.75rem' }} />
+                                    <p style={{ fontWeight: 500 }}>No invoices yet for this client.</p>
+                                    <button className={styles.tab} style={{ marginTop: '1rem' }} onClick={() => setActiveTab('create')}>Create one →</button>
                                 </div>
                             ) : (
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                                     {invoices.map(invoice => (
-                                        <div key={invoice.id} className={styles.invoiceCard}
-                                            style={{
-                                                padding: '1rem',
-                                                border: '1px solid var(--border)',
-                                                borderRadius: 'var(--radius-md)',
-                                                background: 'var(--background)'
-                                            }}
-                                        >
+                                        <div key={invoice.id} className={styles.invoiceCard}>
                                             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
                                                 <div>
-                                                    <h3 style={{ fontWeight: 600, fontSize: '1.1rem' }}>{invoice.invoiceNumber}</h3>
-                                                    <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
-                                                        {new Date(invoice.createdAt).toLocaleDateString()}
+                                                    <h3 style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--text-primary)' }}>{invoice.invoiceNumber}</h3>
+                                                    <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                                                        {new Date(invoice.createdAt).toLocaleDateString('en-NG', { day: 'numeric', month: 'short', year: 'numeric' })}
                                                     </p>
                                                 </div>
                                                 <div style={{ textAlign: 'right' }}>
-                                                    <p style={{ fontWeight: 700, fontSize: '1.1rem' }}>
-                                                        {formatCurrencyFromKobo(invoice.totalAmount)}
-                                                    </p>
-                                                    <p style={{
-                                                        fontSize: '0.75rem',
-                                                        fontWeight: 600,
-                                                        color: invoice.status === 'PAID' ? 'var(--success)' : invoice.status === 'OVERDUE' ? 'var(--error)' : 'var(--warning)',
-                                                        textTransform: 'uppercase'
+                                                    <p style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--text-primary)' }}>{formatCurrencyFromKobo(invoice.totalAmount)}</p>
+                                                    <span style={{
+                                                        fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em',
+                                                        color: invoice.status === 'paid' || invoice.status === 'PAID' ? 'var(--success)' : invoice.status === 'overdue' || invoice.status === 'OVERDUE' ? 'var(--danger)' : 'var(--warning)',
                                                     }}>
                                                         {invoice.status.replace('_', ' ')}
-                                                    </p>
+                                                    </span>
                                                 </div>
                                             </div>
 
-                                            {/* Financial Breakdown */}
-                                            <div style={{
-                                                display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem',
-                                                background: 'var(--surface-subtle)', padding: '0.5rem', borderRadius: '4px',
-                                                marginBottom: '0.5rem', fontSize: '0.875rem'
-                                            }}>
+                                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', background: 'var(--surface-subtle)', padding: '0.5rem 0.75rem', borderRadius: 'var(--radius-sm)', marginBottom: '0.75rem', fontSize: '0.8rem' }}>
                                                 <div>
-                                                    <span style={{ color: 'var(--text-secondary)', display: 'block' }}>Paid</span>
-                                                    <span style={{ fontWeight: 500, color: 'var(--success)' }}>
-                                                        {formatCurrencyFromKobo(invoice.paidAmount || 0)}
-                                                    </span>
+                                                    <span style={{ color: 'var(--text-secondary)', display: 'block', fontSize: '0.7rem' }}>PAID</span>
+                                                    <span style={{ fontWeight: 600, color: 'var(--success)' }}>{formatCurrencyFromKobo((invoice as any).paidAmount || 0)}</span>
                                                 </div>
                                                 <div style={{ textAlign: 'right' }}>
-                                                    <span style={{ color: 'var(--text-secondary)', display: 'block' }}>Outstanding</span>
-                                                    <span style={{ fontWeight: 600, color: invoice.totalAmount - (invoice.paidAmount || 0) <= 0 ? 'var(--text-secondary)' : '#DC2626' }}>
-                                                        {formatCurrencyFromKobo(invoice.totalAmount - (invoice.paidAmount || 0))}
+                                                    <span style={{ color: 'var(--text-secondary)', display: 'block', fontSize: '0.7rem' }}>OUTSTANDING</span>
+                                                    <span style={{ fontWeight: 700, color: (invoice.totalAmount as any) - ((invoice as any).paidAmount || 0) <= 0 ? 'var(--text-secondary)' : 'var(--danger)' }}>
+                                                        {formatCurrencyFromKobo((invoice.totalAmount as any) - ((invoice as any).paidAmount || 0))}
                                                     </span>
                                                 </div>
                                             </div>
 
-                                            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginTop: '1rem' }}>
-                                                <button
-                                                    onClick={() => handleDownloadPDF(invoice)}
-                                                    className={styles.iconBtn}
-                                                    title="Download PDF"
-                                                    disabled={isGeneratingPdf === invoice.id}
-                                                    style={{
-                                                        display: 'flex', alignItems: 'center', gap: '0.25rem',
-                                                        padding: '0.5rem 0.75rem', fontSize: '0.875rem',
-                                                        border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)',
-                                                        background: 'var(--surface)', cursor: 'pointer'
-                                                    }}
-                                                >
-                                                    {isGeneratingPdf === invoice.id ? (
-                                                        <Loader size={14} className="spin" />
-                                                    ) : (
-                                                        <Download size={14} />
-                                                    )}
-                                                    PDF
+                                            <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
+                                                <button onClick={() => handleDownloadPDF(invoice)} className={styles.secondaryActionBtn} disabled={isGeneratingPdf === invoice.id}>
+                                                    {isGeneratingPdf === invoice.id ? <Loader size={13} className="spin" /> : <Download size={13} />} PDF
                                                 </button>
-                                                <button
-                                                    onClick={() => handleDownloadDOCX(invoice)}
-                                                    className={styles.iconBtn}
-                                                    title="Download Word"
-                                                    disabled={isGeneratingPdf === invoice.id + '-docx'}
-                                                    style={{
-                                                        display: 'flex', alignItems: 'center', gap: '0.25rem',
-                                                        padding: '0.5rem 0.75rem', fontSize: '0.875rem',
-                                                        border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)',
-                                                        background: 'var(--surface)', cursor: 'pointer'
-                                                    }}
-                                                >
-                                                    {isGeneratingPdf === invoice.id + '-docx' ? (
-                                                        <Loader size={14} className="spin" />
-                                                    ) : (
-                                                        <FileText size={14} />
-                                                    )}
-                                                    Word
+                                                <button onClick={() => handleDownloadDOCX(invoice)} className={styles.secondaryActionBtn} disabled={isGeneratingPdf === invoice.id + '-docx'}>
+                                                    {isGeneratingPdf === invoice.id + '-docx' ? <Loader size={13} className="spin" /> : <FileText size={13} />} Word
                                                 </button>
-
-                                                {invoice.status !== 'PAID' && onRecordPayment && (
-                                                    <button
-                                                        onClick={() => onRecordPayment(invoice)}
-                                                        className={styles.primaryBtn}
-                                                        style={{
-                                                            display: 'flex', alignItems: 'center', gap: '0.25rem',
-                                                            padding: '0.5rem 0.75rem', fontSize: '0.875rem',
-                                                            background: 'var(--primary)', color: 'white', border: 'none',
-                                                            borderRadius: 'var(--radius-sm)', cursor: 'pointer'
-                                                        }}
-                                                    >
-                                                        <CreditCard size={14} />
-                                                        Pay
+                                                {(invoice.status !== 'paid' && invoice.status !== 'PAID') && onRecordPayment && (
+                                                    <button onClick={() => onRecordPayment(invoice)} className={styles.submitBtn} style={{ padding: '0.4rem 0.75rem', fontSize: '0.8rem' }}>
+                                                        <CreditCard size={13} /> Pay
                                                     </button>
                                                 )}
                                             </div>

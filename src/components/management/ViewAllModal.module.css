@@ -310,6 +310,41 @@
     border-color: var(--text-secondary);
 }
 
+/* Shimmer skeleton */
+@keyframes shimmer {
+    0% { background-position: -400px 0; }
+    100% { background-position: 400px 0; }
+}
+
+/* Download button beside record payment */
+.downloadBtn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.35rem 0.55rem;
+    background: transparent;
+    color: var(--text-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+}
+.downloadBtn:hover:not(:disabled) {
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    border-color: var(--text-secondary);
+}
+.downloadBtn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.actionsCell {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+}
+
 @media (max-width: 768px) {
     .modal {
         max-width: 100%;

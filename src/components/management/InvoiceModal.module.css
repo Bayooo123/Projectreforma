@@ -420,3 +420,83 @@
     padding-top: 0.75rem;
     margin-top: 0.25rem;
 }
+
+/* Secondary action button (PDF / Word) */
+.secondaryActionBtn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.45rem 0.75rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.secondaryActionBtn:hover:not(:disabled) {
+    background: var(--accent);
+    border-color: var(--text-tertiary);
+}
+.secondaryActionBtn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Bank account section */
+.inputError {
+    border-color: var(--danger) !important;
+    box-shadow: 0 0 0 2px var(--danger-bg);
+}
+.manualBankEntry {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+}
+.bankWarning {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.5rem 0.75rem;
+    background: #FFFBEB;
+    color: #92400E;
+    border-radius: var(--radius-sm);
+    font-size: 0.75rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+.bankLink {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    margin-left: auto;
+    color: var(--primary);
+    font-weight: 700;
+    text-decoration: none;
+    font-size: 0.75rem;
+}
+.bankLink:hover { text-decoration: underline; }
+
+:global(.dark) .bankWarning {
+    background: rgba(245, 158, 11, 0.12);
+    color: #FCD34D;
+}
+
+/* Invoice list skeleton */
+@keyframes shimmer {
+    0% { background-position: -400px 0; }
+    100% { background-position: 400px 0; }
+}
+.skeletonList { display: flex; flex-direction: column; gap: 1rem; }
+.skeletonCard {
+    padding: 1rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: var(--surface);
+}
+.skeletonRow { display: flex; justify-content: space-between; }
+.skeletonBlock {
+    border-radius: var(--radius-sm);
+    background: linear-gradient(90deg, var(--accent) 25%, var(--surface-subtle) 50%, var(--accent) 75%);
+    background-size: 800px 100%;
+    animation: shimmer 1.4s infinite linear;
+}

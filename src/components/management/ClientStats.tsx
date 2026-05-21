@@ -10,9 +10,10 @@ import styles from './ClientStats.module.css';
 
 interface ClientStatsProps {
     workspaceId: string;
+    letterheadUrl?: string | null;
 }
 
-const ClientStats = ({ workspaceId }: ClientStatsProps) => {
+const ClientStats = ({ workspaceId, letterheadUrl }: ClientStatsProps) => {
     const router = useRouter();
     const [stats, setStats] = useState({
         totalClients: 0,
@@ -130,6 +131,7 @@ const ClientStats = ({ workspaceId }: ClientStatsProps) => {
                 isOpen={showInvoicesModal}
                 onClose={() => setShowInvoicesModal(false)}
                 workspaceId={workspaceId}
+                letterheadUrl={letterheadUrl}
             />
             <ViewAllPaymentsModal
                 isOpen={showPaymentsModal}

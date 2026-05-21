@@ -360,30 +360,42 @@ const PaymentModal = ({ isOpen, onClose, clientName, clientId, selectedInvoice }
                     {activeTab === 'list' && (
                         <div className={styles.invoiceList}>
                             {isLoading ? (
-                                <div style={{ textAlign: 'center', padding: '2rem' }}><Loader size={32} className="spin" /><p>Loading...</p></div>
+                                <div className={styles.skeletonList}>
+                                    {[1, 2, 3].map(i => (
+                                        <div key={i} className={styles.skeletonCard}>
+                                            <div className={styles.skeletonRow}>
+                                                <div className={styles.skeletonBlock} style={{ width: '35%', height: 20 }} />
+                                                <div className={styles.skeletonBlock} style={{ width: '25%', height: 14 }} />
+                                            </div>
+                                            <div className={styles.skeletonBlock} style={{ width: '50%', height: 12, marginTop: 8 }} />
+                                        </div>
+                                    ))}
+                                </div>
                             ) : payments.length === 0 ? (
-                                <div style={{ textAlign: 'center', padding: '2rem' }}><p>No history found</p></div>
+                                <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>
+                                    <DollarSign size={36} style={{ opacity: 0.2, marginBottom: '0.5rem' }} />
+                                    <p style={{ fontWeight: 500 }}>No payment history found</p>
+                                </div>
                             ) : (
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                                     {payments.map(p => (
-                                        <div key={p.id} className="p-4 border rounded-xl bg-white shadow-sm">
-                                            <div className="flex justify-between items-start mb-2">
-                                                <div>
-                                                    <h3 className="font-bold text-lg text-primary">{formatCurrency(p.amount)}</h3>
-                                                    <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">{p.method}</p>
-                                                </div>
-                                                <div className="text-right">
-                                                    <p className="text-xs text-slate-400 flex items-center justify-end gap-1">
-                                                        <Calendar size={12} /> {formatDate(p.date)}
-                                                    </p>
-                                                </div>
+                                        <div key={p.id} className={styles.paymentCard}>
+                                            <div className={styles.paymentIcon}>
+                                                <DollarSign size={16} />
                                             </div>
-                                            {p.reference && <p className="text-xs text-slate-500 italic">Ref: {p.reference}</p>}
-                                            {p.invoice && (
-                                                <p className="text-[10px] text-blue-600 font-bold mt-2 uppercase flex items-center gap-1">
-                                                    <FileText size={10} /> Linked to {p.invoice.invoiceNumber}
-                                                </p>
-                                            )}
+                                            <div className={styles.paymentInfo}>
+                                                <p className={styles.paymentAmount}>{formatCurrency(p.amount)}</p>
+                                                <p className={styles.paymentMethod}>{p.method}</p>
+                                                {p.reference && <p className={styles.paymentRef}>Ref: {p.reference}</p>}
+                                                {p.invoice && (
+                                                    <p style={{ fontSize: '0.7rem', color: 'var(--primary)', fontWeight: 700, marginTop: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                                                        <FileText size={10} /> {p.invoice.invoiceNumber}
+                                                    </p>
+                                                )}
+                                            </div>
+                                            <div className={styles.paymentDate}>
+                                                <Calendar size={12} /> {formatDate(p.date)}
+                                            </div>
                                         </div>
                                     ))}
                                 </div>

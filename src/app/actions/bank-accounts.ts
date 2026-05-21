@@ -47,6 +47,19 @@ export async function getBankAccounts(workspaceId: string) {
     }
 }
 
+export async function getBankAccountsWithWorkspaceName(workspaceId: string) {
+    try {
+        const [accounts, workspace] = await Promise.all([
+            prisma.bankAccount.findMany({ where: { workspaceId }, orderBy: { createdAt: 'desc' } }),
+            prisma.workspace.findUnique({ where: { id: workspaceId }, select: { name: true } }),
+        ]);
+        return { success: true, accounts, workspaceName: workspace?.name || '' };
+    } catch (error) {
+        console.error('Failed to fetch bank accounts:', error);
+        return { success: false, error: 'Failed to fetch data', accounts: [], workspaceName: '' };
+    }
+}
+
 export async function deleteBankAccount(id: string) {
     const session = await auth();
     const user = session?.user as (User & { workspaceId?: string }) | undefined;

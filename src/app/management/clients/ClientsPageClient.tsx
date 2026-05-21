@@ -84,7 +84,7 @@ export default function ClientsPageClient({
                 </div>
             </div>
 
-            <ClientStats key={`stats-${refreshKey}`} workspaceId={workspaceId} />
+            <ClientStats key={`stats-${refreshKey}`} workspaceId={workspaceId} letterheadUrl={letterheadUrl} />
 
             <ClientList
                 key={`list-${refreshKey}`}

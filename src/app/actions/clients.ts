@@ -70,7 +70,7 @@ export async function getClients(workspaceId: string, params: GetClientsParams =
                 where,
                 skip,
                 take: limit,
-                orderBy: { createdAt: 'desc' },
+                orderBy: { updatedAt: 'desc' },
                 include: {
                     // Optimized: Only fetch what we strictly need for the list
                     _count: {
