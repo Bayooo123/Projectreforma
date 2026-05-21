@@ -1,74 +1,18 @@
-import { NextResponse } from 'next/server';
-import { runNotificationEngine } from '@/lib/notificationEngine';
-import { Matter } from '@/types/legal';
+import { NextRequest, NextResponse } from 'next/server';
 
-// This endpoint will be called by Vercel Cron or a scheduler
-// For now, it uses mock data. In production, it will fetch from the database.
+// Legacy stub — superseded by /api/cron/process-notifications
+// Kept for backwards-compatibility; secured and returns a redirect hint.
 
-export async function GET() {
-    try {
-        // TODO: Replace with actual database query
-        // const matters = await prisma.matter.findMany({ where: { status: 'active' } });
+export async function GET(request: NextRequest) {
+    const authHeader = request.headers.get('authorization');
+    const cronSecret = process.env.CRON_SECRET;
 
-        // Mock data for demonstration
-        const mockMatters: Matter[] = [
-            {
-                id: '1',
-                caseNumber: 'ID/1234/2025',
-                name: 'State v. Johnson',
-                clientId: 'client-1',
-                lawyers: [{ lawyer: { id: 'lawyer-1', name: 'Lead Counsel', email: 'lead@reforma.com' }, role: 'Lead Counsel' }],
-                court: 'High Court Lagos',
-                status: 'active',
-                nextCourtDate: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000), // 5 days from now
-                lastActivityAt: new Date(Date.now() - 20 * 24 * 60 * 60 * 1000), // 20 days ago
-                lastClientContact: new Date(Date.now() - 25 * 24 * 60 * 60 * 1000), // 25 days ago
-                createdAt: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000),
-                client: { id: 'client-1', name: 'Johnson' },
-                workspaceId: 'w1',
-                briefs: []
-            } as any,
-            {
-                id: '2',
-                caseNumber: 'ID/5678/2025',
-                name: 'TechCorp v. FirstBank',
-                clientId: 'client-2',
-                lawyers: [{ lawyer: { id: 'lawyer-2', name: 'Lead Counsel', email: 'lead2@reforma.com' }, role: 'Lead Counsel' }],
-                status: 'active',
-                lastActivityAt: new Date(Date.now() - 35 * 24 * 60 * 60 * 1000), // 35 days ago - CRITICAL
-                createdAt: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000),
-                client: { id: 'client-2', name: 'TechCorp' },
-                workspaceId: 'w1',
-                briefs: []
-            } as any,
-        ];
-
-        // Run the notification engine
-        const notifications = runNotificationEngine(mockMatters);
-
-        // TODO: Save notifications to database
-        // await prisma.notification.createMany({ data: notifications });
-
-        // TODO: Send emails/SMS for high-priority notifications
-        // for (const notif of notifications.filter(n => n.priority === 'critical' || n.priority === 'high')) {
-        //   await sendEmail(notif);
-        // }
-
-        return NextResponse.json({
-            success: true,
-            notificationsGenerated: notifications.length,
-            notifications: notifications.map(n => ({
-                id: n.id,
-                title: n.title,
-                priority: n.priority,
-                recipientId: n.recipientId,
-            })),
-        });
-    } catch (error) {
-        console.error('Notification engine error:', error);
-        return NextResponse.json(
-            { success: false, error: 'Failed to run notification engine' },
-            { status: 500 }
-        );
+    if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+
+    return NextResponse.json({
+        success: true,
+        message: 'This endpoint is deprecated. Use /api/cron/process-notifications instead.',
+    });
 }

@@ -45,6 +45,7 @@ export async function getCourtEntriesForWorkspace(workspaceId: string) {
     await requireAuth();
     return prisma.calendarEntry.findMany({
         where: {
+            deletedAt: null,
             type: 'COURT',
             OR: [
                 { matter: { workspaceId } },
