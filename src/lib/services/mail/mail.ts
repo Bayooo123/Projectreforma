@@ -21,6 +21,11 @@ class MailService {
     private defaultFrom = config.MAIL_FROM;
 
     async send(options: SendMailOptions) {
+        if (process.env.DISABLE_EMAILS === 'true') {
+            console.log(`[MailService] DISABLED — suppressed email to ${options.to}: ${options.subject}`);
+            return { success: true, data: null };
+        }
+
         const { to, subject, html, text, from, replyTo } = options;
 
         try {
