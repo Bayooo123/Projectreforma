@@ -451,11 +451,6 @@ export async function updateCalendarEntry(
 
         const adjournedToDate = patch.adjournedTo ? new Date(patch.adjournedTo) : null;
 
-        // Detect whether adjournedTo is being newly set or changed to a different date
-        const prevTime = current?.adjournedTo?.getTime();
-        const nextTime = adjournedToDate?.getTime();
-        const adjournmentChanged = adjournedToDate && prevTime !== nextTime;
-
         const updated = await prisma.$transaction(async tx => {
             const entry = await tx.calendarEntry.update({
                 where: { id: entryId },
@@ -477,8 +472,8 @@ export async function updateCalendarEntry(
                 },
             });
 
-            // When adjournedTo is set/changed, create the next-sitting calendar entry
-            if (adjournmentChanged && current?.matterId && adjournedToDate) {
+            // Ensure a forward-looking CalendarEntry exists for the adjourned date
+            if (current?.matterId && adjournedToDate) {
                 const existing = await tx.calendarEntry.findFirst({
                     where: {
                         matterId: current.matterId,
