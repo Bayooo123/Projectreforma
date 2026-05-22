@@ -663,11 +663,10 @@ export async function backfillBriefTimeline(briefId: string): Promise<{ processe
 
     const { extractDocumentTimeline } = await import('@/lib/services/doc-timeline-extractor');
 
-    let totalFound = 0;
-    for (const doc of docs) {
-        const count = await extractDocumentTimeline(doc.id, doc.name, briefId, doc.ocrText ?? null, doc.url, doc.type);
-        totalFound += count;
-    }
+    const counts = await Promise.all(
+        docs.map(doc => extractDocumentTimeline(doc.id, doc.name, briefId, doc.ocrText ?? null, doc.url, doc.type))
+    );
+    const totalFound = counts.reduce((sum, n) => sum + n, 0);
 
     return { processed: docs.length, found: totalFound };
 }

@@ -56,6 +56,14 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+    experimental: {
+        optimizePackageImports: ['lucide-react'],
+    },
+    images: {
+        remotePatterns: [
+            { protocol: 'https', hostname: '**.public.blob.vercel-storage.com' },
+        ],
+    },
     webpack: (config) => {
         config.resolve.alias.canvas = false;
         return config;

@@ -172,26 +172,23 @@ export async function checkOverdueInvoices() {
             include: { client: true }
         });
 
-        let count = 0;
-        for (const invoice of overdueInvoices) {
-            await createNotification({
+        await Promise.all(overdueInvoices.map(invoice => Promise.all([
+            createNotification({
                 workspaceId: invoice.client.workspaceId,
                 title: 'Payment Follow-up Required',
                 message: `Invoice #${invoice.invoiceNumber} for ${invoice?.client?.name} is 5 days old. Please follow up.`,
                 type: 'warning',
                 priority: 'high',
                 recipients: 'ALL',
-                relatedInvoiceId: invoice.id
-            });
-
-            await prisma.invoice.update({
+                relatedInvoiceId: invoice.id,
+            }),
+            prisma.invoice.update({
                 where: { id: invoice.id },
-                data: { followUpSent: true }
-            });
-            count++;
-        }
+                data: { followUpSent: true },
+            }),
+        ])));
 
-        return { success: true, processed: count };
+        return { success: true, processed: overdueInvoices.length };
     } catch (error) {
         console.error('Check overdue invoices error:', error);
         return { success: false };

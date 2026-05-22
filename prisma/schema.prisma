@@ -220,6 +220,8 @@ model BankAccount {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   workspace     Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
 }
 
 model ApiKey {
@@ -680,6 +682,7 @@ model Invoice {
   @@index([matterId])
   @@index([status])
   @@index([date])
+  @@index([clientId, status])
 }
 
 model InvoiceItem {

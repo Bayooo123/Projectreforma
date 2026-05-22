@@ -181,6 +181,7 @@ export async function getInvoices(workspaceId: string) {
             orderBy: {
                 createdAt: 'desc',
             },
+            take: 200,
         });
 
         return { success: true, data: invoices };

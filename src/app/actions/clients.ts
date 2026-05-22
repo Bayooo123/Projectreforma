@@ -374,25 +374,19 @@ export async function getClientStats(workspaceId: string) {
         // Let's stick to the previous implementation for outstanding for now to minimize risk, 
         // OR improve it. Let's improve it.
 
-        const outstandingInvoices = await prisma.invoice.findMany({
-            where: {
-                client: { workspaceId },
-                status: { in: ['pending', 'overdue'] },
-            },
-            include: {
-                payments: {
-                    select: { amount: true }
-                }
-            }
-        });
+        const [outstandingTotals, paymentsOnPending] = await Promise.all([
+            prisma.invoice.aggregate({
+                where: { client: { workspaceId }, status: { in: ['pending', 'overdue'] } },
+                _sum: { totalAmount: true },
+            }),
+            prisma.payment.aggregate({
+                where: { invoice: { status: { in: ['pending', 'overdue'] }, client: { workspaceId } } },
+                _sum: { amount: true },
+            }),
+        ]);
 
-        const outstandingAmount = outstandingInvoices.reduce((sum, invoice) => {
-            const paid = invoice.payments.reduce(
-                (pSum, p) => pSum.plus(p.amount), 
-                new Prisma.Decimal(0)
-            );
-            return sum.plus(new Prisma.Decimal(invoice.totalAmount as any).minus(paid));
-        }, new Prisma.Decimal(0));
+        const outstandingAmount = new Prisma.Decimal(outstandingTotals._sum.totalAmount ?? 0)
+            .minus(new Prisma.Decimal(paymentsOnPending._sum.amount ?? 0));
 
         // Check if revenue pin is set
         const workspace = await prisma.workspace.findUnique({

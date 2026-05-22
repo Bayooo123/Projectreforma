@@ -153,7 +153,8 @@ export async function getAllPayments(workspaceId: string) {
             },
             orderBy: {
                 date: 'desc'
-            }
+            },
+            take: 200,
         });
 
         return { success: true, data: payments };

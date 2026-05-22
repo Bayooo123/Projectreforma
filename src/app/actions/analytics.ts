@@ -37,25 +37,47 @@ export async function getAnalyticsMetrics(workspaceId: string, filter: string = 
     const startOfLastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
     const endOfLastMonth = new Date(today.getFullYear(), today.getMonth(), 0, 23, 59, 59, 999);
 
-    // 1. Revenue Metrics (Based on Payments)
-    const payments = await prisma.payment.findMany({
-        where: {
-            client: { workspaceId },
-            date: { gte: startDate, lte: endDate }
-        },
-        select: { amount: true }
-    });
+    const nextWeek = new Date(startOfToday);
+    nextWeek.setDate(startOfToday.getDate() + 7);
 
-    const lastMonthPayments = await prisma.payment.findMany({
-        where: {
-            client: { workspaceId },
-            date: { gte: startOfLastMonth, lte: endOfLastMonth }
-        },
-        select: { amount: true }
-    });
+    const [
+        revenueAgg,
+        lastMonthRevenueAgg,
+        activeMattersCount,
+        newMattersThisMonth,
+        expensesAgg,
+        expenseCount,
+        pendingCourtDates,
+    ] = await Promise.all([
+        prisma.payment.aggregate({
+            where: { client: { workspaceId }, date: { gte: startDate, lte: endDate } },
+            _sum: { amount: true },
+        }),
+        prisma.payment.aggregate({
+            where: { client: { workspaceId }, date: { gte: startOfLastMonth, lte: endOfLastMonth } },
+            _sum: { amount: true },
+        }),
+        prisma.matter.count({
+            where: { workspaceId, status: { notIn: ['closed', 'completed', 'archived'] } },
+        }),
+        prisma.matter.count({
+            where: { workspaceId, createdAt: { gte: startOfMonth, lte: endOfMonth } },
+        }),
+        prisma.expense.aggregate({
+            where: { workspaceId, date: { gte: startDate, lte: endDate } },
+            _sum: { amount: true },
+        }),
+        prisma.expense.count({
+            where: { workspaceId, date: { gte: startDate, lte: endDate } },
+        }),
+        prisma.calendarEntry.count({
+            where: { matter: { workspaceId }, type: 'COURT', date: { gte: startOfToday, lte: nextWeek } },
+        }),
+    ]);
 
-    const thisMonthRevenue = payments.reduce((sum, p) => sum + Number(p.amount || 0), 0);
-    const lastMonthRevenue = lastMonthPayments.reduce((sum, p) => sum + Number(p.amount || 0), 0);
+    const thisMonthRevenue = Number(revenueAgg._sum.amount ?? 0);
+    const lastMonthRevenue = Number(lastMonthRevenueAgg._sum.amount ?? 0);
+    const totalExpenses = Number(expensesAgg._sum.amount ?? 0);
 
     let revenueGrowth = 0;
     if (lastMonthRevenue > 0) {
@@ -63,45 +85,6 @@ export async function getAnalyticsMetrics(workspaceId: string, filter: string = 
     } else if (thisMonthRevenue > 0) {
         revenueGrowth = 100;
     }
-
-    // 2. Active Matters — case-insensitive closed/completed exclusion
-    const activeMattersCount = await prisma.matter.count({
-        where: {
-            workspaceId,
-            status: { notIn: ['closed', 'completed', 'archived'] }
-        }
-    });
-
-    const newMattersThisMonth = await prisma.matter.count({
-        where: {
-            workspaceId,
-            createdAt: { gte: startOfMonth, lte: endOfMonth }
-        }
-    });
-
-    // 3. Expenses
-    const expenses = await prisma.expense.findMany({
-        where: {
-            workspaceId,
-            date: { gte: startDate, lte: endDate }
-        },
-        select: { amount: true }
-    });
-
-    const totalExpenses = expenses.reduce((sum, e) => sum + Number(e.amount || 0), 0);
-    const expenseCount = expenses.length;
-
-    // 4. Pending Court Dates (next 7 days) — only type=COURT entries, starting from today
-    const nextWeek = new Date(startOfToday);
-    nextWeek.setDate(startOfToday.getDate() + 7);
-
-    const pendingCourtDates = await prisma.calendarEntry.count({
-        where: {
-            matter: { workspaceId },
-            type: 'COURT',
-            date: { gte: startOfToday, lte: nextWeek }
-        }
-    });
 
     console.log(`[Analytics] Results - Revenue: ${thisMonthRevenue}, Matters: ${activeMattersCount}, Expenses: ${totalExpenses}, Court dates: ${pendingCourtDates}`);
 

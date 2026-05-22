@@ -442,28 +442,82 @@ export async function updateCalendarEntry(
     }
 ) {
     try {
-        await requireAuth();
-        const updated = await prisma.calendarEntry.update({
+        const user = await requireAuth();
+
+        const current = await prisma.calendarEntry.findUnique({
             where: { id: entryId },
-            data: {
-                ...(patch.date !== undefined && { date: new Date(patch.date) }),
-                ...(patch.court !== undefined && { court: patch.court }),
-                ...(patch.judge !== undefined && { judge: patch.judge }),
-                ...(patch.proceedings !== undefined && { proceedings: patch.proceedings }),
-                ...(patch.outcome !== undefined && { outcome: patch.outcome }),
-                ...(patch.adjournedFor !== undefined && { adjournedFor: patch.adjournedFor }),
-                ...(patch.adjournedTo !== undefined && { adjournedTo: patch.adjournedTo ? new Date(patch.adjournedTo) : null }),
-                ...(patch.title !== undefined && { title: patch.title }),
-                ...(patch.appearingLawyerIds !== undefined && {
-                    appearances: {
-                        set: patch.appearingLawyerIds.map(id => ({ id })),
-                    },
-                }),
-            },
-            include: {
-                appearances: { select: { id: true, name: true, email: true, image: true } },
-            },
+            select: { matterId: true, court: true, judge: true, submittingLawyerId: true, adjournedTo: true },
         });
+
+        const adjournedToDate = patch.adjournedTo ? new Date(patch.adjournedTo) : null;
+
+        // Detect whether adjournedTo is being newly set or changed to a different date
+        const prevTime = current?.adjournedTo?.getTime();
+        const nextTime = adjournedToDate?.getTime();
+        const adjournmentChanged = adjournedToDate && prevTime !== nextTime;
+
+        const updated = await prisma.$transaction(async tx => {
+            const entry = await tx.calendarEntry.update({
+                where: { id: entryId },
+                data: {
+                    ...(patch.date !== undefined && { date: new Date(patch.date) }),
+                    ...(patch.court !== undefined && { court: patch.court }),
+                    ...(patch.judge !== undefined && { judge: patch.judge }),
+                    ...(patch.proceedings !== undefined && { proceedings: patch.proceedings }),
+                    ...(patch.outcome !== undefined && { outcome: patch.outcome }),
+                    ...(patch.adjournedFor !== undefined && { adjournedFor: patch.adjournedFor }),
+                    ...(patch.adjournedTo !== undefined && { adjournedTo: adjournedToDate }),
+                    ...(patch.title !== undefined && { title: patch.title }),
+                    ...(patch.appearingLawyerIds !== undefined && {
+                        appearances: { set: patch.appearingLawyerIds.map(id => ({ id })) },
+                    }),
+                },
+                include: {
+                    appearances: { select: { id: true, name: true, email: true, image: true } },
+                },
+            });
+
+            // When adjournedTo is set/changed, create the next-sitting calendar entry
+            if (adjournmentChanged && current?.matterId && adjournedToDate) {
+                const existing = await tx.calendarEntry.findFirst({
+                    where: {
+                        matterId: current.matterId,
+                        date: adjournedToDate,
+                        deletedAt: null,
+                        id: { not: entryId },
+                    },
+                    select: { id: true },
+                });
+
+                if (!existing) {
+                    const nextEntry = await tx.calendarEntry.create({
+                        data: {
+                            matterId: current.matterId,
+                            date: adjournedToDate,
+                            type: 'COURT',
+                            title: patch.adjournedFor || 'Next Sitting',
+                            court: patch.court ?? current.court ?? null,
+                            judge: patch.judge ?? current.judge ?? null,
+                            submittingLawyerId: current.submittingLawyerId ?? user.id,
+                        },
+                    });
+
+                    await tx.matter.update({
+                        where: { id: current.matterId },
+                        data: { nextCourtDate: adjournedToDate },
+                    });
+
+                    const recipientIds = [current.submittingLawyerId, user.id]
+                        .filter((id): id is string => !!id)
+                        .filter((id, i, arr) => arr.indexOf(id) === i);
+
+                    await scheduleCourtReminders(tx, nextEntry.id, adjournedToDate, current.matterId, recipientIds);
+                }
+            }
+
+            return entry;
+        });
+
         revalidatePath('/calendar');
         revalidatePath('/matters');
         return { success: true, data: updated };
