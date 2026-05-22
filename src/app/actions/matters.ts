@@ -70,9 +70,11 @@ export async function createMatter(input: {
         });
 
         await prisma.$transaction(async tx => {
+            let firstEntry: { id: string } | null = null;
+
             // Entry 1: the first sitting (with proceedings + appearances)
             if (input.firstSittingDate) {
-                const entry = await tx.calendarEntry.create({
+                firstEntry = await tx.calendarEntry.create({
                     data: {
                         matterId: matter.id,
                         date: input.firstSittingDate,
@@ -88,26 +90,28 @@ export async function createMatter(input: {
                             ? { connect: input.appearingLawyerIds.map(id => ({ id })) }
                             : undefined,
                     },
+                    select: { id: true },
                 });
+            }
 
-                // Entry 2: the adjourned-to date (next scheduled sitting)
-                if (input.adjournedTo) {
-                    const nextEntry = await tx.calendarEntry.create({
-                        data: {
-                            matterId: matter.id,
-                            date: input.adjournedTo,
-                            type: 'COURT',
-                            title: input.adjournedFor || 'Next Sitting',
-                            court: input.court || null,
-                            judge: input.judge || null,
-                            submittingLawyerId: input.userId,
-                            adjournedFor: input.adjournedFor || null,
-                        },
-                    });
-                    await scheduleCourtReminders(tx, nextEntry.id, input.adjournedTo, matter.id, [input.userId]);
-                } else {
-                    await scheduleCourtReminders(tx, entry.id, input.firstSittingDate, matter.id, [input.userId]);
-                }
+            // Entry 2: the adjourned-to / next sitting date
+            // Created independently — so matters with only a next-date still show on calendar
+            if (input.adjournedTo) {
+                const nextEntry = await tx.calendarEntry.create({
+                    data: {
+                        matterId: matter.id,
+                        date: input.adjournedTo,
+                        type: 'COURT',
+                        title: input.adjournedFor || 'Next Sitting',
+                        court: input.court || null,
+                        judge: input.judge || null,
+                        submittingLawyerId: input.userId,
+                        adjournedFor: input.adjournedFor || null,
+                    },
+                });
+                await scheduleCourtReminders(tx, nextEntry.id, input.adjournedTo, matter.id, [input.userId]);
+            } else if (firstEntry && input.firstSittingDate) {
+                await scheduleCourtReminders(tx, firstEntry.id, input.firstSittingDate, matter.id, [input.userId]);
             }
         });
 
