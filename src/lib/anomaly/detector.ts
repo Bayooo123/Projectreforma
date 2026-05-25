@@ -219,19 +219,25 @@ export async function detectAnomalies(workspaceId: string): Promise<DetectedAnom
         },
     });
 
-    for (const entry of upcomingFilingHearings) {
-        const adjFor = (entry.adjournedFor || '').toLowerCase();
-        if (!FILING_KEYWORDS.some(kw => adjFor.includes(kw))) continue;
-        if (!entry.matter) continue;
+    // Filter to keyword-matched hearings first, then batch-check documents — avoids N+1
+    const filingHearings = upcomingFilingHearings.filter(e => {
+        const adjFor = (e.adjournedFor || '').toLowerCase();
+        return e.matter && FILING_KEYWORDS.some(kw => adjFor.includes(kw));
+    });
 
-        // Check if any brief linked to this matter has recent documents
-        const recentDocs = await prisma.document.count({
-            where: {
-                brief: { matterId: entry.matter.id, deletedAt: null },
-                uploadedAt: { gte: twoWeeksAgo },
-            },
-        });
-        if (recentDocs > 0) continue;
+    const matterIds = [...new Set(filingHearings.map(e => e.matter!.id))];
+    const mattersWithRecentDocs = matterIds.length > 0
+        ? new Set(
+            (await prisma.brief.findMany({
+                where: { matterId: { in: matterIds }, deletedAt: null, documents: { some: { uploadedAt: { gte: twoWeeksAgo } } } },
+                select: { matterId: true },
+            })).map(b => b.matterId!)
+          )
+        : new Set<string>();
+
+    for (const entry of filingHearings) {
+        if (!entry.matter) continue;
+        if (mattersWithRecentDocs.has(entry.matter.id)) continue;
 
         const daysLeft = Math.ceil((entry.date.getTime() - now.getTime()) / 86_400_000);
         const dateStr = new Date(entry.date).toLocaleDateString('en-NG', { day: 'numeric', month: 'long', year: 'numeric' });
@@ -326,11 +332,11 @@ export async function runAnomalyScan(workspaceId: string): Promise<{ created: nu
         });
     }
 
-    // Create records only for problems not already tracked
+    // Create records only for problems not already tracked — batch insert
     const toCreate = currentProblems.filter(a => !existingKeys.has(`${a.type}::${a.resourceId}`));
-    for (const a of toCreate) {
-        await prisma.workspaceAnomaly.create({
-            data: {
+    if (toCreate.length > 0) {
+        await prisma.workspaceAnomaly.createMany({
+            data: toCreate.map(a => ({
                 workspaceId,
                 type: a.type,
                 severity: a.severity,
@@ -341,7 +347,8 @@ export async function runAnomalyScan(workspaceId: string): Promise<{ created: nu
                 resourceId: a.resourceId,
                 resourceName: a.resourceName,
                 context: a.context ?? {},
-            },
+            })),
+            skipDuplicates: true,
         });
     }
 

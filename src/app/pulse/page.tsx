@@ -26,8 +26,10 @@ export default async function PulsePage() {
         );
     }
 
-    // Scan must complete before fetching anomalies so auto-resolutions are visible immediately
-    await runAnomalyScan(workspaceId).catch(e => console.error('[Pulse] anomaly scan failed:', e));
+    // Fire anomaly scan in background — don't block page load.
+    // Cron job at /api/cron/anomaly-scan runs hourly for deep scans.
+    // Here we do a lightweight background refresh; the page reads pre-computed results from DB.
+    runAnomalyScan(workspaceId).catch(e => console.error('[Pulse] anomaly scan failed:', e));
 
     const [firmStats, userStats, firmFeed, userFeed, pendingQuestions, anomalies, myBriefs, todayEntries] = await Promise.all([
         getPulseFirmStats(workspaceId),

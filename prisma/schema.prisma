@@ -803,6 +803,7 @@ model Task {
 
   @@index([assignedToId, status, dueDate])
   @@index([workspaceId, status])
+  @@index([workspaceId, status, priority, dueDate])
   @@index([sourceEmail])
   @@index([dueDate])
 }
@@ -1197,6 +1198,7 @@ model WorkspaceAnomaly {
   resolvedBy   User?     @relation("AnomalyResolver", fields: [resolvedById], references: [id])
 
   @@index([workspaceId, status])
+  @@index([workspaceId, status, detectedAt])
   @@index([workspaceId, type])
   @@index([resourceType, resourceId])
 }

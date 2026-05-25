@@ -16,10 +16,8 @@ export async function getOpenAnomalies(workspaceId: string) {
 
     return prisma.workspaceAnomaly.findMany({
         where: { workspaceId, status: { in: ['open', 'acknowledged'] } },
-        orderBy: [
-            { severity: 'desc' }, // critical first
-            { detectedAt: 'desc' },
-        ],
+        orderBy: { detectedAt: 'desc' },
+        take: 50,
     });
 }
 

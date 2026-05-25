@@ -1,4 +1,3 @@
-import { auth } from '@/auth';
 import { redirect } from 'next/navigation';
 import { getCurrentUserWithWorkspace } from '@/lib/workspace';
 import { Suspense } from 'react';
@@ -7,14 +6,9 @@ import BriefTableSkeleton from '@/components/briefs/BriefTableSkeleton';
 import styles from './page.module.css';
 
 export default async function BriefsPage() {
-    const session = await auth();
-
-    if (!session?.user) {
-        redirect('/login');
-    }
-
-    // Get workspace
     const data = await getCurrentUserWithWorkspace();
+
+    if (!data?.user) redirect('/login');
 
     if (!data?.workspace) {
         return (
