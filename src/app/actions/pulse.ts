@@ -173,6 +173,7 @@ export async function getPulseFeedFirmwide(workspaceId: string): Promise<PulseIt
             monthRevenue,
             monthExpenses,
             outstandingInvoiceCount,
+            recentPulseEvents,
         ] = await Promise.all([
             prisma.task.findMany({
                 where: { workspaceId, status: { not: 'completed' }, priority: { in: ['high', 'urgent'] }, dueDate: { lt: today } },
@@ -202,6 +203,11 @@ export async function getPulseFeedFirmwide(workspaceId: string): Promise<PulseIt
             prisma.payment.aggregate({ where: { client: { workspaceId }, date: { gte: startOfMonth } }, _sum: { amount: true } }),
             prisma.expense.aggregate({ where: { workspaceId, date: { gte: startOfMonth } }, _sum: { amount: true } }),
             prisma.invoice.count({ where: { client: { workspaceId }, status: { in: ['sent', 'pending', 'overdue'] } } }),
+            prisma.pulseEvent.findMany({
+                where: { workspaceId, createdAt: { gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) } },
+                take: 10, orderBy: { createdAt: 'desc' },
+                include: { brief: { select: { name: true, id: true } }, assignedTo: { select: { name: true } } },
+            }),
         ]);
 
         const items: PulseItem[] = [];
@@ -264,6 +270,48 @@ export async function getPulseFeedFirmwide(workspaceId: string): Promise<PulseIt
                 timeLabel: relativeTime(email.receivedAt), categories: ['client', 'firm'],
                 ctaLabel: matched ? 'View matter' : 'Review',
                 ctaHref: email.matter ? `/briefs?matter=${email.matter.name}` : '/management/clients',
+            });
+        }
+
+        // Map PulseEvents (institutional memory emails) to PulseItems
+        const INTENT_SEVERITY: Record<string, PulseSeverity> = {
+            COURT_NOTICE: 'urgent', ADJOURNMENT: 'warning', NEW_INSTRUCTION: 'warning',
+            CLIENT_QUERY: 'info', PAYMENT: 'info', DOCUMENT_RECEIVED: 'info', CORRESPONDENCE: 'info',
+        };
+        const INTENT_SECTION: Record<string, PulseSection> = {
+            COURT_NOTICE: 'urgent', NEW_INSTRUCTION: 'urgent', ADJOURNMENT: 'thisWeek',
+            CLIENT_QUERY: 'thisWeek', PAYMENT: 'thisWeek', DOCUMENT_RECEIVED: 'thisWeek', CORRESPONDENCE: 'insights',
+        };
+        const INTENT_ICON: Record<string, PulseIconType> = {
+            COURT_NOTICE: 'calendar', ADJOURNMENT: 'calendar', NEW_INSTRUCTION: 'email',
+            CLIENT_QUERY: 'email', PAYMENT: 'invoice', DOCUMENT_RECEIVED: 'document', CORRESPONDENCE: 'email',
+        };
+
+        for (const pe of recentPulseEvents) {
+            const urgencyOverride = pe.urgency === 'critical' || pe.urgency === 'high';
+            const severity: PulseSeverity = pe.urgency === 'critical' ? 'urgent'
+                : pe.urgency === 'high' ? 'warning'
+                : INTENT_SEVERITY[pe.intent] || 'info';
+            const section: PulseSection = (urgencyOverride && (pe.urgency === 'critical' || pe.urgency === 'high'))
+                ? 'urgent'
+                : INTENT_SECTION[pe.intent] || 'thisWeek';
+
+            const actionSummary = Array.isArray(pe.actionItems) && pe.actionItems.length > 0
+                ? ` Action: ${(pe.actionItems as string[])[0]}`
+                : '';
+
+            items.push({
+                id: `pulse-${pe.id}`,
+                severity,
+                section,
+                iconType: INTENT_ICON[pe.intent] || 'email',
+                title: pe.title || `Email from ${pe.senderName || pe.senderEmail}`,
+                description: `${pe.summary || ''}${pe.brief?.name ? ` · Brief: ${pe.brief.name}` : ' · Unmatched'}${actionSummary}`,
+                timeLabel: relativeTime(pe.createdAt),
+                categories: ['client', 'firm'] as PulseCategory[],
+                ctaLabel: pe.brief?.id ? 'View brief' : 'Review',
+                ctaHref: pe.brief?.id ? `/briefs/${pe.brief.id}` : '/management/clients',
+                ...(pe.assignedTo?.name ? { lawyers: [{ initials: getInitials(pe.assignedTo.name), label: pe.assignedTo.name }] } : {}),
             });
         }
 
