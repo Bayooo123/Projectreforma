@@ -140,6 +140,51 @@ export async function completeBranding(
     });
 }
 
+export async function getInstitutionalEmail(workspaceId: string) {
+    try {
+        await assertWorkspaceAccess(workspaceId);
+        const config = await prisma.workspaceEmailConfig.findUnique({
+            where: { workspaceId },
+            select: { emailAddress: true, isActive: true },
+        });
+        return { success: true, emailAddress: config?.emailAddress || null, isActive: config?.isActive ?? false };
+    } catch (error: any) {
+        return { success: false, error: error?.message || 'Failed to fetch email config' };
+    }
+}
+
+export async function claimInstitutionalEmail(workspaceId: string, handle: string) {
+    try {
+        await assertWorkspaceAccess(workspaceId);
+
+        const clean = handle.toLowerCase().trim().replace(/[^a-z0-9-]/g, '');
+        if (!clean || clean.length < 2 || clean.length > 30) {
+            return { success: false, error: 'Handle must be 2–30 alphanumeric characters.' };
+        }
+
+        const emailAddress = `${clean}@reforma.ng`;
+
+        const existing = await prisma.workspaceEmailConfig.findFirst({
+            where: { emailAddress },
+        });
+        if (existing && existing.workspaceId !== workspaceId) {
+            return { success: false, error: 'This handle is already claimed by another firm.' };
+        }
+
+        const config = await prisma.workspaceEmailConfig.upsert({
+            where: { workspaceId },
+            create: { workspaceId, emailAddress, isActive: true },
+            update: { emailAddress, isActive: true },
+        });
+
+        revalidatePath('/settings');
+        return { success: true, emailAddress: config.emailAddress };
+    } catch (error: any) {
+        console.error('Failed to claim institutional email:', error);
+        return { success: false, error: error?.message || 'Failed to claim email handle.' };
+    }
+}
+
 export async function getStorageUsage(workspaceId: string) {
     try {
         if (!workspaceId) {

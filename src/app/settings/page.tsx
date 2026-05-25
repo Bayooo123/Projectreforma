@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
-import { User, Building2, Lock, Loader, FileText, AlertCircle, Key, Copy, Trash2, Plus, Eye, EyeOff, Check, HardDrive, CreditCard, CheckCircle, Clock, XCircle } from 'lucide-react';
-import { updateWorkspaceSettings, getWorkspaceSettings, getStorageUsage } from '@/app/actions/settings';
+import { User, Building2, Lock, Loader, FileText, AlertCircle, Key, Copy, Trash2, Plus, Eye, EyeOff, Check, HardDrive, CreditCard, CheckCircle, Clock, XCircle, Brain } from 'lucide-react';
+import { updateWorkspaceSettings, getWorkspaceSettings, getStorageUsage, getInstitutionalEmail, claimInstitutionalEmail } from '@/app/actions/settings';
 import { getUserProfile, updateUserProfile } from '@/app/actions/members';
 import { getBankAccounts, createBankAccount, deleteBankAccount } from '@/app/actions/bank-accounts';
 import { generateApiKey, listApiKeys, revokeApiKey } from '@/app/actions/api-keys';
@@ -29,6 +29,12 @@ export default function SettingsPage() {
     // Temp state for editing
     const [editLetterheadUrl, setEditLetterheadUrl] = useState('');
     const [editBrandColor, setEditBrandColor] = useState('#121826');
+
+    // Institutional Memory Email
+    const [institutionalEmail, setInstitutionalEmail] = useState<string | null>(null);
+    const [emailHandle, setEmailHandle] = useState('');
+    const [isClaimingEmail, setIsClaimingEmail] = useState(false);
+    const [emailFeedback, setEmailFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
     // Bank Accounts & Job Title
     const [jobTitle, setJobTitle] = useState('');
@@ -82,6 +88,11 @@ export default function SettingsPage() {
             setEditLetterheadUrl(settingsRes.workspace.letterheadUrl || '');
             setBrandColor(settingsRes.workspace.brandColor || '#121826');
             setEditBrandColor(settingsRes.workspace.brandColor || '#121826');
+        }
+
+        const emailRes = await getInstitutionalEmail(workspaceId);
+        if (emailRes.success) {
+            setInstitutionalEmail(emailRes.emailAddress || null);
         }
 
         const accountsRes = await getBankAccounts(workspaceId);
@@ -203,6 +214,21 @@ export default function SettingsPage() {
     const copyToClipboard = (text: string) => {
         navigator.clipboard.writeText(text);
         alert('Copied to clipboard!');
+    };
+
+    const handleClaimEmail = async () => {
+        if (!emailHandle.trim() || !session?.user?.workspaceId) return;
+        setIsClaimingEmail(true);
+        setEmailFeedback(null);
+        const res = await claimInstitutionalEmail(session.user.workspaceId, emailHandle.trim());
+        if (res.success && res.emailAddress) {
+            setInstitutionalEmail(res.emailAddress);
+            setEmailHandle('');
+            setEmailFeedback({ type: 'success', message: `Claimed! Your address is ${res.emailAddress}` });
+        } else {
+            setEmailFeedback({ type: 'error', message: res.error || 'Failed to claim handle.' });
+        }
+        setIsClaimingEmail(false);
     };
 
     const handleSaveFirmSettings = async (e: React.FormEvent) => {
@@ -449,6 +475,71 @@ export default function SettingsPage() {
                                 <button type="submit" className={styles.saveBtn} disabled={isSaving}>Save Configuration</button>
                             </div>
                         </form>
+
+                        {/* Institutional Memory Card */}
+                        <div className={styles.card}>
+                            <div className={styles.cardHeader}>
+                                <Brain className={styles.icon} />
+                                <h2>Institutional Memory</h2>
+                            </div>
+                            <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
+                                BCC this address on client emails to automatically capture them into your firm's institutional memory.
+                                Every email you BCC will be routed into the correct brief.
+                            </p>
+
+                            {institutionalEmail ? (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '1rem', background: 'var(--surface)', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                                        <code style={{ flex: 1, fontSize: '1rem', fontWeight: 600, color: 'var(--primary)', letterSpacing: '0.01em' }}>
+                                            {institutionalEmail}
+                                        </code>
+                                        <button
+                                            onClick={() => { navigator.clipboard.writeText(institutionalEmail); alert('Copied!'); }}
+                                            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', padding: '0.25rem' }}
+                                            title="Copy to clipboard"
+                                        >
+                                            <Copy size={18} />
+                                        </button>
+                                    </div>
+                                    <p style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)' }}>
+                                        Add this to the BCC field on every client email. Team members can also save it as a contact for quick access.
+                                    </p>
+                                </div>
+                            ) : (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                                    <div style={{ display: 'flex', gap: '0.75rem' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', flex: 1, border: '1px solid var(--border)', borderRadius: '8px', overflow: 'hidden', background: 'var(--surface)' }}>
+                                            <input
+                                                type="text"
+                                                className={styles.input}
+                                                placeholder="yourfirm"
+                                                value={emailHandle}
+                                                onChange={e => setEmailHandle(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
+                                                style={{ flex: 1, border: 'none', background: 'transparent', paddingRight: 0 }}
+                                            />
+                                            <span style={{ padding: '0 0.75rem', color: 'var(--text-tertiary)', fontSize: '0.9rem', whiteSpace: 'nowrap' }}>@reforma.ng</span>
+                                        </div>
+                                        <button
+                                            onClick={handleClaimEmail}
+                                            disabled={!emailHandle.trim() || isClaimingEmail}
+                                            className={styles.saveBtn}
+                                            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', whiteSpace: 'nowrap' }}
+                                        >
+                                            {isClaimingEmail ? <><Loader className="spin" size={16} /> Claiming…</> : 'Claim Address'}
+                                        </button>
+                                    </div>
+                                    {emailFeedback && (
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem', color: emailFeedback.type === 'error' ? '#ef4444' : '#10b981' }}>
+                                            {emailFeedback.type === 'error' ? <AlertCircle size={14} /> : <Check size={14} />}
+                                            {emailFeedback.message}
+                                        </div>
+                                    )}
+                                    <p style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)' }}>
+                                        Once claimed, this address belongs to your firm permanently.
+                                    </p>
+                                </div>
+                            )}
+                        </div>
 
                         {/* Bank Accounts Card */}
                         <div className={styles.card}>

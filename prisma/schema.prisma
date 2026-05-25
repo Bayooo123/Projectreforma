@@ -62,6 +62,8 @@ model Workspace {
   workEntries           WorkEntry[]
   litigationMilestones  LitigationMilestone[]
   subscriptionPayments  SubscriptionPayment[]
+  firmContacts          FirmContact[]
+  pulseEvents           PulseEvent[]
 
   @@index([slug])
   @@index([firmCode])
@@ -193,6 +195,7 @@ model User {
   resolvedAnomalies            WorkspaceAnomaly[]     @relation("AnomalyResolver")
   pushSubscriptions            PushSubscription[]
   workEntries                  WorkEntry[]            @relation("UserWorkEntries")
+  pulseEventAssignments        PulseEvent[]           @relation("PulseEventAssignee")
 
   @@index([email])
   @@index([lawyerToken])
@@ -537,6 +540,7 @@ model Brief {
   workEntries         WorkEntry[]
   briefLawyers        BriefLawyer[]
   timelineEvents      DocumentTimelineEvent[]
+  pulseEvents         PulseEvent[]
 
   @@index([lawyerId])
   @@index([lawyerInChargeId])
@@ -641,6 +645,7 @@ model Client {
   invoices             Invoice[]
   matters              Matter[]
   payments             Payment[]
+  firmContacts         FirmContact[]
 
   @@index([email])
   @@index([workspaceId])
@@ -1280,4 +1285,60 @@ model LitigationMilestone {
   @@index([matterId])
   @@index([workspaceId, status])
   @@index([dueDate])
+}
+
+// ── Institutional Memory ─────────────────────────────────────────────────────
+
+model FirmContact {
+  id          String    @id @default(cuid())
+  workspaceId String
+  email       String
+  name        String?
+  // client | court | counsel | other | unknown
+  type        String    @default("unknown")
+  clientId    String?
+  firstSeen   DateTime  @default(now())
+  lastSeen    DateTime  @updatedAt
+  emailCount  Int       @default(1)
+
+  workspace   Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  client      Client?     @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  pulseEvents PulseEvent[]
+
+  @@unique([workspaceId, email])
+  @@index([workspaceId, type])
+  @@index([email])
+}
+
+model PulseEvent {
+  id           String    @id @default(cuid())
+  workspaceId  String
+  // email | system | internal
+  source       String    @default("email")
+  // CLIENT_QUERY | COURT_NOTICE | DOCUMENT_RECEIVED | PAYMENT | NEW_INSTRUCTION | ADJOURNMENT | CORRESPONDENCE
+  intent       String
+  // critical | high | normal | low
+  urgency      String    @default("normal")
+  title        String
+  summary      String
+  senderName   String?
+  senderEmail  String?
+  briefId      String?
+  contactId    String?
+  assignedToId String?
+  actionItems  Json?
+  // new | viewed | actioned | dismissed
+  status       String    @default("new")
+  createdAt    DateTime  @default(now())
+  actionedAt   DateTime?
+
+  workspace  Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  brief      Brief?       @relation(fields: [briefId], references: [id], onDelete: SetNull)
+  contact    FirmContact? @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  assignedTo User?        @relation("PulseEventAssignee", fields: [assignedToId], references: [id])
+
+  @@index([workspaceId, status, createdAt])
+  @@index([workspaceId, createdAt])
+  @@index([briefId])
+  @@index([assignedToId])
 }

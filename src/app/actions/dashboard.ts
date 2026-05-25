@@ -215,6 +215,11 @@ export async function getTodaysActivity(workspaceId: string) {
 }
 
 export async function getFirmPulse(limit: number = 20, workspaceId?: string) {
+    // Resolve workspaceId from session if not explicitly provided
+    if (!workspaceId) {
+        const session = await auth();
+        workspaceId = session?.user?.workspaceId;
+    }
     if (!workspaceId) return [];
 
     // Fetch activities from Matters, Briefs, and Invitations
@@ -263,6 +268,18 @@ export async function getFirmPulse(limit: number = 20, workspaceId?: string) {
         }
     });
 
+    // Fetch recent PulseEvents (institutional memory)
+    const pulseEvents = await prisma.pulseEvent.findMany({
+        where: { workspaceId },
+        take: limit,
+        orderBy: { createdAt: 'desc' },
+        include: {
+            brief:     { select: { name: true, briefNumber: true } },
+            assignedTo: { select: { name: true } },
+            contact:   { select: { name: true, type: true } },
+        },
+    });
+
     const allActivities: any[] = [
         ...matterLogs.map(l => ({
             id: l.id,
@@ -295,10 +312,28 @@ export async function getFirmPulse(limit: number = 20, workspaceId?: string) {
             id: p.id,
             type: 'payment',
             description: `Recorded payment of ₦${new Prisma.Decimal(p.amount as any).toNumber().toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
-            activityType: 'document_created', // Re-use doc/payment icon
+            activityType: 'document_created',
             timestamp: p.date,
             performedBy: 'Billing System',
-            entityName: p.client.name // Payment has clientId
+            entityName: p.client.name
+        })),
+        ...pulseEvents.map(e => ({
+            id:           `pulse-${e.id}`,
+            type:         'pulse',
+            pulseEventId: e.id,
+            intent:       e.intent,
+            urgency:      e.urgency,
+            description:  e.summary,
+            activityType: e.intent,
+            timestamp:    e.createdAt,
+            performedBy:  e.senderName || e.senderEmail || 'Unknown',
+            entityName:   e.brief?.name || 'Unmatched',
+            assignedTo:   e.assignedTo?.name || null,
+            contactType:  e.contact?.type || 'other',
+            title:        e.title,
+            status:       e.status,
+            actionItems:  e.actionItems,
+            briefNumber:  e.brief?.briefNumber || null,
         }))
     ];
 
