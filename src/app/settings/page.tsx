@@ -337,13 +337,6 @@ export default function SettingsPage() {
                             <input type="email" disabled value={session?.user?.email || ''} className={styles.input} />
                         </div>
                         <div className={styles.infoRow}>
-                            <label>Lawyer Token</label>
-                            <div className={styles.tokenDisplay}>
-                                <span className={styles.tokenValue}>{lawyerToken || '----'}</span>
-                                <p className={styles.hint}>System-assigned unique 4-digit code for record authentication.</p>
-                            </div>
-                        </div>
-                        <div className={styles.infoRow}>
                             <label>Job Title / Designation</label>
                             <div className={styles.inputWrapper}>
                                 <input

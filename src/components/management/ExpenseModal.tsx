@@ -32,6 +32,13 @@ const EXPENSE_CATEGORIES = [
     { label: 'Miscellaneous', value: 'MISCELLANEOUS' },
 ];
 
+function generateExpenseRef(): string {
+    const d = new Date();
+    const date = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
+    const suffix = Math.random().toString(36).substring(2, 6).toUpperCase();
+    return `EXP-${date}-${suffix}`;
+}
+
 const ExpenseModal = ({ isOpen, onClose, onSuccess, workspaceId, expenseToEdit }: ExpenseModalProps) => {
     // List of added expenses (for batch mode)
     const [expenseList, setExpenseList] = useState<Expense[]>([]);
@@ -64,7 +71,7 @@ const ExpenseModal = ({ isOpen, onClose, onSuccess, workspaceId, expenseToEdit }
                 setAmount('');
                 setDescription('');
                 setDate(new Date().toISOString().split('T')[0]);
-                setReference('');
+                setReference(generateExpenseRef());
                 setExpenseList([]);
             }
             setError('');
@@ -91,11 +98,11 @@ const ExpenseModal = ({ isOpen, onClose, onSuccess, workspaceId, expenseToEdit }
 
         setExpenseList([...expenseList, newExpense]);
 
-        // Reset inputs but keep date
+        // Reset inputs but keep date; new ref for next item
         setCategory('');
         setAmount('');
         setDescription('');
-        setReference('');
+        setReference(generateExpenseRef());
         setError('');
     };
 
@@ -284,11 +291,11 @@ const ExpenseModal = ({ isOpen, onClose, onSuccess, workspaceId, expenseToEdit }
                             </div>
 
                             <div className={styles.formGroup}>
-                                <label className={styles.label}>Reference (Optional)</label>
+                                <label className={styles.label}>Reference</label>
                                 <input
                                     type="text"
                                     className={styles.input}
-                                    placeholder="e.g., REC-001"
+                                    placeholder="Auto-generated"
                                     value={reference}
                                     onChange={(e) => setReference(e.target.value)}
                                 />

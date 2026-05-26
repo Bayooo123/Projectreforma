@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { Search, Filter, MoreVertical, FileText, DollarSign, ChevronLeft, ChevronRight, Edit2 } from 'lucide-react';
+import { Search, Filter, FileText, DollarSign, ChevronLeft, ChevronRight, Edit2 } from 'lucide-react';
 import { getClients } from '@/app/actions/clients';
 import InvoiceModal from './InvoiceModal';
 import PaymentModal from './PaymentModal';
@@ -259,9 +259,6 @@ const ClientList = ({
                                                     onClick={() => onEditClient?.(client)}
                                                 >
                                                     <Edit2 size={18} />
-                                                </button>
-                                                <button className={styles.iconBtn} title="More Options">
-                                                    <MoreVertical size={18} />
                                                 </button>
                                             </div>
                                         </td>
