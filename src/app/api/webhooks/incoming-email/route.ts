@@ -137,7 +137,7 @@ export async function POST(request: NextRequest) {
 
         if (contentType.includes('application/json')) {
             const json = await request.json();
-            recipient = json.to || json.To || '';
+            recipient = json.OriginalRecipient || json.originalRecipient || json.to || json.To || '';
             sender    = json.from || json.From || '';
             subject   = json.subject || json.Subject || '';
             body      = json.text || json.TextBody || json.html || json.HtmlBody || '';
@@ -152,7 +152,7 @@ export async function POST(request: NextRequest) {
             }));
         } else if (contentType.includes('multipart/form-data')) {
             const fd  = await request.formData();
-            recipient = (fd.get('to')        || fd.get('To'))        as string ?? '';
+            recipient = (fd.get('OriginalRecipient') || fd.get('to') || fd.get('To')) as string ?? '';
             sender    = (fd.get('from')      || fd.get('From'))       as string ?? '';
             subject   = (fd.get('subject')   || fd.get('Subject'))    as string ?? '';
             body      = ((fd.get('text')     || fd.get('TextBody'))   as string)
