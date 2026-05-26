@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { assertWorkspaceMember } from '@/lib/workspace-guard';
 
-// GET /api/clients - List all clients
 export async function GET(request: NextRequest) {
     try {
         const { searchParams } = new URL(request.url);
@@ -11,16 +11,12 @@ export async function GET(request: NextRequest) {
             return NextResponse.json({ error: 'workspaceId is required' }, { status: 400 });
         }
 
+        try { await assertWorkspaceMember(workspaceId); }
+        catch { return NextResponse.json({ error: 'Forbidden' }, { status: 403 }); }
+
         const clients = await prisma.client.findMany({
             where: { workspaceId },
-            include: {
-                _count: {
-                    select: {
-                        matters: true,
-                        payments: true,
-                    },
-                },
-            },
+            include: { _count: { select: { matters: true, payments: true } } },
             orderBy: { createdAt: 'desc' },
         });
 
@@ -31,28 +27,20 @@ export async function GET(request: NextRequest) {
     }
 }
 
-// POST /api/clients - Create a new client
 export async function POST(request: NextRequest) {
     try {
         const body = await request.json();
         const { name, email, phone, company, industry, workspaceId } = body;
 
         if (!name || !email || !workspaceId) {
-            return NextResponse.json(
-                { error: 'name, email, and workspaceId are required' },
-                { status: 400 }
-            );
+            return NextResponse.json({ error: 'name, email, and workspaceId are required' }, { status: 400 });
         }
 
+        try { await assertWorkspaceMember(workspaceId); }
+        catch { return NextResponse.json({ error: 'Forbidden' }, { status: 403 }); }
+
         const client = await prisma.client.create({
-            data: {
-                name,
-                email,
-                phone,
-                company,
-                industry,
-                workspaceId,
-            },
+            data: { name, email, phone, company, industry, workspaceId },
         });
 
         return NextResponse.json(client, { status: 201 });

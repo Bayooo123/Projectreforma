@@ -1121,19 +1121,38 @@ model InboundEmail {
   fromName        String?
   subject         String
   bodyPreview     String?
+  body            String?    @db.Text
+  messageId       String?
   clientId        String?
   matterId        String?
   attachmentCount Int        @default(0)
   attachmentNames String?
   receivedAt      DateTime   @default(now())
 
-  workspace       Workspace? @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  client          Client?    @relation(fields: [clientId], references: [id], onDelete: SetNull)
-  matter          Matter?    @relation(fields: [matterId], references: [id], onDelete: SetNull)
+  workspace       Workspace?        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  client          Client?           @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  matter          Matter?           @relation(fields: [matterId], references: [id], onDelete: SetNull)
+  pulseEvents     PulseEvent[]
+  attachments     EmailAttachment[]
 
   @@index([workspaceId, receivedAt])
+  @@index([workspaceId, messageId])
   @@index([clientId])
   @@index([matterId])
+}
+
+model EmailAttachment {
+  id             String       @id @default(cuid())
+  inboundEmailId String
+  name           String
+  url            String
+  contentType    String
+  size           Int
+  uploadedAt     DateTime     @default(now())
+
+  inboundEmail   InboundEmail @relation(fields: [inboundEmailId], references: [id], onDelete: Cascade)
+
+  @@index([inboundEmailId])
 }
 
 model AttendanceRecord {
@@ -1313,31 +1332,33 @@ model FirmContact {
 }
 
 model PulseEvent {
-  id           String    @id @default(cuid())
-  workspaceId  String
+  id              String    @id @default(cuid())
+  workspaceId     String
   // email | system | internal
-  source       String    @default("email")
+  source          String    @default("email")
   // CLIENT_QUERY | COURT_NOTICE | DOCUMENT_RECEIVED | PAYMENT | NEW_INSTRUCTION | ADJOURNMENT | CORRESPONDENCE
-  intent       String
+  intent          String
   // critical | high | normal | low
-  urgency      String    @default("normal")
-  title        String
-  summary      String
-  senderName   String?
-  senderEmail  String?
-  briefId      String?
-  contactId    String?
-  assignedToId String?
-  actionItems  Json?
+  urgency         String    @default("normal")
+  title           String
+  summary         String
+  senderName      String?
+  senderEmail     String?
+  briefId         String?
+  contactId       String?
+  assignedToId    String?
+  inboundEmailId  String?
+  actionItems     Json?
   // new | viewed | actioned | dismissed
-  status       String    @default("new")
-  createdAt    DateTime  @default(now())
-  actionedAt   DateTime?
+  status          String    @default("new")
+  createdAt       DateTime  @default(now())
+  actionedAt      DateTime?
 
-  workspace  Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  brief      Brief?       @relation(fields: [briefId], references: [id], onDelete: SetNull)
-  contact    FirmContact? @relation(fields: [contactId], references: [id], onDelete: SetNull)
-  assignedTo User?        @relation("PulseEventAssignee", fields: [assignedToId], references: [id])
+  workspace     Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  brief         Brief?        @relation(fields: [briefId], references: [id], onDelete: SetNull)
+  contact       FirmContact?  @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  assignedTo    User?         @relation("PulseEventAssignee", fields: [assignedToId], references: [id])
+  inboundEmail  InboundEmail? @relation(fields: [inboundEmailId], references: [id], onDelete: SetNull)
 
   @@index([workspaceId, status, createdAt])
   @@index([workspaceId, createdAt])

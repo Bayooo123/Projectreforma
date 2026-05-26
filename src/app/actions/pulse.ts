@@ -206,7 +206,7 @@ export async function getPulseFeedFirmwide(workspaceId: string): Promise<PulseIt
             prisma.pulseEvent.findMany({
                 where: { workspaceId, createdAt: { gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) } },
                 take: 10, orderBy: { createdAt: 'desc' },
-                include: { brief: { select: { name: true, id: true } }, assignedTo: { select: { name: true } } },
+                select: { id: true, title: true, summary: true, intent: true, urgency: true, senderName: true, senderEmail: true, createdAt: true, actionItems: true, inboundEmailId: true, brief: { select: { name: true, id: true } }, assignedTo: { select: { name: true } } },
             }),
         ]);
 
@@ -260,7 +260,10 @@ export async function getPulseFeedFirmwide(workspaceId: string): Promise<PulseIt
             });
         }
 
+        // Only show raw email card if no PulseEvent was created for it (avoid double-rendering)
+        const pulseEventEmailIds = new Set(recentPulseEvents.map(pe => pe.inboundEmailId).filter(Boolean));
         for (const email of recentEmails) {
+            if (pulseEventEmailIds.has(email.id)) continue;
             const sender = email.fromName || email.fromEmail;
             const matched = email.matter?.name || email.client?.name;
             items.push({
@@ -280,7 +283,7 @@ export async function getPulseFeedFirmwide(workspaceId: string): Promise<PulseIt
         };
         const INTENT_SECTION: Record<string, PulseSection> = {
             COURT_NOTICE: 'urgent', NEW_INSTRUCTION: 'urgent', ADJOURNMENT: 'thisWeek',
-            CLIENT_QUERY: 'thisWeek', PAYMENT: 'thisWeek', DOCUMENT_RECEIVED: 'thisWeek', CORRESPONDENCE: 'insights',
+            CLIENT_QUERY: 'thisWeek', PAYMENT: 'thisWeek', DOCUMENT_RECEIVED: 'thisWeek', CORRESPONDENCE: 'thisWeek',
         };
         const INTENT_ICON: Record<string, PulseIconType> = {
             COURT_NOTICE: 'calendar', ADJOURNMENT: 'calendar', NEW_INSTRUCTION: 'email',
@@ -306,7 +309,7 @@ export async function getPulseFeedFirmwide(workspaceId: string): Promise<PulseIt
                 section,
                 iconType: INTENT_ICON[pe.intent] || 'email',
                 title: pe.title || `Email from ${pe.senderName || pe.senderEmail}`,
-                description: `${pe.summary || ''}${pe.brief?.name ? ` · Brief: ${pe.brief.name}` : ' · Unmatched'}${actionSummary}`,
+                description: `From ${pe.senderName || pe.senderEmail}${pe.brief?.name ? ` · ${pe.brief.name}` : ''}${pe.assignedTo?.name ? ` · For: ${pe.assignedTo.name}` : ''}`,
                 timeLabel: relativeTime(pe.createdAt),
                 categories: ['client', 'firm'] as PulseCategory[],
                 ctaLabel: pe.brief?.id ? 'View brief' : 'Review',

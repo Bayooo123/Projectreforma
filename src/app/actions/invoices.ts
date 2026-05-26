@@ -383,6 +383,7 @@ export async function getClientMatters(clientId: string) {
             where: {
                 clientId,
                 status: 'active',
+                deletedAt: null,
             },
             select: {
                 id: true,

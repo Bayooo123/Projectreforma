@@ -13,7 +13,8 @@ export async function getMyBriefs(limit: number = 5) {
     return await prisma.brief.findMany({
         where: {
             lawyerId: session.user.id,
-            status: 'active'
+            status: 'active',
+            deletedAt: null,
         },
         orderBy: { updatedAt: 'desc' },
         take: limit,
@@ -66,7 +67,8 @@ export async function getCourtDates(days: number = 7) {
             nextCourtDate: {
                 gte: today,
                 lte: futureDate
-            }
+            },
+            deletedAt: null,
         },
         orderBy: { nextCourtDate: 'asc' },
         select: {
@@ -154,7 +156,8 @@ export async function getTodaysActivity(workspaceId: string) {
             nextCourtDate: {
                 gte: startOfDay,
                 lte: endOfDay
-            }
+            },
+            deletedAt: null,
         },
         select: {
             id: true,
@@ -179,7 +182,8 @@ export async function getTodaysActivity(workspaceId: string) {
                 gte: startOfDay,
                 lte: endOfDay
             },
-            status: 'active'
+            status: 'active',
+            deletedAt: null,
         },
         select: {
             id: true,

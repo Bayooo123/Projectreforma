@@ -1,19 +1,39 @@
 "use client";
 
 import { useState, useEffect, useRef } from 'react';
-import { Search, Loader, FileText, Briefcase, X, Command } from 'lucide-react';
+import { Search, Loader, FileText, Briefcase, Users, Scale, Mail, X, Command } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import styles from './GlobalSearch.module.css';
 
+type ResultType = 'brief' | 'document' | 'matter' | 'client' | 'pulse' | 'email';
+
 interface SearchResult {
     id: string;
-    type: 'brief' | 'document';
+    type: ResultType;
     title: string;
     subtitle: string;
     url: string;
     snippet?: string;
     matchType: string;
 }
+
+const RESULT_ICON: Record<ResultType, React.ReactNode> = {
+    brief:    <Briefcase size={15} />,
+    document: <FileText  size={15} />,
+    matter:   <Scale     size={15} />,
+    client:   <Users     size={15} />,
+    pulse:    <Mail      size={15} />,
+    email:    <Mail      size={15} />,
+};
+
+const RESULT_COLOUR: Record<ResultType, string> = {
+    brief:    '#3b82f6',
+    document: '#6b7280',
+    matter:   '#8b5cf6',
+    client:   '#059669',
+    pulse:    '#d97706',
+    email:    '#d97706',
+};
 
 interface GlobalSearchProps {
     workspaceId: string;
@@ -106,7 +126,7 @@ export default function GlobalSearch({ workspaceId }: GlobalSearchProps) {
                 <Search size={18} className={styles.searchIcon} />
                 <input
                     type="text"
-                    placeholder="Search documents & briefs... (Ctrl + K)"
+                    placeholder="Search your office... (Ctrl + K)"
                     className={styles.input}
                     value={query}
                     onChange={(e) => {
@@ -131,7 +151,7 @@ export default function GlobalSearch({ workspaceId }: GlobalSearchProps) {
                     {isSearching ? (
                         <div className={styles.loading}>
                             <Loader size={20} className="animate-spin" />
-                            <span>Searching across all documents...</span>
+                            <span>Searching your office...</span>
                         </div>
                     ) : results.length > 0 ? (
                         <div className={styles.resultsList}>
@@ -141,19 +161,19 @@ export default function GlobalSearch({ workspaceId }: GlobalSearchProps) {
                                     className={`${styles.resultItem} ${index === selectedIndex ? styles.selected : ''}`}
                                     onClick={() => handleSelect(result)}
                                 >
-                                    <div className={styles.resultIcon}>
-                                        {result.type === 'brief' ? <Briefcase size={16} /> : <FileText size={16} />}
+                                    <div className={styles.resultIcon} style={{ color: RESULT_COLOUR[result.type] }}>
+                                        {RESULT_ICON[result.type]}
                                     </div>
                                     <div className={styles.resultInfo}>
                                         <div className={styles.resultHeader}>
                                             <span className={styles.resultTitle}>{result.title}</span>
-                                            <span className={styles.matchType}>{result.matchType}</span>
+                                            <span className={styles.matchType} style={{ color: RESULT_COLOUR[result.type] }}>
+                                                {result.matchType}
+                                            </span>
                                         </div>
                                         <div className={styles.resultSubtitle}>{result.subtitle}</div>
                                         {result.snippet && (
-                                            <div className={styles.snippet}>
-                                                {result.snippet}
-                                            </div>
+                                            <div className={styles.snippet}>{result.snippet}</div>
                                         )}
                                     </div>
                                 </div>

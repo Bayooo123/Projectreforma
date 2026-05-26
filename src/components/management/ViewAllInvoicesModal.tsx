@@ -1,12 +1,11 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { X, Loader, DollarSign, CheckCircle, Download, FileText } from 'lucide-react';
+import { X, Loader, DollarSign, CheckCircle, Download } from 'lucide-react';
 import { getInvoices } from '@/app/actions/invoices';
 import { createPayment } from '@/app/actions/payments';
 import { getBankAccounts } from '@/app/actions/bank-accounts';
 import { generateInvoicePDF } from '@/lib/invoice-pdf';
-import { generateInvoiceDOCX } from '@/lib/invoice-docx';
 import styles from './ViewAllModal.module.css';
 
 interface Invoice {
@@ -119,34 +118,6 @@ const ViewAllInvoicesModal = ({ isOpen, onClose, workspaceId, letterheadUrl }: V
         finally { setGeneratingPdf(null); }
     };
 
-    const handleDownloadDOCX = async (invoice: Invoice) => {
-        setGeneratingPdf(invoice.id + '-docx');
-        try {
-            const bank = bankAccounts[0];
-            let subtotal = 0;
-            const items = (invoice.items || []).map((item: any) => {
-                const q = Number(item.quantity); const a = Number(item.amount);
-                subtotal += a * q;
-                return { description: item.description, quantity: q, amount: a };
-            });
-            const vat = subtotal * 0.075; const security = subtotal * 0.01;
-            const blob = await generateInvoiceDOCX({
-                invoiceNumber: invoice.invoiceNumber,
-                date: new Date(invoice.createdAt),
-                dueDate: invoice.dueDate ? new Date(invoice.dueDate) : undefined,
-                billTo: { name: invoice.billToName || invoice.client.name },
-                items,
-                totals: { subtotal, vat, securityCharge: security, total: invoice.totalAmount },
-                bankDetails: bank,
-                letterheadUrl,
-            });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a'); a.href = url; a.download = `Invoice-${invoice.invoiceNumber}.docx`;
-            document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
-        } catch (e) { console.error(e); alert('Failed to generate Word doc'); }
-        finally { setGeneratingPdf(null); }
-    };
-
     const handleRecordPayment = (invoice: Invoice) => {
         setRecordingPaymentFor(invoice.id);
         setPaymentMode('full'); setCustomAmount(''); setPaymentMethod('Bank Transfer'); setPaymentReference('');
@@ -166,46 +137,48 @@ const ViewAllInvoicesModal = ({ isOpen, onClose, workspaceId, letterheadUrl }: V
         finally { setIsSubmitting(false); }
     };
 
+    const activeInvoice = invoices.find(inv => inv.id === recordingPaymentFor) ?? null;
+
     if (!isOpen) return null;
 
     return (
-        <div className={styles.overlay} onClick={onClose}>
-            <div className={styles.modal} onClick={e => e.stopPropagation()}>
-                <div className={styles.header}>
-                    <h2 className={styles.title}>All Invoices</h2>
-                    <button className={styles.closeBtn} onClick={onClose}><X size={20} /></button>
-                </div>
+        <>
+            <div className={styles.overlay} onClick={onClose}>
+                <div className={styles.modal} onClick={e => e.stopPropagation()}>
+                    <div className={styles.header}>
+                        <h2 className={styles.title}>All Invoices</h2>
+                        <button className={styles.closeBtn} onClick={onClose}><X size={20} /></button>
+                    </div>
 
-                <div className={styles.content}>
-                    {isLoading ? (
-                        <div className={styles.tableWrapper}>
-                            <table className={styles.table}>
-                                <thead><tr><th>Invoice #</th><th>Client</th><th>Matter</th><th>Amount</th><th>Status</th><th>Date</th><th>Due Date</th><th>Actions</th></tr></thead>
-                                <tbody>
-                                    {[1,2,3,4,5].map(i => (
-                                        <tr key={i}>
-                                            {[28,40,35,30,25,28,28,40].map((w,j) => (
-                                                <td key={j}><div style={{ height: 14, width: `${w + i * 4}%`, borderRadius: 4, background: 'linear-gradient(90deg,var(--bg-secondary) 25%,var(--bg-primary) 50%,var(--bg-secondary) 75%)', backgroundSize: '800px 100%', animation: 'shimmer 1.4s infinite linear' }} /></td>
-                                            ))}
+                    <div className={styles.content}>
+                        {isLoading ? (
+                            <div className={styles.tableWrapper}>
+                                <table className={styles.table}>
+                                    <thead><tr><th>Invoice #</th><th>Client</th><th>Matter</th><th>Amount</th><th>Status</th><th>Date</th><th>Due Date</th><th>Actions</th></tr></thead>
+                                    <tbody>
+                                        {[1,2,3,4,5].map(i => (
+                                            <tr key={i}>
+                                                {[28,40,35,30,25,28,28,40].map((w,j) => (
+                                                    <td key={j}><div style={{ height: 14, width: `${w + i * 4}%`, borderRadius: 4, background: 'linear-gradient(90deg,var(--bg-secondary) 25%,var(--bg-primary) 50%,var(--bg-secondary) 75%)', backgroundSize: '800px 100%', animation: 'shimmer 1.4s infinite linear' }} /></td>
+                                                ))}
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        ) : invoices.length === 0 ? (
+                            <div className={styles.empty}><p>No invoices found</p></div>
+                        ) : (
+                            <div className={styles.tableWrapper}>
+                                <table className={styles.table}>
+                                    <thead>
+                                        <tr>
+                                            <th>Invoice #</th><th>Client</th><th>Matter</th><th>Amount</th>
+                                            <th>Status</th><th>Date</th><th>Due Date</th><th>Actions</th>
                                         </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    ) : invoices.length === 0 ? (
-                        <div className={styles.empty}><p>No invoices found</p></div>
-                    ) : (
-                        <div className={styles.tableWrapper}>
-                            <table className={styles.table}>
-                                <thead>
-                                    <tr>
-                                        <th>Invoice #</th><th>Client</th><th>Matter</th><th>Amount</th>
-                                        <th>Status</th><th>Date</th><th>Due Date</th><th>Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {invoices.map(invoice => (
-                                        <>
+                                    </thead>
+                                    <tbody>
+                                        {invoices.map(invoice => (
                                             <tr key={invoice.id}>
                                                 <td className={styles.invoiceNumber}>{invoice.invoiceNumber}</td>
                                                 <td>{invoice.client.name}</td>
@@ -219,66 +192,64 @@ const ViewAllInvoicesModal = ({ isOpen, onClose, workspaceId, letterheadUrl }: V
                                                         <button onClick={() => handleDownloadPDF(invoice)} className={styles.downloadBtn} disabled={generatingPdf === invoice.id + '-pdf'} title="Download PDF">
                                                             {generatingPdf === invoice.id + '-pdf' ? <Loader size={12} className="spin" /> : <Download size={12} />} PDF
                                                         </button>
-                                                        <button onClick={() => handleDownloadDOCX(invoice)} className={styles.downloadBtn} disabled={generatingPdf === invoice.id + '-docx'} title="Download Word">
-                                                            {generatingPdf === invoice.id + '-docx' ? <Loader size={12} className="spin" /> : <FileText size={12} />} Word
-                                                        </button>
                                                         {invoice.status !== 'paid' && (
-                                                            <button onClick={() => handleRecordPayment(invoice)} className={styles.actionBtn} disabled={recordingPaymentFor === invoice.id}>
+                                                            <button onClick={() => handleRecordPayment(invoice)} className={styles.actionBtn}>
                                                                 <DollarSign size={13} /> Record Payment
                                                             </button>
                                                         )}
                                                     </div>
                                                 </td>
                                             </tr>
-                                            {recordingPaymentFor === invoice.id && (
-                                                <tr key={invoice.id + '-pay'}>
-                                                    <td colSpan={8} className={styles.paymentForm}>
-                                                        <div className={styles.paymentFormContent}>
-                                                            <h4>Record Payment — {invoice.invoiceNumber}</h4>
-                                                            <p className={styles.outstandingInfo}>Outstanding: <strong>{formatCurrency(getOutstanding(invoice))}</strong></p>
-                                                            <div className={styles.paymentModeButtons}>
-                                                                <button className={paymentMode === 'full' ? styles.modeActive : styles.modeInactive} onClick={() => setPaymentMode('full')}>
-                                                                    <CheckCircle size={14} /> Full Payment
-                                                                </button>
-                                                                <button className={paymentMode === 'vary' ? styles.modeActive : styles.modeInactive} onClick={() => setPaymentMode('vary')}>
-                                                                    Vary Amount
-                                                                </button>
-                                                            </div>
-                                                            {paymentMode === 'vary' && (
-                                                                <div className={styles.formGroup}>
-                                                                    <label>Amount (₦)</label>
-                                                                    <input type="number" value={customAmount} onChange={e => setCustomAmount(e.target.value)} placeholder="Enter amount" className={styles.input} />
-                                                                </div>
-                                                            )}
-                                                            <div className={styles.formGroup}>
-                                                                <label>Payment Method</label>
-                                                                <select value={paymentMethod} onChange={e => setPaymentMethod(e.target.value)} className={styles.select}>
-                                                                    {['Bank Transfer','Cash','Cheque','Card','Mobile Money','Other'].map(m => <option key={m} value={m}>{m}</option>)}
-                                                                </select>
-                                                            </div>
-                                                            <div className={styles.formGroup}>
-                                                                <label>Reference (Optional)</label>
-                                                                <input type="text" value={paymentReference} onChange={e => setPaymentReference(e.target.value)} placeholder="Transaction reference" className={styles.input} />
-                                                            </div>
-                                                            <div className={styles.formActions}>
-                                                                <button onClick={() => handleSubmitPayment(invoice)} disabled={isSubmitting} className={styles.submitBtn}>
-                                                                    {isSubmitting ? <Loader size={14} className="spin" /> : 'Submit Payment'}
-                                                                </button>
-                                                                <button onClick={handleCancelPayment} disabled={isSubmitting} className={styles.cancelBtn}>Cancel</button>
-                                                            </div>
-                                                        </div>
-                                                    </td>
-                                                </tr>
-                                            )}
-                                        </>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    )}
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
-        </div>
+
+            {/* Payment modal — floats above the invoice table */}
+            {activeInvoice && (
+                <div className={styles.paymentOverlay} onClick={handleCancelPayment}>
+                    <div className={styles.paymentModal} onClick={e => e.stopPropagation()}>
+                        <h4>Record Payment</h4>
+                        <p className={styles.paymentModalMeta}>{activeInvoice.invoiceNumber} · {activeInvoice.client.name}</p>
+                        <p className={styles.outstandingInfo}>Outstanding: <strong>{formatCurrency(getOutstanding(activeInvoice))}</strong></p>
+                        <div className={styles.paymentModeButtons}>
+                            <button className={paymentMode === 'full' ? styles.modeActive : styles.modeInactive} onClick={() => setPaymentMode('full')}>
+                                <CheckCircle size={14} /> Full Payment
+                            </button>
+                            <button className={paymentMode === 'vary' ? styles.modeActive : styles.modeInactive} onClick={() => setPaymentMode('vary')}>
+                                Vary Amount
+                            </button>
+                        </div>
+                        {paymentMode === 'vary' && (
+                            <div className={styles.formGroup}>
+                                <label>Amount (₦)</label>
+                                <input type="number" value={customAmount} onChange={e => setCustomAmount(e.target.value)} placeholder="Enter amount" className={styles.input} />
+                            </div>
+                        )}
+                        <div className={styles.formGroup}>
+                            <label>Payment Method</label>
+                            <select value={paymentMethod} onChange={e => setPaymentMethod(e.target.value)} className={styles.select}>
+                                {['Bank Transfer','Cash','Cheque','Card','Mobile Money','Other'].map(m => <option key={m} value={m}>{m}</option>)}
+                            </select>
+                        </div>
+                        <div className={styles.formGroup}>
+                            <label>Reference (Optional)</label>
+                            <input type="text" value={paymentReference} onChange={e => setPaymentReference(e.target.value)} placeholder="Transaction reference" className={styles.input} />
+                        </div>
+                        <div className={styles.formActions}>
+                            <button onClick={() => handleSubmitPayment(activeInvoice)} disabled={isSubmitting} className={styles.submitBtn}>
+                                {isSubmitting ? <Loader size={14} className="spin" /> : 'Submit Payment'}
+                            </button>
+                            <button onClick={handleCancelPayment} disabled={isSubmitting} className={styles.cancelBtn}>Cancel</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </>
     );
 };
 

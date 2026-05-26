@@ -316,6 +316,41 @@
     100% { background-position: 400px 0; }
 }
 
+/* Payment modal overlay (sits above the main invoice modal) */
+.paymentOverlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1100;
+    padding: 1rem;
+}
+
+.paymentModal {
+    background: var(--bg-primary);
+    border-radius: var(--radius-lg);
+    width: 100%;
+    max-width: 480px;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    padding: 1.5rem;
+    border-top: 3px solid var(--primary);
+}
+
+.paymentModal h4 {
+    margin: 0 0 0.25rem 0;
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.paymentModalMeta {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    margin: 0 0 1.25rem 0;
+}
+
 /* Download button beside record payment */
 .downloadBtn {
     display: inline-flex;

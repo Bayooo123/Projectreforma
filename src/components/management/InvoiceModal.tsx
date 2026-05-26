@@ -6,7 +6,6 @@ import { createInvoice, generateInvoiceNumber, getClientMatters, getClientInvoic
 import { getBankAccountsWithWorkspaceName } from '@/app/actions/bank-accounts';
 import { getWorkspaceMembers } from '@/app/actions/members';
 import { generateInvoicePDF } from '@/lib/invoice-pdf';
-import { generateInvoiceDOCX } from '@/lib/invoice-docx';
 import styles from './InvoiceModal.module.css';
 import { Matter, Invoice } from '@/types/legal';
 
@@ -280,38 +279,6 @@ const InvoiceModal = ({ isOpen, onClose, clientName, clientId, workspaceId, lett
         }
     };
 
-    const handleDownloadDOCX = async (invoice: Invoice | null) => {
-        let invoiceToUse = invoice;
-        if (!invoiceToUse) {
-            if (!isBankSet()) {
-                alert('Please enter payment account details before generating the invoice.');
-                return;
-            }
-            const saved = await saveDraft();
-            if (!saved) return;
-            invoiceToUse = saved;
-        }
-        const targetId = (invoiceToUse as any).id + '-docx';
-        setIsGeneratingPdf(targetId);
-        try {
-            const bank = bankAccounts.find(b => b.id === selectedBankId) || getActiveBankDetails();
-            const signatory = signatories.find(s => s.id === selectedSignatoryId);
-            const data = buildPdfData(invoiceToUse, bank, signatory);
-            const blob = await generateInvoiceDOCX(data);
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url; a.download = `Invoice-${data.invoiceNumber}.docx`;
-            document.body.appendChild(a); a.click();
-            document.body.removeChild(a); URL.revokeObjectURL(url);
-            if (!invoice) { resetForm(); setActiveTab('list'); }
-        } catch (error) {
-            console.error('Error generating DOCX', error);
-            alert('Failed to generate Word document');
-        } finally {
-            setIsGeneratingPdf(null);
-        }
-    };
-
     const totals = calculateTotals();
 
     return (
@@ -503,9 +470,6 @@ const InvoiceModal = ({ isOpen, onClose, clientName, clientId, workspaceId, lett
                                 <button type="button" className={styles.secondaryActionBtn} onClick={() => handleDownloadPDF(null)} disabled={!!isGeneratingPdf || isSubmitting}>
                                     {isGeneratingPdf ? <Loader className="spin" size={16} /> : <Download size={16} />} PDF Preview
                                 </button>
-                                <button type="button" className={styles.secondaryActionBtn} onClick={() => handleDownloadDOCX(null)} disabled={!!isGeneratingPdf || isSubmitting}>
-                                    {isGeneratingPdf ? <Loader className="spin" size={16} /> : <FileText size={16} />} Word
-                                </button>
                                 <div style={{ flex: 1 }} />
                                 <button type="button" className={styles.cancelBtn} onClick={onClose} disabled={isSubmitting}>Cancel</button>
                                 <button type="submit" className={styles.submitBtn} disabled={isSubmitting}>
@@ -574,9 +538,6 @@ const InvoiceModal = ({ isOpen, onClose, clientName, clientId, workspaceId, lett
                                             <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
                                                 <button onClick={() => handleDownloadPDF(invoice)} className={styles.secondaryActionBtn} disabled={isGeneratingPdf === invoice.id}>
                                                     {isGeneratingPdf === invoice.id ? <Loader size={13} className="spin" /> : <Download size={13} />} PDF
-                                                </button>
-                                                <button onClick={() => handleDownloadDOCX(invoice)} className={styles.secondaryActionBtn} disabled={isGeneratingPdf === invoice.id + '-docx'}>
-                                                    {isGeneratingPdf === invoice.id + '-docx' ? <Loader size={13} className="spin" /> : <FileText size={13} />} Word
                                                 </button>
                                                 {(invoice.status !== 'paid' && invoice.status !== 'PAID') && onRecordPayment && (
                                                     <button onClick={() => onRecordPayment(invoice)} className={styles.submitBtn} style={{ padding: '0.4rem 0.75rem', fontSize: '0.8rem' }}>

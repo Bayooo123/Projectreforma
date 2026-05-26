@@ -147,7 +147,7 @@ export async function getTopClients(workspaceId: string, filter: string = 'this-
     const { startDate, endDate } = getDateRange(filter);
 
     const clients = await prisma.client.findMany({
-        where: { workspaceId },
+        where: { workspaceId, deletedAt: null },
         select: {
             id: true,
             name: true,
@@ -157,7 +157,7 @@ export async function getTopClients(workspaceId: string, filter: string = 'this-
             },
             matters: {
                 select: { id: true },
-                where: { status: { notIn: ['closed', 'completed', 'archived'] } }
+                where: { status: { notIn: ['closed', 'completed', 'archived'] }, deletedAt: null }
             },
             invoices: {
                 where: { date: { gte: startDate, lte: endDate } },
@@ -211,7 +211,8 @@ export async function getLawyerStats(workspaceId: string) {
         where: {
             type: 'COURT',
             date: { lte: now },
-            matter: { workspaceId },
+            deletedAt: null,
+            matter: { workspaceId, deletedAt: null },
             appearances: { some: { id: { in: memberIds } } },
         },
         select: {
@@ -258,7 +259,7 @@ export async function getLawyerStats(workspaceId: string) {
 
 export async function getMatterDistribution(workspaceId: string) {
     const matters = await prisma.matter.findMany({
-        where: { workspaceId },
+        where: { workspaceId, deletedAt: null },
         select: { status: true }
     });
 

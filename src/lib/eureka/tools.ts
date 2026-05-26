@@ -109,6 +109,18 @@ export function getClaudeTools() {
         tool('get_client_health', 'Identify clients who have had no recent payments — useful for follow-up and relationship management.', {
             days: { type: 'number', description: 'Inactivity threshold in days (default 60)' },
         }),
+        tool('get_institutional_memory', 'Search the firm\'s institutional memory — emails received and processed by the system. Each entry includes the AI-generated intent, urgency, summary, and action items. Use this when asked about correspondence, client communications, court notices received by email, or any email-related intelligence.', {
+            intent: { type: 'string', description: 'Filter by intent: CLIENT_QUERY | COURT_NOTICE | ADJOURNMENT | DOCUMENT_RECEIVED | PAYMENT | NEW_INSTRUCTION | CORRESPONDENCE' },
+            urgency: { type: 'string', description: 'Filter by urgency: critical | high | normal | low' },
+            sender: { type: 'string', description: 'Filter by sender name or email (partial match)' },
+            brief_title: { type: 'string', description: 'Filter to emails linked to a specific brief' },
+            days: { type: 'number', description: 'How many days back to look (default 30)' },
+            limit: { type: 'number', description: 'Max results (default 20)' },
+        }),
+        tool('search_emails', 'Full-text search across all inbound emails — subject lines and full body text. Use this when looking for specific content, a name, a case reference, or a phrase that appeared in an email.', {
+            query: { type: 'string', description: 'Text to search for in email subjects and bodies' },
+            limit: { type: 'number', description: 'Max results (default 10)' },
+        }, ['query']),
         tool('update_matter', 'Update fields on an existing matter — rename it, assign/change client, update court, judge, status, or lawyer in charge.', {
             matter_id: { type: 'string', description: 'The matter ID to update' },
             matter_title: { type: 'string', description: 'Search by matter title if ID unknown' },
@@ -886,6 +898,121 @@ export async function executeTool(
                 success: true,
                 brief: { id: updated.id, name: updated.name, client: updated.client?.name ?? null },
                 message: `Brief "${updated.name}" updated successfully.`,
+            };
+        }
+
+        case 'get_institutional_memory': {
+            const since = new Date();
+            since.setDate(since.getDate() - (input.days ?? 30));
+
+            const events = await prisma.pulseEvent.findMany({
+                where: {
+                    workspaceId,
+                    createdAt: { gte: since },
+                    ...(input.intent  && { intent:  input.intent }),
+                    ...(input.urgency && { urgency: input.urgency }),
+                    ...(input.sender  && {
+                        OR: [
+                            { senderName:  { contains: input.sender, mode: 'insensitive' } },
+                            { senderEmail: { contains: input.sender, mode: 'insensitive' } },
+                        ],
+                    }),
+                    ...(input.brief_title && {
+                        brief: { name: { contains: input.brief_title, mode: 'insensitive' } },
+                    }),
+                },
+                orderBy: { createdAt: 'desc' },
+                take: input.limit ?? 20,
+                include: {
+                    brief:   { select: { id: true, name: true, briefNumber: true } },
+                    contact: { select: { name: true, type: true } },
+                    inboundEmail: { select: { body: true, attachmentCount: true, attachmentNames: true } },
+                },
+            });
+
+            return {
+                total: events.length,
+                period_days: input.days ?? 30,
+                events: events.map(e => ({
+                    id:           e.id,
+                    date:         e.createdAt,
+                    intent:       e.intent,
+                    urgency:      e.urgency,
+                    status:       e.status,
+                    title:        e.title,
+                    summary:      e.summary,
+                    actionItems:  e.actionItems,
+                    from:         { name: e.senderName, email: e.senderEmail, type: e.contact?.type },
+                    linkedBrief:  e.brief ? { id: e.brief.id, name: e.brief.name, number: e.brief.briefNumber } : null,
+                    attachments:  e.inboundEmail?.attachmentCount ?? 0,
+                    attachmentNames: e.inboundEmail?.attachmentNames ?? null,
+                    fullBody:     e.inboundEmail?.body ?? null,
+                })),
+            };
+        }
+
+        case 'search_emails': {
+            const q = { contains: input.query, mode: 'insensitive' as const };
+
+            const [pulseMatches, emailMatches] = await Promise.all([
+                prisma.pulseEvent.findMany({
+                    where: {
+                        workspaceId,
+                        OR: [{ title: q }, { summary: q }, { senderEmail: q }, { senderName: q }],
+                    },
+                    orderBy: { createdAt: 'desc' },
+                    take: input.limit ?? 10,
+                    include: {
+                        brief: { select: { id: true, name: true } },
+                        inboundEmail: { select: { body: true, subject: true } },
+                    },
+                }),
+                prisma.inboundEmail.findMany({
+                    where: {
+                        workspaceId,
+                        OR: [{ subject: q }, { body: q }, { fromEmail: q }, { fromName: q }],
+                    },
+                    orderBy: { receivedAt: 'desc' },
+                    take: input.limit ?? 10,
+                    include: {
+                        pulseEvents: {
+                            select: { id: true, title: true, intent: true, urgency: true, summary: true },
+                            take: 1,
+                        },
+                    },
+                }),
+            ]);
+
+            // Deduplicate: if an inboundEmail already has a PulseEvent in results, skip the raw email
+            const pulseEmailIds = new Set(pulseMatches.map(p => p.inboundEmailId).filter(Boolean));
+
+            return {
+                query: input.query,
+                results: [
+                    ...pulseMatches.map(p => ({
+                        source:      'pulse_event',
+                        id:          p.id,
+                        date:        p.createdAt,
+                        title:       p.title,
+                        intent:      p.intent,
+                        urgency:     p.urgency,
+                        summary:     p.summary,
+                        linkedBrief: p.brief?.name ?? null,
+                        fullBody:    p.inboundEmail?.body ?? null,
+                    })),
+                    ...emailMatches
+                        .filter(e => !pulseEmailIds.has(e.id))
+                        .map(e => ({
+                            source:     'inbound_email',
+                            id:         e.id,
+                            date:       e.receivedAt,
+                            title:      e.subject,
+                            from:       e.fromName || e.fromEmail,
+                            bodyPreview: e.bodyPreview,
+                            fullBody:   e.body,
+                            aiSummary:  e.pulseEvents[0] ?? null,
+                        })),
+                ],
             };
         }
 
