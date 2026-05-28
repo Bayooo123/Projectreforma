@@ -841,6 +841,10 @@ export async function getBriefSummary(briefId: string): Promise<BriefSummaryData
 export async function generateBriefSummary(briefId: string): Promise<{ success: boolean; data?: BriefSummaryData; error?: string }> {
     await requireAuth();
 
+    // Step 1: Extract all dates/events from documents (idempotent — safe to re-run)
+    await backfillBriefTimeline(briefId);
+
+    // Step 2: Fetch brief metadata + the freshly extracted events in parallel
     const [brief, events] = await Promise.all([
         prisma.brief.findUnique({
             where: { id: briefId, deletedAt: null },
@@ -850,10 +854,10 @@ export async function generateBriefSummary(briefId: string): Promise<{ success: 
                 status: true,
                 dueDate: true,
                 description: true,
-                client:       { select: { name: true } },
-                lawyer:       { select: { name: true } },
+                client:         { select: { name: true } },
+                lawyer:         { select: { name: true } },
                 lawyerInCharge: { select: { name: true } },
-                matter:       { select: { name: true, caseNumber: true } },
+                matter:         { select: { name: true, caseNumber: true } },
             },
         }),
         prisma.documentTimelineEvent.findMany({
