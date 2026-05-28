@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { Gavel, CalendarX, Users, CheckCircle2, Clock, FileText, Activity, BookOpen, Flag, Loader, ScrollText, Sparkles, ChevronDown, ChevronUp, RefreshCw } from 'lucide-react';
-import { getBriefTimeline, backfillBriefTimeline, generateBriefSummary, TimelineEvent, BriefSummaryData } from '@/app/actions/briefs';
+import { generateBriefSummary, TimelineEvent, BriefSummaryData } from '@/app/actions/briefs';
 import styles from './BriefTimeline.module.css';
 
 const CONFIG: Record<string, { label: string; color: string; bg: string; Icon: React.ElementType }> = {
@@ -193,27 +193,7 @@ interface BriefTimelineProps {
 }
 
 export default function BriefTimeline({ briefId, initialEvents, initialSummary }: BriefTimelineProps) {
-    const [events, setEvents]     = useState<TimelineEvent[]>(initialEvents);
-    const [analyzing, setAnalyzing] = useState(false);
-    const [analyzeMsg, setAnalyzeMsg] = useState<string | null>(null);
-
-    const handleAnalyse = async () => {
-        setAnalyzing(true);
-        setAnalyzeMsg(null);
-        try {
-            const result = await backfillBriefTimeline(briefId);
-            const fresh = await getBriefTimeline(briefId);
-            setEvents(fresh);
-            const msg = result.processed === 0
-                ? 'No documents found in this brief yet.'
-                : `${result.processed} document${result.processed !== 1 ? 's' : ''} analysed — ${result.found} event${result.found !== 1 ? 's' : ''} extracted from documents`;
-            setAnalyzeMsg(msg);
-        } catch {
-            setAnalyzeMsg('Analysis failed. Please try again.');
-        } finally {
-            setAnalyzing(false);
-        }
-    };
+    const [events] = useState<TimelineEvent[]>(initialEvents);
 
     const groups = groupEvents(events);
 
@@ -221,20 +201,6 @@ export default function BriefTimeline({ briefId, initialEvents, initialSummary }
         <div className={styles.root}>
             {/* AI Summary panel */}
             <SummaryPanel briefId={briefId} initial={initialSummary} />
-
-            {/* Toolbar */}
-            <div className={styles.toolbar}>
-                <button
-                    className={styles.reanalyzeBtn}
-                    onClick={handleAnalyse}
-                    disabled={analyzing}
-                    title="Read all documents in this brief and extract every date and event mentioned inside them"
-                >
-                    {analyzing ? <Loader size={13} className={styles.spinner} /> : <ScrollText size={13} />}
-                    {analyzing ? 'Reading documents…' : 'Analyse documents'}
-                </button>
-                {analyzeMsg && <span className={styles.analyzeMsg}>{analyzeMsg}</span>}
-            </div>
 
             {groups.length === 0 ? (
                 <div className={styles.empty}>
