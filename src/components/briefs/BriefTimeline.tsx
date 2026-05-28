@@ -152,30 +152,41 @@ function SummaryPanel({ briefId, initial }: SummaryPanelProps) {
                         ))}
                     </div>
 
-                    {/* Chronological table */}
+                    {/* Chronology — narrative bullets for transactional, table for litigation */}
                     {summary.chronology.length > 0 && (
                         <div className={styles.chronoSection}>
-                            <h4 className={styles.chronoTitle}>Chronological Outline</h4>
-                            <div className={styles.chronoTableWrap}>
-                                <table className={styles.chronoTable}>
-                                    <thead>
-                                        <tr>
-                                            <th>Date</th>
-                                            <th>Event / Document</th>
-                                            <th>Key Action</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {summary.chronology.map((row, i) => (
-                                            <tr key={i}>
-                                                <td className={styles.chronoDate}>{row.dateDisplay || row.date}</td>
-                                                <td className={styles.chronoTitle2}>{row.title}</td>
-                                                <td>{row.summary}</td>
+                            <h4 className={styles.chronoTitle}>Chronology</h4>
+
+                            {summary.briefType === 'transactional' ? (
+                                <ul className={styles.chronoBullets}>
+                                    {summary.chronology.map((row, i) => (
+                                        <li key={i} className={styles.chronoBulletItem}>
+                                            {row.narrative ?? `${row.dateDisplay || row.date} — ${row.title ?? ''} ${row.summary ?? ''}`.trim()}
+                                        </li>
+                                    ))}
+                                </ul>
+                            ) : (
+                                <div className={styles.chronoTableWrap}>
+                                    <table className={styles.chronoTable}>
+                                        <thead>
+                                            <tr>
+                                                <th>Date</th>
+                                                <th>Event</th>
+                                                <th>Key Action</th>
                                             </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
+                                        </thead>
+                                        <tbody>
+                                            {summary.chronology.map((row, i) => (
+                                                <tr key={i}>
+                                                    <td className={styles.chronoDate}>{row.dateDisplay || row.date}</td>
+                                                    <td className={styles.chronoTitle2}>{row.title}</td>
+                                                    <td>{row.summary}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
                         </div>
                     )}
                 </div>

@@ -400,3 +400,36 @@
     font-weight: 500;
     min-width: 140px;
 }
+
+/* ── Narrative bullet chronology (transactional briefs) ────────────────────── */
+.chronoBullets {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+}
+
+.chronoBulletItem {
+    position: relative;
+    padding: 0.55rem 0.75rem 0.55rem 1.5rem;
+    font-size: 0.8rem;
+    line-height: 1.6;
+    color: var(--text-primary);
+    border-bottom: 1px solid #ede9fe;
+}
+.chronoBulletItem:last-child {
+    border-bottom: none;
+}
+.chronoBulletItem::before {
+    content: '';
+    position: absolute;
+    left: 0.5rem;
+    top: 1rem;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #7c3aed;
+    flex-shrink: 0;
+}

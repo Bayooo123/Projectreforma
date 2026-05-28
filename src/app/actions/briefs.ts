@@ -819,8 +819,9 @@ export async function getBriefTimeline(briefId: string): Promise<TimelineEvent[]
 // ── AI Brief Summary ─────────────────────────────────────────────────────────
 
 export interface BriefSummaryData {
+    briefType: 'litigation' | 'transactional';
     prose: string;
-    chronology: Array<{ date: string; dateDisplay: string; title: string; summary: string }>;
+    chronology: Array<{ date: string; dateDisplay: string; narrative?: string; title?: string; summary?: string }>;
     generatedAt: Date;
 }
 
@@ -828,10 +829,19 @@ export async function getBriefSummary(briefId: string): Promise<BriefSummaryData
     await requireAuth();
     const brief = await prisma.brief.findUnique({
         where: { id: briefId },
-        select: { aiSummaryProse: true, aiSummaryChronology: true, aiSummaryGeneratedAt: true },
+        select: {
+            aiSummaryProse: true,
+            aiSummaryChronology: true,
+            aiSummaryGeneratedAt: true,
+            isLitigationDerived: true,
+            category: true,
+        },
     });
     if (!brief?.aiSummaryProse || !brief.aiSummaryGeneratedAt) return null;
+
+    const { detectBriefType } = await import('@/lib/services/brief-summary-generator');
     return {
+        briefType: detectBriefType(brief.isLitigationDerived, brief.category),
         prose: brief.aiSummaryProse,
         chronology: (brief.aiSummaryChronology as BriefSummaryData['chronology']) ?? [],
         generatedAt: brief.aiSummaryGeneratedAt,
@@ -841,8 +851,6 @@ export async function getBriefSummary(briefId: string): Promise<BriefSummaryData
 export async function generateBriefSummary(briefId: string): Promise<{ success: boolean; data?: BriefSummaryData; error?: string }> {
     await requireAuth();
 
-    // Fetch brief metadata and document OCR text in one parallel query pair.
-    // ocrText is already stored from the upload pipeline — no per-document AI calls needed.
     const [brief, documents] = await Promise.all([
         prisma.brief.findUnique({
             where: { id: briefId, deletedAt: null },
@@ -852,15 +860,17 @@ export async function generateBriefSummary(briefId: string): Promise<{ success: 
                 status: true,
                 dueDate: true,
                 description: true,
+                isLitigationDerived: true,
                 client:         { select: { name: true } },
                 lawyer:         { select: { name: true } },
                 lawyerInCharge: { select: { name: true } },
                 matter:         { select: { name: true, caseNumber: true } },
             },
         }),
+        // Fetch url + type so the generator can read files that have no ocrText yet
         prisma.document.findMany({
             where: { briefId },
-            select: { name: true, ocrText: true },
+            select: { name: true, url: true, type: true, ocrText: true },
             orderBy: { uploadedAt: 'asc' },
         }),
     ]);
@@ -871,14 +881,15 @@ export async function generateBriefSummary(briefId: string): Promise<{ success: 
 
     const result = await generateBriefSummaryFromDocuments(
         {
-            name:        brief.name,
-            client:      brief.client?.name ?? null,
-            lawyer:      brief.lawyerInCharge?.name ?? brief.lawyer?.name ?? null,
-            category:    brief.category,
-            status:      brief.status,
-            dueDate:     brief.dueDate?.toISOString().slice(0, 10) ?? null,
-            description: brief.description ?? null,
-            matter:      brief.matter
+            name:                brief.name,
+            client:              brief.client?.name ?? null,
+            lawyer:              brief.lawyerInCharge?.name ?? brief.lawyer?.name ?? null,
+            category:            brief.category,
+            status:              brief.status,
+            dueDate:             brief.dueDate?.toISOString().slice(0, 10) ?? null,
+            description:         brief.description ?? null,
+            isLitigationDerived: brief.isLitigationDerived,
+            matter:              brief.matter
                 ? `${brief.matter.name}${brief.matter.caseNumber ? ` (${brief.matter.caseNumber})` : ''}`
                 : null,
         },
@@ -899,6 +910,6 @@ export async function generateBriefSummary(briefId: string): Promise<{ success: 
 
     return {
         success: true,
-        data: { prose: result.prose, chronology: result.chronology, generatedAt: now },
+        data: { briefType: result.briefType, prose: result.prose, chronology: result.chronology, generatedAt: now },
     };
 }
