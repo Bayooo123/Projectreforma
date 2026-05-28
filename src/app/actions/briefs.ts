@@ -812,3 +812,87 @@ export async function getBriefTimeline(briefId: string): Promise<TimelineEvent[]
 
     return events.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 }
+
+// ── AI Brief Summary ─────────────────────────────────────────────────────────
+
+export interface BriefSummaryData {
+    prose: string;
+    chronology: Array<{ date: string; dateDisplay: string; title: string; summary: string }>;
+    generatedAt: Date;
+}
+
+export async function getBriefSummary(briefId: string): Promise<BriefSummaryData | null> {
+    await requireAuth();
+    const brief = await prisma.brief.findUnique({
+        where: { id: briefId },
+        select: { aiSummaryProse: true, aiSummaryChronology: true, aiSummaryGeneratedAt: true },
+    });
+    if (!brief?.aiSummaryProse || !brief.aiSummaryGeneratedAt) return null;
+    return {
+        prose: brief.aiSummaryProse,
+        chronology: (brief.aiSummaryChronology as BriefSummaryData['chronology']) ?? [],
+        generatedAt: brief.aiSummaryGeneratedAt,
+    };
+}
+
+export async function generateBriefSummary(briefId: string): Promise<{ success: boolean; data?: BriefSummaryData; error?: string }> {
+    await requireAuth();
+
+    const [brief, events] = await Promise.all([
+        prisma.brief.findUnique({
+            where: { id: briefId, deletedAt: null },
+            select: {
+                name: true,
+                category: true,
+                status: true,
+                dueDate: true,
+                description: true,
+                client:       { select: { name: true } },
+                lawyer:       { select: { name: true } },
+                lawyerInCharge: { select: { name: true } },
+                matter:       { select: { name: true, caseNumber: true } },
+            },
+        }),
+        prisma.documentTimelineEvent.findMany({
+            where: { briefId },
+            select: { eventDate: true, eventDateRaw: true, description: true, documentName: true },
+        }),
+    ]);
+
+    if (!brief) return { success: false, error: 'Brief not found' };
+
+    const { generateBriefSummaryFromEvents } = await import('@/lib/services/brief-summary-generator');
+
+    const result = await generateBriefSummaryFromEvents(
+        {
+            name:        brief.name,
+            client:      brief.client?.name ?? null,
+            lawyer:      brief.lawyerInCharge?.name ?? brief.lawyer?.name ?? null,
+            category:    brief.category,
+            status:      brief.status,
+            dueDate:     brief.dueDate?.toISOString().slice(0, 10) ?? null,
+            description: brief.description ?? null,
+            matter:      brief.matter
+                ? `${brief.matter.name}${brief.matter.caseNumber ? ` (${brief.matter.caseNumber})` : ''}`
+                : null,
+        },
+        events,
+    );
+
+    if (!result) return { success: false, error: 'Summary generation failed. Please try again.' };
+
+    const now = new Date();
+    await prisma.brief.update({
+        where: { id: briefId },
+        data: {
+            aiSummaryProse:       result.prose,
+            aiSummaryChronology:  result.chronology as object[],
+            aiSummaryGeneratedAt: now,
+        },
+    });
+
+    return {
+        success: true,
+        data: { prose: result.prose, chronology: result.chronology, generatedAt: now },
+    };
+}

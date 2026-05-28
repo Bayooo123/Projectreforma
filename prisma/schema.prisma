@@ -522,6 +522,9 @@ model Brief {
   deletedAt           DateTime?
   briefId             String?
   parentBriefId       String?
+  aiSummaryProse      String?
+  aiSummaryChronology Json?
+  aiSummaryGeneratedAt DateTime?
   parentBrief         Brief?               @relation("BriefHierarchy", fields: [parentBriefId], references: [id])
   subBriefs           Brief[]              @relation("BriefHierarchy")
   client              Client?              @relation(fields: [clientId], references: [id])

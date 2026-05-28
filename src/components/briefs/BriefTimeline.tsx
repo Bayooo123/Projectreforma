@@ -1,11 +1,11 @@
 'use client';
 
 import { useState } from 'react';
-import { Gavel, CalendarX, Users, CheckCircle2, Clock, FileText, Activity, BookOpen, Flag, Loader, ScrollText } from 'lucide-react';
-import { getBriefTimeline, backfillBriefTimeline, TimelineEvent, TimelineEventType } from '@/app/actions/briefs';
+import { Gavel, CalendarX, Users, CheckCircle2, Clock, FileText, Activity, BookOpen, Flag, Loader, ScrollText, Sparkles, ChevronDown, ChevronUp, RefreshCw } from 'lucide-react';
+import { getBriefTimeline, backfillBriefTimeline, generateBriefSummary, TimelineEvent, BriefSummaryData } from '@/app/actions/briefs';
 import styles from './BriefTimeline.module.css';
 
-const CONFIG: Record<TimelineEventType, { label: string; color: string; bg: string; Icon: React.ElementType }> = {
+const CONFIG: Record<string, { label: string; color: string; bg: string; Icon: React.ElementType }> = {
     brief_created:    { label: 'Opened',    color: '#6366f1', bg: '#eef2ff', Icon: BookOpen },
     brief_due:        { label: 'Due Date',  color: '#ef4444', bg: '#fef2f2', Icon: Flag },
     court_hearing:    { label: 'Court',     color: '#1d4ed8', bg: '#eff6ff', Icon: Gavel },
@@ -49,13 +49,151 @@ function formatDay(date: Date) {
     return new Date(date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
 }
 
+function formatRelative(date: Date): string {
+    const diffMs = Date.now() - date.getTime();
+    const mins = Math.floor(diffMs / 60000);
+    if (mins < 60) return `${mins}m ago`;
+    const hours = Math.floor(mins / 60);
+    if (hours < 24) return `${hours}h ago`;
+    const days = Math.floor(hours / 24);
+    if (days < 7) return `${days}d ago`;
+    return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+// ── AI Summary panel ─────────────────────────────────────────────────────────
+
+interface SummaryPanelProps {
+    briefId: string;
+    initial: BriefSummaryData | null;
+}
+
+function SummaryPanel({ briefId, initial }: SummaryPanelProps) {
+    const [summary, setSummary]     = useState<BriefSummaryData | null>(initial);
+    const [generating, setGenerating] = useState(false);
+    const [error, setError]         = useState<string | null>(null);
+    const [collapsed, setCollapsed] = useState(false);
+
+    const handleGenerate = async () => {
+        setGenerating(true);
+        setError(null);
+        try {
+            const res = await generateBriefSummary(briefId);
+            if (res.success && res.data) {
+                setSummary(res.data);
+                setCollapsed(false);
+            } else {
+                setError(res.error ?? 'Unknown error');
+            }
+        } catch {
+            setError('Summary generation failed. Please try again.');
+        } finally {
+            setGenerating(false);
+        }
+    };
+
+    return (
+        <div className={styles.summaryPanel}>
+            <div className={styles.summaryHeader}>
+                <div className={styles.summaryTitle}>
+                    <Sparkles size={13} />
+                    AI Brief Summary
+                    {summary && (
+                        <span className={styles.summaryMeta}>
+                            · generated {formatRelative(new Date(summary.generatedAt))}
+                        </span>
+                    )}
+                </div>
+                <div className={styles.summaryActions}>
+                    <button
+                        className={styles.generateBtn}
+                        onClick={handleGenerate}
+                        disabled={generating}
+                        title={summary ? 'Regenerate summary from current document events' : 'Generate AI summary from document events'}
+                    >
+                        {generating
+                            ? <><Loader size={12} className={styles.spinner} /> Generating…</>
+                            : <><RefreshCw size={12} /> {summary ? 'Regenerate' : 'Generate Summary'}</>
+                        }
+                    </button>
+                    {summary && (
+                        <button
+                            className={styles.collapseBtn}
+                            onClick={() => setCollapsed(v => !v)}
+                            title={collapsed ? 'Show summary' : 'Hide summary'}
+                        >
+                            {collapsed ? <ChevronDown size={14} /> : <ChevronUp size={14} />}
+                        </button>
+                    )}
+                </div>
+            </div>
+
+            {error && <p className={styles.summaryError}>{error}</p>}
+
+            {!summary && !generating && (
+                <p className={styles.summaryHint}>
+                    Click <strong>Generate Summary</strong> to produce a prose overview and chronological outline
+                    from the documents analysed in this brief.
+                </p>
+            )}
+
+            {generating && (
+                <div className={styles.summaryLoading}>
+                    <Loader size={16} className={styles.spinner} />
+                    <span>Reading brief events and composing summary…</span>
+                </div>
+            )}
+
+            {summary && !collapsed && (
+                <div className={styles.summaryBody}>
+                    {/* Prose */}
+                    <div className={styles.summaryProse}>
+                        {summary.prose.split('\n').filter(Boolean).map((para, i) => (
+                            <p key={i}>{para}</p>
+                        ))}
+                    </div>
+
+                    {/* Chronological table */}
+                    {summary.chronology.length > 0 && (
+                        <div className={styles.chronoSection}>
+                            <h4 className={styles.chronoTitle}>Chronological Outline</h4>
+                            <div className={styles.chronoTableWrap}>
+                                <table className={styles.chronoTable}>
+                                    <thead>
+                                        <tr>
+                                            <th>Date</th>
+                                            <th>Event / Document</th>
+                                            <th>Key Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {summary.chronology.map((row, i) => (
+                                            <tr key={i}>
+                                                <td className={styles.chronoDate}>{row.dateDisplay || row.date}</td>
+                                                <td className={styles.chronoTitle2}>{row.title}</td>
+                                                <td>{row.summary}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            )}
+        </div>
+    );
+}
+
+// ── Main component ────────────────────────────────────────────────────────────
+
 interface BriefTimelineProps {
     briefId: string;
     initialEvents: TimelineEvent[];
+    initialSummary: BriefSummaryData | null;
 }
 
-export default function BriefTimeline({ briefId, initialEvents }: BriefTimelineProps) {
-    const [events, setEvents] = useState<TimelineEvent[]>(initialEvents);
+export default function BriefTimeline({ briefId, initialEvents, initialSummary }: BriefTimelineProps) {
+    const [events, setEvents]     = useState<TimelineEvent[]>(initialEvents);
     const [analyzing, setAnalyzing] = useState(false);
     const [analyzeMsg, setAnalyzeMsg] = useState<string | null>(null);
 
@@ -64,7 +202,6 @@ export default function BriefTimeline({ briefId, initialEvents }: BriefTimelineP
         setAnalyzeMsg(null);
         try {
             const result = await backfillBriefTimeline(briefId);
-            // Refresh timeline after extraction
             const fresh = await getBriefTimeline(briefId);
             setEvents(fresh);
             const msg = result.processed === 0
@@ -82,7 +219,10 @@ export default function BriefTimeline({ briefId, initialEvents }: BriefTimelineP
 
     return (
         <div className={styles.root}>
-            {/* Single action bar */}
+            {/* AI Summary panel */}
+            <SummaryPanel briefId={briefId} initial={initialSummary} />
+
+            {/* Toolbar */}
             <div className={styles.toolbar}>
                 <button
                     className={styles.reanalyzeBtn}
@@ -117,7 +257,7 @@ export default function BriefTimeline({ briefId, initialEvents }: BriefTimelineP
                                 );
                             }
 
-                            const cfg = CONFIG[item.type];
+                            const cfg = CONFIG[item.type] ?? CONFIG['activity'];
                             const Icon = cfg.Icon;
                             const isPast = !item.isFuture && !item.isToday;
                             const rowClass = [
