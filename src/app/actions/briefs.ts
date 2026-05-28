@@ -135,30 +135,9 @@ export async function getBriefById(id: string) {
                         judge: true,
                     },
                 },
-                // Explicitly exclude ocrText — it can be megabytes per document
-                // and is never displayed in the brief header view
-                documents: {
-                    select: {
-                        id: true,
-                        name: true,
-                        url: true,
-                        type: true,
-                        size: true,
-                        uploadedAt: true,
-                        ocrStatus: true,
-                        folderId: true,
-                    },
-                    orderBy: { uploadedAt: 'desc' },
-                    take: 200,
-                },
-                folders: {
-                    include: {
-                        _count: {
-                            select: { documents: true }
-                        }
-                    },
-                    take: 100,
-                },
+                // documents and folders excluded — fetched lazily client-side
+                // when the Documents tab is opened, avoiding a 200-row join on
+                // every brief page load.
                 workspace: {
                     select: {
                         id: true,

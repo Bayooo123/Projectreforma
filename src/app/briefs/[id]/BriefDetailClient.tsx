@@ -12,6 +12,17 @@ import CreateFolderModal from '@/components/briefs/CreateFolderModal';
 import MoveDocumentModal from '@/components/briefs/MoveDocumentModal';
 import styles from './page.module.css';
 
+interface DocItem {
+    id: string;
+    name: string;
+    url: string;
+    type: string;
+    size: number;
+    uploadedAt: Date;
+    ocrStatus?: string;
+    folderId?: string | null;
+}
+
 interface Brief {
     id: string;
     briefNumber: string;
@@ -58,16 +69,7 @@ interface Brief {
         parentId: string | null;
         _count?: { documents: number };
     }>;
-    documents: Array<{
-        id: string;
-        name: string;
-        url: string;
-        type: string;
-        size: number;
-        uploadedAt: Date;
-        ocrStatus?: string;
-        folderId?: string | null;
-    }>;
+    documents?: DocItem[];
     workspace: {
         id: string;
         name: string;
@@ -75,35 +77,56 @@ interface Brief {
     inboundEmailId: string;
 }
 
-interface BriefDetailClientProps {
-    brief: Brief;
-    initialTimeline: TimelineEvent[];
-    initialSummary: BriefSummaryData | null;
-}
-
 import { getDocuments } from '@/app/actions/documents';
 import { getFolders, deleteFolder } from '@/app/actions/folders';
-import { logBriefViewed, TimelineEvent, BriefSummaryData } from '@/app/actions/briefs';
+import { logBriefViewed, getBriefTimeline, getBriefSummary, TimelineEvent, BriefSummaryData } from '@/app/actions/briefs';
 import BriefTimeline from '@/components/briefs/BriefTimeline';
 
-export default function BriefDetailClient({ brief, initialTimeline, initialSummary }: BriefDetailClientProps) {
+interface BriefDetailClientProps {
+    brief: Brief;
+}
+
+export default function BriefDetailClient({ brief }: BriefDetailClientProps) {
     const router = useRouter();
     const searchParams = useSearchParams();
-    const [documents, setDocuments] = useState(brief.documents);
-    const [folders, setFolders] = useState(brief.folders || []);
+    const [documents, setDocuments] = useState<DocItem[]>([]);
+    const [folders, setFolders] = useState<NonNullable<Brief['folders']>>([]);
     const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
-    const [previewDocument, setPreviewDocument] = useState<typeof documents[0] | null>(null);
+    const [previewDocument, setPreviewDocument] = useState<DocItem | null>(null);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [isCreateFolderModalOpen, setIsCreateFolderModalOpen] = useState(false);
-    const [movingDoc, setMovingDoc] = useState<typeof documents[0] | null>(null);
+    const [movingDoc, setMovingDoc] = useState<DocItem | null>(null);
     const [isRefreshing, setIsRefreshing] = useState(false);
+    const [docsLoaded, setDocsLoaded] = useState(false);
     const [activeTab, setActiveTab] = useState<'timeline' | 'documents'>(
         searchParams.get('tab') === 'documents' ? 'documents' : 'timeline'
     );
 
+    // Timeline + summary — loaded client-side so SSR only serves the page shell
+    const [initialTimeline, setInitialTimeline] = useState<TimelineEvent[]>([]);
+    const [initialSummary, setInitialSummary] = useState<BriefSummaryData | null>(null);
+    const [timelineLoading, setTimelineLoading] = useState(true);
+
     useEffect(() => {
         logBriefViewed(brief.id).catch(() => {});
+        // Fetch timeline and cached summary in parallel after mount
+        Promise.all([
+            getBriefTimeline(brief.id),
+            getBriefSummary(brief.id),
+        ]).then(([timeline, summary]) => {
+            setInitialTimeline(timeline);
+            setInitialSummary(summary);
+        }).finally(() => setTimelineLoading(false));
     }, [brief.id]);
+
+    // Fetch documents/folders lazily — only when the Documents tab is first opened
+    const handleTabChange = (tab: 'timeline' | 'documents') => {
+        setActiveTab(tab);
+        if (tab === 'documents' && !docsLoaded) {
+            setDocsLoaded(true);
+            refreshData(true);
+        }
+    };
 
     const refreshData = async (silent = false) => {
         if (!silent) setIsRefreshing(true);
@@ -287,7 +310,7 @@ export default function BriefDetailClient({ brief, initialTimeline, initialSumma
                     {(['timeline', 'documents'] as const).map(tab => (
                         <button
                             key={tab}
-                            onClick={() => setActiveTab(tab)}
+                            onClick={() => handleTabChange(tab)}
                             style={{
                                 padding: '0.6rem 1.25rem',
                                 fontSize: 'var(--text-sm)',
@@ -307,7 +330,13 @@ export default function BriefDetailClient({ brief, initialTimeline, initialSumma
                     ))}
                 </div>
 
-                {activeTab === 'timeline' && <BriefTimeline briefId={brief.id} initialEvents={initialTimeline} initialSummary={initialSummary} />}
+                {activeTab === 'timeline' && (
+                    timelineLoading
+                        ? <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '3rem 0', color: 'var(--text-secondary)', fontSize: '0.82rem' }}>
+                            <Loader size={16} className="animate-spin" /> Loading timeline…
+                          </div>
+                        : <BriefTimeline briefId={brief.id} initialEvents={initialTimeline} initialSummary={initialSummary} />
+                )}
 
                 {activeTab === 'documents' && <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
