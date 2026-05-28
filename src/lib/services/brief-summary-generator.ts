@@ -208,43 +208,47 @@ export async function generateBriefSummaryFromDocuments(
     });
     const textBlock = textParts.join('\n\n');
 
-    // Build document blocks for PDFs without OCR
-    const docBlocks: Anthropic.MessageParam['content'] = [];
-    pdfResults.forEach((b64, i) => {
+    // Build document blocks for PDFs without OCR.
+    // No `title` field — not supported by the pdfs beta.
+    const docBlocks: any[] = [];
+    pdfResults.forEach(b64 => {
         if (b64) {
             docBlocks.push({
-                type: 'document' as const,
-                source: { type: 'base64' as const, media_type: 'application/pdf' as const, data: b64 },
-                title: pdfDocsToFetch[i].name,
-            } as any);
+                type: 'document',
+                source: { type: 'base64', media_type: 'application/pdf', data: b64 },
+            });
         }
     });
 
+    const systemPrompt = 'You are a specialised Legal Analyst. Respond only in the exact format requested.';
     const promptText = briefType === 'transactional'
         ? buildTransactionalPrompt(metaLines, textBlock)
         : buildLitigationPrompt(metaLines, textBlock);
 
-    const content: Anthropic.MessageParam['content'] = [
+    // System prompt embedded in user turn — avoids SDK version conflicts with betas
+    const userContent: any[] = [
         ...docBlocks,
-        { type: 'text', text: promptText },
+        { type: 'text', text: `${systemPrompt}\n\n${promptText}` },
     ];
 
-    // Use Sonnet when reading PDFs via vision; Haiku for text-only (faster)
-    const model = docBlocks.length > 0 ? 'claude-sonnet-4-6' : 'claude-haiku-4-5-20251001';
+    // Sonnet + pdf beta when vision docs present; Haiku for text-only
+    const usePdfBeta = docBlocks.length > 0;
+    const model = usePdfBeta ? 'claude-sonnet-4-6' : 'claude-haiku-4-5-20251001';
 
     try {
-        const response = await (anthropic.messages.create as any)({
+        const callParams: any = {
             model,
             max_tokens: 2048,
-            betas: docBlocks.length > 0 ? ['pdfs-2024-09-25'] : undefined,
-            system: 'You are a specialised Legal Analyst. Respond only in the exact format requested.',
-            messages: [{ role: 'user', content }],
-        });
+            messages: [{ role: 'user', content: userContent }],
+        };
+        if (usePdfBeta) callParams.betas = ['pdfs-2024-09-25'];
 
+        const response = await (anthropic.messages.create as any)(callParams);
         const text = response.content[0]?.type === 'text' ? response.content[0].text.trim() : '';
         return parseResponse(text, briefType);
-    } catch (err) {
-        console.error('[BriefSummary] Claude call failed:', err);
-        return null;
+    } catch (err: any) {
+        const detail = err?.message ?? String(err);
+        console.error('[BriefSummary] Claude call failed:', detail);
+        throw new Error(`Claude API error: ${detail}`);
     }
 }

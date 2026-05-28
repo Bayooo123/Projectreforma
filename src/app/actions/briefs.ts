@@ -858,24 +858,29 @@ export async function generateBriefSummary(briefId: string): Promise<{ success: 
 
     const { generateBriefSummaryFromDocuments } = await import('@/lib/services/brief-summary-generator');
 
-    const result = await generateBriefSummaryFromDocuments(
-        {
-            name:                brief.name,
-            client:              brief.client?.name ?? null,
-            lawyer:              brief.lawyerInCharge?.name ?? brief.lawyer?.name ?? null,
-            category:            brief.category,
-            status:              brief.status,
-            dueDate:             brief.dueDate?.toISOString().slice(0, 10) ?? null,
-            description:         brief.description ?? null,
-            isLitigationDerived: brief.isLitigationDerived,
-            matter:              brief.matter
-                ? `${brief.matter.name}${brief.matter.caseNumber ? ` (${brief.matter.caseNumber})` : ''}`
-                : null,
-        },
-        documents,
-    );
+    let result;
+    try {
+        result = await generateBriefSummaryFromDocuments(
+            {
+                name:                brief.name,
+                client:              brief.client?.name ?? null,
+                lawyer:              brief.lawyerInCharge?.name ?? brief.lawyer?.name ?? null,
+                category:            brief.category,
+                status:              brief.status,
+                dueDate:             brief.dueDate?.toISOString().slice(0, 10) ?? null,
+                description:         brief.description ?? null,
+                isLitigationDerived: brief.isLitigationDerived,
+                matter:              brief.matter
+                    ? `${brief.matter.name}${brief.matter.caseNumber ? ` (${brief.matter.caseNumber})` : ''}`
+                    : null,
+            },
+            documents,
+        );
+    } catch (err: any) {
+        return { success: false, error: err?.message ?? 'Summary generation failed.' };
+    }
 
-    if (!result) return { success: false, error: 'Summary generation failed. Please try again.' };
+    if (!result) return { success: false, error: 'Summary generation failed — no result returned.' };
 
     const now = new Date();
     await prisma.brief.update({
