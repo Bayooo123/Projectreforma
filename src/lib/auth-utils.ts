@@ -1,3 +1,4 @@
+import { cache } from 'react';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
 import { getPermissionsForRole, Permission } from '@/lib/rbac';
@@ -10,13 +11,27 @@ export async function requireAuth() {
     return session.user;
 }
 
+// Per-request memoized lookups — React cache() deduplicates calls within a
+// single server render/action chain. Multiple requirePermission() calls for the
+// same workspaceId within one request hit the DB exactly once each.
+const getCachedMembership = cache(async (workspaceId: string, email: string) =>
+    prisma.workspaceMember.findFirst({
+        where: { workspaceId, user: { email } },
+    })
+);
+
+const getCachedWorkspaceOwner = cache(async (workspaceId: string) =>
+    prisma.workspace.findUnique({
+        where: { id: workspaceId },
+        select: { ownerId: true },
+    })
+);
+
 export async function requireWorkspaceRole(workspaceId: string, allowedRoles: string[]) {
     // Deprecated: use requirePermission instead. Keeping for backwards compatibility during migration.
     const user = await requireAuth();
 
-    const membership = await prisma.workspaceMember.findFirst({
-        where: { workspaceId, user: { email: user.email! } },
-    });
+    const membership = await getCachedMembership(workspaceId, user.email!);
 
     if (!membership) throw new Error('Unauthorized: You are not a member of this workspace');
 
@@ -35,13 +50,8 @@ export async function requirePermission(workspaceId: string, requiredPermission:
     const user = await requireAuth();
 
     const [membership, workspace] = await Promise.all([
-        prisma.workspaceMember.findFirst({
-            where: { workspaceId, user: { email: user.email! } },
-        }),
-        prisma.workspace.findUnique({
-            where: { id: workspaceId },
-            select: { ownerId: true }
-        })
+        getCachedMembership(workspaceId, user.email!),
+        getCachedWorkspaceOwner(workspaceId),
     ]);
 
     if (!membership) {
@@ -65,7 +75,6 @@ export async function requirePermission(workspaceId: string, requiredPermission:
 export async function requirePlatformAdmin() {
     const user = await requireAuth();
 
-    // Fetch user from DB to verify platform admin status
     const dbUser = await prisma.user.findUnique({
         where: { email: user.email! },
         select: { isPlatformAdmin: true }
