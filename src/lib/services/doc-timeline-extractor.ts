@@ -2,6 +2,14 @@ import Anthropic from '@anthropic-ai/sdk';
 import { prisma } from '@/lib/prisma';
 import { config } from '@/lib/config';
 
+async function fetchOcrText(documentId: string): Promise<string | null> {
+    const doc = await prisma.document.findUnique({
+        where: { id: documentId },
+        select: { ocrText: true },
+    });
+    return doc?.ocrText ?? null;
+}
+
 const EXTRACTION_PROMPT = (documentName: string) =>
     `You are a legal document analyst reviewing "${documentName}".
 
@@ -47,9 +55,10 @@ export async function extractDocumentTimeline(
         if (visionResult >= 0) return visionResult;
     }
 
-    // Fall back to OCR text
-    if (ocrText && ocrText.trim().length >= 20) {
-        return await extractWithText(client, documentId, documentName, briefId, ocrText);
+    // Fall back to OCR text — fetch lazily only when vision is unavailable (non-PDF/image formats)
+    const resolvedOcr = ocrText ?? await fetchOcrText(documentId);
+    if (resolvedOcr && resolvedOcr.trim().length >= 20) {
+        return await extractWithText(client, documentId, documentName, briefId, resolvedOcr);
     }
 
     console.log(`[Timeline] No content available for: ${documentName}`);

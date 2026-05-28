@@ -117,7 +117,8 @@ export async function getRevenueTrend(workspaceId: string) {
             client: { workspaceId },
             date: { gte: sixMonthsAgo }
         },
-        select: { amount: true, date: true }
+        select: { amount: true, date: true },
+        take: 5000,
     });
 
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -148,6 +149,8 @@ export async function getTopClients(workspaceId: string, filter: string = 'this-
 
     const clients = await prisma.client.findMany({
         where: { workspaceId, deletedAt: null },
+        take: 150,
+        orderBy: { updatedAt: 'desc' },
         select: {
             id: true,
             name: true,
@@ -258,18 +261,13 @@ export async function getLawyerStats(workspaceId: string) {
 }
 
 export async function getMatterDistribution(workspaceId: string) {
-    const matters = await prisma.matter.findMany({
+    const groups = await prisma.matter.groupBy({
+        by: ['status'],
         where: { workspaceId, deletedAt: null },
-        select: { status: true }
+        _count: { status: true },
     });
 
-    const counts: Record<string, number> = {};
-    matters.forEach(m => {
-        const status = m.status || 'unknown';
-        counts[status] = (counts[status] || 0) + 1;
-    });
-
-    return Object.entries(counts).map(([status, count]) => ({ status, count }));
+    return groups.map(g => ({ status: g.status || 'unknown', count: g._count.status }));
 }
 
 export async function getCourtVisits(workspaceId: string, filter: string = 'this-month') {
@@ -285,7 +283,8 @@ export async function getCourtVisits(workspaceId: string, filter: string = 'this
         select: {
             court: true,
             matter: { select: { court: true } }
-        }
+        },
+        take: 500,
     });
 
     const courtCounts: Record<string, number> = {};
@@ -303,26 +302,17 @@ export async function getCourtVisits(workspaceId: string, filter: string = 'this
 export async function getExpenseDistribution(workspaceId: string, filter: string = 'this-month') {
     const { startDate, endDate } = getDateRange(filter);
 
-    const expenses = await prisma.expense.findMany({
-        where: {
-            workspaceId,
-            date: { gte: startDate, lte: endDate }
-        },
-        select: { amount: true, category: true }
+    const groups = await prisma.expense.groupBy({
+        by: ['category'],
+        where: { workspaceId, date: { gte: startDate, lte: endDate } },
+        _sum: { amount: true },
+        _count: { category: true },
+        orderBy: { _sum: { amount: 'desc' } },
     });
 
-    const distribution: Record<string, { amount: number, count: number }> = {};
-
-    expenses.forEach(e => {
-        const cat = e.category || 'MISCELLANEOUS';
-        if (!distribution[cat]) distribution[cat] = { amount: 0, count: 0 };
-        distribution[cat].amount += Number(e.amount || 0);
-        distribution[cat].count += 1;
-    });
-
-    return Object.entries(distribution).map(([category, stats]) => ({
-        category: category.replace(/_/g, ' '),
-        amount: stats.amount,
-        count: stats.count
-    })).sort((a, b) => b.amount - a.amount);
+    return groups.map(g => ({
+        category: (g.category || 'MISCELLANEOUS').replace(/_/g, ' '),
+        amount: Number(g._sum.amount ?? 0),
+        count: g._count.category,
+    }));
 }

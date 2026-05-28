@@ -389,6 +389,7 @@ model Matter {
   @@index([nextCourtDate])
   @@index([submittingLawyerId])
   @@index([deletedAt])
+  @@index([workspaceId, status, deletedAt])
 }
 
 model MatterLawyer {
@@ -443,6 +444,7 @@ model CalendarEntry {
   @@index([matterId], map: "CourtDate_matterId_idx")
   @@index([submittingLawyerId], map: "CourtDate_submittingLawyerId_idx")
   @@index([type], map: "CourtDate_type_idx")
+  @@index([type, date])
 }
 
 model ScheduledNotification {
@@ -555,6 +557,7 @@ model Brief {
   @@index([status])
   @@index([deletedAt])
   @@index([isLitigationDerived])
+  @@index([workspaceId, status, deletedAt])
 }
 
 model Document {
@@ -623,6 +626,7 @@ model DocumentTimelineEvent {
   @@index([briefId])
   @@index([documentId])
   @@index([eventDate])
+  @@index([briefId, eventDate])
 }
 
 model Client {
@@ -721,6 +725,7 @@ model Payment {
 
   @@index([clientId])
   @@index([invoiceId])
+  @@index([clientId, date])
 }
 
 model SubscriptionPayment {
@@ -757,6 +762,8 @@ model Expense {
 
   @@index([workspaceId])
   @@index([date])
+  @@index([workspaceId, date])
+  @@index([workspaceId, category])
 }
 
 model ExpenseAuditLog {

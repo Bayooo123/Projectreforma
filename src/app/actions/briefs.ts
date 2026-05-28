@@ -654,9 +654,12 @@ export async function logBriefViewed(briefId: string) {
 export async function backfillBriefTimeline(briefId: string): Promise<{ processed: number; found: number }> {
     await requireAuth();
 
+    // ocrText intentionally excluded here — it can be megabytes per document.
+    // The extractor fetches it lazily only for non-visual formats (docx, txt, etc.)
+    // where direct PDF/image vision is unavailable.
     const docs = await prisma.document.findMany({
         where: { briefId },
-        select: { id: true, name: true, url: true, type: true, ocrText: true },
+        select: { id: true, name: true, url: true, type: true },
     });
 
     if (docs.length === 0) return { processed: 0, found: 0 };
@@ -664,7 +667,7 @@ export async function backfillBriefTimeline(briefId: string): Promise<{ processe
     const { extractDocumentTimeline } = await import('@/lib/services/doc-timeline-extractor');
 
     const counts = await Promise.all(
-        docs.map(doc => extractDocumentTimeline(doc.id, doc.name, briefId, doc.ocrText ?? null, doc.url, doc.type))
+        docs.map(doc => extractDocumentTimeline(doc.id, doc.name, briefId, null, doc.url, doc.type))
     );
     const totalFound = counts.reduce((sum, n) => sum + n, 0);
 
