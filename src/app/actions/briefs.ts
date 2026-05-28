@@ -841,11 +841,9 @@ export async function getBriefSummary(briefId: string): Promise<BriefSummaryData
 export async function generateBriefSummary(briefId: string): Promise<{ success: boolean; data?: BriefSummaryData; error?: string }> {
     await requireAuth();
 
-    // Step 1: Extract all dates/events from documents (idempotent — safe to re-run)
-    await backfillBriefTimeline(briefId);
-
-    // Step 2: Fetch brief metadata + the freshly extracted events in parallel
-    const [brief, events] = await Promise.all([
+    // Fetch brief metadata and document OCR text in one parallel query pair.
+    // ocrText is already stored from the upload pipeline — no per-document AI calls needed.
+    const [brief, documents] = await Promise.all([
         prisma.brief.findUnique({
             where: { id: briefId, deletedAt: null },
             select: {
@@ -860,17 +858,18 @@ export async function generateBriefSummary(briefId: string): Promise<{ success: 
                 matter:         { select: { name: true, caseNumber: true } },
             },
         }),
-        prisma.documentTimelineEvent.findMany({
+        prisma.document.findMany({
             where: { briefId },
-            select: { eventDate: true, eventDateRaw: true, description: true, documentName: true },
+            select: { name: true, ocrText: true },
+            orderBy: { uploadedAt: 'asc' },
         }),
     ]);
 
     if (!brief) return { success: false, error: 'Brief not found' };
 
-    const { generateBriefSummaryFromEvents } = await import('@/lib/services/brief-summary-generator');
+    const { generateBriefSummaryFromDocuments } = await import('@/lib/services/brief-summary-generator');
 
-    const result = await generateBriefSummaryFromEvents(
+    const result = await generateBriefSummaryFromDocuments(
         {
             name:        brief.name,
             client:      brief.client?.name ?? null,
@@ -883,7 +882,7 @@ export async function generateBriefSummary(briefId: string): Promise<{ success: 
                 ? `${brief.matter.name}${brief.matter.caseNumber ? ` (${brief.matter.caseNumber})` : ''}`
                 : null,
         },
-        events,
+        documents,
     );
 
     if (!result) return { success: false, error: 'Summary generation failed. Please try again.' };

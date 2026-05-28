@@ -13,33 +13,55 @@ export interface BriefSummaryResult {
     chronology: ChronologyRow[];
 }
 
-function buildPrompt(briefMeta: string, events: string): string {
-    return `You are a Legal and Project Management Analyst AI. Based on the information below about a legal brief, provide a structured analysis.
+const CHAR_LIMIT_PER_DOC = 8000;
+const MAX_DOCS = 12;
+
+function buildPrompt(briefMeta: string, documentTexts: string): string {
+    return `You are a Legal and Project Management Analyst AI. Analyse the documents below and produce a structured brief overview.
 
 ## Brief Metadata
 ${briefMeta}
 
-## Extracted Document Events (chronological)
-${events}
+## Document Contents
+${documentTexts}
 
 ---
 
-Respond in exactly this format — no deviation:
+Respond in EXACTLY this format — no preamble, no deviation:
 
 PROSE:
 Write 2-3 professional paragraphs:
-- Paragraph 1: Identify the core parties (client, assigned counsel, any third parties named in the events) and the primary subject of the matter.
-- Paragraph 2: Summarise the key progression of events and any disputes or milestones evident from the documents.
-- Paragraph 3: Describe the current status based on the most recent events. Use a neutral, professional tone throughout.
+- Paragraph 1: Identify all named parties (client, opposing counsel, third parties, institutions) and the primary subject of the matter.
+- Paragraph 2: Summarise the key sequence of events, disputes, or contractual milestones evident from the documents.
+- Paragraph 3: Describe the current status of the matter based on the most recent correspondence or filing.
 
 CHRONOLOGY:
-A JSON array in strict chronological order (earliest first). Each element:
-{ "date": "<YYYY-MM-DD, or 'Late YYYY' if approximate>", "dateDisplay": "<human-friendly e.g. '21 Aug 2025'>", "title": "<event or document title>", "summary": "<one sentence — the key action or decision>" }
+A JSON array in strict chronological order (earliest first). Extract EVERY date reference — document dates, referenced dates, scheduled dates, signature dates. Each element:
+{ "date": "<YYYY-MM-DD, or 'Late YYYY' if only year known>", "dateDisplay": "<human-friendly e.g. '21 Aug 2025'>", "title": "<event or document title, max 8 words>", "summary": "<one sentence — the key action or decision on this date>" }
 
-Return [] for the chronology array only if there are truly no events to list.`;
+Return [] only if the documents contain absolutely no date references.`;
 }
 
-export async function generateBriefSummaryFromEvents(
+function parseResponse(text: string): BriefSummaryResult {
+    const proseMatch = text.match(/PROSE:\s*([\s\S]*?)(?=\n\s*CHRONOLOGY:|$)/i);
+    const prose = proseMatch ? proseMatch[1].trim() : text.trim();
+
+    const chronoMatch = text.match(/CHRONOLOGY:\s*([\s\S]*)/i);
+    let chronology: ChronologyRow[] = [];
+    if (chronoMatch) {
+        const raw = chronoMatch[1].trim().replace(/^```[\w]*\n?/, '').replace(/\n?```$/, '').trim();
+        try {
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed)) chronology = parsed;
+        } catch {
+            console.error('[BriefSummary] Failed to parse chronology JSON');
+        }
+    }
+
+    return { prose, chronology };
+}
+
+export async function generateBriefSummaryFromDocuments(
     briefMeta: {
         name: string;
         client: string | null;
@@ -50,63 +72,47 @@ export async function generateBriefSummaryFromEvents(
         description: string | null;
         matter: string | null;
     },
-    events: Array<{
-        eventDate: Date | null;
-        eventDateRaw: string;
-        description: string;
-        documentName: string;
-    }>,
+    documents: Array<{ name: string; ocrText: string | null }>,
 ): Promise<BriefSummaryResult | null> {
     const apiKey = config.ANTHROPIC_API_KEY;
     if (!apiKey) { console.error('[BriefSummary] ANTHROPIC_API_KEY not set'); return null; }
 
-    const client = new Anthropic({ apiKey });
+    const anthropic = new Anthropic({ apiKey });
 
     const metaLines = [
-        `Name: ${briefMeta.name}`,
-        briefMeta.client        ? `Client: ${briefMeta.client}`               : null,
-        briefMeta.lawyer        ? `Assigned Counsel: ${briefMeta.lawyer}`      : null,
+        `Brief name: ${briefMeta.name}`,
+        briefMeta.client      ? `Client: ${briefMeta.client}`           : null,
+        briefMeta.lawyer      ? `Assigned counsel: ${briefMeta.lawyer}` : null,
         `Category: ${briefMeta.category}`,
         `Status: ${briefMeta.status}`,
-        briefMeta.matter        ? `Related Matter: ${briefMeta.matter}`        : null,
-        briefMeta.dueDate       ? `Due Date: ${briefMeta.dueDate}`             : null,
-        briefMeta.description   ? `Description: ${briefMeta.description}`      : null,
+        briefMeta.matter      ? `Related matter: ${briefMeta.matter}`   : null,
+        briefMeta.dueDate     ? `Due date: ${briefMeta.dueDate}`        : null,
+        briefMeta.description ? `Description: ${briefMeta.description}` : null,
     ].filter(Boolean).join('\n');
 
-    const eventsStr = events.length === 0
-        ? 'No events have been extracted from documents yet.'
-        : events
-            .slice()
-            .sort((a, b) => (a.eventDate?.getTime() ?? 0) - (b.eventDate?.getTime() ?? 0))
-            .map(e => `[${e.eventDate ? e.eventDate.toISOString().slice(0, 10) : e.eventDateRaw}] (source: "${e.documentName}") ${e.description}`)
-            .join('\n');
+    // Build document text block — cap per-doc and total doc count to stay fast
+    const usable = documents
+        .filter(d => d.ocrText && d.ocrText.trim().length > 20)
+        .slice(0, MAX_DOCS);
+
+    const documentTexts = usable.length === 0
+        ? 'No document text available. Base the analysis on the brief metadata only.'
+        : usable
+            .map((d, i) =>
+                `--- Document ${i + 1}: ${d.name} ---\n${d.ocrText!.slice(0, CHAR_LIMIT_PER_DOC)}`
+            )
+            .join('\n\n');
 
     try {
-        const response = await client.messages.create({
-            model: 'claude-sonnet-4-6',
+        const response = await anthropic.messages.create({
+            model: 'claude-haiku-4-5-20251001',
             max_tokens: 2048,
-            system: 'You are a specialised Legal and Project Management Analyst. Respond only in the requested format.',
-            messages: [{ role: 'user', content: buildPrompt(metaLines, eventsStr) }],
+            system: 'You are a specialised Legal Analyst. Respond only in the exact format requested.',
+            messages: [{ role: 'user', content: buildPrompt(metaLines, documentTexts) }],
         });
 
         const text = response.content[0]?.type === 'text' ? response.content[0].text.trim() : '';
-
-        const proseMatch = text.match(/PROSE:\s*([\s\S]*?)(?=\n\s*CHRONOLOGY:|$)/i);
-        const prose = proseMatch ? proseMatch[1].trim() : text;
-
-        const chronoMatch = text.match(/CHRONOLOGY:\s*([\s\S]*)/i);
-        let chronology: ChronologyRow[] = [];
-        if (chronoMatch) {
-            const raw = chronoMatch[1].trim().replace(/^```[\w]*\n?/, '').replace(/\n?```$/, '').trim();
-            try {
-                const parsed = JSON.parse(raw);
-                if (Array.isArray(parsed)) chronology = parsed;
-            } catch {
-                console.error('[BriefSummary] Failed to parse chronology JSON');
-            }
-        }
-
-        return { prose, chronology };
+        return parseResponse(text);
     } catch (err) {
         console.error('[BriefSummary] Claude call failed:', err);
         return null;

@@ -139,7 +139,7 @@ function SummaryPanel({ briefId, initial }: SummaryPanelProps) {
             {generating && (
                 <div className={styles.summaryLoading}>
                     <Loader size={16} className={styles.spinner} />
-                    <span>Reading documents and composing summary — this may take 20–30 seconds…</span>
+                    <span>Analysing documents and composing summary…</span>
                 </div>
             )}
 
