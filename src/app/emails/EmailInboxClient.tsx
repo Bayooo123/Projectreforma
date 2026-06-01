@@ -3,12 +3,13 @@
 import { useState, useMemo, useTransition } from 'react';
 import {
     Mail, Link2, Plus, Search, X, Check, AlertCircle,
-    ChevronDown, Unlink, FileText, CheckSquare, Square,
+    ChevronDown, Unlink, FileText, CheckSquare, Square, RefreshCw,
 } from 'lucide-react';
 import {
     InboxEmail, InboxBrief,
     linkEmailToBrief, unlinkEmail,
     bulkLinkEmailsToBrief, quickCreateBriefAndLink,
+    getInboxEmails,
 } from '@/app/actions/email-inbox';
 import styles from './page.module.css';
 
@@ -285,7 +286,18 @@ export default function EmailInboxClient({ emails: initial, briefs }: Props) {
     const [search, setSearch]               = useState('');
     const [selected, setSelected]           = useState<Set<string>>(new Set());
     const [panelTarget, setPanelTarget]     = useState<{ emailIds: string[]; subject: string; mode?: 'search' | 'create' } | null>(null);
+    const [refreshing, setRefreshing]       = useState(false);
     const [, startTransition]               = useTransition();
+
+    const handleRefresh = async () => {
+        setRefreshing(true);
+        try {
+            const fresh = await getInboxEmails('all');
+            setEmails(fresh);
+        } finally {
+            setRefreshing(false);
+        }
+    };
 
     const visible = useMemo(() => {
         let list = emails;
@@ -356,6 +368,10 @@ export default function EmailInboxClient({ emails: initial, briefs }: Props) {
                         <p className={styles.subtitle}>{emails.length} emails · {unlinkedCount} unlinked</p>
                     </div>
                 </div>
+                <button className={styles.refreshBtn} onClick={handleRefresh} disabled={refreshing} title="Refresh email list">
+                    <RefreshCw size={14} className={refreshing ? styles.spinning : ''} />
+                    {refreshing ? 'Refreshing…' : 'Refresh'}
+                </button>
             </div>
 
             <div className={styles.body}>

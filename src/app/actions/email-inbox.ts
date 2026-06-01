@@ -52,7 +52,6 @@ export async function getInboxEmails(filter: 'all' | 'unlinked' | 'linked' = 'al
             matter: { select: { name: true } },
         },
         orderBy: { receivedAt: 'desc' },
-        take: 200,
     });
 
     // Also pull briefId from PulseEvents
