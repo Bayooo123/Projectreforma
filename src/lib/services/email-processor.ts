@@ -15,6 +15,13 @@ export interface BriefCandidate {
     clientName: string;
 }
 
+export interface MatterCandidate {
+    id: string;
+    name: string;
+    caseNumber: string | null;
+    status: string;
+}
+
 function getClient(): Anthropic | null {
     if (!config.ANTHROPIC_API_KEY) return null;
     return new Anthropic({ apiKey: config.ANTHROPIC_API_KEY });
@@ -32,46 +39,68 @@ function parseJSON<T>(text: string): T | null {
 export async function identifyBriefFromContent(
     subject: string,
     body: string,
-    candidates: BriefCandidate[]
-): Promise<{ briefId: string | null; confidence: number; reasoning: string }> {
+    candidates: BriefCandidate[],
+    matterCandidates: MatterCandidate[] = [],
+): Promise<{ briefId: string | null; matterId: string | null; confidence: number; reasoning: string }> {
     const client = getClient();
-    if (!client) return { briefId: null, confidence: 0, reasoning: 'No AI Key' };
-    if (candidates.length === 0) return { briefId: null, confidence: 0, reasoning: 'No briefs found' };
+    if (!client) return { briefId: null, matterId: null, confidence: 0, reasoning: 'No AI Key' };
+    if (candidates.length === 0 && matterCandidates.length === 0) {
+        return { briefId: null, matterId: null, confidence: 0, reasoning: 'No candidates' };
+    }
 
-    const candidatesJson = JSON.stringify(
-        candidates.map(c => ({ id: c.id, label: `${c.briefNumber} - ${c.name} (Client: ${c.clientName})` }))
-    );
+    const briefList = candidates
+        .map(c => `BRIEF|${c.id}|${c.briefNumber} — ${c.name} (${c.clientName})`)
+        .join('\n');
+
+    const matterList = matterCandidates
+        .map(m => `MATTER|${m.id}|${m.caseNumber ? m.caseNumber + ' — ' : ''}${m.name}`)
+        .join('\n');
 
     try {
         const response = await client.messages.create({
             model: 'claude-haiku-4-5-20251001',
-            max_tokens: 256,
-            system: 'You are a routing assistant for a legal firm. Return only valid JSON — no markdown, no explanation.',
+            max_tokens: 300,
+            system: 'You are a routing assistant for a Nigerian legal firm. Return only valid JSON — no markdown, no explanation.',
             messages: [{
                 role: 'user',
-                content: `Match this email to one of the active briefs listed below.
+                content: `Match this email to one of the cases below. Cases are listed as TYPE|ID|LABEL.
 
 Email Subject: ${subject}
-Email Body Snippet: ${body.substring(0, 500)}
+Email Body Snippet: ${body.substring(0, 600)}
 
-Candidate Briefs:
-${candidatesJson}
+Candidates:
+${briefList}
+${matterList}
 
-Rules:
-- If the email explicitly mentions a Brief Number (e.g. BRF-001), match it with 1.0 confidence.
-- If it matches a Brief Name closely, match with high confidence.
-- If ambiguous, return null.
+Matching rules:
+- Party names in email subjects are often abbreviated or shortened (e.g. "HOMAL" = "Hotelliers Association...", "RCCG" = any RCCG matter, "ODUMOSU" = a party surname).
+- Match on any partial party name, case nickname, or subject keyword found in the candidate labels.
+- If a Brief Number appears (e.g. BRF-001), confidence = 1.0.
+- Prefer MATTER matches when the email discusses a court case, hearing, ruling, or filing.
+- Prefer BRIEF matches when the email references a brief number or brief name directly.
+- If no reasonable match exists, return null for both.
 
-Return exactly this JSON shape:
-{"briefId": "<id or null>", "confidence": <0.0-1.0>, "reasoning": "<why>"}`,
+Return exactly this JSON:
+{"type": "BRIEF" | "MATTER" | null, "id": "<matched id or null>", "confidence": <0.0-1.0>, "reasoning": "<one sentence>"}`,
             }],
         });
 
         const text = response.content[0]?.type === 'text' ? response.content[0].text : '';
-        return parseJSON(text) ?? { briefId: null, confidence: 0, reasoning: 'Parse error' };
+        const parsed = parseJSON<{ type: string | null; id: string | null; confidence: number; reasoning: string }>(text);
+
+        if (!parsed || !parsed.id || !parsed.type) {
+            return { briefId: null, matterId: null, confidence: 0, reasoning: parsed?.reasoning ?? 'No match' };
+        }
+
+        return {
+            briefId:    parsed.type === 'BRIEF'  ? parsed.id : null,
+            matterId:   parsed.type === 'MATTER' ? parsed.id : null,
+            confidence: parsed.confidence,
+            reasoning:  parsed.reasoning,
+        };
     } catch (error) {
-        console.error('Error identifying brief:', error);
-        return { briefId: null, confidence: 0, reasoning: 'AI Error' };
+        console.error('Error identifying brief/matter:', error);
+        return { briefId: null, matterId: null, confidence: 0, reasoning: 'AI Error' };
     }
 }
 

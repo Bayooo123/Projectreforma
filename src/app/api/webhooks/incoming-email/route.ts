@@ -5,6 +5,7 @@ import {
     classifyEmailIntent,
     identifyBriefFromContent,
     BriefCandidate,
+    MatterCandidate,
 } from '@/lib/services/email-processor';
 import { addBriefActivity } from '@/lib/briefs';
 import { executeIntentActions } from '@/lib/institutional-memory/actions';
@@ -284,33 +285,54 @@ export async function POST(request: NextRequest) {
             })(),
         ]);
 
-        // ── 5. Brief identification via AI ───────────────────────────────────
+        // ── 5. Brief + Matter identification via AI ──────────────────────────
         let brief = briefIdResult;
+        let matchedMatterId: string | null = brief?.matterId ?? null;
         let routingMethod = 'Direct Match (ID)';
 
         if (!brief) {
-            const candidates = await prisma.brief.findMany({
-                where: { status: 'active', workspaceId },
-                take: 50,
-                orderBy: { updatedAt: 'desc' },
-                select: { id: true, name: true, briefNumber: true, client: { select: { name: true } } },
-            });
+            const [briefCandidates, matterCandidates] = await Promise.all([
+                prisma.brief.findMany({
+                    where: { status: 'active', workspaceId },
+                    take: 50,
+                    orderBy: { updatedAt: 'desc' },
+                    select: { id: true, name: true, briefNumber: true, client: { select: { name: true } } },
+                }),
+                prisma.matter.findMany({
+                    where: { workspaceId, deletedAt: null, status: { notIn: ['closed', 'archived'] } },
+                    orderBy: { updatedAt: 'desc' },
+                    select: { id: true, name: true, caseNumber: true, status: true },
+                }),
+            ]);
 
-            const candidateList: BriefCandidate[] = candidates.map(b => ({
-                id: b.id,
-                name: b.name,
-                briefNumber: b.briefNumber,
+            const briefList: BriefCandidate[] = briefCandidates.map(b => ({
+                id: b.id, name: b.name, briefNumber: b.briefNumber,
                 clientName: b.client?.name || 'No Client',
             }));
 
-            const identification = await identifyBriefFromContent(subject, body, candidateList);
+            const matterList: MatterCandidate[] = matterCandidates.map(m => ({
+                id: m.id, name: m.name, caseNumber: m.caseNumber, status: m.status,
+            }));
 
-            if (identification.briefId && identification.confidence > 0.6) {
-                brief = await prisma.brief.findFirst({
-                    where: { id: identification.briefId, workspaceId },
-                    select: { id: true, name: true, lawyerId: true, lawyerInChargeId: true, matterId: true },
-                });
-                routingMethod = `AI Routing (${Math.round(identification.confidence * 100)}%): ${identification.reasoning}`;
+            const identification = await identifyBriefFromContent(subject, body, briefList, matterList);
+            const pct = Math.round(identification.confidence * 100);
+            routingMethod = `AI Routing (${pct}%): ${identification.reasoning}`;
+
+            if (identification.confidence > 0.5) {
+                if (identification.briefId) {
+                    brief = await prisma.brief.findFirst({
+                        where: { id: identification.briefId, workspaceId },
+                        select: { id: true, name: true, lawyerId: true, lawyerInChargeId: true, matterId: true },
+                    });
+                    matchedMatterId = brief?.matterId ?? null;
+                } else if (identification.matterId) {
+                    matchedMatterId = identification.matterId;
+                    // Also link the InboundEmail to the matter
+                    await prisma.inboundEmail.update({
+                        where: { id: inboundEmail.id },
+                        data: { matterId: identification.matterId },
+                    });
+                }
             }
         }
 

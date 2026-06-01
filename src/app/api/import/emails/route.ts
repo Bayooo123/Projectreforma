@@ -6,6 +6,7 @@ import {
     classifyEmailIntent,
     identifyBriefFromContent,
     BriefCandidate,
+    MatterCandidate,
 } from '@/lib/services/email-processor';
 import { addBriefActivity } from '@/lib/briefs';
 import { executeIntentActions } from '@/lib/institutional-memory/actions';
@@ -195,8 +196,8 @@ async function processEmail(
             },
         });
 
-        // Intent classification + brief matching (parallel)
-        const [intentResult, candidates] = await Promise.all([
+        // Intent classification + brief/matter matching (parallel)
+        const [intentResult, briefCandidates, matterCandidates] = await Promise.all([
             classifyEmailIntent(subject, body, senderEmail),
             prisma.brief.findMany({
                 where: { status: 'active', workspaceId },
@@ -204,27 +205,42 @@ async function processEmail(
                 orderBy: { updatedAt: 'desc' },
                 select: { id: true, name: true, briefNumber: true, client: { select: { name: true } } },
             }),
+            prisma.matter.findMany({
+                where: { workspaceId, deletedAt: null, status: { notIn: ['closed', 'archived'] } },
+                orderBy: { updatedAt: 'desc' },
+                select: { id: true, name: true, caseNumber: true, status: true },
+            }),
         ]);
 
-        const candidateList: BriefCandidate[] = candidates.map(b => ({
-            id: b.id, name: b.name, briefNumber: b.briefNumber,
-            clientName: b.client?.name || 'No Client',
-        }));
+        const briefList: BriefCandidate[]  = briefCandidates.map(b => ({ id: b.id, name: b.name, briefNumber: b.briefNumber, clientName: b.client?.name || 'No Client' }));
+        const matterList: MatterCandidate[] = matterCandidates.map(m => ({ id: m.id, name: m.name, caseNumber: m.caseNumber, status: m.status }));
 
-        const identification = await identifyBriefFromContent(subject, body, candidateList);
+        const identification = await identifyBriefFromContent(subject, body, briefList, matterList);
 
         let brief: { id: string; name: string; lawyerId: string; lawyerInChargeId: string | null; matterId: string | null } | null = null;
+        let matchedMatterId: string | null = null;
         let routingMethod = 'Unmatched';
 
-        if (identification.briefId && identification.confidence > 0.6) {
-            brief = await prisma.brief.findFirst({
-                where: { id: identification.briefId, workspaceId },
-                select: { id: true, name: true, lawyerId: true, lawyerInChargeId: true, matterId: true },
-            });
-            if (brief) routingMethod = `AI Routing (${Math.round(identification.confidence * 100)}%): ${identification.reasoning}`;
+        if (identification.confidence > 0.5) {
+            const pct = Math.round(identification.confidence * 100);
+            routingMethod = `AI Routing (${pct}%): ${identification.reasoning}`;
+            if (identification.briefId) {
+                brief = await prisma.brief.findFirst({
+                    where: { id: identification.briefId, workspaceId },
+                    select: { id: true, name: true, lawyerId: true, lawyerInChargeId: true, matterId: true },
+                });
+                matchedMatterId = brief?.matterId ?? null;
+            } else if (identification.matterId) {
+                matchedMatterId = identification.matterId;
+                await prisma.inboundEmail.update({
+                    where: { id: inboundEmail.id },
+                    data: { matterId: identification.matterId },
+                });
+            }
         }
 
         const assignedToId = brief?.lawyerInChargeId || brief?.lawyerId || null;
+        const linkedMatterId = brief?.matterId ?? matchedMatterId ?? null;
 
         // PulseEvent
         const pulseEvent = await prisma.pulseEvent.create({
@@ -238,6 +254,7 @@ async function processEmail(
                 senderName:     firmContact.name || senderEmail,
                 senderEmail,
                 briefId:        brief?.id || null,
+                matterId:       linkedMatterId,
                 contactId:      firmContact.id,
                 assignedToId,
                 inboundEmailId: inboundEmail.id,

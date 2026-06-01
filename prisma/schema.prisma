@@ -382,6 +382,7 @@ model Matter {
   tasks                 Task[]
   matterQuestions       MatterQuestion[]
   litigationMilestones  LitigationMilestone[]
+  pulseEvents           PulseEvent[]
 
   @@index([workspaceId])
   @@index([status])
@@ -1355,6 +1356,7 @@ model PulseEvent {
   senderName      String?
   senderEmail     String?
   briefId         String?
+  matterId        String?
   contactId       String?
   assignedToId    String?
   inboundEmailId  String?
@@ -1366,6 +1368,7 @@ model PulseEvent {
 
   workspace     Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   brief         Brief?        @relation(fields: [briefId], references: [id], onDelete: SetNull)
+  matter        Matter?       @relation(fields: [matterId], references: [id], onDelete: SetNull)
   contact       FirmContact?  @relation(fields: [contactId], references: [id], onDelete: SetNull)
   assignedTo    User?         @relation("PulseEventAssignee", fields: [assignedToId], references: [id])
   inboundEmail  InboundEmail? @relation(fields: [inboundEmailId], references: [id], onDelete: SetNull)
