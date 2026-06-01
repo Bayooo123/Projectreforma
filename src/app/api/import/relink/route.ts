@@ -5,7 +5,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { config } from '@/lib/config';
 
 export const dynamic = 'force-dynamic';
-export const maxDuration = 60;
+export const maxDuration = 10;
 
 // One Claude call with ALL subjects — returns a bulk mapping
 async function bulkMatch(
@@ -86,6 +86,10 @@ export async function POST(request: NextRequest) {
     let linked = 0, skipped = 0;
     const results: Array<{ subject: string; matched: string | null; confidence: number }> = [];
 
+    // Build update maps — group by matterId for batch writes
+    const emailToMatter: Record<string, string> = {};   // emailId → matterId
+    const emailToBrief:  Record<string, { briefId: string; matterId: string | null }> = {};
+
     for (const match of matches) {
         const email = emails.find(e => e.id === match.emailId);
         const subject = email?.subject?.slice(0, 65) ?? '';
@@ -99,20 +103,50 @@ export async function POST(request: NextRequest) {
         if (match.type === 'BRIEF') {
             const brief = briefList.find(b => b.id === match.id);
             if (brief) {
-                await prisma.inboundEmail.update({ where: { id: match.emailId }, data: { matterId: brief.matterId ?? undefined } });
-                await prisma.pulseEvent.updateMany({ where: { inboundEmailId: match.emailId }, data: { briefId: brief.id, matterId: brief.matterId ?? undefined } });
+                emailToBrief[match.emailId] = { briefId: brief.id, matterId: brief.matterId ?? null };
                 results.push({ subject, matched: `BRIEF: ${brief.name}`, confidence: match.confidence });
                 linked++;
             }
         } else if (match.type === 'MATTER') {
             const matter = matterList.find(m => m.id === match.id);
             if (matter) {
-                await prisma.inboundEmail.update({ where: { id: match.emailId }, data: { matterId: matter.id } });
-                await prisma.pulseEvent.updateMany({ where: { inboundEmailId: match.emailId }, data: { matterId: matter.id } });
+                emailToMatter[match.emailId] = matter.id;
                 results.push({ subject, matched: `MATTER: ${matter.name}`, confidence: match.confidence });
                 linked++;
             }
         }
+    }
+
+    // Batch all DB writes using $transaction with raw updates
+    const matterEmailIds  = Object.keys(emailToMatter);
+    const briefEmailIds   = Object.keys(emailToBrief);
+
+    if (matterEmailIds.length > 0 || briefEmailIds.length > 0) {
+        // Group matter-only updates by matterId for efficient updateMany
+        const matterGroups: Record<string, string[]> = {};
+        for (const [emailId, matterId] of Object.entries(emailToMatter)) {
+            if (!matterGroups[matterId]) matterGroups[matterId] = [];
+            matterGroups[matterId].push(emailId);
+        }
+
+        await Promise.all([
+            // Update InboundEmail matter links
+            ...Object.entries(matterGroups).map(([matterId, ids]) =>
+                prisma.inboundEmail.updateMany({ where: { id: { in: ids } }, data: { matterId } })
+            ),
+            // Update brief-matched emails
+            ...Object.entries(emailToBrief).map(([emailId, { matterId }]) =>
+                prisma.inboundEmail.update({ where: { id: emailId }, data: { matterId: matterId ?? undefined } })
+            ),
+            // Update PulseEvents for matter matches
+            ...Object.entries(matterGroups).map(([matterId, ids]) =>
+                prisma.pulseEvent.updateMany({ where: { inboundEmailId: { in: ids } }, data: { matterId } })
+            ),
+            // Update PulseEvents for brief matches
+            ...Object.entries(emailToBrief).map(([emailId, { briefId, matterId }]) =>
+                prisma.pulseEvent.updateMany({ where: { inboundEmailId: emailId }, data: { briefId, matterId: matterId ?? undefined } })
+            ),
+        ]);
     }
 
     return NextResponse.json({ linked, skipped, total: emails.length, results });
