@@ -1,57 +1,44 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { withApiAuth } from '@/lib/api-auth';
-import Anthropic from '@anthropic-ai/sdk';
-import { config } from '@/lib/config';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 10;
 
-// One Claude call with ALL subjects — returns a bulk mapping
-async function bulkMatch(
-    emails: Array<{ id: string; subject: string }>,
-    matters: Array<{ id: string; name: string; caseNumber: string | null }>,
-    briefs: Array<{ id: string; name: string; briefNumber: string; clientName: string }>,
-): Promise<Array<{ emailId: string; type: 'MATTER' | 'BRIEF' | null; id: string | null; confidence: number }>> {
-    const anthropic = new Anthropic({ apiKey: config.ANTHROPIC_API_KEY });
+const STOPWORDS = new Set(['the','and','for','re','fwd','fwd:','re:','to','of','in','on','a','an','v','vs','v.','attn','prof','mr','mrs','ms','dr','hon','update','letter','brief','case','matter','file','dear','attention','atten','direct','hoc','prof:']);
 
-    const emailLines = emails.map((e, i) => `${i}: ${e.subject}`).join('\n');
-    const matterLines = matters.map(m => `MATTER|${m.id}|${m.caseNumber ? m.caseNumber + ' — ' : ''}${m.name}`).join('\n');
-    const briefLines  = briefs.map(b => `BRIEF|${b.id}|${b.briefNumber} — ${b.name} (${b.clientName})`).join('\n');
+function keywords(text: string): string[] {
+    return text.toUpperCase()
+        .replace(/[^A-Z0-9\s]/g, ' ')
+        .split(/\s+/)
+        .filter(w => w.length > 2 && !STOPWORDS.has(w.toLowerCase()));
+}
 
-    const response = await anthropic.messages.create({
-        model: 'claude-haiku-4-5-20251001',
-        max_tokens: 4096,
-        messages: [{
-            role: 'user',
-            content: `You are a routing assistant for a Nigerian law firm. Match each email subject to the best case below.
+function matchScore(subject: string, caseName: string): number {
+    const subjectWords = keywords(subject);
+    const caseWords    = keywords(caseName);
+    if (subjectWords.length === 0 || caseWords.length === 0) return 0;
+    const hits = subjectWords.filter(w => caseWords.some(c => c.includes(w) || w.includes(c)));
+    return hits.length / Math.max(subjectWords.length, caseWords.length);
+}
 
-Party names in subjects are often shortened (e.g. "RCCG" matches any RCCG matter, "ODUMOSU" is a party surname, "HOMAL" may be an abbreviation, "CHI" or "CHECKPOINT" may match "Chi v. FIRS").
+function findBestMatch(
+    subject: string,
+    matters: Array<{ id: string; name: string }>,
+    briefs:  Array<{ id: string; name: string; briefNumber: string; matterId: string | null }>,
+): { type: 'MATTER' | 'BRIEF' | null; id: string | null; name: string; score: number } {
+    let best = { type: null as 'MATTER' | 'BRIEF' | null, id: null as string | null, name: '', score: 0 };
 
-EMAIL SUBJECTS (index: subject):
-${emailLines}
+    for (const m of matters) {
+        const score = matchScore(subject, m.name);
+        if (score > best.score) best = { type: 'MATTER', id: m.id, name: m.name, score };
+    }
+    for (const b of briefs) {
+        const score = matchScore(subject, b.name);
+        if (score > best.score) best = { type: 'BRIEF', id: b.id, name: b.name, score };
+    }
 
-CASES (TYPE|ID|LABEL):
-${matterLines}
-${briefLines}
-
-Return a JSON array — one entry per email, in the same order:
-[{"idx": 0, "type": "MATTER"|"BRIEF"|null, "id": "<case id or null>", "confidence": 0.0-1.0}, ...]
-
-Only match with confidence >= 0.5. Use null for no match or ambiguous emails (testing, password reset, general research).`,
-        }],
-    });
-
-    const text = response.content[0]?.type === 'text' ? response.content[0].text.trim() : '[]';
-    const clean = text.replace(/^```[\w]*\n?/, '').replace(/\n?```$/, '').trim();
-    const parsed: Array<{ idx: number; type: string | null; id: string | null; confidence: number }> = JSON.parse(clean);
-
-    return parsed.map(p => ({
-        emailId:    emails[p.idx]?.id ?? '',
-        type:       (p.type as 'MATTER' | 'BRIEF' | null),
-        id:         p.id,
-        confidence: p.confidence,
-    }));
+    return best;
 }
 
 export async function POST(request: NextRequest) {
@@ -78,10 +65,14 @@ export async function POST(request: NextRequest) {
 
     if (emails.length === 0) return NextResponse.json({ linked: 0, skipped: 0, total: 0, results: [] });
 
-    const briefList = briefCandidates.map(b => ({ id: b.id, name: b.name, briefNumber: b.briefNumber, clientName: b.client?.name || '', matterId: b.matterId }));
+    const briefList  = briefCandidates.map(b => ({ id: b.id, name: b.name, briefNumber: b.briefNumber, clientName: b.client?.name || '', matterId: b.matterId }));
     const matterList = matterCandidates.map(m => ({ id: m.id, name: m.name, caseNumber: m.caseNumber }));
 
-    const matches = await bulkMatch(emails, matterList, briefList);
+    const matches = emails.map(e => ({
+        emailId:    e.id,
+        subject:    e.subject ?? '',
+        ...findBestMatch(e.subject ?? '', matterList, briefList),
+    }));
 
     let linked = 0, skipped = 0;
     const results: Array<{ subject: string; matched: string | null; confidence: number }> = [];
@@ -90,13 +81,14 @@ export async function POST(request: NextRequest) {
     const emailToMatter: Record<string, string> = {};   // emailId → matterId
     const emailToBrief:  Record<string, { briefId: string; matterId: string | null }> = {};
 
-    for (const match of matches) {
-        const email = emails.find(e => e.id === match.emailId);
-        const subject = email?.subject?.slice(0, 65) ?? '';
+    const THRESHOLD = 0.35;
 
-        if (!match.id || !match.type || match.confidence < 0.5) {
+    for (const match of matches) {
+        const subject = match.subject.slice(0, 65);
+
+        if (!match.id || !match.type || match.score < THRESHOLD) {
             skipped++;
-            results.push({ subject, matched: null, confidence: match.confidence ?? 0 });
+            results.push({ subject, matched: null, confidence: Math.round(match.score * 100) / 100 });
             continue;
         }
 
@@ -104,14 +96,14 @@ export async function POST(request: NextRequest) {
             const brief = briefList.find(b => b.id === match.id);
             if (brief) {
                 emailToBrief[match.emailId] = { briefId: brief.id, matterId: brief.matterId ?? null };
-                results.push({ subject, matched: `BRIEF: ${brief.name}`, confidence: match.confidence });
+                results.push({ subject, matched: `BRIEF: ${brief.name}`, confidence: match.score });
                 linked++;
             }
         } else if (match.type === 'MATTER') {
             const matter = matterList.find(m => m.id === match.id);
             if (matter) {
                 emailToMatter[match.emailId] = matter.id;
-                results.push({ subject, matched: `MATTER: ${matter.name}`, confidence: match.confidence });
+                results.push({ subject, matched: `MATTER: ${matter.name}`, confidence: match.score });
                 linked++;
             }
         }
