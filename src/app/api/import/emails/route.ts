@@ -11,8 +11,7 @@ import { addBriefActivity } from '@/lib/briefs';
 import { executeIntentActions } from '@/lib/institutional-memory/actions';
 
 export const dynamic = 'force-dynamic';
-// Allow up to 5 minutes — bulk imports with AI classification take time
-export const maxDuration = 300;
+export const maxDuration = 60;
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -356,4 +355,13 @@ export async function POST(request: NextRequest) {
     console.log(`[BulkImport] Done — ${summary.processed} processed, ${summary.duplicates} duplicates, ${summary.errors} errors`);
 
     return NextResponse.json({ success: true, summary, results });
+}
+
+export async function GET() {
+    return NextResponse.json({
+        endpoint: 'POST /api/import/emails',
+        status: 'live',
+        auth: 'Authorization: Bearer <api_key>',
+        batch_limit: 100,
+    });
 }
