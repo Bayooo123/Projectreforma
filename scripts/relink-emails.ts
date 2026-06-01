@@ -18,8 +18,8 @@ async function main() {
     const emails = await prisma.inboundEmail.findMany({
         where: {
             workspaceId: WORKSPACE_ID,
-            briefId: null,
             matterId: null,
+            clientId: null,
         },
         select: { id: true, subject: true, body: true, fromEmail: true, receivedAt: true },
         orderBy: { receivedAt: 'desc' },
