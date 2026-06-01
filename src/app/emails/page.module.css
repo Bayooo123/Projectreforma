@@ -66,6 +66,19 @@
     flex-wrap: wrap;
 }
 
+.selectAllBtn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 2px;
+    border-radius: 4px;
+    flex-shrink: 0;
+}
+.selectAllBtn:hover { background: var(--border); }
+
 .filters {
     display: flex;
     gap: 4px;
@@ -132,6 +145,69 @@
     text-align: center;
 }
 
+/* ── Bulk action bar ─────────────────────────────────────────────────────── */
+.bulkBar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.6rem 1rem;
+    background: #eef2ff;
+    border-bottom: 1px solid #c7d2fe;
+    flex-shrink: 0;
+    flex-wrap: wrap;
+}
+
+.bulkCount {
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: #4338ca;
+}
+
+.bulkActions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.bulkBtn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 12px;
+    border-radius: 6px;
+    border: 1px solid #a5b4fc;
+    background: white;
+    color: #4338ca;
+    font-size: 0.72rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.12s;
+}
+.bulkBtn:hover { background: #eef2ff; }
+
+.bulkBtnPrimary {
+    background: #4f46e5;
+    border-color: #4f46e5;
+    color: white;
+}
+.bulkBtnPrimary:hover { background: #4338ca !important; border-color: #4338ca; }
+
+.bulkClear {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 5px 10px;
+    border-radius: 6px;
+    border: none;
+    background: none;
+    color: #6b7280;
+    font-size: 0.72rem;
+    cursor: pointer;
+    transition: color 0.12s;
+}
+.bulkClear:hover { color: #dc2626; }
+
 /* ── Email card ──────────────────────────────────────────────────────────── */
 .card {
     border: 1px solid var(--border);
@@ -139,10 +215,34 @@
     padding: 0.7rem 0.85rem;
     background: var(--surface);
     transition: border-color 0.12s, box-shadow 0.12s;
+    display: flex;
+    gap: 0.5rem;
+    align-items: flex-start;
 }
 .card:hover { border-color: #c4b5fd; }
+.card:hover .checkbox { opacity: 1; }
 .cardActive { border-color: var(--primary); box-shadow: 0 0 0 3px #eef2ff; }
 .cardLinked { background: var(--background); }
+.cardSelected { border-color: #6366f1; background: #f5f3ff; }
+
+.cardInner { flex: 1; min-width: 0; }
+
+.checkbox {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+    padding: 2px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    border-radius: 4px;
+    opacity: 0;
+    transition: opacity 0.1s;
+    margin-top: 2px;
+}
+.checkboxVisible { opacity: 1 !important; }
+.checkboxOn { color: #6366f1; }
+.checkboxOff { color: #cbd5e1; }
 
 .cardTop { margin-bottom: 0.5rem; }
 

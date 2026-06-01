@@ -163,11 +163,48 @@ export async function unlinkEmail(emailId: string): Promise<{ success: boolean }
     return { success: true };
 }
 
+export async function bulkLinkEmailsToBrief(
+    emailIds: string[],
+    briefId: string,
+): Promise<{ success: boolean; linked: number; error?: string }> {
+    const user = await requireAuth();
+    if (emailIds.length === 0) return { success: true, linked: 0 };
+
+    const brief = await prisma.brief.findUnique({
+        where: { id: briefId },
+        select: { matterId: true, workspaceId: true, name: true },
+    });
+    if (!brief) return { success: false, linked: 0, error: 'Brief not found' };
+
+    await Promise.all([
+        brief.matterId
+            ? prisma.inboundEmail.updateMany({ where: { id: { in: emailIds } }, data: { matterId: brief.matterId } })
+            : Promise.resolve(),
+        prisma.pulseEvent.updateMany({
+            where: { inboundEmailId: { in: emailIds } },
+            data: { briefId, ...(brief.matterId ? { matterId: brief.matterId } : {}) },
+        }),
+        prisma.briefActivityLog.createMany({
+            data: emailIds.map(emailId => ({
+                briefId,
+                activityType: 'email_linked',
+                description: `Email bulk-linked to brief`,
+                performedBy: user.id!,
+            })),
+        }),
+    ]);
+
+    revalidatePath('/emails');
+    revalidatePath(`/briefs/${briefId}`);
+    return { success: true, linked: emailIds.length };
+}
+
 export async function quickCreateBriefAndLink(
-    emailId: string,
+    emailIds: string | string[],
     briefName: string,
     category: string,
 ): Promise<{ success: boolean; briefId?: string; error?: string }> {
+    const ids = Array.isArray(emailIds) ? emailIds : [emailIds];
     const user = await requireAuth();
 
     const membership = await prisma.workspaceMember.findFirst({
@@ -194,7 +231,7 @@ export async function quickCreateBriefAndLink(
         },
     });
 
-    const linkResult = await linkEmailToBrief(emailId, brief.id);
+    const linkResult = await bulkLinkEmailsToBrief(ids, brief.id);
     if (!linkResult.success) return { success: false, error: linkResult.error };
 
     revalidatePath('/briefs');

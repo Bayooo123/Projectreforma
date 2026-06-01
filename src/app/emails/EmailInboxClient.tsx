@@ -1,15 +1,21 @@
 'use client';
 
 import { useState, useMemo, useTransition } from 'react';
-import { Mail, Link2, Plus, Search, X, Check, AlertCircle, ChevronDown, Unlink, FileText } from 'lucide-react';
-import { InboxEmail, InboxBrief, linkEmailToBrief, unlinkEmail, quickCreateBriefAndLink } from '@/app/actions/email-inbox';
+import {
+    Mail, Link2, Plus, Search, X, Check, AlertCircle,
+    ChevronDown, Unlink, FileText, CheckSquare, Square,
+} from 'lucide-react';
+import {
+    InboxEmail, InboxBrief,
+    linkEmailToBrief, unlinkEmail,
+    bulkLinkEmailsToBrief, quickCreateBriefAndLink,
+} from '@/app/actions/email-inbox';
 import styles from './page.module.css';
 
 const CATEGORIES = ['Litigation', 'Corporate', 'Real Estate', 'Employment', 'Tax', 'Criminal', 'Arbitration', 'Advisory', 'Other'];
 
 function formatDate(date: Date) {
-    const d = new Date(date);
-    return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: '2-digit' });
+    return new Date(date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: '2-digit' });
 }
 
 function stripFwd(subject: string) {
@@ -19,19 +25,21 @@ function stripFwd(subject: string) {
 // ── Link Panel ────────────────────────────────────────────────────────────────
 
 interface LinkPanelProps {
-    email: InboxEmail;
+    emailIds: string[];
+    firstSubject: string;
     briefs: InboxBrief[];
-    onDone: (emailId: string, briefId: string, briefName: string) => void;
+    onDone: (emailIds: string[], briefId: string, briefName: string) => void;
     onClose: () => void;
 }
 
-function LinkPanel({ email, briefs, onDone, onClose }: LinkPanelProps) {
-    const [query, setQuery]         = useState('');
-    const [mode, setMode]           = useState<'search' | 'create'>('search');
-    const [newName, setNewName]     = useState(stripFwd(email.subject ?? ''));
+function LinkPanel({ emailIds, firstSubject, briefs, onDone, onClose }: LinkPanelProps) {
+    const [query, setQuery]             = useState('');
+    const [mode, setMode]               = useState<'search' | 'create'>('search');
+    const [newName, setNewName]         = useState(stripFwd(firstSubject));
     const [newCategory, setNewCategory] = useState('Litigation');
     const [isPending, startTransition]  = useTransition();
-    const [error, setError]         = useState<string | null>(null);
+    const [error, setError]             = useState<string | null>(null);
+    const isBulk = emailIds.length > 1;
 
     const filtered = useMemo(() =>
         briefs.filter(b =>
@@ -45,9 +53,11 @@ function LinkPanel({ email, briefs, onDone, onClose }: LinkPanelProps) {
     const handleLink = (briefId: string, briefName: string) => {
         startTransition(async () => {
             setError(null);
-            const res = await linkEmailToBrief(email.id, briefId);
-            if (res.success) onDone(email.id, briefId, briefName);
-            else setError(res.error ?? 'Failed');
+            const res = isBulk
+                ? await bulkLinkEmailsToBrief(emailIds, briefId)
+                : await linkEmailToBrief(emailIds[0], briefId);
+            if (res.success) onDone(emailIds, briefId, briefName);
+            else setError((res as any).error ?? 'Failed');
         });
     };
 
@@ -55,8 +65,8 @@ function LinkPanel({ email, briefs, onDone, onClose }: LinkPanelProps) {
         if (!newName.trim()) return;
         startTransition(async () => {
             setError(null);
-            const res = await quickCreateBriefAndLink(email.id, newName, newCategory);
-            if (res.success) onDone(email.id, res.briefId!, newName);
+            const res = await quickCreateBriefAndLink(emailIds, newName, newCategory);
+            if (res.success) onDone(emailIds, res.briefId!, newName);
             else setError(res.error ?? 'Failed');
         });
     };
@@ -66,15 +76,21 @@ function LinkPanel({ email, briefs, onDone, onClose }: LinkPanelProps) {
             <div className={styles.panelHeader}>
                 <div className={styles.panelTitle}>
                     <Link2 size={14} />
-                    Link to Brief
+                    {isBulk ? `Link ${emailIds.length} emails to Brief` : 'Link to Brief'}
                 </div>
                 <button className={styles.closeBtn} onClick={onClose}><X size={16} /></button>
             </div>
 
-            <div className={styles.panelEmail}>
-                <span className={styles.panelEmailFrom}>{email.fromName || email.fromEmail}</span>
-                <span className={styles.panelEmailSubject}>{email.subject}</span>
-            </div>
+            {isBulk ? (
+                <div className={styles.panelEmail}>
+                    <span className={styles.panelEmailFrom}>{emailIds.length} emails selected</span>
+                    <span className={styles.panelEmailSubject}>{firstSubject}</span>
+                </div>
+            ) : (
+                <div className={styles.panelEmail}>
+                    <span className={styles.panelEmailSubject}>{firstSubject}</span>
+                </div>
+            )}
 
             <div className={styles.panelTabs}>
                 <button className={`${styles.tab} ${mode === 'search' ? styles.tabActive : ''}`} onClick={() => setMode('search')}>
@@ -145,7 +161,11 @@ function LinkPanel({ email, briefs, onDone, onClose }: LinkPanelProps) {
                         onClick={handleCreate}
                         disabled={isPending || !newName.trim()}
                     >
-                        {isPending ? 'Creating…' : 'Create Brief & Link'}
+                        {isPending
+                            ? 'Creating…'
+                            : isBulk
+                                ? `Create Brief & Link ${emailIds.length} Emails`
+                                : 'Create Brief & Link'}
                     </button>
                 </div>
             )}
@@ -157,51 +177,99 @@ function LinkPanel({ email, briefs, onDone, onClose }: LinkPanelProps) {
 
 interface EmailCardProps {
     email: InboxEmail;
-    isActive: boolean;
+    selected: boolean;
+    isAnySelected: boolean;
+    isPanelTarget: boolean;
+    onToggleSelect: () => void;
     onLink: () => void;
     onUnlink: () => void;
 }
 
-function EmailCard({ email, isActive, onLink, onUnlink }: EmailCardProps) {
+function EmailCard({ email, selected, isAnySelected, isPanelTarget, onToggleSelect, onLink, onUnlink }: EmailCardProps) {
     const linked = !!(email.briefId || email.matterName);
 
     return (
-        <div className={`${styles.card} ${isActive ? styles.cardActive : ''} ${linked ? styles.cardLinked : ''}`}>
-            <div className={styles.cardTop}>
-                <div className={styles.cardFrom}>
-                    <span className={styles.cardSender}>{email.fromName || email.fromEmail}</span>
-                    <span className={styles.cardDate}>{formatDate(email.receivedAt)}</span>
-                </div>
-                <p className={styles.cardSubject}>{email.subject}</p>
-                {email.bodyPreview && (
-                    <p className={styles.cardPreview}>{email.bodyPreview.slice(0, 100).replace(/\n/g, ' ')}</p>
-                )}
-            </div>
+        <div className={`${styles.card} ${isPanelTarget ? styles.cardActive : ''} ${linked ? styles.cardLinked : ''} ${selected ? styles.cardSelected : ''}`}>
+            {/* Checkbox */}
+            <button
+                className={`${styles.checkbox} ${isAnySelected ? styles.checkboxVisible : ''}`}
+                onClick={onToggleSelect}
+                title={selected ? 'Deselect' : 'Select'}
+            >
+                {selected
+                    ? <CheckSquare size={15} className={styles.checkboxOn} />
+                    : <Square size={15} className={styles.checkboxOff} />
+                }
+            </button>
 
-            <div className={styles.cardFooter}>
-                {linked ? (
-                    <div className={styles.linkedBadge}>
-                        <Check size={11} />
-                        {email.briefName || email.matterName}
+            <div className={styles.cardInner} onClick={isAnySelected ? onToggleSelect : undefined} style={isAnySelected ? { cursor: 'pointer' } : undefined}>
+                <div className={styles.cardTop}>
+                    <div className={styles.cardFrom}>
+                        <span className={styles.cardSender}>{email.fromName || email.fromEmail}</span>
+                        <span className={styles.cardDate}>{formatDate(email.receivedAt)}</span>
                     </div>
-                ) : (
-                    <div className={styles.unlinkedBadge}>
-                        <AlertCircle size={11} />
-                        Unlinked
-                    </div>
-                )}
-
-                <div className={styles.cardActions}>
-                    {linked && (
-                        <button className={styles.unlinkBtn} onClick={onUnlink} title="Remove link">
-                            <Unlink size={12} />
-                        </button>
+                    <p className={styles.cardSubject}>{email.subject}</p>
+                    {email.bodyPreview && (
+                        <p className={styles.cardPreview}>{email.bodyPreview.slice(0, 100).replace(/\n/g, ' ')}</p>
                     )}
-                    <button className={`${styles.linkBtn} ${isActive ? styles.linkBtnActive : ''}`} onClick={onLink}>
-                        <Link2 size={12} />
-                        {linked ? 'Relink' : 'Link to Brief'}
-                    </button>
                 </div>
+
+                <div className={styles.cardFooter}>
+                    {linked ? (
+                        <div className={styles.linkedBadge}>
+                            <Check size={11} />
+                            {email.briefName || email.matterName}
+                        </div>
+                    ) : (
+                        <div className={styles.unlinkedBadge}>
+                            <AlertCircle size={11} />
+                            Unlinked
+                        </div>
+                    )}
+
+                    <div className={styles.cardActions} onClick={e => e.stopPropagation()}>
+                        {linked && (
+                            <button className={styles.unlinkBtn} onClick={onUnlink} title="Remove link">
+                                <Unlink size={12} />
+                            </button>
+                        )}
+                        <button
+                            className={`${styles.linkBtn} ${isPanelTarget ? styles.linkBtnActive : ''}`}
+                            onClick={onLink}
+                        >
+                            <Link2 size={12} />
+                            {linked ? 'Relink' : 'Link'}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+// ── Bulk action bar ───────────────────────────────────────────────────────────
+
+interface BulkBarProps {
+    count: number;
+    onLinkAll: () => void;
+    onCreateBrief: () => void;
+    onClear: () => void;
+}
+
+function BulkBar({ count, onLinkAll, onCreateBrief, onClear }: BulkBarProps) {
+    return (
+        <div className={styles.bulkBar}>
+            <span className={styles.bulkCount}>{count} email{count !== 1 ? 's' : ''} selected</span>
+            <div className={styles.bulkActions}>
+                <button className={styles.bulkBtn} onClick={onLinkAll}>
+                    <Link2 size={13} /> Link to Existing Brief
+                </button>
+                <button className={`${styles.bulkBtn} ${styles.bulkBtnPrimary}`} onClick={onCreateBrief}>
+                    <Plus size={13} /> Create New Brief
+                </button>
+                <button className={styles.bulkClear} onClick={onClear}>
+                    <X size={13} /> Clear
+                </button>
             </div>
         </div>
     );
@@ -209,17 +277,15 @@ function EmailCard({ email, isActive, onLink, onUnlink }: EmailCardProps) {
 
 // ── Main ──────────────────────────────────────────────────────────────────────
 
-interface Props {
-    emails: InboxEmail[];
-    briefs: InboxBrief[];
-}
+interface Props { emails: InboxEmail[]; briefs: InboxBrief[]; }
 
 export default function EmailInboxClient({ emails: initial, briefs }: Props) {
-    const [emails, setEmails]           = useState<InboxEmail[]>(initial);
-    const [filter, setFilter]           = useState<'all' | 'unlinked' | 'linked'>('all');
-    const [search, setSearch]           = useState('');
-    const [activeEmailId, setActiveEmailId] = useState<string | null>(null);
-    const [, startTransition]           = useTransition();
+    const [emails, setEmails]               = useState<InboxEmail[]>(initial);
+    const [filter, setFilter]               = useState<'all' | 'unlinked' | 'linked'>('all');
+    const [search, setSearch]               = useState('');
+    const [selected, setSelected]           = useState<Set<string>>(new Set());
+    const [panelTarget, setPanelTarget]     = useState<{ emailIds: string[]; subject: string; mode?: 'search' | 'create' } | null>(null);
+    const [, startTransition]               = useTransition();
 
     const visible = useMemo(() => {
         let list = emails;
@@ -237,10 +303,25 @@ export default function EmailInboxClient({ emails: initial, briefs }: Props) {
     }, [emails, filter, search]);
 
     const unlinkedCount = emails.filter(e => !e.briefId && !e.matterName).length;
+    const allVisibleSelected = visible.length > 0 && visible.every(e => selected.has(e.id));
 
-    const handleDone = (emailId: string, briefId: string, briefName: string) => {
-        setEmails(prev => prev.map(e => e.id === emailId ? { ...e, briefId, briefName } : e));
-        setActiveEmailId(null);
+    const toggleSelect = (id: string) =>
+        setSelected(prev => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s; });
+
+    const toggleAll = () => {
+        if (allVisibleSelected) {
+            setSelected(prev => { const s = new Set(prev); visible.forEach(e => s.delete(e.id)); return s; });
+        } else {
+            setSelected(prev => { const s = new Set(prev); visible.forEach(e => s.add(e.id)); return s; });
+        }
+    };
+
+    const clearSelection = () => { setSelected(new Set()); setPanelTarget(null); };
+
+    const handleDone = (emailIds: string[], briefId: string, briefName: string) => {
+        setEmails(prev => prev.map(e => emailIds.includes(e.id) ? { ...e, briefId, briefName } : e));
+        setSelected(new Set());
+        setPanelTarget(null);
     };
 
     const handleUnlink = (emailId: string) => {
@@ -250,7 +331,19 @@ export default function EmailInboxClient({ emails: initial, briefs }: Props) {
         });
     };
 
-    const activeEmail = activeEmailId ? emails.find(e => e.id === activeEmailId) : null;
+    const openBulkPanel = (mode: 'search' | 'create' = 'search') => {
+        const ids = Array.from(selected);
+        const first = emails.find(e => e.id === ids[0]);
+        setPanelTarget({ emailIds: ids, subject: first?.subject ?? '', mode });
+    };
+
+    const openSinglePanel = (email: InboxEmail) => {
+        if (panelTarget?.emailIds[0] === email.id && panelTarget.emailIds.length === 1) {
+            setPanelTarget(null);
+        } else {
+            setPanelTarget({ emailIds: [email.id], subject: email.subject ?? '' });
+        }
+    };
 
     return (
         <div className={styles.root}>
@@ -270,6 +363,14 @@ export default function EmailInboxClient({ emails: initial, briefs }: Props) {
                 <div className={styles.listCol}>
                     {/* Toolbar */}
                     <div className={styles.toolbar}>
+                        {/* Select-all checkbox */}
+                        <button className={styles.selectAllBtn} onClick={toggleAll} title="Select all visible">
+                            {allVisibleSelected
+                                ? <CheckSquare size={15} className={styles.checkboxOn} />
+                                : <Square size={15} className={styles.checkboxOff} />
+                            }
+                        </button>
+
                         <div className={styles.filters}>
                             {(['all', 'unlinked', 'linked'] as const).map(f => (
                                 <button
@@ -281,6 +382,7 @@ export default function EmailInboxClient({ emails: initial, briefs }: Props) {
                                 </button>
                             ))}
                         </div>
+
                         <div className={styles.searchWrap}>
                             <Search size={13} className={styles.searchIconSm} />
                             <input
@@ -291,6 +393,16 @@ export default function EmailInboxClient({ emails: initial, briefs }: Props) {
                             />
                         </div>
                     </div>
+
+                    {/* Bulk action bar */}
+                    {selected.size > 0 && (
+                        <BulkBar
+                            count={selected.size}
+                            onLinkAll={() => openBulkPanel('search')}
+                            onCreateBrief={() => openBulkPanel('create')}
+                            onClear={clearSelection}
+                        />
+                    )}
 
                     {/* List */}
                     <div className={styles.list}>
@@ -304,8 +416,11 @@ export default function EmailInboxClient({ emails: initial, briefs }: Props) {
                             <EmailCard
                                 key={email.id}
                                 email={email}
-                                isActive={activeEmailId === email.id}
-                                onLink={() => setActiveEmailId(prev => prev === email.id ? null : email.id)}
+                                selected={selected.has(email.id)}
+                                isAnySelected={selected.size > 0}
+                                isPanelTarget={panelTarget?.emailIds.includes(email.id) ?? false}
+                                onToggleSelect={() => toggleSelect(email.id)}
+                                onLink={() => openSinglePanel(email)}
                                 onUnlink={() => handleUnlink(email.id)}
                             />
                         ))}
@@ -313,13 +428,14 @@ export default function EmailInboxClient({ emails: initial, briefs }: Props) {
                 </div>
 
                 {/* Right: link panel */}
-                {activeEmail && (
+                {panelTarget && (
                     <div className={styles.panelCol}>
                         <LinkPanel
-                            email={activeEmail}
+                            emailIds={panelTarget.emailIds}
+                            firstSubject={panelTarget.subject}
                             briefs={briefs}
                             onDone={handleDone}
-                            onClose={() => setActiveEmailId(null)}
+                            onClose={() => setPanelTarget(null)}
                         />
                     </div>
                 )}
