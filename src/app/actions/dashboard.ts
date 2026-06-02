@@ -1,7 +1,6 @@
 'use server';
 
 
-// Build fix: Updated to use status instead of proceduralStatus
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
@@ -114,7 +113,6 @@ export async function getOperationalMetrics(workspaceId: string) {
                 }
             }
         }),
-        // FIX: Invoice doesn't have workspaceId, verified via Client
         prisma.invoice.count({
             where: {
                 client: { workspaceId },
@@ -247,7 +245,6 @@ export async function getFirmPulse(limit: number = 20, workspaceId?: string) {
         }
     });
 
-    // Fetch recent invoices - FIX: Filter by client.workspaceId
     const invoiceLogs = await prisma.invoice.findMany({
         where: { client: { workspaceId } },
         take: limit,
@@ -257,7 +254,6 @@ export async function getFirmPulse(limit: number = 20, workspaceId?: string) {
         }
     });
 
-    // Fetch recent payments - FIX: Filter by client.workspaceId
     const paymentLogs = await prisma.payment.findMany({
         where: { client: { workspaceId } },
         take: limit,
@@ -344,9 +340,4 @@ export async function getFirmPulse(limit: number = 20, workspaceId?: string) {
     return allActivities
         .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
         .slice(0, limit);
-}
-
-// Deprecated stub to satisfy any lingering imports
-export async function getDashboardStats() {
-    return { pendingTasks: 0, courtDates: 0, activeBriefs: 0 };
 }

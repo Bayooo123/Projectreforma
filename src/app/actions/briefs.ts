@@ -171,32 +171,20 @@ export async function createBrief(data: {
     data = applySentenceCaseToFields(data, ['description']);
     const creatorId = data.lawyerId || session.id;
     try {
-        console.log('[createBrief] ========== START ==========');
-        console.log('[createBrief] Creating brief with data:', JSON.stringify(data, null, 2));
-
-        // Validate briefNumber is provided
         if (!data.briefNumber || data.briefNumber.trim() === '') {
-            console.error('[createBrief] ERROR: Brief number is empty!');
             return { success: false, error: 'Brief number is required' };
         }
 
-        // Use explicit transaction to ensure atomic operation
         const result = await prisma.$transaction(async (tx) => {
-            console.log('[createBrief] Starting database transaction...');
-
-            // Check if briefNumber already exists
             const existing = await tx.brief.findUnique({
                 where: { briefNumber: data.briefNumber }
             });
 
             if (existing) {
-                console.error('[createBrief] ERROR: Brief number already exists:', data.briefNumber);
                 throw new Error(`Brief number "${data.briefNumber}" already exists. Please use a different number.`);
             }
 
-            console.log('[createBrief] Brief number is unique, proceeding with creation...');
-
-            const brief = await tx.brief.create({
+            return tx.brief.create({
                 data: {
                     briefNumber: data.briefNumber,
                     name: data.name,
@@ -208,7 +196,6 @@ export async function createBrief(data: {
                     status: data.status,
                     dueDate: data.dueDate,
                     description: data.description,
-                    // Standalone briefs are not litigation-derived
                     isLitigationDerived: false,
                     customTitle: null,
                     parentBriefId: data.parentBriefId || null,
@@ -216,44 +203,17 @@ export async function createBrief(data: {
                 include: {
                     client: true,
                     lawyer: {
-                        select: {
-                            id: true,
-                            name: true,
-                            email: true,
-                        },
+                        select: { id: true, name: true, email: true },
                     },
                 },
             });
-
-            console.log('[createBrief] ✅ Brief created in transaction!');
-            console.log('[createBrief] Brief ID:', brief.id);
-            console.log('[createBrief] Brief Number:', brief.briefNumber);
-            console.log('[createBrief] Brief Name:', brief.name);
-
-            return brief;
         }, {
-            maxWait: 5000, // Maximum time to wait for a transaction slot (ms)
-            timeout: 10000, // Maximum time the transaction can run (ms)
+            maxWait: 5000,
+            timeout: 10000,
         });
 
-        console.log('[createBrief] ✅ Transaction committed successfully!');
-
-        // Verify the brief was actually saved (outside transaction)
-        const verification = await prisma.brief.findUnique({
-            where: { id: result.id }
-        });
-
-        if (verification) {
-            console.log('[createBrief] ✅ VERIFICATION: Brief exists in database');
-        } else {
-            console.error('[createBrief] ❌ VERIFICATION FAILED: Brief not found in database!');
-            throw new Error('Brief was not persisted to database');
-        }
-
-        console.log('[createBrief] Calling revalidatePath("/briefs")');
         revalidatePath('/briefs');
 
-        // Notification: New Brief Created
         try {
             const { createNotification } = await import('@/app/actions/notifications');
             await createNotification({
@@ -265,27 +225,17 @@ export async function createBrief(data: {
                 recipients: 'ALL',
                 relatedBriefId: result.id
             });
-        } catch (error) {
-            console.error('Notification error:', error);
+        } catch {
+            // Non-critical — notification failure must not block brief creation
         }
 
         logActivity({ workspaceId: data.workspaceId, userId: session.id!, resource: 'BRIEF', action: 'CREATED', resourceId: result.id, resourceName: result.name }).catch(() => {});
 
-        console.log('[createBrief] ========== END ==========');
         return { success: true, brief: result };
     } catch (error: any) {
-        console.error('[createBrief] ========== ERROR ==========');
-        console.error('[createBrief] Error type:', error.constructor.name);
-        console.error('[createBrief] Error message:', error.message);
-        console.error('[createBrief] Error code:', error.code);
-        console.error('[createBrief] Full error:', error);
-        console.error('[createBrief] ========== ERROR END ==========');
-
-        // Handle Prisma unique constraint error
         if (error.code === 'P2002') {
             return { success: false, error: 'Brief number already exists. Please use a different number.' };
         }
-
         return { success: false, error: 'Failed to create brief: ' + error.message };
     }
 }
