@@ -10,7 +10,6 @@ import {
 import { getPendingMatterQuestions } from '@/app/actions/matterQuestions';
 import { getOpenAnomalies } from '@/app/actions/anomalies';
 import { runAnomalyScan } from '@/lib/anomaly/detector';
-import { getTodayWorkEntries } from '@/app/actions/work-entries';
 import PulseClient from './PulseClient';
 
 export default async function PulsePage() {
@@ -26,20 +25,16 @@ export default async function PulsePage() {
         );
     }
 
-    // Fire anomaly scan in background — don't block page load.
-    // Cron job at /api/cron/anomaly-scan runs hourly for deep scans.
-    // Here we do a lightweight background refresh; the page reads pre-computed results from DB.
-    runAnomalyScan(workspaceId).catch(e => console.error('[Pulse] anomaly scan failed:', e));
+    runAnomalyScan(workspaceId).catch(() => {});
 
-    const [firmStats, userStats, firmFeed, userFeed, pendingQuestions, anomalies, myBriefs, todayEntries] = await Promise.all([
+    const [firmStats, userStats, firmFeed, userFeed, pendingQuestions, anomalies, myBriefs] = await Promise.all([
         getPulseFirmStats(workspaceId),
         getPulseUserStats(workspaceId),
         getPulseFeedFirmwide(workspaceId),
         getPulseFeedUser(workspaceId),
-        getPendingMatterQuestions(workspaceId).catch(e => { console.error('[Pulse] pendingQuestions failed:', e); return []; }),
-        getOpenAnomalies(workspaceId).catch(e => { console.error('[Pulse] anomalies failed:', e); return []; }),
+        getPendingMatterQuestions(workspaceId).catch(() => []),
+        getOpenAnomalies(workspaceId).catch(() => []),
         getMyBriefs(workspaceId),
-        getTodayWorkEntries(workspaceId).catch(e => { console.error('[Pulse] workEntries failed:', e); return []; }),
     ]);
 
     const attentionCount = (firmFeed ?? []).filter(i => i.severity === 'urgent').length;
@@ -55,7 +50,6 @@ export default async function PulsePage() {
             pendingQuestions={pendingQuestions}
             anomalies={anomalies}
             myBriefs={myBriefs}
-            todayEntries={todayEntries}
             userId={session.user.id}
             workspaceId={workspaceId}
         />

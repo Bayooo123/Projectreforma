@@ -2,9 +2,7 @@
 
 import { ComplianceTask } from "@/app/actions/compliance";
 
-import { FileUp, Eye, CheckCircle, AlertCircle, Clock, ExternalLink, Loader2, Globe, Edit2 } from "lucide-react";
-import { useState } from "react";
-import { uploadEvidence } from "@/app/actions/compliance";
+import { CheckCircle, AlertCircle, Clock, ExternalLink, Globe, Edit2, Link2 } from "lucide-react";
 import styles from "./Compliance.module.css";
 
 interface ComplianceTableProps {
@@ -14,32 +12,6 @@ interface ComplianceTableProps {
 }
 
 export default function ComplianceTable({ tasks, onUpdate, onEdit }: ComplianceTableProps) {
-    const [uploadingId, setUploadingId] = useState<string | null>(null);
-
-    const handleFileUpload = async (taskId: string, e: React.ChangeEvent<HTMLInputElement>) => {
-        if (!e.target.files?.[0]) return;
-
-        setUploadingId(taskId);
-        const file = e.target.files[0];
-
-        try {
-            const response = await fetch(`/api/upload?filename=${file.name}`, {
-                method: 'POST',
-                body: file,
-            });
-
-            if (!response.ok) throw new Error('Upload failed');
-
-            const blob = await response.json();
-            await uploadEvidence(taskId, blob.url);
-            onUpdate();
-        } catch (error) {
-            console.error('Evidence upload failed:', error);
-            alert('Failed to upload evidence');
-        } finally {
-            setUploadingId(null);
-        }
-    };
 
     const formatDate = (date: Date | string | null | undefined) => {
         if (!date) return null;
@@ -98,7 +70,7 @@ export default function ComplianceTable({ tasks, onUpdate, onEdit }: ComplianceT
                         <th>Due Date</th>
                         <th>Frequency</th>
                         <th>Status</th>
-                        <th>Evidence</th>
+                        <th>Comply</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -146,42 +118,25 @@ export default function ComplianceTable({ tasks, onUpdate, onEdit }: ComplianceT
                             </td>
                             <td className={styles.tableCell}>
                                 <div className="flex items-center gap-2">
-                                    {task.status === 'concluded' || task.status === 'complied' ? (
+                                    {task.evidenceUrl ? (
                                         <a
-                                            href={task.evidenceUrl!}
+                                            href={task.evidenceUrl}
                                             target="_blank"
                                             rel="noopener noreferrer"
                                             className={styles.viewBtn}
                                         >
-                                            <Eye size={14} />
-                                            <span>View Proof</span>
+                                            <ExternalLink size={14} />
+                                            <span>Comply →</span>
                                         </a>
                                     ) : (
-                                        <div className="relative">
-                                            <input
-                                                type="file"
-                                                id={`upload-${task.id}`}
-                                                className="hidden"
-                                                onChange={(e) => handleFileUpload(task.id, e)}
-                                                disabled={uploadingId === task.id}
-                                            />
-                                            <label
-                                                htmlFor={`upload-${task.id}`}
-                                                className={styles.uploadBtn}
-                                            >
-                                                {uploadingId === task.id ? (
-                                                    <>
-                                                        <Loader2 size={14} className="animate-spin text-primary" />
-                                                        <span>Syncing...</span>
-                                                    </>
-                                                ) : (
-                                                    <>
-                                                        <FileUp size={14} />
-                                                        <span>Upload Evidence</span>
-                                                    </>
-                                                )}
-                                            </label>
-                                        </div>
+                                        <button
+                                            className={styles.uploadBtn}
+                                            onClick={() => onEdit && onEdit(task)}
+                                            title="Add compliance link"
+                                        >
+                                            <Link2 size={14} />
+                                            <span>Add link</span>
+                                        </button>
                                     )}
                                     <button
                                         className={styles.editBtn}

@@ -4,8 +4,6 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Users, UserPlus, Loader } from 'lucide-react';
 import { getClientStats } from '@/app/actions/clients';
-import ViewAllInvoicesModal from './ViewAllInvoicesModal';
-import ViewAllPaymentsModal from './ViewAllPaymentsModal';
 import styles from './ClientStats.module.css';
 
 interface ClientStatsProps {
@@ -20,8 +18,6 @@ const ClientStats = ({ workspaceId, letterheadUrl }: ClientStatsProps) => {
         newClientsThisMonth: 0,
     });
     const [isLoading, setIsLoading] = useState(true);
-    const [showInvoicesModal, setShowInvoicesModal] = useState(false);
-    const [showPaymentsModal, setShowPaymentsModal] = useState(false);
 
     useEffect(() => {
         const fetchStats = async () => {
@@ -85,56 +81,6 @@ const ClientStats = ({ workspaceId, letterheadUrl }: ClientStatsProps) => {
                 </div>
             </div>
 
-            {/* Action Buttons */}
-            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                <button
-                    onClick={() => setShowInvoicesModal(true)}
-                    style={{
-                        padding: '0.375rem 0.625rem',
-                        background: 'var(--primary)',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: 'var(--radius-md)',
-                        fontSize: '0.75rem',
-                        fontWeight: 600,
-                        cursor: 'pointer',
-                        transition: 'all 0.2s',
-                        whiteSpace: 'nowrap'
-                    }}
-                >
-                    View All Invoices
-                </button>
-                <button
-                    onClick={() => setShowPaymentsModal(true)}
-                    style={{
-                        padding: '0.375rem 0.625rem',
-                        background: 'transparent',
-                        color: 'var(--primary)',
-                        border: '1px solid var(--primary)',
-                        borderRadius: 'var(--radius-md)',
-                        fontSize: '0.75rem',
-                        fontWeight: 600,
-                        cursor: 'pointer',
-                        transition: 'all 0.2s',
-                        whiteSpace: 'nowrap'
-                    }}
-                >
-                    View All Payments
-                </button>
-            </div>
-
-            {/* Modals */}
-            <ViewAllInvoicesModal
-                isOpen={showInvoicesModal}
-                onClose={() => setShowInvoicesModal(false)}
-                workspaceId={workspaceId}
-                letterheadUrl={letterheadUrl}
-            />
-            <ViewAllPaymentsModal
-                isOpen={showPaymentsModal}
-                onClose={() => setShowPaymentsModal(false)}
-                workspaceId={workspaceId}
-            />
         </div>
     );
 };

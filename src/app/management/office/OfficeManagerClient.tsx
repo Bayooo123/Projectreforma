@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import FinancialLog from "@/components/management/FinancialLog";
-import AttendanceLogSection from "@/components/attendance/AttendanceLogSection";
 import { ChevronDown, ChevronUp, TrendingDown } from 'lucide-react';
 
 interface OfficeManagerClientProps {
@@ -73,7 +72,6 @@ export default function OfficeManagerClient({
                     )}
                 </div>
 
-                <AttendanceLogSection workspaceId={workspaceId} />
             </div>
         </div>
     );

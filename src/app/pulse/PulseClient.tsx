@@ -20,10 +20,8 @@ import type {
     PulseIconType,
     MyBrief,
 } from '@/app/actions/pulse';
-import type { WorkEntryWithRelations } from '@/app/actions/work-entries';
 import PendingQuestionsPanel from './PendingQuestionsPanel';
 import AnomalyPanel from './AnomalyPanel';
-import DailyFocusPanel from './DailyFocusPanel';
 import MyBriefsGrid from './MyBriefsGrid';
 
 const ICON_MAP: Record<PulseIconType, React.ElementType> = {
@@ -80,7 +78,6 @@ interface PulseClientProps {
     pendingQuestions: PendingQuestion[];
     anomalies: any[];
     myBriefs: MyBrief[];
-    todayEntries: WorkEntryWithRelations[];
     userId: string;
     workspaceId: string;
 }
@@ -94,9 +91,6 @@ export default function PulseClient({
     pendingQuestions,
     anomalies,
     myBriefs,
-    todayEntries,
-    userId,
-    workspaceId,
 }: PulseClientProps) {
     const [view, setView] = useState<'firm' | 'user'>('firm');
     const [filter, setFilter] = useState<FilterType>('all');
@@ -169,25 +163,14 @@ export default function PulseClient({
                             value={firmStats.activeBriefs}
                             delta={firmStats.activeBriefsDelta}
                             deltaType="up"
-                        />
-                        <StatCard
-                            label="Unbilled matters"
-                            value={firmStats.unbilledMatters}
-                            delta={`${firmStats.unbilledAmount} outstanding`}
-                            deltaType="down"
+                            href="/briefs"
                         />
                         <StatCard
                             label="Hearings this week"
                             value={firmStats.hearingsThisWeek}
                             delta={`Next: ${firmStats.nextHearingLabel}`}
                             deltaType="neutral"
-                        />
-                        <StatCard
-                            label="Open escalations"
-                            value={firmStats.openEscalations}
-                            delta={firmStats.openEscalations > 0 ? 'Unresolved 48h+' : 'All clear'}
-                            deltaType={firmStats.openEscalations > 0 ? 'down' : 'up'}
-                            urgent={firmStats.openEscalations > 0}
+                            href="/calendar"
                         />
                     </>
                 ) : (
@@ -197,6 +180,7 @@ export default function PulseClient({
                             value={userStats.myBriefs}
                             delta={userStats.myBriefsSubLabel}
                             deltaType="neutral"
+                            href="/briefs"
                         />
                         <StatCard
                             label="Tasks overdue"
@@ -210,12 +194,7 @@ export default function PulseClient({
                             value={userStats.myHearings}
                             delta="This week"
                             deltaType="neutral"
-                        />
-                        <StatCard
-                            label="Notifications"
-                            value={userStats.unreadNotifications}
-                            delta="Unread"
-                            deltaType="neutral"
+                            href="/calendar"
                         />
                     </>
                 )}
@@ -223,14 +202,6 @@ export default function PulseClient({
 
             {/* Feed Area */}
             <div className={styles.feedArea}>
-                <DailyFocusPanel
-                    view={view}
-                    workspaceId={workspaceId}
-                    userId={userId}
-                    initialEntries={todayEntries}
-                    myBriefs={myBriefs}
-                />
-
                 {view === 'user' && myBriefs.length > 0 && (
                     <MyBriefsGrid briefs={myBriefs} />
                 )}
@@ -289,22 +260,32 @@ function StatCard({
     delta,
     deltaType,
     urgent,
+    href,
 }: {
     label: string;
     value: number;
     delta: string;
     deltaType: 'up' | 'down' | 'neutral';
     urgent?: boolean;
+    href?: string;
 }) {
-    return (
-        <div className={styles.statCard}>
+    const inner = (
+        <>
             <div className={styles.statLabel}>{label}</div>
             <div className={`${styles.statVal} ${urgent ? styles.statValUrgent : ''}`}>{value}</div>
             <div className={`${styles.statDelta} ${deltaType === 'up' ? styles.deltaUp : deltaType === 'down' ? styles.deltaDown : styles.deltaNeutral}`}>
                 {delta}
             </div>
-        </div>
+        </>
     );
+    if (href) {
+        return (
+            <Link href={href} className={styles.statCard} style={{ textDecoration: 'none' }}>
+                {inner}
+            </Link>
+        );
+    }
+    return <div className={styles.statCard}>{inner}</div>;
 }
 
 function PulseCard({ item }: { item: PulseItem }) {

@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { Search, Filter, FileText, DollarSign, ChevronLeft, ChevronRight, Edit2 } from 'lucide-react';
+import { Search, Filter, FileText, DollarSign, ChevronLeft, ChevronRight, Edit2, ArrowUpDown } from 'lucide-react';
 import { getClients } from '@/app/actions/clients';
 import InvoiceModal from './InvoiceModal';
 import PaymentModal from './PaymentModal';
@@ -75,7 +75,9 @@ const ClientList = ({
     const limit = 10;
 
     const [searchQuery, setSearchQuery] = useState('');
-    const [statusFilter, setStatusFilter] = useState('all');
+    const [statusFilter] = useState('all');
+    const [sortBy, setSortBy] = useState<'recent' | 'name' | 'matters'>('recent');
+    const [showSortMenu, setShowSortMenu] = useState(false);
 
     // Debounce search to prevent server hammer
     const debouncedSearch = useDebounceValue(searchQuery, 400);
@@ -166,15 +168,44 @@ const ClientList = ({
                         onChange={(e) => setSearchQuery(e.target.value)}
                     />
                 </div>
-                <select
-                    className={styles.filterSelect}
-                    value={statusFilter}
-                    onChange={(e) => setStatusFilter(e.target.value)}
-                >
-                    <option value="all">All Status</option>
-                    <option value="active">Active</option>
-                    <option value="inactive">Inactive</option>
-                </select>
+                <div style={{ position: 'relative' }}>
+                    <button
+                        className={styles.filterSelect}
+                        onClick={() => setShowSortMenu(v => !v)}
+                        style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}
+                    >
+                        <Filter size={14} />
+                        Sort: {sortBy === 'recent' ? 'Most Recent' : sortBy === 'name' ? 'Name' : 'Most Matters'}
+                    </button>
+                    {showSortMenu && (
+                        <>
+                            <div style={{ position: 'fixed', inset: 0, zIndex: 99 }} onClick={() => setShowSortMenu(false)} />
+                            <div style={{
+                                position: 'absolute', top: '110%', right: 0, zIndex: 100,
+                                background: 'var(--surface)', border: '1px solid var(--border)',
+                                borderRadius: 8, boxShadow: '0 4px 16px rgba(0,0,0,0.1)',
+                                minWidth: 160, overflow: 'hidden',
+                            }}>
+                                {(['recent', 'name', 'matters'] as const).map(opt => (
+                                    <button
+                                        key={opt}
+                                        onClick={() => { setSortBy(opt); setShowSortMenu(false); }}
+                                        style={{
+                                            width: '100%', padding: '0.55rem 0.9rem', textAlign: 'left',
+                                            background: sortBy === opt ? 'var(--primary-light, #f0fdfa)' : 'none',
+                                            border: 'none', cursor: 'pointer',
+                                            color: sortBy === opt ? 'var(--primary)' : 'var(--text-primary)',
+                                            fontWeight: sortBy === opt ? 600 : 400,
+                                            fontSize: '0.8rem',
+                                        }}
+                                    >
+                                        {opt === 'recent' ? 'Most recent' : opt === 'name' ? 'Client name' : 'Most matters'}
+                                    </button>
+                                ))}
+                            </div>
+                        </>
+                    )}
+                </div>
             </div>
 
             {/* Active Filter Indicator */}
