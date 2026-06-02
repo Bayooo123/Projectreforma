@@ -31,7 +31,7 @@ export default function AppLayout({ children, user, workspace }: AppLayoutProps)
                         {children}
                     </div>
                 </main>
-                <BottomNavigation />
+                <BottomNavigation user={user} />
             </div>
             {/* <BicaWidget /> — deactivated, replaced by Eureka */}
             <EurekaWidget />

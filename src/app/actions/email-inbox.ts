@@ -114,7 +114,7 @@ export async function getInboxBriefs(): Promise<InboxBrief[]> {
 }
 
 export async function linkEmailToBrief(emailId: string, briefId: string): Promise<{ success: boolean; error?: string }> {
-    const user = await requireAuth();
+    await requireAuth();
 
     const [email, brief] = await Promise.all([
         prisma.inboundEmail.findUnique({ where: { id: emailId }, select: { subject: true, workspaceId: true } }),
@@ -133,15 +133,6 @@ export async function linkEmailToBrief(emailId: string, briefId: string): Promis
         prisma.pulseEvent.updateMany({
             where: { inboundEmailId: emailId },
             data: { briefId, ...(brief.matterId ? { matterId: brief.matterId } : {}) },
-        }),
-        // Log to brief activity feed
-        prisma.briefActivityLog.create({
-            data: {
-                briefId,
-                activityType: 'email_linked',
-                description: `Email linked: ${email.subject ?? '(no subject)'}`,
-                performedBy: user.id!,
-            },
         }),
     ]);
 
@@ -166,7 +157,7 @@ export async function bulkLinkEmailsToBrief(
     emailIds: string[],
     briefId: string,
 ): Promise<{ success: boolean; linked: number; error?: string }> {
-    const user = await requireAuth();
+    await requireAuth();
     if (emailIds.length === 0) return { success: true, linked: 0 };
 
     const brief = await prisma.brief.findUnique({
@@ -182,14 +173,6 @@ export async function bulkLinkEmailsToBrief(
         prisma.pulseEvent.updateMany({
             where: { inboundEmailId: { in: emailIds } },
             data: { briefId, ...(brief.matterId ? { matterId: brief.matterId } : {}) },
-        }),
-        prisma.briefActivityLog.createMany({
-            data: emailIds.map(emailId => ({
-                briefId,
-                activityType: 'email_linked',
-                description: `Email bulk-linked to brief`,
-                performedBy: user.id!,
-            })),
         }),
     ]);
 

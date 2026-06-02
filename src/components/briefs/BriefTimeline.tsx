@@ -1,8 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { Gavel, CalendarX, Users, CheckCircle2, Clock, FileText, Activity, BookOpen, Flag, Loader, ScrollText, Sparkles, ChevronDown, ChevronUp, RefreshCw } from 'lucide-react';
-import { generateBriefSummary, TimelineEvent, BriefSummaryData } from '@/app/actions/briefs';
+import { Gavel, CalendarX, Users, CheckCircle2, Clock, FileText, Activity, BookOpen, Flag, Loader, ScrollText, Sparkles, ChevronDown, ChevronUp, RefreshCw, Mail, Paperclip } from 'lucide-react';
+import { generateBriefSummary, TimelineEvent, BriefSummaryData, TimelineEmailData } from '@/app/actions/briefs';
 import styles from './BriefTimeline.module.css';
 
 const CONFIG: Record<string, { label: string; color: string; bg: string; Icon: React.ElementType }> = {
@@ -17,6 +17,7 @@ const CONFIG: Record<string, { label: string; color: string; bg: string; Icon: R
     document_uploaded:{ label: 'Document',  color: '#475569', bg: '#f8fafc', Icon: FileText },
     activity:         { label: 'Activity',  color: '#6b7280', bg: '#f9fafb', Icon: Activity },
     doc_event:        { label: 'Alleged',   color: '#7c3aed', bg: '#f5f3ff', Icon: ScrollText },
+    email:            { label: 'Email',     color: '#0d9488', bg: '#f0fdfa', Icon: Mail },
 };
 
 type Group = { monthKey: string; label: string; events: Array<TimelineEvent | 'TODAY'> };
@@ -58,6 +59,56 @@ function formatRelative(date: Date): string {
     const days = Math.floor(hours / 24);
     if (days < 7) return `${days}d ago`;
     return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+// ── Email card ────────────────────────────────────────────────────────────────
+
+function formatBytes(bytes: number) {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function EmailCard({ email }: { email: TimelineEmailData }) {
+    const [expanded, setExpanded] = useState(false);
+    const sender = email.fromName ? `${email.fromName} <${email.fromEmail}>` : email.fromEmail;
+
+    return (
+        <div className={styles.emailCard}>
+            <button className={styles.emailCardHeader} onClick={() => setExpanded(v => !v)}>
+                <span className={styles.emailSender}>{sender}</span>
+                {expanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+            </button>
+
+            {expanded && (
+                <div className={styles.emailBody}>
+                    {email.body
+                        ? <pre className={styles.emailBodyText}>{email.body}</pre>
+                        : email.bodyPreview
+                            ? <p className={styles.emailBodyText}>{email.bodyPreview}</p>
+                            : <p className={styles.emailBodyEmpty}>No content available.</p>
+                    }
+                    {email.attachments.length > 0 && (
+                        <div className={styles.emailAttachments}>
+                            {email.attachments.map(att => (
+                                <a
+                                    key={att.id}
+                                    href={att.url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className={styles.emailAttachment}
+                                >
+                                    <Paperclip size={11} />
+                                    <span>{att.name}</span>
+                                    <span className={styles.emailAttachmentSize}>{formatBytes(att.size)}</span>
+                                </a>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            )}
+        </div>
+    );
 }
 
 // ── AI Summary panel ─────────────────────────────────────────────────────────
@@ -277,6 +328,9 @@ export default function BriefTimeline({ briefId, initialEvents, initialSummary }
                                             </p>
                                         )}
                                         {item.actor && <p className={styles.actor}>{item.actor}</p>}
+                                        {item.type === 'email' && item.email && (
+                                            <EmailCard email={item.email} />
+                                        )}
                                     </div>
                                 </div>
                             );

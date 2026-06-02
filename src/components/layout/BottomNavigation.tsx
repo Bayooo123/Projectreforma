@@ -3,80 +3,148 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
+  Activity,
   FileText,
   Gavel,
-  Plus
+  Users,
+  Briefcase,
+  BarChart2,
+  ShieldCheck,
+  Terminal,
+  Inbox,
+  Plus,
+  LayoutGrid,
 } from 'lucide-react';
 import styles from './BottomNavigation.module.css';
 import { useState } from 'react';
 
-const BottomNavigation = () => {
-    const pathname = usePathname();
-    const [showFabMenu, setShowFabMenu] = useState(false);
+interface BottomNavigationProps {
+  user?: {
+    role?: string | null;
+  };
+}
 
-    const navItems = [
-        { name: 'Briefs', href: '/briefs', icon: FileText },
-        { name: 'Calendar', href: '/calendar', icon: Gavel },
-    ];
+const BottomNavigation = ({ user }: BottomNavigationProps) => {
+  const pathname = usePathname();
+  const [showFabMenu, setShowFabMenu] = useState(false);
+  const [showMoreDrawer, setShowMoreDrawer] = useState(false);
 
-    const isActive = (path: string) => {
-        if (path === '/management') return pathname === path;
-        return pathname === path || pathname.startsWith(path + '/');
-    };
+  const isAdminOrOwner = user?.role === 'admin' || user?.role === 'owner';
 
-    return (
-        <>
-            {/* Contextual FAB Menu for quick actions */}
-            {showFabMenu && (
-                <div className={styles.fabMenuOverlay} onClick={() => setShowFabMenu(false)}>
-                    <div className={styles.fabMenuItems} onClick={e => e.stopPropagation()}>
-                        <Link href="/briefs" onClick={() => setShowFabMenu(false)} className={styles.fabMenuItem}>
-                            <FileText size={18} /> New Brief
-                        </Link>
-                        <Link href="/calendar" onClick={() => setShowFabMenu(false)} className={styles.fabMenuItem}>
-                            <Gavel size={18} /> New Meeting
-                        </Link>
-                    </div>
-                </div>
-            )}
+  const primaryNav = [
+    { name: 'Pulse', href: '/pulse', icon: Activity },
+    { name: 'Briefs', href: '/briefs', icon: FileText },
+  ];
 
-            <div className={styles.bottomNav}>
-                <div className={styles.navItemsContainer}>
-                    {navItems.slice(0, 1).map((item) => (
-                        <Link
-                            key={item.href}
-                            href={item.href}
-                            className={`${styles.navItem} ${isActive(item.href) ? styles.active : ''}`}
-                        >
-                            <item.icon size={22} className={styles.icon} />
-                            <span className={styles.label}>{item.name}</span>
-                        </Link>
-                    ))}
+  const secondaryNav = [
+    { name: 'Calendar', href: '/calendar', icon: Gavel },
+  ];
 
-                    {/* Center FAB Button */}
-                    <div className={styles.fabContainer}>
-                        <button 
-                            className={`${styles.fabButton} ${showFabMenu ? styles.fabActive : ''}`}
-                            onClick={() => setShowFabMenu(!showFabMenu)}
-                        >
-                            <Plus size={24} />
-                        </button>
-                    </div>
+  const moreNav = [
+    { name: 'Email Inbox', href: '/emails', icon: Inbox },
+    { name: 'Clients', href: '/management/clients', icon: Users },
+    { name: 'Office', href: '/management/office', icon: Briefcase },
+    { name: 'Compliance', href: '/management/compliance', icon: ShieldCheck },
+    { name: 'Analytics', href: '/analytics', icon: BarChart2 },
+    ...(isAdminOrOwner ? [{ name: 'IT Mgmt', href: '/management/it', icon: Terminal }] : []),
+  ];
 
-                    {navItems.slice(1, 2).map((item) => (
-                        <Link
-                            key={item.href}
-                            href={item.href}
-                            className={`${styles.navItem} ${isActive(item.href) ? styles.active : ''}`}
-                        >
-                            <item.icon size={22} className={styles.icon} />
-                            <span className={styles.label}>{item.name}</span>
-                        </Link>
-                    ))}
-                </div>
+  const isActive = (path: string) => {
+    if (path === '/management') return pathname === path;
+    return pathname === path || pathname.startsWith(path + '/');
+  };
+
+  const isMoreActive = moreNav.some(item => isActive(item.href));
+
+  const closeBoth = () => {
+    setShowFabMenu(false);
+    setShowMoreDrawer(false);
+  };
+
+  return (
+    <>
+      {/* FAB quick-action menu */}
+      {showFabMenu && (
+        <div className={styles.fabMenuOverlay} onClick={closeBoth}>
+          <div className={styles.fabMenuItems} onClick={e => e.stopPropagation()}>
+            <Link href="/briefs" onClick={closeBoth} className={styles.fabMenuItem}>
+              <FileText size={18} /> New Brief
+            </Link>
+            <Link href="/calendar" onClick={closeBoth} className={styles.fabMenuItem}>
+              <Gavel size={18} /> New Meeting
+            </Link>
+          </div>
+        </div>
+      )}
+
+      {/* More modules drawer */}
+      {showMoreDrawer && (
+        <div className={styles.drawerOverlay} onClick={closeBoth}>
+          <div className={styles.drawer} onClick={e => e.stopPropagation()}>
+            <div className={styles.drawerHandle} />
+            <p className={styles.drawerTitle}>More modules</p>
+            <div className={styles.drawerGrid}>
+              {moreNav.map(item => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={`${styles.drawerItem} ${isActive(item.href) ? styles.drawerItemActive : ''}`}
+                  onClick={closeBoth}
+                >
+                  <item.icon size={24} />
+                  <span>{item.name}</span>
+                </Link>
+              ))}
             </div>
-        </>
-    );
+          </div>
+        </div>
+      )}
+
+      <div className={styles.bottomNav}>
+        <div className={styles.navItemsContainer}>
+          {primaryNav.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={`${styles.navItem} ${isActive(item.href) ? styles.active : ''}`}
+            >
+              <item.icon size={22} className={styles.icon} />
+              <span className={styles.label}>{item.name}</span>
+            </Link>
+          ))}
+
+          {/* Center FAB */}
+          <div className={styles.fabContainer}>
+            <button
+              className={`${styles.fabButton} ${showFabMenu ? styles.fabActive : ''}`}
+              onClick={() => { setShowFabMenu(v => !v); setShowMoreDrawer(false); }}
+            >
+              <Plus size={24} />
+            </button>
+          </div>
+
+          {secondaryNav.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={`${styles.navItem} ${isActive(item.href) ? styles.active : ''}`}
+            >
+              <item.icon size={22} className={styles.icon} />
+              <span className={styles.label}>{item.name}</span>
+            </Link>
+          ))}
+
+          <button
+            className={`${styles.navItem} ${styles.moreButton} ${isMoreActive ? styles.active : ''}`}
+            onClick={() => { setShowMoreDrawer(v => !v); setShowFabMenu(false); }}
+          >
+            <LayoutGrid size={22} className={styles.icon} />
+            <span className={styles.label}>More</span>
+          </button>
+        </div>
+      </div>
+    </>
+  );
 };
 
 export default BottomNavigation;

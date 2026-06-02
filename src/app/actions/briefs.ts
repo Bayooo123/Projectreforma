@@ -659,7 +659,16 @@ export type TimelineEventType =
     | 'brief_created' | 'brief_due'
     | 'court_hearing' | 'court_adjourned' | 'meeting'
     | 'task_created' | 'task_completed' | 'task_due'
-    | 'document_uploaded' | 'activity' | 'doc_event';
+    | 'document_uploaded' | 'activity' | 'doc_event'
+    | 'email';
+
+export interface TimelineEmailData {
+    fromName: string | null;
+    fromEmail: string;
+    body: string | null;
+    bodyPreview: string | null;
+    attachments: Array<{ id: string; name: string; url: string; contentType: string; size: number }>;
+}
 
 export interface TimelineEvent {
     id: string;
@@ -671,6 +680,7 @@ export interface TimelineEvent {
     source?: string;
     isFuture: boolean;
     isToday: boolean;
+    email?: TimelineEmailData;
 }
 
 export async function getBriefTimeline(briefId: string): Promise<TimelineEvent[]> {
@@ -684,7 +694,7 @@ export async function getBriefTimeline(briefId: string): Promise<TimelineEvent[]
 
     const matterId = brief.matterId;
 
-    const [calendarEntries, tasks, documents, activityLogs, docTimelineEvents] = await Promise.all([
+    const [calendarEntries, tasks, documents, activityLogs, docTimelineEvents, emailLinks] = await Promise.all([
         prisma.calendarEntry.findMany({
             where: { OR: [{ briefId }, ...(matterId ? [{ matterId }] : [])] },
             select: {
@@ -709,7 +719,7 @@ export async function getBriefTimeline(briefId: string): Promise<TimelineEvent[]
             orderBy: { uploadedAt: 'asc' },
         }),
         prisma.briefActivityLog.findMany({
-            where: { briefId, activityType: { not: 'viewed' } },
+            where: { briefId, activityType: { notIn: ['viewed', 'email_linked'] } },
             select: { id: true, timestamp: true, activityType: true, description: true, performedBy: true },
             orderBy: { timestamp: 'asc' },
         }),
@@ -720,6 +730,19 @@ export async function getBriefTimeline(briefId: string): Promise<TimelineEvent[]
                 document: { select: { uploadedAt: true } },
             },
             orderBy: { createdAt: 'asc' },
+        }),
+        prisma.pulseEvent.findMany({
+            where: { briefId, inboundEmailId: { not: null } },
+            select: {
+                id: true,
+                inboundEmail: {
+                    select: {
+                        id: true, fromEmail: true, fromName: true,
+                        subject: true, bodyPreview: true, body: true, receivedAt: true,
+                        attachments: { select: { id: true, name: true, url: true, contentType: true, size: true } },
+                    },
+                },
+            },
         }),
     ]);
 
@@ -789,6 +812,27 @@ export async function getBriefTimeline(briefId: string): Promise<TimelineEvent[]
             description: e.eventDate ? undefined : `Date in document: "${e.eventDateRaw}"`,
             source: e.documentName,
             ...classify(date),
+        });
+    }
+
+    const seenEmailIds = new Set<string>();
+    for (const p of emailLinks) {
+        const em = p.inboundEmail;
+        if (!em || seenEmailIds.has(em.id)) continue;
+        seenEmailIds.add(em.id);
+        events.push({
+            id: `email_${em.id}`,
+            date: em.receivedAt,
+            type: 'email',
+            title: em.subject || '(no subject)',
+            email: {
+                fromName: em.fromName,
+                fromEmail: em.fromEmail,
+                body: em.body,
+                bodyPreview: em.bodyPreview,
+                attachments: em.attachments,
+            },
+            ...classify(em.receivedAt),
         });
     }
 

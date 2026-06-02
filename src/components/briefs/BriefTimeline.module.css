@@ -433,3 +433,120 @@
     background: #7c3aed;
     flex-shrink: 0;
 }
+
+/* ── Email card ──────────────────────────────────────────────────────────── */
+.emailCard {
+    margin-top: 0.4rem;
+    border: 1px solid #ccfbf1;
+    border-radius: 6px;
+    overflow: hidden;
+    background: #f0fdfa;
+}
+
+:global(.dark) .emailCard {
+    border-color: #134e4a;
+    background: #022c22;
+}
+
+.emailCardHeader {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.35rem 0.6rem;
+    background: none;
+    border: none;
+    cursor: pointer;
+    text-align: left;
+    gap: 0.5rem;
+}
+
+.emailSender {
+    font-size: 0.68rem;
+    color: #0d9488;
+    font-weight: 500;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+:global(.dark) .emailSender {
+    color: #2dd4bf;
+}
+
+.emailCardHeader svg {
+    flex-shrink: 0;
+    color: #0d9488;
+    opacity: 0.7;
+}
+
+.emailBody {
+    border-top: 1px solid #ccfbf1;
+    padding: 0.6rem 0.7rem;
+}
+
+:global(.dark) .emailBody {
+    border-color: #134e4a;
+}
+
+.emailBodyText {
+    font-size: 0.72rem;
+    line-height: 1.6;
+    color: var(--text-primary);
+    white-space: pre-wrap;
+    word-break: break-word;
+    margin: 0 0 0.4rem;
+    font-family: inherit;
+    max-height: 240px;
+    overflow-y: auto;
+}
+
+.emailBodyEmpty {
+    font-size: 0.7rem;
+    color: var(--text-tertiary);
+    font-style: italic;
+    margin: 0;
+}
+
+.emailAttachments {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 0.5rem;
+    padding-top: 0.5rem;
+    border-top: 1px solid #ccfbf1;
+}
+
+:global(.dark) .emailAttachments {
+    border-color: #134e4a;
+}
+
+.emailAttachment {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 8px;
+    border-radius: 999px;
+    background: white;
+    border: 1px solid #99f6e4;
+    font-size: 0.65rem;
+    color: #0d9488;
+    font-weight: 500;
+    text-decoration: none;
+    transition: background 0.12s;
+}
+
+.emailAttachment:hover {
+    background: #ccfbf1;
+}
+
+:global(.dark) .emailAttachment {
+    background: #134e4a;
+    border-color: #0d9488;
+    color: #2dd4bf;
+}
+
+.emailAttachmentSize {
+    color: #6b7280;
+    font-weight: 400;
+}
