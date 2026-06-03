@@ -3,6 +3,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { nanoid } from 'nanoid';
 import { put } from '@vercel/blob';
+import { classifyDocumentContent } from '@/lib/services/legal-heuristics';
+import { isVersionOf } from '@/lib/services/ocr-versioning';
 
 // Max file size 10MB
 const MAX_SIZE = 10 * 1024 * 1024;
@@ -49,12 +51,35 @@ export async function POST(req: NextRequest) {
             const { TextExtractor } = await import('@/lib/ingestion/text-extractor');
             extractedText = await TextExtractor.extract(buffer, file.type);
 
-            // Update document with extracted text
+            // 3.1. Classify Document Content (Deterministic)
+            const docType = classifyDocumentContent(extractedText);
+
+            // 3.2. Version Detection (Deterministic)
+            const existingDocs = await prisma.document.findMany({
+                where: { briefId, id: { not: documentId }, ocrStatus: 'completed' },
+                select: { id: true, ocrText: true, version: true }
+            });
+
+            let versionOfId: string | undefined;
+            let version = 1;
+
+            for (const existing of existingDocs) {
+                if (existing.ocrText && isVersionOf(extractedText, existing.ocrText)) {
+                    versionOfId = existing.id;
+                    version = existing.version + 1;
+                    break;
+                }
+            }
+
+            // Update document with extracted text, classification and version info
             await prisma.document.update({
                 where: { id: documentId },
                 data: {
                     ocrText: extractedText,
-                    ocrStatus: 'completed'
+                    ocrStatus: 'completed',
+                    docType,
+                    versionOfId,
+                    version
                 }
             });
 

@@ -505,6 +505,7 @@ export default function BriefDetailClient({ brief }: BriefDetailClientProps) {
                 onClose={() => setPreviewDocument(null)}
                 onNavigate={handleNavigateDocument}
                 canNavigate={getNavigationState()}
+                onVersionSelect={(v) => setPreviewDocument(v)}
             />
 
             <ConfirmDialog

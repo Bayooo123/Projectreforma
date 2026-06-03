@@ -159,7 +159,7 @@ function SummaryPanel({ briefId, initial }: SummaryPanelProps) {
                         className={styles.generateBtn}
                         onClick={handleGenerate}
                         disabled={generating}
-                        title={summary ? 'Regenerate summary from current document events' : 'Generate AI summary from document events'}
+                        title={summary ? 'Regenerate summary from emails and documents' : 'Generate AI summary from emails and documents'}
                     >
                         {generating
                             ? <><Loader size={12} className={styles.spinner} /> Generating…</>
@@ -183,7 +183,7 @@ function SummaryPanel({ briefId, initial }: SummaryPanelProps) {
             {!summary && !generating && (
                 <p className={styles.summaryHint}>
                     Click <strong>Generate Summary</strong> to produce a prose overview and chronological outline
-                    from the documents analysed in this brief.
+                    from the linked emails and documents in this brief.
                 </p>
             )}
 

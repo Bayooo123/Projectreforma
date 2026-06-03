@@ -850,7 +850,7 @@ export async function getBriefSummary(briefId: string): Promise<BriefSummaryData
 export async function generateBriefSummary(briefId: string): Promise<{ success: boolean; data?: BriefSummaryData; error?: string }> {
     await requireAuth();
 
-    const [brief, documents] = await Promise.all([
+    const [brief, documents, emailLinks] = await Promise.all([
         prisma.brief.findUnique({
             where: { id: briefId, deletedAt: null },
             select: {
@@ -872,9 +872,37 @@ export async function generateBriefSummary(briefId: string): Promise<{ success: 
             select: { name: true, url: true, type: true, ocrText: true },
             orderBy: { uploadedAt: 'asc' },
         }),
+        // Fetch linked emails via PulseEvent → InboundEmail
+        prisma.pulseEvent.findMany({
+            where: { briefId, inboundEmailId: { not: null } },
+            select: {
+                inboundEmail: {
+                    select: {
+                        subject: true,
+                        fromName: true,
+                        fromEmail: true,
+                        receivedAt: true,
+                        body: true,
+                        bodyPreview: true,
+                    },
+                },
+            },
+        }),
     ]);
 
     if (!brief) return { success: false, error: 'Brief not found' };
+
+    // Deduplicate emails by subject+date and extract the InboundEmail records
+    const seenEmailKeys = new Set<string>();
+    const emails = emailLinks
+        .map(p => p.inboundEmail)
+        .filter((e): e is NonNullable<typeof e> => {
+            if (!e) return false;
+            const key = `${e.fromEmail}::${e.subject}::${e.receivedAt.toISOString().slice(0, 10)}`;
+            if (seenEmailKeys.has(key)) return false;
+            seenEmailKeys.add(key);
+            return true;
+        });
 
     const { generateBriefSummaryFromDocuments } = await import('@/lib/services/brief-summary-generator');
 
@@ -895,6 +923,7 @@ export async function generateBriefSummary(briefId: string): Promise<{ success: 
                     : null,
             },
             documents,
+            emails,
         );
     } catch (err: any) {
         return { success: false, error: err?.message ?? 'Summary generation failed.' };

@@ -91,3 +91,40 @@ export async function deleteDocument(id: string, briefId: string) {
         return { success: false, error: error?.message || 'Failed to delete document' };
     }
 }
+
+export async function getDocumentVersions(documentId: string) {
+    try {
+        const doc = await prisma.document.findUnique({
+            where: { id: documentId },
+            select: { versionOfId: true }
+        });
+
+        // Find all documents in the same chain (up and down)
+        // For simplicity in this logic, we search for docs with the same origin or linked to this
+        // In a real tree we'd recurse, but here we can find all linked in the brief with similarity
+        
+        // Let's just find the immediate parents and children for now
+        const versions = await prisma.document.findMany({
+            where: {
+                OR: [
+                    { id: documentId },
+                    { versionOfId: documentId },
+                    { id: doc?.versionOfId || 'none' }
+                ]
+            },
+            select: {
+                id: true,
+                name: true,
+                version: true,
+                uploadedAt: true,
+                url: true
+            },
+            orderBy: { version: 'desc' }
+        });
+
+        return versions;
+    } catch (error) {
+        console.error('Error fetching document versions:', error);
+        return [];
+    }
+}
