@@ -5,6 +5,151 @@ import { Gavel, CalendarX, Users, CheckCircle2, Clock, FileText, Activity, BookO
 import { generateBriefSummary, TimelineEvent, BriefSummaryData, TimelineEmailData } from '@/app/actions/briefs';
 import styles from './BriefTimeline.module.css';
 
+// ── Email Correspondence Panel (zero-token, computed from timeline events) ────
+
+function stripEmailPrefixes(subject: string): string {
+    // Remove [EXTERNAL] / [**EXTERNAL**] tags
+    let s = subject.replace(/\[[\*\s]*EXTERNAL[\*\s]*\]\s*/gi, '').trim();
+    // Strip Fwd:/Re:/RE:/Fw: prefixes recursively
+    const prefixRe = /^(fwd?:|re:|fw:)\s*/i;
+    let prev = '';
+    while (s !== prev) { prev = s; s = s.replace(prefixRe, '').trim(); }
+    return s || subject;
+}
+
+function fmtDate(d: Date, style: 'short' | 'monthYear' = 'short') {
+    if (style === 'monthYear') return d.toLocaleDateString('en-GB', { month: 'short', year: '2-digit' });
+    return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+function EmailCorrespondencePanel({ events }: { events: TimelineEvent[] }) {
+    const emailEvents = events.filter(e => e.type === 'email' && e.email);
+    if (emailEvents.length === 0) return null;
+
+    // ── Thread grouping ──────────────────────────────────────────────────────
+    const threadMap = new Map<string, { count: number; dates: number[] }>();
+    for (const ev of emailEvents) {
+        const norm = stripEmailPrefixes(ev.title).toLowerCase();
+        const entry = threadMap.get(norm) ?? { count: 0, dates: [] };
+        entry.count++;
+        entry.dates.push(new Date(ev.date).getTime());
+        threadMap.set(norm, entry);
+    }
+    const threads = Array.from(threadMap.entries())
+        .map(([norm, data]) => ({
+            name: stripEmailPrefixes(
+                emailEvents.find(e => stripEmailPrefixes(e.title).toLowerCase() === norm)?.title ?? norm
+            ),
+            count: data.count,
+            from: new Date(Math.min(...data.dates)),
+            to:   new Date(Math.max(...data.dates)),
+        }))
+        .sort((a, b) => b.count - a.count || b.to.getTime() - a.to.getTime());
+
+    // ── Unique senders ───────────────────────────────────────────────────────
+    const senderMap = new Map<string, { name: string | null; lastDate: number }>();
+    for (const ev of emailEvents) {
+        if (!ev.email) continue;
+        const key = ev.email.fromEmail.toLowerCase();
+        const t = new Date(ev.date).getTime();
+        const existing = senderMap.get(key);
+        if (!existing || t > existing.lastDate) {
+            senderMap.set(key, { name: ev.email.fromName, lastDate: t });
+        }
+    }
+    const senders = Array.from(senderMap.entries())
+        .map(([email, d]) => ({ email, name: d.name, lastDate: d.lastDate }))
+        .sort((a, b) => b.lastDate - a.lastDate);
+
+    // ── Date range ───────────────────────────────────────────────────────────
+    const ts = emailEvents.map(e => new Date(e.date).getTime());
+    const earliest = new Date(Math.min(...ts));
+    const latest   = new Date(Math.max(...ts));
+
+    const TOP = 5;
+
+    return (
+        <div style={{
+            border: '1px solid #99f6e4', borderRadius: 10,
+            background: '#f0fdfa', marginBottom: '1rem', overflow: 'hidden',
+            fontSize: '0.78rem',
+        }}>
+            {/* Header */}
+            <div style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                padding: '0.6rem 0.9rem', borderBottom: '1px solid #99f6e4',
+                background: 'linear-gradient(135deg,#ecfdf5,#f0fdfa)',
+            }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 700, color: '#065f46', fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    <Mail size={12} /> Correspondence Overview
+                </span>
+                <span style={{ fontSize: '0.7rem', color: '#6b7280' }}>
+                    <span style={{ fontWeight: 700, color: '#0d9488', marginRight: 6 }}>{emailEvents.length} emails</span>
+                    {fmtDate(earliest)} – {fmtDate(latest)}
+                </span>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
+                {/* Threads column */}
+                <div style={{ padding: '0.65rem 0.9rem', borderRight: '1px solid #ccfbf1' }}>
+                    <div style={{ fontWeight: 700, color: '#065f46', fontSize: '0.62rem', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '0.4rem' }}>Threads</div>
+                    {threads.slice(0, TOP).map((t, i) => (
+                        <div key={i} style={{
+                            display: 'flex', gap: 6, alignItems: 'baseline',
+                            padding: '3px 0',
+                            borderBottom: i < Math.min(threads.length, TOP) - 1 ? '1px solid #d1fae5' : 'none',
+                        }}>
+                            <span style={{ flex: 1, color: '#1e293b', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={t.name}>
+                                {t.name}
+                            </span>
+                            <span style={{ color: '#6b7280', flexShrink: 0, fontSize: '0.67rem', minWidth: 50, textAlign: 'right' }}>
+                                {t.count} {t.count === 1 ? 'email' : 'emails'}
+                            </span>
+                            <span style={{ color: '#94a3b8', flexShrink: 0, fontSize: '0.64rem', minWidth: 52, textAlign: 'right' }}>
+                                {fmtDate(t.from, 'monthYear')}
+                                {(t.from.getMonth() !== t.to.getMonth() || t.from.getFullYear() !== t.to.getFullYear())
+                                    ? `–${fmtDate(t.to, 'monthYear')}` : ''}
+                            </span>
+                        </div>
+                    ))}
+                    {threads.length > TOP && (
+                        <div style={{ color: '#94a3b8', fontSize: '0.64rem', marginTop: 3 }}>+{threads.length - TOP} more</div>
+                    )}
+                </div>
+
+                {/* Senders column */}
+                <div style={{ padding: '0.65rem 0.9rem' }}>
+                    <div style={{ fontWeight: 700, color: '#065f46', fontSize: '0.62rem', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '0.4rem' }}>Correspondents</div>
+                    {senders.slice(0, TOP).map((s, i) => (
+                        <div key={i} style={{
+                            padding: '3px 0',
+                            borderBottom: i < Math.min(senders.length, TOP) - 1 ? '1px solid #d1fae5' : 'none',
+                        }}>
+                            <div style={{ color: '#1e293b', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                {s.name || s.email}
+                            </div>
+                            {s.name && (
+                                <div style={{ color: '#94a3b8', fontSize: '0.64rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                    {s.email}
+                                </div>
+                            )}
+                        </div>
+                    ))}
+                    {senders.length > TOP && (
+                        <div style={{ color: '#94a3b8', fontSize: '0.64rem', marginTop: 3 }}>+{senders.length - TOP} more</div>
+                    )}
+                    <div style={{ marginTop: 8, paddingTop: 5, borderTop: '1px solid #ccfbf1', fontSize: '0.67rem' }}>
+                        <span style={{ color: '#94a3b8' }}>Latest · </span>
+                        <span style={{ color: '#0d9488', fontWeight: 600 }}>{fmtDate(latest)}</span>
+                        {senders[0] && <span style={{ color: '#94a3b8' }}> from {senders[0].name || senders[0].email}</span>}
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+// ── CONFIG ────────────────────────────────────────────────────────────────────
 const CONFIG: Record<string, { label: string; color: string; bg: string; Icon: React.ElementType }> = {
     brief_created:    { label: 'Opened',    color: '#6366f1', bg: '#eef2ff', Icon: BookOpen },
     brief_due:        { label: 'Due Date',  color: '#ef4444', bg: '#fef2f2', Icon: Flag },
@@ -261,6 +406,9 @@ export default function BriefTimeline({ briefId, initialEvents, initialSummary }
 
     return (
         <div className={styles.root}>
+            {/* Zero-token correspondence overview — always visible when emails are linked */}
+            <EmailCorrespondencePanel events={events} />
+
             {/* AI Summary panel */}
             <SummaryPanel briefId={briefId} initial={initialSummary} />
 
