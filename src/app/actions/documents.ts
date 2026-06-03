@@ -113,14 +113,7 @@ export async function getDocumentVersions(documentId: string) {
 
         const versions = await prisma.document.findMany({
             where: { OR: orClauses },
-            select: {
-                id: true,
-                name: true,
-                version: true,
-                uploadedAt: true,
-                url: true,
-            },
-            orderBy: { version: 'desc' },
+            orderBy: { uploadedAt: 'asc' },
         });
 
         return versions;
