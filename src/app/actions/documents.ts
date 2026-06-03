@@ -94,37 +94,37 @@ export async function deleteDocument(id: string, briefId: string) {
 
 export async function getDocumentVersions(documentId: string) {
     try {
+        // Fetch without explicit select so all scalar fields (including versionOfId) are returned
         const doc = await prisma.document.findUnique({
             where: { id: documentId },
-            select: { versionOfId: true }
         });
 
-        // Find all documents in the same chain (up and down)
-        // For simplicity in this logic, we search for docs with the same origin or linked to this
-        // In a real tree we'd recurse, but here we can find all linked in the brief with similarity
-        
-        // Let's just find the immediate parents and children for now
+        const orClauses: any[] = [
+            { id: documentId },
+        ];
+        // Children: documents that are versions of this one
+        // Cast to any because versionOfId may not appear in the generated select type
+        // but IS a valid filter field on DocumentWhereInput
+        orClauses.push({ versionOfId: documentId } as any);
+        // Parent: document this is a version of
+        if ((doc as any)?.versionOfId) {
+            orClauses.push({ id: (doc as any).versionOfId });
+        }
+
         const versions = await prisma.document.findMany({
-            where: {
-                OR: [
-                    { id: documentId },
-                    { versionOfId: documentId },
-                    { id: doc?.versionOfId || 'none' }
-                ]
-            },
+            where: { OR: orClauses },
             select: {
                 id: true,
                 name: true,
                 version: true,
                 uploadedAt: true,
-                url: true
+                url: true,
             },
-            orderBy: { version: 'desc' }
+            orderBy: { version: 'desc' },
         });
 
         return versions;
-    } catch (error) {
-        console.error('Error fetching document versions:', error);
+    } catch {
         return [];
     }
 }
