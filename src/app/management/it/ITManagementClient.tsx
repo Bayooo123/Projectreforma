@@ -7,6 +7,7 @@ import {
     UserX, RefreshCw, Loader2, FileText, Download,
     Ban, AlertTriangle, Clock, LogOut, Mail, RotateCcw, GitBranch
 } from 'lucide-react';
+import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import {
     getGuestMembers, inviteGuestMember, updateGuestMember, revokeGuestMember,
     grantBriefAccess, revokeBriefAccess, sendGuestInviteEmail,
@@ -99,6 +100,7 @@ function GuestAccountsTab({ workspaceId }: { workspaceId: string }) {
     const [sentInvite, setSentInvite] = useState<string | null>(null);
 
     const [form, setForm] = useState({ email: '', name: '', designation: '', expiresAt: '', canDownload: false });
+    const [revokingMemberId, setRevokingMemberId] = useState<string | null>(null);
     const [formError, setFormError] = useState('');
 
     useEffect(() => {
@@ -127,7 +129,6 @@ function GuestAccountsTab({ workspaceId }: { workspaceId: string }) {
     }
 
     function handleRevoke(memberId: string) {
-        if (!confirm('Revoke this guest\'s access? They will no longer be able to log in.')) return;
         startTransition(async () => {
             await revokeGuestMember(memberId);
             load();
@@ -264,7 +265,7 @@ function GuestAccountsTab({ workspaceId }: { workspaceId: string }) {
                                             {sentInvite === guest.id ? <Check size={14} color="#059669" /> : <Mail size={14} />}
                                             {sentInvite === guest.id ? 'Sent!' : 'Resend Invite'}
                                         </button>
-                                        <button onClick={() => handleRevoke(guest.id)} style={{ ...iconBtnStyle, color: '#dc2626' }}>
+                                        <button onClick={() => setRevokingMemberId(guest.id)} style={{ ...iconBtnStyle, color: '#dc2626' }}>
                                             <UserX size={14} /> Revoke
                                         </button>
                                     </div>
@@ -322,6 +323,16 @@ function GuestAccountsTab({ workspaceId }: { workspaceId: string }) {
                 </details>
             )}
         </div>
+
+        <ConfirmDialog
+            open={!!revokingMemberId}
+            title="Revoke guest access"
+            message="This guest will no longer be able to log in. You can re-invite them later."
+            confirmLabel="Revoke"
+            danger
+            onConfirm={() => { if (revokingMemberId) handleRevoke(revokingMemberId); setRevokingMemberId(null); }}
+            onCancel={() => setRevokingMemberId(null)}
+        />
     );
 }
 
@@ -572,6 +583,7 @@ function SessionsTab() {
     const [sessions, setSessions] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [isPending, startTransition] = useTransition();
+    const [forceLogoutTarget, setForceLogoutTarget] = useState<{ id: string; name: string } | null>(null);
 
     useEffect(() => { load(); }, []);
 
@@ -580,8 +592,7 @@ function SessionsTab() {
         getActiveSessions().then(data => { setSessions(data); setLoading(false); });
     }
 
-    function handleForceLogout(userId: string, userName: string) {
-        if (!confirm(`Force logout all sessions for ${userName}?\n\nThey will be signed out on their next page load.`)) return;
+    function handleForceLogout(userId: string) {
         startTransition(async () => {
             await forceLogoutUser(userId);
             load();
@@ -662,7 +673,7 @@ function SessionsTab() {
                                         </div>
                                     </div>
                                     <button
-                                        onClick={() => handleForceLogout(entry.user.id, entry.user.name)}
+                                        onClick={() => setForceLogoutTarget({ id: entry.user.id, name: entry.user.name })}
                                         disabled={isPending}
                                         style={{ ...btnStyle('#fef2f2', '#dc2626'), border: '1px solid #fecaca', flexShrink: 0 }}
                                     >
@@ -690,6 +701,16 @@ function SessionsTab() {
             <p style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '1.5rem' }}>
                 Force logout invalidates all sessions instantly. The user is redirected to login on their next page load.
             </p>
+
+            <ConfirmDialog
+                open={!!forceLogoutTarget}
+                title="Force logout"
+                message={`Sign out all active sessions for ${forceLogoutTarget?.name}? They will be redirected to login on their next page load.`}
+                confirmLabel="Force Logout"
+                danger
+                onConfirm={() => { if (forceLogoutTarget) handleForceLogout(forceLogoutTarget.id); setForceLogoutTarget(null); }}
+                onCancel={() => setForceLogoutTarget(null)}
+            />
         </div>
     );
 }

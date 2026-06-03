@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { approveWaitlistEntry } from '../../actions/admin';
 import styles from './page.module.css';
+import ConfirmDialog from '@/components/ui/ConfirmDialog';
 
 interface WaitlistEntry {
     id: string;
@@ -26,6 +27,7 @@ export default function WaitlistClient({ entries: initialEntries }: { entries: W
     const [entries, setEntries] = useState(initialEntries);
     const [searchTerm, setSearchTerm] = useState('');
     const [isProcessing, setIsProcessing] = useState<string | null>(null);
+    const [approvingId, setApprovingId] = useState<string | null>(null);
 
     const filteredEntries = entries.filter(entry =>
         entry.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -34,8 +36,6 @@ export default function WaitlistClient({ entries: initialEntries }: { entries: W
     );
 
     const handleApprove = async (id: string) => {
-        if (!confirm('Are you sure you want to approve this request?')) return;
-
         setIsProcessing(id);
         try {
             const result = await approveWaitlistEntry(id);
@@ -113,7 +113,7 @@ export default function WaitlistClient({ entries: initialEntries }: { entries: W
                                         <div className={styles.actionButtons}>
                                             <button
                                                 className={styles.approveBtn}
-                                                onClick={() => handleApprove(entry.id)}
+                                                onClick={() => setApprovingId(entry.id)}
                                                 disabled={isProcessing === entry.id}
                                             >
                                                 {isProcessing === entry.id ? '...' : <CheckCircle size={18} />}
@@ -131,5 +131,14 @@ export default function WaitlistClient({ entries: initialEntries }: { entries: W
                 </table>
             </div>
         </div>
+
+        <ConfirmDialog
+            open={!!approvingId}
+            title="Approve waitlist request"
+            message="This will grant the applicant access to create a workspace on Reforma. This action cannot be reversed."
+            confirmLabel="Approve"
+            onConfirm={() => { if (approvingId) handleApprove(approvingId); setApprovingId(null); }}
+            onCancel={() => setApprovingId(null)}
+        />
     );
 }

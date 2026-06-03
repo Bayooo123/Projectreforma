@@ -11,6 +11,42 @@ interface ComplianceTableProps {
     onEdit?: (task: ComplianceTask) => void;
 }
 
+// Official Nigerian compliance portal URLs keyed by regulatory body.
+// task.evidenceUrl (set per-workspace via the edit panel) takes precedence if present.
+const PORTAL_URLS: Record<string, string> = {
+    'NBA':                    'https://portal.nigerianbar.org.ng',
+    'NBA Branch':             'https://portal.nigerianbar.org.ng',
+    'NBA-ICLE':               'https://icle.nigerianbar.org.ng',
+    'NBA Sections':           'https://portal.nigerianbar.org.ng',
+    'SCUML / EFCC':           'https://scumlportal.efcc.gov.ng',
+    'SCUML / NBA-AMLC':       'https://scumlportal.efcc.gov.ng',
+    'SCUML / NFIU':           'https://nfiu.gov.ng',
+    'SCUML':                  'https://scumlportal.efcc.gov.ng',
+    'NFIU':                   'https://nfiu.gov.ng',
+    'FIRS':                   'https://taxpro-max.firs.gov.ng',
+    'CAC':                    'https://post.cac.gov.ng',
+    'PenCom':                 'https://pencomcop.org.ng',
+    'NSITF':                  'https://www.nsitf.gov.ng',
+    'ITF':                    'https://olis.itf.gov.ng',
+    'NHF / FMBN':             'https://efass.nhfmortgage.org.ng',
+    'FMBN':                   'https://efass.nhfmortgage.org.ng',
+    'LIRS':                   'https://lirs.gov.ng',
+    'SIRS':                   'https://lirs.gov.ng',
+    'SIRS / LIRS':            'https://lirs.gov.ng',
+    'Lagos IRS':              'https://lirs.gov.ng',
+    'NPC':                    'https://npc.gov.ng',
+    'NAFDAC':                 'https://nafdacportal.gov.ng',
+    'SON':                    'https://portal.son.gov.ng',
+    'NCC':                    'https://www.ncc.gov.ng',
+    'CBN':                    'https://www.cbn.gov.ng',
+    'SEC':                    'https://sec.gov.ng',
+    'NDPC':                   'https://ndpc.gov.ng',
+};
+
+function getComplyUrl(task: ComplianceTask): string | null {
+    return task.evidenceUrl || PORTAL_URLS[task.obligation.regulatoryBody] || null;
+}
+
 export default function ComplianceTable({ tasks, onUpdate, onEdit }: ComplianceTableProps) {
 
     const formatDate = (date: Date | string | null | undefined) => {
@@ -118,9 +154,9 @@ export default function ComplianceTable({ tasks, onUpdate, onEdit }: ComplianceT
                             </td>
                             <td className={styles.tableCell}>
                                 <div className="flex items-center gap-2">
-                                    {task.evidenceUrl ? (
+                                    {getComplyUrl(task) ? (
                                         <a
-                                            href={task.evidenceUrl}
+                                            href={getComplyUrl(task)!}
                                             target="_blank"
                                             rel="noopener noreferrer"
                                             className={styles.viewBtn}

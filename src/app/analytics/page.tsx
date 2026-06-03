@@ -3,11 +3,7 @@ import { redirect } from "next/navigation";
 import {
     getAnalyticsMetrics,
     getRevenueTrend,
-    getTopClients,
-    getLawyerStats,
     getMatterDistribution,
-    getCourtVisits,
-    getExpenseDistribution
 } from '@/app/actions/analytics';
 import AnalyticsClient from './AnalyticsClient';
 
@@ -25,45 +21,25 @@ export default async function AnalyticsPage(props: {
 
     const filter = searchParams.filter || 'this-month';
 
-    let metrics, revenueTrend, topClients, lawyerStats, matterDistribution, courtVisits, expenseDistribution;
-
-    try {
-        const results = await Promise.all([
-            getAnalyticsMetrics(workspaceId, filter),
-            getRevenueTrend(workspaceId),
-            getTopClients(workspaceId, filter),
-            getLawyerStats(workspaceId),
-            getMatterDistribution(workspaceId),
-            getCourtVisits(workspaceId, filter),
-            getExpenseDistribution(workspaceId, filter)
-        ]);
-        
-        [metrics, revenueTrend, topClients, lawyerStats, matterDistribution, courtVisits, expenseDistribution] = results;
-    } catch (error) {
-        console.error("Critical Analytics Fetch Failure:", error);
-    }
-
-    const analyticsData = {
-        metrics: metrics || {
-            revenue: { total: 0, lastMonth: 0, growth: 0 },
-            matters: { active: 0, newThisMonth: 0 },
-            expenses: { total: 0, count: 0 },
-            courtDates: { upcoming: 0 }
-        },
-        revenueTrend: revenueTrend || [],
-        topClients: topClients || [],
-        lawyerStats: lawyerStats || [],
-        matterDistribution: matterDistribution || [],
-        courtVisits: courtVisits || [],
-        expenseDistribution: expenseDistribution || []
-    };
+    // Only run the fast aggregates SSR — everything else loads client-side
+    const [metrics, revenueTrend, matterDistribution] = await Promise.all([
+        getAnalyticsMetrics(workspaceId, filter),
+        getRevenueTrend(workspaceId),
+        getMatterDistribution(workspaceId),
+    ]);
 
     return (
         <AnalyticsClient
-            data={analyticsData}
+            initialMetrics={metrics || {
+                revenue: { total: 0, lastMonth: 0, growth: 0 },
+                matters: { active: 0, newThisMonth: 0 },
+                expenses: { total: 0, count: 0 },
+                courtDates: { upcoming: 0 },
+            }}
+            initialRevenueTrend={revenueTrend || []}
+            initialMatterDistribution={matterDistribution || []}
             workspaceId={workspaceId}
             initialFilter={filter}
         />
     );
 }
-

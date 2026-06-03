@@ -5,6 +5,7 @@ import { X, Calendar, User, Users, MapPin, FileText, AlertCircle, Loader, Buildi
 import { adjournMatter, addMatterNote, updateMatter, deleteMatter, updateCalendarEntry } from '@/app/actions/matters';
 import { getLawyersForWorkspace } from '@/lib/briefs';
 import styles from './MatterDetailModal.module.css';
+import ConfirmDialog from '@/components/ui/ConfirmDialog';
 
 import { Matter } from '@/types/legal';
 
@@ -35,6 +36,7 @@ const MatterDetailModal = ({ isOpen, onClose, matter, userId }: MatterDetailModa
     const [isEditMode, setIsEditMode] = useState(false);
     const [editedMatter, setEditedMatter] = useState(matter);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [editingJudgeId, setEditingJudgeId] = useState<string | null>(null);
     const [editingJudgeValue, setEditingJudgeValue] = useState('');
 
@@ -160,23 +162,12 @@ const MatterDetailModal = ({ isOpen, onClose, matter, userId }: MatterDetailModa
     };
 
     const handleDelete = async () => {
-        if (!confirm(`Are you sure you want to delete "${matter.name}"? This action cannot be undone.`)) {
-            return;
-        }
-
         setIsSubmitting(true);
         try {
             const result = await deleteMatter(matter.id);
-
-            if (result.success) {
-                alert('Matter deleted successfully!');
-                onClose();
-            } else {
-                alert('Failed to delete matter: ' + result.error);
-            }
-        } catch (error) {
-            console.error('Error deleting matter:', error);
-            alert('An error occurred while deleting');
+            if (result.success) onClose();
+        } catch {
+            // silent — modal closes on success only
         } finally {
             setIsSubmitting(false);
         }
@@ -205,7 +196,7 @@ const MatterDetailModal = ({ isOpen, onClose, matter, userId }: MatterDetailModa
                                 <button onClick={handleEdit} className={styles.editBtn} disabled={isSubmitting}>
                                     <Edit size={16} />
                                 </button>
-                                <button onClick={handleDelete} className={styles.deleteBtn} disabled={isSubmitting}>
+                                <button onClick={() => setShowDeleteConfirm(true)} className={styles.deleteBtn} disabled={isSubmitting}>
                                     <Trash2 size={16} />
                                 </button>
                             </>
@@ -397,6 +388,16 @@ const MatterDetailModal = ({ isOpen, onClose, matter, userId }: MatterDetailModa
                 </div>
             </div>
         </div>
+
+        <ConfirmDialog
+            open={showDeleteConfirm}
+            title="Delete matter"
+            message={`Delete "${matter.name}"? All associated calendar entries will also be removed. This cannot be undone.`}
+            confirmLabel="Delete"
+            danger
+            onConfirm={() => { setShowDeleteConfirm(false); handleDelete(); }}
+            onCancel={() => setShowDeleteConfirm(false)}
+        />
     );
 };
 

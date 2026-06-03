@@ -27,7 +27,6 @@ function getDateRange(filter: string) {
 export async function getAnalyticsMetrics(workspaceId: string, filter: string = 'this-month') {
     if (!workspaceId) return null;
 
-    console.log(`[Analytics] Fetching metrics for Workspace: ${workspaceId}, Filter: ${filter}`);
 
     const today = new Date();
     const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0);
@@ -86,7 +85,6 @@ export async function getAnalyticsMetrics(workspaceId: string, filter: string = 
         revenueGrowth = 100;
     }
 
-    console.log(`[Analytics] Results - Revenue: ${thisMonthRevenue}, Matters: ${activeMattersCount}, Expenses: ${totalExpenses}, Court dates: ${pendingCourtDates}`);
 
     return {
         revenue: {

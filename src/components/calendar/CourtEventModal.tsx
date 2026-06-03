@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { X, Calendar, MapPin, User, FileText, Gavel, Clock, Users, Check, Pencil, Loader, Trash2 } from 'lucide-react';
 import styles from './EventModal.module.css';
+import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import { CalendarEvent, LawyerSummary } from '@/types/legal';
 import { updateCalendarEntry } from '@/app/actions/matters';
 import { deleteCalendarEntry } from '@/app/actions/calendar-events';
@@ -52,6 +53,7 @@ export default function CourtEventModal({ isOpen, onClose, event, workspaceId, u
     const [isEditing, setIsEditing] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [isLoadingLawyers, setIsLoadingLawyers] = useState(false);
     const [allLawyers, setAllLawyers] = useState<LawyerSummary[]>([]);
     const [appearances, setAppearances] = useState<LawyerSummary[]>(event.appearances ?? []);
@@ -91,7 +93,6 @@ export default function CourtEventModal({ isOpen, onClose, event, workspaceId, u
     }, [event.id]);
 
     const handleDelete = async () => {
-        if (!confirm('Delete this calendar entry? This action can be reversed by IT Management.')) return;
         setIsDeleting(true);
         try {
             const result = await deleteCalendarEntry(event.id);
@@ -195,7 +196,7 @@ export default function CourtEventModal({ isOpen, onClose, event, workspaceId, u
                         )}
                         {!isEditing && canDelete && (
                             <button
-                                onClick={handleDelete}
+                                onClick={() => setShowDeleteConfirm(true)}
                                 disabled={isDeleting}
                                 style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.8rem', color: '#dc2626', background: 'none', border: '1px solid #dc2626', borderRadius: 6, padding: '4px 10px', cursor: 'pointer', fontWeight: 500, opacity: isDeleting ? 0.6 : 1 }}
                             >
@@ -395,5 +396,15 @@ export default function CourtEventModal({ isOpen, onClose, event, workspaceId, u
                 </div>
             </div>
         </div>
+
+        <ConfirmDialog
+            open={showDeleteConfirm}
+            title="Delete calendar entry"
+            message="This entry will be removed. IT Management can restore it if needed."
+            confirmLabel="Delete"
+            danger
+            onConfirm={() => { setShowDeleteConfirm(false); handleDelete(); }}
+            onCancel={() => setShowDeleteConfirm(false)}
+        />
     );
 }
