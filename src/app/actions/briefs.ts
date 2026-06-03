@@ -138,6 +138,13 @@ export async function getBriefById(id: string) {
                 // documents and folders excluded — fetched lazily client-side
                 // when the Documents tab is opened, avoiding a 200-row join on
                 // every brief page load.
+                briefLawyers: {
+                    include: {
+                        lawyer: {
+                            select: { id: true, name: true, email: true }
+                        }
+                    }
+                },
                 workspace: {
                     select: {
                         id: true,
@@ -165,6 +172,7 @@ export async function createBrief(data: {
     dueDate?: Date;
     description?: string;
     parentBriefId?: string;
+    assignments?: { lawyerId: string; role: string }[];
 }) {
     const session = await requireAuth();
     data = applyTitleCaseToFields(data, ['name']);
@@ -199,6 +207,12 @@ export async function createBrief(data: {
                     isLitigationDerived: false,
                     customTitle: null,
                     parentBriefId: data.parentBriefId || null,
+                    briefLawyers: {
+                        create: data.assignments?.map(a => ({
+                            lawyerId: a.lawyerId,
+                            role: a.role
+                        }))
+                    }
                 },
                 include: {
                     client: true,
@@ -253,6 +267,7 @@ export async function updateBrief(
         status?: string;
         dueDate?: Date | null;
         description?: string;
+        assignments?: { lawyerId: string; role: string }[];
     }
 ) {
     const session = await requireAuth();
@@ -365,9 +380,20 @@ export async function updateBrief(
             });
         }
 
+        const { assignments, ...rest } = data;
+
         const brief = await prisma.brief.update({
             where: { id },
-            data,
+            data: {
+                ...rest,
+                briefLawyers: assignments ? {
+                    deleteMany: {},
+                    create: assignments.map(a => ({
+                        lawyerId: a.lawyerId,
+                        role: a.role
+                    }))
+                } : undefined
+            },
             include: {
                 client: true,
                 lawyer: {

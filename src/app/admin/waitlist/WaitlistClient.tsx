@@ -50,6 +50,7 @@ export default function WaitlistClient({ entries: initialEntries }: { entries: W
     };
 
     return (
+        <>
         <div className={styles.content}>
             <div className={styles.toolbar}>
                 <div className={styles.searchWrapper}>
@@ -140,5 +141,6 @@ export default function WaitlistClient({ entries: initialEntries }: { entries: W
             onConfirm={() => { if (approvingId) handleApprove(approvingId); setApprovingId(null); }}
             onCancel={() => setApprovingId(null)}
         />
+        </>
     );
 }

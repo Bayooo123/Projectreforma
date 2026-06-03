@@ -160,7 +160,7 @@ function GuestAccountsTab({ workspaceId }: { workspaceId: string }) {
     const revokedGuests = guests.filter(g => g.status === 'revoked');
 
     return (
-        <div>
+        <><div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
                 <div>
                     <h2 style={{ fontWeight: 600, fontSize: '1rem', marginBottom: '0.25rem' }}>Guest Accounts</h2>
@@ -332,7 +332,7 @@ function GuestAccountsTab({ workspaceId }: { workspaceId: string }) {
             danger
             onConfirm={() => { if (revokingMemberId) handleRevoke(revokingMemberId); setRevokingMemberId(null); }}
             onCancel={() => setRevokingMemberId(null)}
-        />
+        /></>
     );
 }
 

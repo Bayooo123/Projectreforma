@@ -2,6 +2,7 @@
 
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { getBriefAssignmentsFilter } from "@/lib/brief-filters";
 
 function relativeTime(date: Date): string {
     const now = new Date();
@@ -151,8 +152,15 @@ export async function getPulseUserStats(workspaceId: string): Promise<PulseUserS
     weekEnd.setDate(startOfToday.getDate() + 7);
 
     try {
+        const assignmentFilter = getBriefAssignmentsFilter(userId);
         const [myBriefs, myBriefsAsPrimary, tasksOverdue, myHearings] = await Promise.all([
-            prisma.brief.count({ where: { lawyerId: userId, status: { equals: 'active', mode: 'insensitive' }, deletedAt: null } }),
+            prisma.brief.count({
+                where: {
+                    ...assignmentFilter,
+                    status: { equals: 'active', mode: 'insensitive' },
+                    deletedAt: null
+                }
+            }),
             prisma.brief.count({ where: { lawyerInChargeId: userId, status: { equals: 'active', mode: 'insensitive' }, deletedAt: null } }),
             prisma.task.count({ where: { assignedToId: userId, status: { not: 'completed' }, dueDate: { lt: startOfToday } } }),
             prisma.calendarEntry.count({ where: { date: { gte: startOfToday, lte: weekEnd }, appearances: { some: { id: userId } } } }),
@@ -224,7 +232,16 @@ export async function getPulseFeedFirmwide(workspaceId: string): Promise<PulseIt
             prisma.pulseEvent.findMany({
                 where: { workspaceId, createdAt: { gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) } },
                 take: 10, orderBy: { createdAt: 'desc' },
-                select: { id: true, title: true, summary: true, intent: true, urgency: true, senderName: true, senderEmail: true, createdAt: true, actionItems: true, inboundEmailId: true, brief: { select: { name: true, id: true } }, assignedTo: { select: { name: true } } },
+                select: {
+                    id: true, title: true, summary: true, intent: true, urgency: true, senderName: true, senderEmail: true, createdAt: true, actionItems: true, inboundEmailId: true,
+                    brief: {
+                        select: {
+                            name: true, id: true,
+                            briefLawyers: { include: { lawyer: { select: { name: true } } }, take: 3 }
+                        }
+                    },
+                    assignedTo: { select: { name: true } }
+                },
             }),
         ]);
 
@@ -321,6 +338,18 @@ export async function getPulseFeedFirmwide(workspaceId: string): Promise<PulseIt
                 ? ` Action: ${(pe.actionItems as string[])[0]}`
                 : '';
 
+            const assignedLawyers = (pe.brief as any)?.briefLawyers?.map((bl: any) => ({
+                initials: getInitials(bl.lawyer.name || 'U'),
+                label: bl.lawyer.name || ''
+            })) || [];
+
+            if (pe.assignedTo?.name && !assignedLawyers.some((l: any) => l.label === pe.assignedTo?.name)) {
+                assignedLawyers.unshift({
+                    initials: getInitials(pe.assignedTo.name),
+                    label: pe.assignedTo.name
+                });
+            }
+
             items.push({
                 id: `pulse-${pe.id}`,
                 severity,
@@ -332,7 +361,7 @@ export async function getPulseFeedFirmwide(workspaceId: string): Promise<PulseIt
                 categories: ['client', 'firm'] as PulseCategory[],
                 ctaLabel: pe.brief?.id ? 'View brief' : 'Review',
                 ctaHref: pe.brief?.id ? `/briefs/${pe.brief.id}` : '/management/clients',
-                ...(pe.assignedTo?.name ? { lawyers: [{ initials: getInitials(pe.assignedTo.name), label: pe.assignedTo.name }] } : {}),
+                lawyers: assignedLawyers.slice(0, 3)
             });
         }
 
@@ -447,6 +476,7 @@ export async function getPulseFeedUser(workspaceId: string): Promise<PulseItem[]
     thirtyDaysAgo.setDate(today.getDate() - 30);
 
     try {
+        const assignmentFilter = getBriefAssignmentsFilter(userId);
         const [myOverdueTasks, myUrgentBriefs, myActiveBriefs, recentLeadBriefs, matterNoContact] = await Promise.all([
             prisma.task.findMany({
                 where: { assignedToId: userId, status: { not: 'completed' }, dueDate: { lt: today } },
@@ -454,12 +484,21 @@ export async function getPulseFeedUser(workspaceId: string): Promise<PulseItem[]
                 include: { brief: { select: { name: true, id: true } }, matter: { select: { name: true } } },
             }),
             prisma.brief.findMany({
-                where: { lawyerId: userId, status: 'active', deletedAt: null, dueDate: { gte: today, lte: threeDaysFromNow } },
+                where: {
+                    ...assignmentFilter,
+                    status: 'active',
+                    deletedAt: null,
+                    dueDate: { gte: today, lte: threeDaysFromNow }
+                },
                 take: 1, orderBy: { dueDate: 'asc' },
                 include: { client: { select: { name: true } } },
             }),
             prisma.brief.findMany({
-                where: { lawyerId: userId, status: 'active', deletedAt: null },
+                where: {
+                    ...assignmentFilter,
+                    status: 'active',
+                    deletedAt: null
+                },
                 take: 10, orderBy: { createdAt: 'desc' },
                 include: { documents: { select: { id: true } } },
             }),
@@ -469,7 +508,15 @@ export async function getPulseFeedUser(workspaceId: string): Promise<PulseItem[]
                 include: { client: { select: { name: true } }, matter: { include: { lawyers: { include: { lawyer: { select: { name: true } } }, take: 3 } } } },
             }),
             prisma.matter.findFirst({
-                where: { workspaceId, status: { not: 'Closed' }, lawyers: { some: { lawyerId: userId } }, lastClientContact: { lt: thirtyDaysAgo } },
+                where: {
+                    workspaceId,
+                    status: { not: 'Closed' },
+                    OR: [
+                        { lawyers: { some: { lawyerId: userId } } },
+                        { briefs: { some: { ...assignmentFilter } } }
+                    ],
+                    lastClientContact: { lt: thirtyDaysAgo }
+                },
                 orderBy: { lastClientContact: 'asc' },
                 include: { client: { select: { name: true } } },
             }),

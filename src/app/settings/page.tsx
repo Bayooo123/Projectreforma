@@ -291,7 +291,7 @@ export default function SettingsPage() {
     if (isLoading && !session) return <div className={styles.loading}><Loader className="spin" /> Loading...</div>;
 
     return (
-        <div className={styles.container}>
+        <><div className={styles.container}>
             <header className={styles.header}>
                 <h1>Settings</h1>
                 <p>Manage your personal profile, firm preferences, and integrations.</p>
@@ -1002,6 +1002,6 @@ export default function SettingsPage() {
             danger
             onConfirm={() => { if (revokingKeyId) handleRevokeKey(revokingKeyId); setRevokingKeyId(null); }}
             onCancel={() => setRevokingKeyId(null)}
-        />
+        /></>
     );
 }

@@ -61,6 +61,7 @@ export default function MeetingEventModal({ isOpen, onClose, event, userId, user
     const date = new Date(event.date);
 
     return (
+        <>
         <div className={styles.overlay}>
             <div className={styles.modal}>
                 <div className={styles.header}>
@@ -139,5 +140,6 @@ export default function MeetingEventModal({ isOpen, onClose, event, userId, user
             onConfirm={() => { setShowDeleteConfirm(false); handleDelete(); }}
             onCancel={() => setShowDeleteConfirm(false)}
         />
+        </>
     );
 }

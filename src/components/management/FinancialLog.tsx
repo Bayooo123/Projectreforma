@@ -165,6 +165,7 @@ const FinancialLog = ({ workspaceId, initialExpenses, initialSummaries, userRole
     }, 0);
 
     return (
+        <>
         <div className={styles.container}>
             <div className={styles.header}>
                 <div>
@@ -325,6 +326,7 @@ const FinancialLog = ({ workspaceId, initialExpenses, initialSummaries, userRole
             onConfirm={() => { if (deletingExpenseId) handleDeleteExpense(deletingExpenseId); setDeletingExpenseId(null); }}
             onCancel={() => setDeletingExpenseId(null)}
         />
+        </>
     );
 };
 

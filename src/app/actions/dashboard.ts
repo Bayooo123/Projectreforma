@@ -4,6 +4,7 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
+import { getBriefAssignmentsFilter } from "@/lib/brief-filters";
 
 export async function getMyBriefs(limit: number = 5) {
     const session = await auth();
@@ -11,7 +12,7 @@ export async function getMyBriefs(limit: number = 5) {
 
     return await prisma.brief.findMany({
         where: {
-            lawyerId: session.user.id,
+            ...getBriefAssignmentsFilter(session.user.id),
             status: 'active',
             deletedAt: null,
         },

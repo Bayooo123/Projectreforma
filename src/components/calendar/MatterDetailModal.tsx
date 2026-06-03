@@ -174,7 +174,7 @@ const MatterDetailModal = ({ isOpen, onClose, matter, userId }: MatterDetailModa
     };
 
     return (
-        <div className={styles.overlay}>
+        <><div className={styles.overlay}>
             <div className={styles.modal}>
                 <div className={styles.header}>
                     <div>
@@ -397,7 +397,7 @@ const MatterDetailModal = ({ isOpen, onClose, matter, userId }: MatterDetailModa
             danger
             onConfirm={() => { setShowDeleteConfirm(false); handleDelete(); }}
             onCancel={() => setShowDeleteConfirm(false)}
-        />
+        /></>
     );
 };
 

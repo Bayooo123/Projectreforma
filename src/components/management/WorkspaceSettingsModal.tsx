@@ -128,7 +128,7 @@ const WorkspaceSettingsModal = ({ isOpen, onClose, workspaceId, currentLetterhea
     };
 
     return (
-        <div className={styles.overlay} onClick={onClose}>
+        <><div className={styles.overlay} onClick={onClose}>
             <div className={styles.modal} onClick={(e) => e.stopPropagation()} style={{ maxWidth: '600px' }}>
                 <div className={styles.header}>
                     <div>
@@ -588,7 +588,7 @@ const WorkspaceSettingsModal = ({ isOpen, onClose, workspaceId, currentLetterhea
             danger
             onConfirm={() => { if (rejectingMemberId) handleReject(rejectingMemberId); setRejectingMemberId(null); }}
             onCancel={() => setRejectingMemberId(null)}
-        />
+        /></>
     );
 };
 

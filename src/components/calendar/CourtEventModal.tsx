@@ -181,6 +181,7 @@ export default function CourtEventModal({ isOpen, onClose, event, workspaceId, u
     };
 
     return (
+        <>
         <div className={styles.overlay}>
             <div className={styles.modal}>
                 <div className={styles.header}>
@@ -406,5 +407,6 @@ export default function CourtEventModal({ isOpen, onClose, event, workspaceId, u
             onConfirm={() => { setShowDeleteConfirm(false); handleDelete(); }}
             onCancel={() => setShowDeleteConfirm(false)}
         />
+        </>
     );
 }
