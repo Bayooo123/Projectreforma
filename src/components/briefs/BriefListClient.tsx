@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { Search, Filter, MoreVertical, Plus, Trash2, Eye, Briefcase, MessageSquare, Edit, FolderTree, ChevronDown, ChevronRight, Share2, FileText } from 'lucide-react';
+import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import styles from './BriefList.module.css';
 import { deleteBrief, getBriefs } from '@/app/actions/briefs'; // Only import actions needed
 import EditBriefModal from './EditBriefModal';
@@ -47,8 +48,11 @@ export default function BriefListClient({ initialBriefs, workspaceId }: Omit<Bri
     const [menuPos, setMenuPos] = useState<{ top: number; right: number } | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState<string>('all');
+    const [sortBy, setSortBy] = useState<'recent' | 'name' | 'client' | 'status'>('recent');
+    const [showSortMenu, setShowSortMenu] = useState(false);
     const [expandedBriefIds, setExpandedBriefIds] = useState<Set<string>>(new Set());
     const [movingBrief, setMovingBrief] = useState<any | null>(null);
+    const [deletingBriefId, setDeletingBriefId] = useState<string | null>(null);
 
     // Persist to sessionStorage whenever briefs change
     useEffect(() => {
@@ -83,14 +87,10 @@ export default function BriefListClient({ initialBriefs, workspaceId }: Omit<Bri
     const router = useRouter();
 
     const handleDelete = async (id: string) => {
-        if (confirm('Are you sure you want to delete this brief?')) {
-            const result = await deleteBrief(id);
-            if (result.success) {
-                setBriefs(briefs.filter(b => b.id !== id));
-                router.refresh(); // Sync server state
-            } else {
-                alert('Failed to delete brief: ' + result.error);
-            }
+        const result = await deleteBrief(id);
+        if (result.success) {
+            setBriefs(briefs.filter(b => b.id !== id));
+            router.refresh();
         }
     };
 
@@ -135,22 +135,30 @@ export default function BriefListClient({ initialBriefs, workspaceId }: Omit<Bri
         setQuickViewBrief({ id: brief.id, name: getBriefDisplayTitle(brief) });
     };
 
-    // Client-side filtering for immediate feedback on search input
-    const displayedBriefs = briefs.filter(brief => {
-        if (searchQuery) {
-            const query = searchQuery.toLowerCase();
-            const matchesSearch =
-                brief.name?.toLowerCase().includes(query) ||
-                brief.briefNumber?.toLowerCase().includes(query) ||
-                (brief.client?.name || '').toLowerCase().includes(query) ||
-                brief.category?.toLowerCase().includes(query);
-            if (!matchesSearch) return false;
-        }
-        if (statusFilter !== 'all' && brief.status.toLowerCase() !== statusFilter) {
-            return false;
-        }
-        return true;
-    });
+    // Client-side filtering and sorting
+    const displayedBriefs = briefs
+        .filter(brief => {
+            if (searchQuery) {
+                const query = searchQuery.toLowerCase();
+                const matchesSearch =
+                    brief.name?.toLowerCase().includes(query) ||
+                    brief.briefNumber?.toLowerCase().includes(query) ||
+                    (brief.client?.name || '').toLowerCase().includes(query) ||
+                    brief.category?.toLowerCase().includes(query);
+                if (!matchesSearch) return false;
+            }
+            if (statusFilter !== 'all' && brief.status.toLowerCase() !== statusFilter) {
+                return false;
+            }
+            return true;
+        })
+        .sort((a, b) => {
+            if (sortBy === 'name') return (a.name || '').localeCompare(b.name || '');
+            if (sortBy === 'client') return (a.client?.name || '').localeCompare(b.client?.name || '');
+            if (sortBy === 'status') return (a.status || '').localeCompare(b.status || '');
+            // default: recent (updatedAt desc)
+            return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+        });
 
     // --- HIERARCHY LOGIC ---
     // 1. Identify which briefs have children
@@ -206,10 +214,40 @@ export default function BriefListClient({ initialBriefs, workspaceId }: Omit<Bri
                         onChange={(e) => setSearchQuery(e.target.value)}
                     />
                 </div>
-                <button className={styles.sortBtn}>
-                    <Filter size={16} />
-                    <span>Sort by</span>
-                </button>
+                <div style={{ position: 'relative' }}>
+                    <button className={styles.sortBtn} onClick={() => setShowSortMenu(v => !v)}>
+                        <Filter size={16} />
+                        <span>Sort: {sortBy === 'recent' ? 'Recent' : sortBy === 'name' ? 'Name' : sortBy === 'client' ? 'Client' : 'Status'}</span>
+                    </button>
+                    {showSortMenu && (
+                        <>
+                            <div style={{ position: 'fixed', inset: 0, zIndex: 99 }} onClick={() => setShowSortMenu(false)} />
+                            <div style={{
+                                position: 'absolute', top: '110%', right: 0, zIndex: 100,
+                                background: 'var(--surface)', border: '1px solid var(--border)',
+                                borderRadius: 8, boxShadow: '0 4px 16px rgba(0,0,0,0.1)',
+                                minWidth: 160, overflow: 'hidden',
+                            }}>
+                                {(['recent', 'name', 'client', 'status'] as const).map(opt => (
+                                    <button
+                                        key={opt}
+                                        onClick={() => { setSortBy(opt); setShowSortMenu(false); }}
+                                        style={{
+                                            width: '100%', padding: '0.55rem 0.9rem', textAlign: 'left',
+                                            background: sortBy === opt ? 'var(--primary-light, #f0fdfa)' : 'none',
+                                            border: 'none', cursor: 'pointer',
+                                            color: sortBy === opt ? 'var(--primary)' : 'var(--text-primary)',
+                                            fontWeight: sortBy === opt ? 600 : 400,
+                                            fontSize: '0.8rem',
+                                        }}
+                                    >
+                                        {opt === 'recent' ? 'Most recent' : opt === 'name' ? 'Brief name' : opt === 'client' ? 'Client name' : 'Status'}
+                                    </button>
+                                ))}
+                            </div>
+                        </>
+                    )}
+                </div>
             </div>
 
             {displayedBriefs.length === 0 ? (
@@ -343,7 +381,7 @@ export default function BriefListClient({ initialBriefs, workspaceId }: Omit<Bri
                                 </button>
                                 <button
                                     className={`${styles.menuItem} ${styles.deleteItem}`}
-                                    onClick={() => { handleDelete(brief.id); setActiveActionId(null); setMenuPos(null); }}
+                                    onClick={() => { setDeletingBriefId(brief.id); setActiveActionId(null); setMenuPos(null); }}
                                 >
                                     <Trash2 size={14} /> Delete Brief
                                 </button>
@@ -430,6 +468,16 @@ export default function BriefListClient({ initialBriefs, workspaceId }: Omit<Bri
                     // Refetch briefs to update UI
                     getBriefs(workspaceId).then(setBriefs);
                 }}
+            />
+
+            <ConfirmDialog
+                open={!!deletingBriefId}
+                title="Delete brief"
+                message="This will permanently delete the brief and all its documents. This cannot be undone."
+                confirmLabel="Delete"
+                danger
+                onConfirm={() => { if (deletingBriefId) handleDelete(deletingBriefId); setDeletingBriefId(null); }}
+                onCancel={() => setDeletingBriefId(null)}
             />
 
             {quickViewBrief && (

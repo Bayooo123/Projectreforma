@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useTransition } from 'react';
+import { useState, useMemo, useTransition, useEffect } from 'react';
 import {
     Mail, Link2, Plus, Search, X, Check, AlertCircle,
     ChevronDown, Unlink, FileText, CheckSquare, Square, RefreshCw,
@@ -9,7 +9,7 @@ import {
     InboxEmail, InboxBrief,
     linkEmailToBrief, unlinkEmail,
     bulkLinkEmailsToBrief, quickCreateBriefAndLink,
-    getInboxEmails,
+    getInboxEmails, getInboxBriefs,
 } from '@/app/actions/email-inbox';
 import styles from './page.module.css';
 
@@ -278,16 +278,38 @@ function BulkBar({ count, onLinkAll, onCreateBrief, onClear }: BulkBarProps) {
 
 // ── Main ──────────────────────────────────────────────────────────────────────
 
-interface Props { emails: InboxEmail[]; briefs: InboxBrief[]; }
+interface Props { emails?: InboxEmail[]; briefs?: InboxBrief[]; }
 
-export default function EmailInboxClient({ emails: initial, briefs }: Props) {
+export default function EmailInboxClient({ emails: initial = [], briefs: initialBriefs = [] }: Props) {
     const [emails, setEmails]               = useState<InboxEmail[]>(initial);
+    const [briefs, setBriefs]               = useState<InboxBrief[]>(initialBriefs);
     const [filter, setFilter]               = useState<'all' | 'unlinked' | 'linked'>('all');
     const [search, setSearch]               = useState('');
     const [selected, setSelected]           = useState<Set<string>>(new Set());
     const [panelTarget, setPanelTarget]     = useState<{ emailIds: string[]; subject: string; mode?: 'search' | 'create' } | null>(null);
     const [refreshing, setRefreshing]       = useState(false);
+    const [loading, setLoading]             = useState(initial.length === 0);
     const [, startTransition]               = useTransition();
+
+    useEffect(() => {
+        if (initial.length === 0 || initialBriefs.length === 0) {
+            handleInitialFetch();
+        }
+    }, []);
+
+    const handleInitialFetch = async () => {
+        setLoading(true);
+        try {
+            const [freshEmails, freshBriefs] = await Promise.all([
+                getInboxEmails('all'),
+                getInboxBriefs(),
+            ]);
+            setEmails(freshEmails);
+            setBriefs(freshBriefs);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     const handleRefresh = async () => {
         setRefreshing(true);
@@ -422,7 +444,12 @@ export default function EmailInboxClient({ emails: initial, briefs }: Props) {
 
                     {/* List */}
                     <div className={styles.list}>
-                        {visible.length === 0 && (
+                        {loading ? (
+                            <div className={styles.empty}>
+                                <RefreshCw size={28} className={styles.spinning} />
+                                <p>Loading your inbox…</p>
+                            </div>
+                        ) : visible.length === 0 && (
                             <div className={styles.empty}>
                                 <FileText size={28} style={{ opacity: 0.3 }} />
                                 <p>No emails match this filter</p>

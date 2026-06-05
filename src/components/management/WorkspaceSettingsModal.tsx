@@ -6,6 +6,7 @@ import { useSession } from 'next-auth/react';
 import { getRoleSeniority } from '@/lib/roles';
 import { X, Upload, FileText, Loader, Check, Lock, Key, Building } from 'lucide-react';
 import { put } from '@vercel/blob';
+import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import { getWorkspaceMembers, approveMember, rejectMember } from '@/app/actions/members';
 import { updateWorkspaceAccess, WorkspaceAccessState } from '@/app/actions/workspace';
 import styles from './InvoiceModal.module.css'; // Reusing modal styles for consistency
@@ -26,6 +27,7 @@ const WorkspaceSettingsModal = ({ isOpen, onClose, workspaceId, currentLetterhea
     const canManagePin = getRoleSeniority(session?.user?.role || '') >= 5;
 
     const [activeTab, setActiveTab] = useState<'general' | 'members' | 'access'>('general');
+    const [rejectingMemberId, setRejectingMemberId] = useState<string | null>(null);
     const [members, setMembers] = useState<any[]>([]);
     const [isLoadingMembers, setIsLoadingMembers] = useState(false);
 
@@ -74,7 +76,6 @@ const WorkspaceSettingsModal = ({ isOpen, onClose, workspaceId, currentLetterhea
     };
 
     const handleReject = async (memberId: string) => {
-        if (!confirm('Are you sure you want to reject and remove this member?')) return;
         const result = await rejectMember(memberId);
         if (result.success) {
             fetchMembers();
@@ -127,7 +128,7 @@ const WorkspaceSettingsModal = ({ isOpen, onClose, workspaceId, currentLetterhea
     };
 
     return (
-        <div className={styles.overlay} onClick={onClose}>
+        <><div className={styles.overlay} onClick={onClose}>
             <div className={styles.modal} onClick={(e) => e.stopPropagation()} style={{ maxWidth: '600px' }}>
                 <div className={styles.header}>
                     <div>
@@ -309,7 +310,7 @@ const WorkspaceSettingsModal = ({ isOpen, onClose, workspaceId, currentLetterhea
                                                             Approve
                                                         </button>
                                                         <button
-                                                            onClick={() => handleReject(member.id)}
+                                                            onClick={() => setRejectingMemberId(member.id)}
                                                             style={{
                                                                 padding: '0.5rem 1rem',
                                                                 background: 'var(--danger)',
@@ -578,6 +579,16 @@ const WorkspaceSettingsModal = ({ isOpen, onClose, workspaceId, currentLetterhea
                 </div>
             </div>
         </div>
+
+        <ConfirmDialog
+            open={!!rejectingMemberId}
+            title="Remove member"
+            message="This member's access will be revoked and they will be removed from the workspace."
+            confirmLabel="Remove"
+            danger
+            onConfirm={() => { if (rejectingMemberId) handleReject(rejectingMemberId); setRejectingMemberId(null); }}
+            onCancel={() => setRejectingMemberId(null)}
+        /></>
     );
 };
 

@@ -11,10 +11,13 @@ import { sendPasswordResetFromSettings } from '@/app/actions/auth';
 import { getSubscriptionStatus, initiateSubscriptionPayment, checkPaymentStatus, getSubscriptionPayments } from '@/app/actions/subscriptions';
 import { BAND_LABELS, TIER_LABELS, SUBSCRIPTION_PRICES, formatNaira, type SubscriptionBand, type SubscriptionTier } from '@/lib/subscriptionPricing';
 import styles from './page.module.css';
+import ConfirmDialog from '@/components/ui/ConfirmDialog';
 
 export default function SettingsPage() {
     const { data: session } = useSession();
     const [activeTab, setActiveTab] = useState<'profile' | 'firm' | 'apikeys' | 'security' | 'storage' | 'subscription'>('profile');
+    const [deletingAccountId, setDeletingAccountId] = useState<string | null>(null);
+    const [revokingKeyId, setRevokingKeyId] = useState<string | null>(null);
 
     // Config State
     const [isLoading, setIsLoading] = useState(true);
@@ -178,7 +181,6 @@ export default function SettingsPage() {
     };
 
     const handleDeleteAccount = async (id: string) => {
-        if (!confirm('Delete this account?')) return;
         await deleteBankAccount(id);
         setBankAccounts(bankAccounts.filter(a => a.id !== id));
     };
@@ -203,7 +205,6 @@ export default function SettingsPage() {
     };
 
     const handleRevokeKey = async (keyId: string) => {
-        if (!confirm('Revoke this API key? This cannot be undone.')) return;
         if (!session?.user?.id) return;
         const res = await revokeApiKey(keyId, session.user.id);
         if (res.success) {
@@ -290,7 +291,7 @@ export default function SettingsPage() {
     if (isLoading && !session) return <div className={styles.loading}><Loader className="spin" /> Loading...</div>;
 
     return (
-        <div className={styles.container}>
+        <><div className={styles.container}>
             <header className={styles.header}>
                 <h1>Settings</h1>
                 <p>Manage your personal profile, firm preferences, and integrations.</p>
@@ -548,7 +549,7 @@ export default function SettingsPage() {
                                             <strong>{account.bankName}</strong> ({account.currency})
                                             <div className={styles.accountDetail}>{account.accountNumber} - {account.accountName}</div>
                                         </div>
-                                        <button onClick={() => handleDeleteAccount(account.id)} className={styles.removeBtn}>Remove</button>
+                                        <button onClick={() => setDeletingAccountId(account.id)} className={styles.removeBtn}>Remove</button>
                                     </div>
                                 ))}
                             </div>
@@ -661,7 +662,7 @@ export default function SettingsPage() {
                                                 </div>
                                             </div>
                                             <button
-                                                onClick={() => handleRevokeKey(key.id)}
+                                                onClick={() => setRevokingKeyId(key.id)}
                                                 style={{
                                                     background: 'rgba(239, 68, 68, 0.1)',
                                                     border: 'none',
@@ -983,5 +984,24 @@ export default function SettingsPage() {
                 )}
             </div>
         </div>
+
+        <ConfirmDialog
+            open={!!deletingAccountId}
+            title="Remove bank account"
+            message="This bank account will be removed from your firm settings."
+            confirmLabel="Remove"
+            danger
+            onConfirm={() => { if (deletingAccountId) handleDeleteAccount(deletingAccountId); setDeletingAccountId(null); }}
+            onCancel={() => setDeletingAccountId(null)}
+        />
+        <ConfirmDialog
+            open={!!revokingKeyId}
+            title="Revoke API key"
+            message="This key will stop working immediately. Any integration using it will break. This cannot be undone."
+            confirmLabel="Revoke"
+            danger
+            onConfirm={() => { if (revokingKeyId) handleRevokeKey(revokingKeyId); setRevokingKeyId(null); }}
+            onCancel={() => setRevokingKeyId(null)}
+        /></>
     );
 }

@@ -91,3 +91,33 @@ export async function deleteDocument(id: string, briefId: string) {
         return { success: false, error: error?.message || 'Failed to delete document' };
     }
 }
+
+export async function getDocumentVersions(documentId: string) {
+    try {
+        // Fetch without explicit select so all scalar fields (including versionOfId) are returned
+        const doc = await prisma.document.findUnique({
+            where: { id: documentId },
+        });
+
+        const orClauses: any[] = [
+            { id: documentId },
+        ];
+        // Children: documents that are versions of this one
+        // Cast to any because versionOfId may not appear in the generated select type
+        // but IS a valid filter field on DocumentWhereInput
+        orClauses.push({ versionOfId: documentId } as any);
+        // Parent: document this is a version of
+        if ((doc as any)?.versionOfId) {
+            orClauses.push({ id: (doc as any).versionOfId });
+        }
+
+        const versions = await prisma.document.findMany({
+            where: { OR: orClauses },
+            orderBy: { uploadedAt: 'asc' },
+        });
+
+        return versions;
+    } catch {
+        return [];
+    }
+}

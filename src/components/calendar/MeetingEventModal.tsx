@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { X, Calendar, MapPin, Users, FileText, Loader, Trash2 } from 'lucide-react';
 import styles from './EventModal.module.css';
+import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import { CalendarEvent } from '@/types/legal';
 import { deleteCalendarEntry } from '@/app/actions/calendar-events';
 
@@ -32,6 +33,7 @@ interface MeetingEventModalProps {
 
 export default function MeetingEventModal({ isOpen, onClose, event, userId, userRole, userEmail, isOwner, onDelete }: MeetingEventModalProps) {
     const [isDeleting, setIsDeleting] = useState(false);
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
     const systemRole = getSystemRole(userRole);
     const canDelete =
@@ -41,7 +43,6 @@ export default function MeetingEventModal({ isOpen, onClose, event, userId, user
         userEmail === SPECIAL_DELETE_EMAIL;
 
     const handleDelete = async () => {
-        if (!confirm('Delete this meeting entry? This action can be reversed by IT Management.')) return;
         setIsDeleting(true);
         try {
             const result = await deleteCalendarEntry(event.id);
@@ -60,6 +61,7 @@ export default function MeetingEventModal({ isOpen, onClose, event, userId, user
     const date = new Date(event.date);
 
     return (
+        <>
         <div className={styles.overlay}>
             <div className={styles.modal}>
                 <div className={styles.header}>
@@ -67,7 +69,7 @@ export default function MeetingEventModal({ isOpen, onClose, event, userId, user
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                         {canDelete && (
                             <button
-                                onClick={handleDelete}
+                                onClick={() => setShowDeleteConfirm(true)}
                                 disabled={isDeleting}
                                 style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.8rem', color: '#dc2626', background: 'none', border: '1px solid #dc2626', borderRadius: 6, padding: '4px 10px', cursor: 'pointer', fontWeight: 500, opacity: isDeleting ? 0.6 : 1 }}
                             >
@@ -128,5 +130,16 @@ export default function MeetingEventModal({ isOpen, onClose, event, userId, user
                 </div>
             </div>
         </div>
+
+        <ConfirmDialog
+            open={showDeleteConfirm}
+            title="Delete meeting entry"
+            message="This entry will be removed. IT Management can restore it if needed."
+            confirmLabel="Delete"
+            danger
+            onConfirm={() => { setShowDeleteConfirm(false); handleDelete(); }}
+            onCancel={() => setShowDeleteConfirm(false)}
+        />
+        </>
     );
 }

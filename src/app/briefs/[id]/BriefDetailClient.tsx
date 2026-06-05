@@ -10,6 +10,7 @@ import DocumentPreview from '@/components/briefs/DocumentPreview';
 import EditBriefModal from '@/components/briefs/EditBriefModal';
 import CreateFolderModal from '@/components/briefs/CreateFolderModal';
 import MoveDocumentModal from '@/components/briefs/MoveDocumentModal';
+import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import styles from './page.module.css';
 
 interface DocItem {
@@ -96,6 +97,7 @@ export default function BriefDetailClient({ brief }: BriefDetailClientProps) {
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [isCreateFolderModalOpen, setIsCreateFolderModalOpen] = useState(false);
     const [movingDoc, setMovingDoc] = useState<DocItem | null>(null);
+    const [deletingFolder, setDeletingFolder] = useState<{ id: string; name: string } | null>(null);
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [docsLoaded, setDocsLoaded] = useState(false);
     const [activeTab, setActiveTab] = useState<'timeline' | 'documents'>(
@@ -152,9 +154,7 @@ export default function BriefDetailClient({ brief }: BriefDetailClientProps) {
         refreshData(true);
     };
 
-    const handleDeleteFolder = async (folderId: string, folderName: string) => {
-        if (!confirm(`Are you sure you want to delete the folder "${folderName}"?\nNote: Documents inside will be moved to the main brief.`)) return;
-
+    const handleDeleteFolder = async (folderId: string) => {
         try {
             const result = await deleteFolder(folderId, brief.id, true);
             if (result.success) {
@@ -407,11 +407,11 @@ export default function BriefDetailClient({ brief }: BriefDetailClientProps) {
                                     </div>
                                 </div>
                                 <div className={styles.documentActions} onClick={(e) => e.stopPropagation()}>
-                                    <button 
+                                    <button
                                         className={styles.deleteBtn}
                                         onClick={(e) => {
                                             e.stopPropagation();
-                                            handleDeleteFolder(folder.id, folder.name);
+                                            setDeletingFolder({ id: folder.id, name: folder.name });
                                         }}
                                         title="Delete Folder"
                                     >
@@ -505,6 +505,17 @@ export default function BriefDetailClient({ brief }: BriefDetailClientProps) {
                 onClose={() => setPreviewDocument(null)}
                 onNavigate={handleNavigateDocument}
                 canNavigate={getNavigationState()}
+                onVersionSelect={(v) => setPreviewDocument(v)}
+            />
+
+            <ConfirmDialog
+                open={!!deletingFolder}
+                title="Delete folder"
+                message={`Delete "${deletingFolder?.name}"? Documents inside will be moved to the main brief.`}
+                confirmLabel="Delete"
+                danger
+                onConfirm={() => { if (deletingFolder) handleDeleteFolder(deletingFolder.id); setDeletingFolder(null); }}
+                onCancel={() => setDeletingFolder(null)}
             />
         </div>
     );

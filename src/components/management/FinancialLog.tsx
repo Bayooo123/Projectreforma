@@ -5,6 +5,7 @@ import { TrendingDown, Plus, Edit2, Trash2, ArrowLeft } from 'lucide-react';
 import ExpenseModal from './ExpenseModal';
 import ExpensePeriodFilter, { DateRange } from './ExpensePeriodFilter';
 import styles from './FinancialLog.module.css';
+import ConfirmDialog from '@/components/ui/ConfirmDialog';
 
 interface Expense {
     id: string;
@@ -43,6 +44,7 @@ const FinancialLog = ({ workspaceId, initialExpenses, initialSummaries, userRole
     const [expenseToEdit, setExpenseToEdit] = useState<Expense | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [activeRange, setActiveRange] = useState<DateRange | null>(null);
+    const [deletingExpenseId, setDeletingExpenseId] = useState<string | null>(null);
 
     const canManageExpenses = isOwner || ['Managing Partner', 'Partner', 'Practice Manager', 'Head of Chamber'].includes(userRole);
 
@@ -93,8 +95,6 @@ const FinancialLog = ({ workspaceId, initialExpenses, initialSummaries, userRole
     };
 
     const handleDeleteExpense = async (id: string) => {
-        if (!confirm('Are you sure you want to delete this expense? This action cannot be undone.')) return;
-
         try {
             const response = await fetch(`/api/expenses?id=${id}&workspaceId=${workspaceId}`, {
                 method: 'DELETE',
@@ -165,6 +165,7 @@ const FinancialLog = ({ workspaceId, initialExpenses, initialSummaries, userRole
     }, 0);
 
     return (
+        <>
         <div className={styles.container}>
             <div className={styles.header}>
                 <div>
@@ -291,7 +292,7 @@ const FinancialLog = ({ workspaceId, initialExpenses, initialSummaries, userRole
                                                     </button>
                                                     <button 
                                                         className={styles.iconBtn} 
-                                                        onClick={(e) => { e.stopPropagation(); handleDeleteExpense(expense.id); }}
+                                                        onClick={(e) => { e.stopPropagation(); setDeletingExpenseId(expense.id); }}
                                                         title="Delete expense"
                                                         style={{ color: 'var(--danger)' }}
                                                     >
@@ -316,6 +317,16 @@ const FinancialLog = ({ workspaceId, initialExpenses, initialSummaries, userRole
                 expenseToEdit={expenseToEdit}
             />
         </div>
+        <ConfirmDialog
+            open={!!deletingExpenseId}
+            title="Delete expense"
+            message="This expense record will be permanently removed."
+            confirmLabel="Delete"
+            danger
+            onConfirm={() => { if (deletingExpenseId) handleDeleteExpense(deletingExpenseId); setDeletingExpenseId(null); }}
+            onCancel={() => setDeletingExpenseId(null)}
+        />
+        </>
     );
 };
 

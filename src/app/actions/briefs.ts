@@ -40,7 +40,65 @@ export async function getBriefs(workspaceId: string) {
 export async function getBriefById(id: string) {
     await requireAuth();
     try {
-        return BriefService.getById(id);
+        const brief = await prisma.brief.findUnique({
+            where: {
+                id,
+                deletedAt: null
+            },
+            include: {
+                client: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true,
+                        phone: true,
+                        company: true,
+                        status: true,
+                    },
+                },
+                lawyer: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true,
+                    },
+                },
+                lawyerInCharge: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true,
+                    },
+                },
+                matter: {
+                    select: {
+                        id: true,
+                        name: true,
+                        caseNumber: true,
+                        status: true,
+                        court: true,
+                        judge: true,
+                    },
+                },
+                // documents and folders excluded — fetched lazily client-side
+                // when the Documents tab is opened, avoiding a 200-row join on
+                // every brief page load.
+                briefLawyers: {
+                    include: {
+                        lawyer: {
+                            select: { id: true, name: true, email: true }
+                        }
+                    }
+                },
+                workspace: {
+                    select: {
+                        id: true,
+                        name: true,
+                    },
+                },
+            },
+        });
+        return brief;
     } catch (error) {
         console.error('Error fetching brief:', error);
         return null;
@@ -59,29 +117,51 @@ export async function createBrief(data: {
     dueDate?: Date;
     description?: string;
     parentBriefId?: string;
+    assignments?: { lawyerId: string; role: string }[];
 }) {
     const session = await requireAuth();
     data = applyTitleCaseToFields(data, ['name']);
     data = applySentenceCaseToFields(data, ['description']);
 
+    const creatorId = data.lawyerId || session.id;
     try {
-        console.log('[createBrief] Creating:', data.briefNumber, data.name);
-
-        const result = await BriefService.create({
-            ...data,
-            lawyerId: data.lawyerId || session.id,
-        });
-
-        if (!result.success) return result;
-
-        const brief = result.data;
-
-        // Verify the brief was actually saved (outside transaction)
-        const verification = await prisma.brief.findUnique({ where: { id: brief.id } });
-        if (!verification) {
-            console.error('[createBrief] VERIFICATION FAILED: Brief not found in database!');
-            throw new Error('Brief was not persisted to database');
+        if (!data.briefNumber || data.briefNumber.trim() === '') {
+            return { success: false, error: 'Brief number is required' };
         }
+
+        const result = await prisma.$transaction(async (tx) => {
+            const existing = await tx.brief.findUnique({
+                where: { briefNumber: data.briefNumber }
+            });
+            if (existing) {
+                throw new Error(`Brief number "${data.briefNumber}" already exists. Please use a different number.`);
+            }
+
+            return tx.brief.create({
+                data: {
+                    briefNumber: data.briefNumber,
+                    name: data.name,
+                    clientId: data.clientId,
+                    lawyerId: creatorId,
+                    lawyerInChargeId: data.lawyerInChargeId || null,
+                    workspaceId: data.workspaceId,
+                    category: data.category,
+                    status: data.status,
+                    dueDate: data.dueDate,
+                    description: data.description,
+                    isLitigationDerived: false,
+                    customTitle: null,
+                    parentBriefId: data.parentBriefId || null,
+                    briefLawyers: data.assignments?.length ? {
+                        create: data.assignments.map(a => ({ lawyerId: a.lawyerId, role: a.role }))
+                    } : undefined,
+                },
+                include: {
+                    client: true,
+                    lawyer: { select: { id: true, name: true, email: true } },
+                },
+            });
+        }, { maxWait: 5000, timeout: 10000 });
 
         revalidatePath('/briefs');
 
@@ -94,17 +174,16 @@ export async function createBrief(data: {
                 type: 'info',
                 priority: 'medium',
                 recipients: 'ALL',
-                relatedBriefId: brief.id,
+                relatedBriefId: result.id,
             });
-        } catch (error) {
-            console.error('Notification error:', error);
+        } catch {
+            // Non-critical
         }
 
-        logActivity({ workspaceId: data.workspaceId, userId: session.id!, resource: 'BRIEF', action: 'CREATED', resourceId: brief.id, resourceName: brief.name }).catch(() => {});
+        logActivity({ workspaceId: data.workspaceId, userId: session.id!, resource: 'BRIEF', action: 'CREATED', resourceId: result.id, resourceName: result.name }).catch(() => {});
 
-        return { success: true, brief };
+        return { success: true, brief: result };
     } catch (error: any) {
-        console.error('[createBrief] Error:', error.message, error.code);
         if (error.code === 'P2002') {
             return { success: false, error: 'Brief number already exists. Please use a different number.' };
         }
@@ -125,6 +204,7 @@ export async function updateBrief(
         status?: string;
         dueDate?: Date | null;
         description?: string;
+        assignments?: { lawyerId: string; role: string }[];
     }
 ) {
     const session = await requireAuth();
@@ -191,13 +271,42 @@ export async function updateBrief(
             });
         }
 
-        const result = await BriefService.update(id, data);
-        if (!result.success) return result;
+        const { assignments, ...rest } = data;
 
-        logActivity({ workspaceId: existingBrief.workspaceId, userId: session.id!, resource: 'BRIEF', action: 'UPDATED', resourceId: id, resourceName: result.data.name }).catch(() => {});
+        const brief = await prisma.brief.update({
+            where: { id },
+            data: {
+                ...rest,
+                briefLawyers: assignments ? {
+                    deleteMany: {},
+                    create: assignments.map(a => ({
+                        lawyerId: a.lawyerId,
+                        role: a.role
+                    }))
+                } : undefined
+            },
+            include: {
+                client: true,
+                lawyer: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true,
+                    },
+                },
+                lawyerInCharge: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true,
+                    },
+                },
+            },
+        });
+        logActivity({ workspaceId: existingBrief.workspaceId, userId: session.id!, resource: 'BRIEF', action: 'UPDATED', resourceId: brief.id, resourceName: brief.name }).catch(() => {});
         revalidatePath('/briefs');
         revalidatePath(`/briefs/${id}`);
-        return { success: true, brief: result.data };
+        return { success: true, brief };
     } catch (error) {
         console.error('Error updating brief:', error);
         return { success: false, error: 'Failed to update brief' };
@@ -583,7 +692,7 @@ export async function getBriefSummary(briefId: string): Promise<BriefSummaryData
 export async function generateBriefSummary(briefId: string): Promise<{ success: boolean; data?: BriefSummaryData; error?: string }> {
     await requireAuth();
 
-    const [brief, documents] = await Promise.all([
+    const [brief, documents, emailLinks] = await Promise.all([
         prisma.brief.findUnique({
             where: { id: briefId, deletedAt: null },
             select: {
@@ -605,9 +714,37 @@ export async function generateBriefSummary(briefId: string): Promise<{ success: 
             select: { name: true, url: true, type: true, ocrText: true },
             orderBy: { uploadedAt: 'asc' },
         }),
+        // Fetch linked emails via PulseEvent → InboundEmail
+        prisma.pulseEvent.findMany({
+            where: { briefId, inboundEmailId: { not: null } },
+            select: {
+                inboundEmail: {
+                    select: {
+                        subject: true,
+                        fromName: true,
+                        fromEmail: true,
+                        receivedAt: true,
+                        body: true,
+                        bodyPreview: true,
+                    },
+                },
+            },
+        }),
     ]);
 
     if (!brief) return { success: false, error: 'Brief not found' };
+
+    // Deduplicate emails by subject+date and extract the InboundEmail records
+    const seenEmailKeys = new Set<string>();
+    const emails = emailLinks
+        .map(p => p.inboundEmail)
+        .filter((e): e is NonNullable<typeof e> => {
+            if (!e) return false;
+            const key = `${e.fromEmail}::${e.subject}::${e.receivedAt.toISOString().slice(0, 10)}`;
+            if (seenEmailKeys.has(key)) return false;
+            seenEmailKeys.add(key);
+            return true;
+        });
 
     const { generateBriefSummaryFromDocuments } = await import('@/lib/services/brief-summary-generator');
 
@@ -628,6 +765,7 @@ export async function generateBriefSummary(briefId: string): Promise<{ success: 
                     : null,
             },
             documents,
+            emails,
         );
     } catch (err: any) {
         return { success: false, error: err?.message ?? 'Summary generation failed.' };

@@ -3,6 +3,7 @@
 import { useState, useEffect, forwardRef, useImperativeHandle } from 'react';
 import Link from 'next/link';
 import { Search, Filter, MoreVertical, Plus, Trash2, UserPlus, Eye, Briefcase } from 'lucide-react';
+import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import styles from './BriefList.module.css';
 import FluidLoader from '@/components/ui/FluidLoader';
 import { getBriefs, deleteBrief } from '@/app/actions/briefs';
@@ -31,6 +32,7 @@ const BriefList = forwardRef<BriefListRef, BriefListProps>(({ onUpload, workspac
     // Modal states
     const [editingBrief, setEditingBrief] = useState<any | null>(null);
     const [activityBrief, setActivityBrief] = useState<any | null>(null);
+    const [deletingBriefId, setDeletingBriefId] = useState<string | null>(null);
 
     useEffect(() => {
         if (workspaceId) {
@@ -67,7 +69,7 @@ const BriefList = forwardRef<BriefListRef, BriefListProps>(({ onUpload, workspac
     }));
 
     const handleDelete = async (id: string) => {
-        if (confirm('Are you sure you want to delete this brief?')) {
+        {
             const result = await deleteBrief(id);
             if (result.success) {
                 setBriefs(briefs.filter(b => b.id !== id));
@@ -229,7 +231,7 @@ const BriefList = forwardRef<BriefListRef, BriefListProps>(({ onUpload, workspac
                                                     <button
                                                         className={`${styles.menuItem} ${styles.deleteItem}`}
                                                         onClick={() => {
-                                                            handleDelete(brief.id);
+                                                            setDeletingBriefId(brief.id);
                                                             setActiveActionId(null);
                                                         }}
                                                     >
@@ -259,7 +261,16 @@ const BriefList = forwardRef<BriefListRef, BriefListProps>(({ onUpload, workspac
                 onClose={() => setActivityBrief(null)}
                 brief={activityBrief}
             />
-        </div >
+            <ConfirmDialog
+                open={!!deletingBriefId}
+                title="Delete brief"
+                message="This will permanently delete the brief and all its documents. This cannot be undone."
+                confirmLabel="Delete"
+                danger
+                onConfirm={() => { if (deletingBriefId) handleDelete(deletingBriefId); setDeletingBriefId(null); }}
+                onCancel={() => setDeletingBriefId(null)}
+            />
+        </div>
     );
 });
 

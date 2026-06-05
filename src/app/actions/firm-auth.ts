@@ -45,11 +45,9 @@ export async function validateFirmCredentials(
 
     try {
         const workspace = await prisma.workspace.findUnique({
-            // @ts-ignore
             where: { firmCode },
         });
 
-        // @ts-ignore
         if (!workspace || !workspace.joinPassword) {
             return {
                 errors: {
@@ -58,7 +56,6 @@ export async function validateFirmCredentials(
             };
         }
 
-        // @ts-ignore
         const passwordsMatch = await bcrypt.compare(firmPassword, workspace.joinPassword);
 
         if (!passwordsMatch) {
@@ -75,8 +72,7 @@ export async function validateFirmCredentials(
             firmId: workspace.id,
             firmName: workspace.name,
         };
-    } catch (error) {
-        console.error('Firm login error:', error);
+    } catch {
         return {
             errors: {
                 _form: ['Something went wrong. Please try again.'],
@@ -147,13 +143,12 @@ export async function registerMember(
             });
 
             await tx.workspaceMember.create({
-                // @ts-ignore
                 data: {
                     userId: newUser.id,
                     workspaceId: firmId,
                     role: 'staff',
                     designation,
-                    status: 'pending', // Pending approval
+                    status: 'pending',
                 },
             });
         });
@@ -161,8 +156,7 @@ export async function registerMember(
         return {
             success: true,
         };
-    } catch (error) {
-        console.error('Registration error:', error);
+    } catch {
         return {
             errors: {
                 _form: ['Failed to create account. Please try again.'],

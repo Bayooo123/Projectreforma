@@ -10,6 +10,8 @@ import {
 } from '@/lib/services/email-processor';
 import { addBriefActivity } from '@/lib/briefs';
 import { executeIntentActions } from '@/lib/institutional-memory/actions';
+import { matchEmailToMatter } from '@/lib/services/content-matcher';
+import { classifyIntentDeterministic } from '@/lib/services/deterministic-processor';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
@@ -196,34 +198,19 @@ async function processEmail(
             },
         });
 
-        // Intent classification + brief/matter matching (parallel)
-        const [intentResult, briefCandidates, matterCandidates] = await Promise.all([
-            classifyEmailIntent(subject, body, senderEmail),
-            prisma.brief.findMany({
-                where: { status: 'active', workspaceId },
-                take: 50,
-                orderBy: { updatedAt: 'desc' },
-                select: { id: true, name: true, briefNumber: true, client: { select: { name: true } } },
-            }),
-            prisma.matter.findMany({
-                where: { workspaceId, deletedAt: null, status: { notIn: ['closed', 'archived'] } },
-                orderBy: { updatedAt: 'desc' },
-                select: { id: true, name: true, caseNumber: true, status: true },
-            }),
-        ]);
+        // 1. Deterministic Intent Classification (Zero AI)
+        const intentResult = classifyIntentDeterministic(subject, body, senderEmail);
 
-        const briefList: BriefCandidate[]  = briefCandidates.map(b => ({ id: b.id, name: b.name, briefNumber: b.briefNumber, clientName: b.client?.name || 'No Client' }));
-        const matterList: MatterCandidate[] = matterCandidates.map(m => ({ id: m.id, name: m.name, caseNumber: m.caseNumber, status: m.status }));
-
-        const identification = await identifyBriefFromContent(subject, body, briefList, matterList);
+        // 2. Deterministic Brief/Matter Matching (Zero AI)
+        const identification = await matchEmailToMatter(workspaceId, subject, body);
 
         let brief: { id: string; name: string; lawyerId: string; lawyerInChargeId: string | null; matterId: string | null } | null = null;
         let matchedMatterId: string | null = null;
         let routingMethod = 'Unmatched';
 
-        if (identification.confidence > 0.5) {
+        if (identification.confidence > 0.4) {
             const pct = Math.round(identification.confidence * 100);
-            routingMethod = `AI Routing (${pct}%): ${identification.reasoning}`;
+            routingMethod = `Deterministic Match (${pct}%): ${identification.reasoning}`;
             if (identification.briefId) {
                 brief = await prisma.brief.findFirst({
                     where: { id: identification.briefId, workspaceId },

@@ -1,14 +1,13 @@
 "use client";
 
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, Search, Users, Gavel, Trash2 } from 'lucide-react';
+import { Plus, Search, Gavel } from 'lucide-react';
 import CalendarGrid from '@/components/calendar/CalendarGrid';
 import CourtEventModal from '@/components/calendar/CourtEventModal';
 import MeetingEventModal from '@/components/calendar/MeetingEventModal';
 import ScheduleMeetingModal from '@/components/calendar/ScheduleMeetingModal';
 import AddMatterModal from '@/components/calendar/AddMatterModal';
 import RecordProceedingModal from '@/components/calendar/RecordProceedingModal';
-import DeletedEntriesModal from '@/components/calendar/DeletedEntriesModal';
 import styles from './page.module.css';
 
 import { CalendarEvent } from '@/types/legal';
@@ -51,10 +50,6 @@ export default function CalendarClient({
     const [isScheduleMeetingModalOpen, setIsScheduleMeetingModalOpen] = useState(false);
     const [isRecordProceedingOpen, setIsRecordProceedingOpen] = useState(false);
     const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
-    const [isDeletedEntriesOpen, setIsDeletedEntriesOpen] = useState(false);
-
-    const canViewDeleted = isOwner || ['owner', 'admin'].includes(getSystemRole(userRole));
-
     // Filters
     const [searchQuery, setSearchQuery] = useState('');
 
@@ -116,10 +111,10 @@ export default function CalendarClient({
                     </div>
                     <div className={styles.stats}>
                         <div className={styles.statItem}>
-                            <strong>{filteredEvents.filter(e => e.type === 'COURT').length}</strong> <span>Courts</span>
+                            <strong>{filteredEvents.filter(e => e.type === 'COURT').length}</strong> <span>Court Appearances</span>
                         </div>
                         <div className={styles.statItem}>
-                            <strong>{filteredEvents.filter(e => e.type === 'MEETING').length}</strong> <span>Meetings</span>
+                            <strong>{filteredEvents.filter(e => e.type === 'MEETING').length}</strong> <span>Work Meetings</span>
                         </div>
                     </div>
                 </div>
@@ -141,15 +136,6 @@ export default function CalendarClient({
                         <button className={styles.proceedingBtn} onClick={() => setIsRecordProceedingOpen(true)}>
                             <Gavel size={18} /> <span>Record Court Proceeding</span>
                         </button>
-                        {canViewDeleted && (
-                            <button
-                                className={styles.secondaryBtn}
-                                onClick={() => setIsDeletedEntriesOpen(true)}
-                                style={{ color: '#dc2626', borderColor: '#dc2626' }}
-                            >
-                                <Trash2 size={18} /> <span>Deleted Entries</span>
-                            </button>
-                        )}
                     </div>
                 </div>
             </div>
@@ -220,14 +206,6 @@ export default function CalendarClient({
                 />
             )}
 
-            {canViewDeleted && (
-                <DeletedEntriesModal
-                    isOpen={isDeletedEntriesOpen}
-                    onClose={() => setIsDeletedEntriesOpen(false)}
-                    workspaceId={workspaceId}
-                    onRestored={handleRefresh}
-                />
-            )}
         </div>
     );
 }

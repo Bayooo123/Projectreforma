@@ -1,25 +1,19 @@
 "use client";
 
-import { useState } from 'react';
-import { AlertTriangle, ArrowUp, ArrowDown, Download, Users, Briefcase, Calendar, DollarSign, TrendingDown, ChevronRight } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { AlertTriangle, ArrowUp, ArrowDown, Download, TrendingDown, Loader } from 'lucide-react';
 import { PinProtection } from '@/components/auth/PinProtection';
 import { useCountUp } from '@/hooks/useCountUp';
 import styles from './Analytics.module.css';
-import { getAnalyticsMetrics, getTopClients, getCourtVisits, getExpenseDistribution } from '@/app/actions/analytics';
-import AttendanceAnalytics from '@/components/analytics/AttendanceAnalytics';
-
-interface AnalyticsData {
-    metrics: any;
-    revenueTrend: { month: string; amount: number }[];
-    topClients: any[];
-    lawyerStats: any[];
-    matterDistribution: { status: string; count: number }[];
-    courtVisits: { court: string; count: number }[];
-    expenseDistribution: { category: string; amount: number; count: number }[];
-}
+import {
+    getAnalyticsMetrics, getTopClients, getCourtVisits,
+    getExpenseDistribution, getLawyerStats,
+} from '@/app/actions/analytics';
 
 interface AnalyticsClientProps {
-    data: AnalyticsData;
+    initialMetrics: any;
+    initialRevenueTrend: { month: string; amount: number }[];
+    initialMatterDistribution: { status: string; count: number }[];
     workspaceId: string;
     initialFilter: string;
 }
@@ -198,37 +192,50 @@ function HBarChart({ data }: { data: { label: string; value: number }[] }) {
 // ─────────────────────────────────────────
 // Main Component
 // ─────────────────────────────────────────
-export default function AnalyticsClient({ data, workspaceId, initialFilter }: AnalyticsClientProps) {
+export default function AnalyticsClient({
+    initialMetrics, initialRevenueTrend, initialMatterDistribution, workspaceId, initialFilter,
+}: AnalyticsClientProps) {
     const [filter, setFilter] = useState(initialFilter);
-    const [displayData, setDisplayData] = useState(data);
+    const [metrics, setMetrics] = useState(initialMetrics);
+    const [revenueTrend] = useState(initialRevenueTrend);
+    const [matterDistribution] = useState(initialMatterDistribution);
     const [isFiltering, setIsFiltering] = useState(false);
+
+    // Heavy data — loaded client-side after paint
+    const [topClients, setTopClients] = useState<any[]>([]);
+    const [lawyerStats, setLawyerStats] = useState<any[]>([]);
+    const [courtVisits, setCourtVisits] = useState<any[]>([]);
+    const [expenseDistribution, setExpenseDistribution] = useState<any[]>([]);
+    const [heavyLoading, setHeavyLoading] = useState(true);
+
+    useEffect(() => {
+        setHeavyLoading(true);
+        Promise.all([
+            getTopClients(workspaceId, filter),
+            getLawyerStats(workspaceId),
+            getCourtVisits(workspaceId, filter),
+            getExpenseDistribution(workspaceId, filter),
+        ]).then(([tc, ls, cv, ed]) => {
+            setTopClients(tc ?? []);
+            setLawyerStats(ls ?? []);
+            setCourtVisits(cv ?? []);
+            setExpenseDistribution(ed ?? []);
+        }).finally(() => setHeavyLoading(false));
+    }, [workspaceId, filter]);
 
     const handleFilterChange = async (f: string) => {
         if (f === filter) return;
         setFilter(f);
         setIsFiltering(true);
         try {
-            const [newMetrics, newTopClients, newCourtVisits, newExpenseDist] = await Promise.all([
-                getAnalyticsMetrics(workspaceId, f),
-                getTopClients(workspaceId, f),
-                getCourtVisits(workspaceId, f),
-                getExpenseDistribution(workspaceId, f),
-            ]);
-            setDisplayData(prev => ({
-                ...prev,
-                metrics: newMetrics ?? prev.metrics,
-                topClients: newTopClients ?? prev.topClients,
-                courtVisits: newCourtVisits ?? prev.courtVisits,
-                expenseDistribution: newExpenseDist ?? prev.expenseDistribution,
-            }));
-        } catch (e) {
-            console.error('[Analytics] Filter change failed:', e);
+            const newMetrics = await getAnalyticsMetrics(workspaceId, f);
+            if (newMetrics) setMetrics(newMetrics);
+        } catch {
+            // silent
         } finally {
             setIsFiltering(false);
         }
     };
-
-    const { metrics, revenueTrend, topClients, lawyerStats, matterDistribution, courtVisits, expenseDistribution } = displayData;
 
     const totalMatters = (matterDistribution || []).reduce((s: number, d: any) => s + (d.count || 0), 0) || 1;
     const topClientTotal = (topClients || []).reduce((s: number, c: any) => s + (c.totalRevenue || 0), 0) || 1;
@@ -366,9 +373,11 @@ export default function AnalyticsClient({ data, workspaceId, initialFilter }: An
                             <div className={styles.panelTitle}>Revenue by Top Clients</div>
                         </div>
                         <div className={styles.panelBody}>
-                            {clientDonutData.length > 0
-                                ? <DonutChart data={clientDonutData} colors={CHART_COLORS} />
-                                : <div style={{ textAlign: 'center', padding: '40px 0', color: '#94a3b8', fontSize: '0.8rem' }}>No client revenue data</div>
+                            {heavyLoading
+                                ? <div style={{ height: 136, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Loader size={20} style={{ animation: 'spin 1s linear infinite', color: '#e2e8f0' }} /></div>
+                                : clientDonutData.length > 0
+                                    ? <DonutChart data={clientDonutData} colors={CHART_COLORS} />
+                                    : <div style={{ textAlign: 'center', padding: '40px 0', color: '#94a3b8', fontSize: '0.8rem' }}>No client revenue data</div>
                             }
                         </div>
                     </div>
@@ -490,6 +499,7 @@ export default function AnalyticsClient({ data, workspaceId, initialFilter }: An
                     <div className={styles.panel}>
                         <div className={styles.panelHeader}>
                             <div className={styles.panelTitle}>Revenue by Client</div>
+                            {heavyLoading && <Loader size={13} style={{ animation: 'spin 1s linear infinite', color: '#94a3b8' }} />}
                         </div>
                         <div className={styles.tableWrap}>
                             <table className={styles.dataTable}>
@@ -532,14 +542,12 @@ export default function AnalyticsClient({ data, workspaceId, initialFilter }: An
                     </div>
                 </div>
 
-                {/* ── Staff Attendance ── */}
-                <AttendanceAnalytics workspaceId={workspaceId} />
-
                 {/* ── Court Appearances by Lawyer Table ── */}
                 <div>
                     <div className={styles.panel}>
                         <div className={styles.panelHeader}>
                             <div className={styles.panelTitle}>Court Appearances by Lawyer</div>
+                            {heavyLoading && <Loader size={13} style={{ animation: 'spin 1s linear infinite', color: '#94a3b8' }} />}
                         </div>
                         <div className={styles.tableWrap}>
                             <table className={styles.dataTable}>

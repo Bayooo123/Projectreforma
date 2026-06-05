@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from 'react';
-import { X, Download, ChevronLeft, ChevronRight } from 'lucide-react';
-import { logDocumentDownload } from '@/app/actions/documents';
+import { X, Download, ChevronLeft, ChevronRight, History, Layers } from 'lucide-react';
+import { logDocumentDownload, getDocumentVersions } from '@/app/actions/documents';
+import { useEffect } from 'react';
 import { Document, Page, pdfjs } from 'react-pdf';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
@@ -22,6 +23,15 @@ interface DocumentPreviewProps {
     onClose: () => void;
     onNavigate?: (direction: 'prev' | 'next') => void;
     canNavigate?: { prev: boolean; next: boolean };
+    onVersionSelect?: (document: any) => void;
+}
+
+interface VersionItem {
+    id: string;
+    name: string;
+    version: number;
+    uploadedAt: Date;
+    url: string;
 }
 
 export default function DocumentPreview({ document, onClose, onNavigate, canNavigate }: DocumentPreviewProps) {
@@ -29,6 +39,17 @@ export default function DocumentPreview({ document, onClose, onNavigate, canNavi
     // const [pageNumber, setPageNumber] = useState<number>(1); // Removed for continuous scroll
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<Error | null>(null);
+    const [versions, setVersions] = useState<VersionItem[]>([]);
+    const [showVersions, setShowVersions] = useState(false);
+
+    useEffect(() => {
+        if (document) {
+            setLoading(true);
+            getDocumentVersions(document.id).then(v => {
+                setVersions(v as any);
+            });
+        }
+    }, [document?.id]);
 
     if (!document) return null;
 
@@ -140,15 +161,52 @@ export default function DocumentPreview({ document, onClose, onNavigate, canNavi
                         >
                             <Download size={20} />
                         </a>
+                        {versions.length > 1 && (
+                            <button 
+                                onClick={() => setShowVersions(!showVersions)} 
+                                className={`${styles.actionButton} ${showVersions ? styles.active : ''}`}
+                                title="Version History"
+                            >
+                                <History size={20} />
+                                <span className={styles.versionBadge}>{versions.length}</span>
+                            </button>
+                        )}
                         <button onClick={onClose} className={styles.closeButton} title="Close">
                             <X size={20} />
                         </button>
                     </div>
                 </div>
 
-                <div className={styles.content}>
-                    {loading && <div className={styles.loading}>Loading...</div>}
-                    {renderPreview()}
+                <div className={styles.mainContent}>
+                    {showVersions && (
+                        <div className={styles.versionSidebar}>
+                            <div className={styles.sidebarHeader}>
+                                <Layers size={16} />
+                                <span>Version History</span>
+                            </div>
+                            <div className={styles.versionList}>
+                                {versions.map((v) => (
+                                    <div 
+                                        key={v.id} 
+                                        className={`${styles.versionItem} ${v.id === document.id ? styles.currentVersion : ''}`}
+                                        onClick={() => v.id !== document.id && onVersionSelect?.(v)}
+                                    >
+                                        <div className={styles.versionNumber}>v{v.version}</div>
+                                        <div className={styles.versionInfo}>
+                                            <div className={styles.versionDate}>
+                                                {new Date(v.uploadedAt).toLocaleDateString()}
+                                            </div>
+                                            {v.id === document.id && <span className={styles.currentLabel}>Current</span>}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                    <div className={styles.viewerPane}>
+                        {loading && <div className={styles.loading}>Loading...</div>}
+                        {renderPreview()}
+                    </div>
                 </div>
 
                 {onNavigate && canNavigate && (

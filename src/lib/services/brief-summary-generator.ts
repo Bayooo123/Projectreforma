@@ -19,53 +19,27 @@ export interface BriefSummaryResult {
     chronology: ChronologyRow[];
 }
 
-const MAX_DOCS       = 12;
-const MAX_OCR_CHARS  = 8_000;
-const MAX_PDF_VISION = 6;
+const MAX_DOCS        = 12;
+const MAX_OCR_CHARS   = 8_000;
+const MAX_PDF_VISION  = 6;
+const MAX_EMAILS      = 20;
+const MAX_EMAIL_CHARS = 3_000;
 
 // ── Prompt builders ──────────────────────────────────────────────────────────
 
-function buildTransactionalPrompt(meta: string, textBlock: string): string {
+function buildTransactionalPrompt(meta: string, textBlock: string, emailBlock: string): string {
+    const emailSection = emailBlock
+        ? `\n\n## Email Correspondence\n${emailBlock}`
+        : '';
+    const hasContent = textBlock || emailBlock;
     return `You are a Legal Analyst specialising in transactional and commercial matters.
-Analyse the documents below and produce a brief overview.
+Analyse the material below and produce a brief overview.
 
 ## Brief Metadata
 ${meta}
 
 ## Documents
-${textBlock || 'No document text available — base analysis on metadata and document names only.'}
-
----
-
-Respond in EXACTLY this format:
-
-PROSE:
-Write 2 concise paragraphs:
-- Paragraph 1: Identify ALL named parties (client, counterparties, individuals, companies) and the nature of the matter (e.g. retainership, tenancy, sublease, notice).
-- Paragraph 2: Describe the current status and any outstanding issues evident from the documents.
-
-CHRONOLOGY:
-A JSON array — one entry per significant event, in strict chronological order (earliest first).
-Base this on dates and events found in the documents. If a document has a date, use it.
-Each entry must be a complete, standalone sentence naming the parties and what happened.
-Format: { "date": "YYYY-MM-DD", "dateDisplay": "17 Mar 2026", "narrative": "On 17 March 2026, Catalyst Business Consult executed a Legal Retainership Agreement with Kola Abdulsalam, engaging him as legal counsel for real estate advisory services." }
-
-Rules:
-- Extract EVERY dated event, agreement, notice, payment, and correspondence.
-- Name the actual parties — do not say "the client" or "the parties".
-- Each narrative must start with "On [dateDisplay]," followed by a complete factual sentence.
-- Return [] only if the documents contain absolutely zero date references.`;
-}
-
-function buildLitigationPrompt(meta: string, textBlock: string): string {
-    return `You are a Legal Analyst specialising in litigation and dispute matters.
-Analyse the documents below and produce a brief overview.
-
-## Brief Metadata
-${meta}
-
-## Documents
-${textBlock || 'No document text available — base analysis on metadata and document names only.'}
+${textBlock || 'No document text available.'}${emailSection}
 
 ---
 
@@ -73,15 +47,57 @@ Respond in EXACTLY this format:
 
 PROSE:
 Write 2-3 concise paragraphs:
-- Paragraph 1: Identify all parties (claimant, defendant, counsel, court) and the nature of the claim.
-- Paragraph 2: Summarise the procedural history and key legal issues.
-- Paragraph 3: Describe the current status based on the most recent filing or correspondence.
+- Paragraph 1: Identify ALL named parties (client, counterparties, individuals, companies) and the nature of the matter.
+- Paragraph 2: Summarise the key facts and issues deduced from documents and correspondence.
+- Paragraph 3 (if emails present): Describe what the email correspondence reveals about the current position, outstanding issues, and any strategy discussed.
 
 CHRONOLOGY:
-A JSON array in strict chronological order (earliest first). Extract every procedural date, filing, hearing, and correspondence.
-Format: { "date": "YYYY-MM-DD", "dateDisplay": "17 Mar 2026", "title": "Writ of Summons filed", "summary": "Claimant filed originating summons at the High Court seeking injunctive relief." }
+A JSON array — one entry per significant event, in strict chronological order (earliest first).
+Draw from both documents AND emails. Each email thread is a source of dated events.
+Each entry must be a complete, standalone sentence naming the parties and what happened.
+Format: { "date": "YYYY-MM-DD", "dateDisplay": "17 Mar 2026", "narrative": "On 17 March 2026, Catalyst Business Consult executed a Legal Retainership Agreement with Kola Abdulsalam, engaging him as legal counsel for real estate advisory services." }
 
-Return [] only if the documents contain absolutely zero date references.`;
+Rules:
+- Extract EVERY dated event, agreement, notice, payment, correspondence, and strategy discussion.
+- Name the actual parties — do not say "the client" or "the parties".
+- Each narrative must start with "On [dateDisplay]," followed by a complete factual sentence.
+- Return [] only if the material contains absolutely zero date references.
+${!hasContent ? '\nNote: No documents or emails are available — base analysis on metadata only.' : ''}`;
+}
+
+function buildLitigationPrompt(meta: string, textBlock: string, emailBlock: string): string {
+    const emailSection = emailBlock
+        ? `\n\n## Email Correspondence\n${emailBlock}`
+        : '';
+    return `You are a Legal Analyst specialising in litigation and dispute matters.
+Analyse the material below and produce a brief overview.
+
+## Brief Metadata
+${meta}
+
+## Documents
+${textBlock || 'No document text available.'}${emailSection}
+
+---
+
+Respond in EXACTLY this format:
+
+PROSE:
+Write 3-4 concise paragraphs:
+- Paragraph 1: Identify all parties (claimant, defendant, counsel, court) and the nature of the claim.
+- Paragraph 2: Summarise the procedural history and key legal issues from documents and filings.
+- Paragraph 3: Describe what the email correspondence reveals — strategy, counsel's positions, updates on judgments, notices, negotiations, and any intelligence about the opposing side.
+- Paragraph 4: State the current status and what is next based on the most recent correspondence or filing.
+
+CHRONOLOGY:
+A JSON array in strict chronological order (earliest first).
+Draw from BOTH documents AND emails. Email dates, judgment references, hearing outcomes, strategy exchanges, and notices are all valid chronology entries.
+Format: { "date": "YYYY-MM-DD", "dateDisplay": "17 Mar 2026", "title": "Notice of Distraint received", "summary": "Counsel received and reviewed the Notice of Distraint from opposing party, forwarded to team for response strategy." }
+
+Rules:
+- Every email in the correspondence thread should yield at least one chronology entry if it contains a date reference or substantive event.
+- Name actual parties and counsel — not "the client" or "opposing counsel".
+- Return [] only if the material contains absolutely zero date references.`;
 }
 
 // ── Document text extraction ─────────────────────────────────────────────────
@@ -147,6 +163,26 @@ export interface DocInput {
     ocrText: string | null;
 }
 
+export interface EmailInput {
+    subject: string;
+    fromName: string | null;
+    fromEmail: string;
+    receivedAt: Date;
+    body: string | null;
+    bodyPreview: string | null;
+}
+
+function buildEmailBlock(emails: EmailInput[]): string {
+    if (emails.length === 0) return '';
+    const sorted = [...emails].sort((a, b) => new Date(a.receivedAt).getTime() - new Date(b.receivedAt).getTime());
+    return sorted.slice(0, MAX_EMAILS).map(e => {
+        const sender = e.fromName ? `${e.fromName} <${e.fromEmail}>` : e.fromEmail;
+        const date = new Date(e.receivedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+        const content = (e.body || e.bodyPreview || '').slice(0, MAX_EMAIL_CHARS);
+        return `--- Email: ${date} | From: ${sender} | Subject: ${e.subject} ---\n${content}`;
+    }).join('\n\n');
+}
+
 export function detectBriefType(isLitigationDerived: boolean, category: string): BriefType {
     if (isLitigationDerived) return 'litigation';
     const cat = category.toLowerCase();
@@ -167,6 +203,7 @@ export async function generateBriefSummaryFromDocuments(
         isLitigationDerived: boolean;
     },
     documents: DocInput[],
+    emails: EmailInput[] = [],
 ): Promise<BriefSummaryResult | null> {
     const apiKey = config.ANTHROPIC_API_KEY;
     if (!apiKey) { console.error('[BriefSummary] ANTHROPIC_API_KEY not set'); return null; }
@@ -207,6 +244,7 @@ export async function generateBriefSummaryFromDocuments(
         if (text) textParts.push(`--- Document: ${docxDocsToFetch[i].name} ---\n${text.slice(0, MAX_OCR_CHARS)}`);
     });
     const textBlock = textParts.join('\n\n');
+    const emailBlock = buildEmailBlock(emails);
 
     // Build document blocks for PDFs without OCR.
     // No `title` field — not supported by the pdfs beta.
@@ -222,8 +260,8 @@ export async function generateBriefSummaryFromDocuments(
 
     const systemPrompt = 'You are a specialised Legal Analyst. Respond only in the exact format requested.';
     const promptText = briefType === 'transactional'
-        ? buildTransactionalPrompt(metaLines, textBlock)
-        : buildLitigationPrompt(metaLines, textBlock);
+        ? buildTransactionalPrompt(metaLines, textBlock, emailBlock)
+        : buildLitigationPrompt(metaLines, textBlock, emailBlock);
 
     // System prompt embedded in user turn — avoids SDK version conflicts with betas
     const userContent: any[] = [
@@ -231,9 +269,11 @@ export async function generateBriefSummaryFromDocuments(
         { type: 'text', text: `${systemPrompt}\n\n${promptText}` },
     ];
 
-    // Sonnet + pdf beta when vision docs present; Haiku for text-only
+    // Sonnet when PDFs need vision or emails are present (richer reasoning needed)
+    // Haiku only for pure text-only document briefs with no email context
     const usePdfBeta = docBlocks.length > 0;
-    const model = usePdfBeta ? 'claude-sonnet-4-6' : 'claude-haiku-4-5-20251001';
+    const usesSonnet = usePdfBeta || emails.length > 0;
+    const model = usesSonnet ? 'claude-sonnet-4-6' : 'claude-haiku-4-5-20251001';
 
     try {
         const callParams: any = {
