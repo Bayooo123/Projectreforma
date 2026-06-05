@@ -1,13 +1,12 @@
 import { NextRequest } from 'next/server';
-import { prisma } from '@/lib/prisma';
 import { withApiAuth, successResponse, errorResponse, notFoundResponse } from '@/lib/api-auth';
-import { Prisma } from '@prisma/client';
+import { ClientService } from '@/lib/services/clients/client-service';
 
 export const dynamic = 'force-dynamic';
 
 /**
  * GET /api/v1/clients/:id
- * Get a single client by ID with full details
+ * Get a single client with full details and financial summary
  */
 export async function GET(
     request: NextRequest,
@@ -18,74 +17,25 @@ export async function GET(
     if (error) return error;
 
     try {
-        const client = await prisma.client.findFirst({
-            where: {
-                id,
-                workspaceId: auth!.workspaceId,
-            },
-            include: {
-                matters: {
-                    select: {
-                        id: true,
-                        caseNumber: true,
-                        name: true,
-                        status: true,
-                        nextCourtDate: true,
-                    },
-                    orderBy: { createdAt: 'desc' },
-                },
-                briefs: {
-                    select: {
-                        id: true,
-                        briefNumber: true,
-                        name: true,
-                        status: true,
-                        category: true,
-                    },
-                    orderBy: { createdAt: 'desc' },
-                },
-                invoices: {
-                    select: {
-                        id: true,
-                        invoiceNumber: true,
-                        totalAmount: true,
-                        status: true,
-                        createdAt: true,
-                    },
-                    orderBy: { createdAt: 'desc' },
-                },
-            },
-        });
-
-        if (!client) {
-            return notFoundResponse('Client');
-        }
-
-        // Calculate financial summary
-        const [billed, payments] = await Promise.all([
-            prisma.invoice.aggregate({
-                where: { clientId: client.id },
-                _sum: { totalAmount: true },
-            }),
-            prisma.payment.aggregate({
-                where: { clientId: client.id },
-                _sum: { amount: true },
-            }),
+        const [client, matters, financialSummary] = await Promise.all([
+            ClientService.getById(id, auth!.workspaceId),
+            ClientService.getMatters(id, auth!.workspaceId),
+            ClientService.getFinancialSummary(id),
         ]);
 
-        const totalBilled = billed._sum.totalAmount || new Prisma.Decimal(0);
-        const totalPaid = payments._sum.amount || new Prisma.Decimal(0);
-        const outstanding = totalBilled.minus(totalPaid);
+        if (!client) return notFoundResponse('Client');
 
         return successResponse({
             ...client,
-            financialSummary: {
-                totalBilled: totalBilled.toNumber(),
-                totalPaid: totalPaid.toNumber(),
-                outstanding: outstanding.toNumber(),
-            },
+            matters: matters.map(m => ({
+                id: m.id,
+                caseNumber: m.caseNumber,
+                name: m.name,
+                status: m.status,
+                nextCourtDate: m.nextCourtDate,
+            })),
+            financialSummary,
         });
-
     } catch (err) {
         console.error('Error fetching client:', err);
         return errorResponse('SERVER_ERROR', 'Failed to fetch client', 500);
@@ -105,35 +55,24 @@ export async function PATCH(
     if (error) return error;
 
     try {
-        const existing = await prisma.client.findFirst({
-            where: {
-                id,
-                workspaceId: auth!.workspaceId,
-            },
-        });
-
-        if (!existing) {
-            return notFoundResponse('Client');
-        }
+        const existing = await ClientService.getById(id, auth!.workspaceId);
+        if (!existing) return notFoundResponse('Client');
 
         const body = await request.json();
         const { name, email, phone, company, industry, status } = body;
 
-        const updateData: any = {};
-        if (name !== undefined) updateData.name = name;
-        if (email !== undefined) updateData.email = email;
-        if (phone !== undefined) updateData.phone = phone;
-        if (company !== undefined) updateData.company = company;
-        if (industry !== undefined) updateData.industry = industry;
-        if (status !== undefined) updateData.status = status;
+        const patch: Record<string, any> = {};
+        if (name !== undefined) patch.name = name;
+        if (email !== undefined) patch.email = email;
+        if (phone !== undefined) patch.phone = phone;
+        if (company !== undefined) patch.company = company;
+        if (industry !== undefined) patch.industry = industry;
+        if (status !== undefined) patch.status = status;
 
-        const client = await prisma.client.update({
-            where: { id },
-            data: updateData,
-        });
+        const result = await ClientService.update(id, patch);
+        if (!result.success) return errorResponse('VALIDATION_ERROR', result.error ?? 'Failed to update', 400);
 
-        return successResponse(client);
-
+        return successResponse(result.data);
     } catch (err) {
         console.error('Error updating client:', err);
         return errorResponse('SERVER_ERROR', 'Failed to update client', 500);
@@ -142,7 +81,7 @@ export async function PATCH(
 
 /**
  * DELETE /api/v1/clients/:id
- * Delete/archive a client
+ * Soft-delete (archive) a client
  */
 export async function DELETE(
     request: NextRequest,
@@ -157,25 +96,12 @@ export async function DELETE(
     }
 
     try {
-        const client = await prisma.client.findFirst({
-            where: {
-                id,
-                workspaceId: auth!.workspaceId,
-            },
-        });
-
-        if (!client) {
-            return notFoundResponse('Client');
+        const result = await ClientService.softDelete(id, auth!.workspaceId);
+        if (!result.success) {
+            if (result.error === 'Client not found') return notFoundResponse('Client');
+            return errorResponse('SERVER_ERROR', result.error ?? 'Failed to delete', 500);
         }
-
-        // Soft delete by archiving
-        await prisma.client.update({
-            where: { id },
-            data: { status: 'archived' },
-        });
-
         return successResponse({ archived: true });
-
     } catch (err) {
         console.error('Error deleting client:', err);
         return errorResponse('SERVER_ERROR', 'Failed to delete client', 500);

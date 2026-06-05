@@ -1,12 +1,12 @@
 import { NextRequest } from 'next/server';
-import { prisma } from '@/lib/prisma';
 import { withApiAuth, successResponse, errorResponse, notFoundResponse } from '@/lib/api-auth';
+import { MatterService } from '@/lib/services/matters/matter-service';
 
 export const dynamic = 'force-dynamic';
 
 /**
  * GET /api/v1/matters/:id
- * Get a single matter by ID
+ * Get a single matter with lawyers and linked briefs
  */
 export async function GET(
     request: NextRequest,
@@ -17,35 +17,9 @@ export async function GET(
     if (error) return error;
 
     try {
-        const matter = await prisma.matter.findFirst({
-            where: {
-                id,
-                workspaceId: auth!.workspaceId,
-            },
-            include: {
-                client: { select: { id: true, name: true, email: true } },
-                lawyers: {
-                    include: {
-                        lawyer: { select: { id: true, name: true, email: true } }
-                    }
-                },
-                briefs: {
-                    select: {
-                        id: true,
-                        briefNumber: true,
-                        name: true,
-                        status: true,
-                    },
-                },
-            },
-        });
-
-        if (!matter) {
-            return notFoundResponse('Matter');
-        }
-
+        const matter = await MatterService.getById(id, auth!.workspaceId);
+        if (!matter) return notFoundResponse('Matter');
         return successResponse(matter);
-
     } catch (err) {
         console.error('Error fetching matter:', err);
         return errorResponse('SERVER_ERROR', 'Failed to fetch matter', 500);
@@ -54,7 +28,7 @@ export async function GET(
 
 /**
  * PATCH /api/v1/matters/:id
- * Update a matter
+ * Update a matter (supports lawyer association replacement)
  */
 export async function PATCH(
     request: NextRequest,
@@ -65,53 +39,25 @@ export async function PATCH(
     if (error) return error;
 
     try {
-        const existing = await prisma.matter.findFirst({
-            where: {
-                id,
-                workspaceId: auth!.workspaceId,
-            },
-        });
-
-        if (!existing) {
-            return notFoundResponse('Matter');
-        }
+        const existing = await MatterService.getById(id, auth!.workspaceId);
+        if (!existing) return notFoundResponse('Matter');
 
         const body = await request.json();
         const { name, status, court, judge, description, nextCourtDate, lawyerAssociations } = body;
 
-        const updateData: any = {};
-        if (name !== undefined) updateData.name = name;
-        if (status !== undefined) updateData.status = status;
-        if (court !== undefined) updateData.court = court;
-        if (judge !== undefined) updateData.judge = judge;
-        if (description !== undefined) updateData.description = description;
-        if (nextCourtDate !== undefined) updateData.nextCourtDate = nextCourtDate ? new Date(nextCourtDate) : null;
-        if (lawyerAssociations !== undefined) {
-            updateData.lawyers = {
-                deleteMany: {},
-                create: lawyerAssociations.map((assoc: any) => ({
-                    lawyerId: assoc.lawyerId,
-                    role: assoc.role,
-                    isAppearing: assoc.isAppearing || false
-                }))
-            };
-        }
+        const patch: Record<string, any> = {};
+        if (name !== undefined) patch.name = name;
+        if (status !== undefined) patch.status = status;
+        if (court !== undefined) patch.court = court;
+        if (judge !== undefined) patch.judge = judge;
+        if (description !== undefined) patch.description = description;
+        if (nextCourtDate !== undefined) patch.nextCourtDate = nextCourtDate ? new Date(nextCourtDate) : null;
+        if (lawyerAssociations !== undefined) patch.lawyerAssociations = lawyerAssociations;
 
-        const matter = await prisma.matter.update({
-            where: { id },
-            data: updateData,
-            include: {
-                client: { select: { id: true, name: true } },
-                lawyers: {
-                    include: {
-                        lawyer: { select: { id: true, name: true } }
-                    }
-                },
-            },
-        });
+        const result = await MatterService.update(id, patch);
+        if (!result.success) return errorResponse('SERVER_ERROR', result.error ?? 'Failed to update', 500);
 
-        return successResponse(matter);
-
+        return successResponse(result.data);
     } catch (err) {
         console.error('Error updating matter:', err);
         return errorResponse('SERVER_ERROR', 'Failed to update matter', 500);
@@ -120,7 +66,7 @@ export async function PATCH(
 
 /**
  * DELETE /api/v1/matters/:id
- * Delete a matter
+ * Soft-delete a matter (sets deletedAt)
  */
 export async function DELETE(
     request: NextRequest,
@@ -135,23 +81,12 @@ export async function DELETE(
     }
 
     try {
-        const matter = await prisma.matter.findFirst({
-            where: {
-                id,
-                workspaceId: auth!.workspaceId,
-            },
-        });
-
-        if (!matter) {
-            return notFoundResponse('Matter');
+        const result = await MatterService.softDelete(id, auth!.workspaceId);
+        if (!result.success) {
+            if (result.error === 'Matter not found') return notFoundResponse('Matter');
+            return errorResponse('SERVER_ERROR', result.error ?? 'Failed to delete', 500);
         }
-
-        await prisma.matter.delete({
-            where: { id },
-        });
-
         return successResponse({ deleted: true });
-
     } catch (err) {
         console.error('Error deleting matter:', err);
         return errorResponse('SERVER_ERROR', 'Failed to delete matter', 500);

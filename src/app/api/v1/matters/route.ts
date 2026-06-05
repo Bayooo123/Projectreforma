@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { withApiAuth, successResponse, errorResponse } from '@/lib/api-auth';
+import { MatterService } from '@/lib/services/matters/matter-service';
 
 export const dynamic = 'force-dynamic';
 
@@ -13,38 +14,20 @@ export async function GET(request: NextRequest) {
     if (error) return error;
 
     const { searchParams } = new URL(request.url);
-    const status = searchParams.get('status');
-    const clientId = searchParams.get('clientId');
-    const lawyerId = searchParams.get('lawyerId');
+    const status = searchParams.get('status') ?? undefined;
+    const clientId = searchParams.get('clientId') ?? undefined;
+    const lawyerId = searchParams.get('lawyerId') ?? undefined;
     const limit = parseInt(searchParams.get('limit') || '50');
     const offset = parseInt(searchParams.get('offset') || '0');
 
     try {
-        const where: any = {
-            workspaceId: auth!.workspaceId,
-        };
-
-        if (status) where.status = status;
-        if (clientId) where.clientId = clientId;
-        if (lawyerId) where.lawyers = { some: { lawyerId } };
-
-        const [matters, total] = await Promise.all([
-            prisma.matter.findMany({
-                where,
-                include: {
-                    client: { select: { id: true, name: true } },
-                    lawyers: {
-                        include: {
-                            lawyer: { select: { id: true, name: true } }
-                        }
-                    },
-                },
-                orderBy: { nextCourtDate: 'asc' },
-                take: limit,
-                skip: offset,
-            }),
-            prisma.matter.count({ where }),
-        ]);
+        const { matters, total } = await MatterService.list(auth!.workspaceId, {
+            status,
+            clientId,
+            lawyerId,
+            limit,
+            offset,
+        });
 
         const data = matters.map(matter => ({
             id: matter.id,
@@ -60,7 +43,6 @@ export async function GET(request: NextRequest) {
         }));
 
         return successResponse(data, { total, limit, offset });
-
     } catch (err) {
         console.error('Error fetching matters:', err);
         return errorResponse('SERVER_ERROR', 'Failed to fetch matters', 500);
@@ -69,7 +51,7 @@ export async function GET(request: NextRequest) {
 
 /**
  * POST /api/v1/matters
- * Create a new matter
+ * Create a new matter (always initializes milestones)
  */
 export async function POST(request: NextRequest) {
     const { auth, error } = await withApiAuth(request);
@@ -79,63 +61,40 @@ export async function POST(request: NextRequest) {
         const body = await request.json();
         const { caseNumber, name, clientId, lawyerAssociations, court, judge, description, nextCourtDate } = body;
 
-        if (!caseNumber) {
-            return errorResponse('VALIDATION_ERROR', 'Case number is required', 400, 'caseNumber');
-        }
-        if (!name) {
-            return errorResponse('VALIDATION_ERROR', 'Matter name is required', 400, 'name');
-        }
-        if (!clientId) {
-            return errorResponse('VALIDATION_ERROR', 'Client ID is required', 400, 'clientId');
-        }
+        if (!caseNumber) return errorResponse('VALIDATION_ERROR', 'Case number is required', 400, 'caseNumber');
+        if (!name) return errorResponse('VALIDATION_ERROR', 'Matter name is required', 400, 'name');
+        if (!clientId) return errorResponse('VALIDATION_ERROR', 'Client ID is required', 400, 'clientId');
 
-        // Verify client belongs to workspace
         const client = await prisma.client.findFirst({
             where: { id: clientId, workspaceId: auth!.workspaceId },
+            select: { id: true },
+        });
+        if (!client) return errorResponse('NOT_FOUND', 'Client not found in this workspace', 404, 'clientId');
+
+        const result = await MatterService.createBasic(auth!.workspaceId, {
+            caseNumber,
+            name,
+            clientId,
+            userId: auth!.userId,
+            court,
+            judge,
+            description,
+            nextCourtDate,
+            lawyerAssociations,
         });
 
-        if (!client) {
-            return errorResponse('NOT_FOUND', 'Client not found in this workspace', 404, 'clientId');
-        }
+        if (!result.success) return errorResponse('SERVER_ERROR', 'Failed to create matter', 500);
 
-        const matter = await prisma.matter.create({
-            data: {
-                caseNumber,
-                name,
-                clientId,
-                lawyers: {
-                    create: lawyerAssociations || [
-                        { lawyerId: auth!.userId, role: 'Lead Counsel', isAppearing: true }
-                    ]
-                },
-                court,
-                judge,
-                nextCourtDate: nextCourtDate ? new Date(nextCourtDate) : null,
-                status: 'active',
-                workspaceId: auth!.workspaceId,
-            },
-            include: {
-                client: { select: { id: true, name: true } },
-                lawyers: {
-                    include: {
-                        lawyer: { select: { id: true, name: true } }
-                    }
-                },
-            },
-        });
-
-        // Log activity
         await prisma.matterActivityLog.create({
             data: {
-                matterId: matter.id,
+                matterId: result.data.id,
                 activityType: 'api_action',
                 description: 'Matter created via API',
                 performedBy: auth!.userId,
             },
         });
 
-        return successResponse(matter);
-
+        return successResponse(result.data);
     } catch (err: any) {
         console.error('Error creating matter:', err);
         if (err.code === 'P2002') {

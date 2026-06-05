@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { withApiAuth, successResponse, errorResponse } from '@/lib/api-auth';
+import { InvoiceService } from '@/lib/services/invoices/invoice-service';
 import { Prisma } from '@prisma/client';
 
 export const dynamic = 'force-dynamic';
@@ -14,41 +15,26 @@ export async function GET(request: NextRequest) {
     if (error) return error;
 
     const { searchParams } = new URL(request.url);
-    const status = searchParams.get('status');
-    const clientId = searchParams.get('clientId');
+    const status = searchParams.get('status') ?? undefined;
+    const clientId = searchParams.get('clientId') ?? undefined;
     const limit = parseInt(searchParams.get('limit') || '50');
     const offset = parseInt(searchParams.get('offset') || '0');
 
     try {
-        const where: any = {
-            client: { workspaceId: auth!.workspaceId },
-        };
-
-        if (status) where.status = status;
-        if (clientId) where.clientId = clientId;
-
-        const [invoices, total] = await Promise.all([
-            prisma.invoice.findMany({
-                where,
-                include: {
-                    client: { select: { id: true, name: true } },
-                    payments: { select: { amount: true } },
-                },
-                orderBy: { createdAt: 'desc' },
-                take: limit,
-                skip: offset,
-            }),
-            prisma.invoice.count({ where }),
-        ]);
+        const { invoices, total } = await InvoiceService.list(auth!.workspaceId, {
+            status,
+            clientId,
+            limit,
+            offset,
+        });
 
         const data = invoices.map(invoice => {
-            const paidAmount = invoice.payments.reduce(
-                (sum, p) => sum.plus(new Prisma.Decimal(p.amount as any)), 
+            const paidAmount = (invoice.payments ?? []).reduce(
+                (sum, p) => sum.plus(new Prisma.Decimal(p.amount as any)),
                 new Prisma.Decimal(0)
             );
             const totalAmount = new Prisma.Decimal(invoice.totalAmount as any);
-            const outstandingAmount = totalAmount.minus(paidAmount);
-            
+
             return {
                 id: invoice.id,
                 invoiceNumber: invoice.invoiceNumber,
@@ -60,7 +46,7 @@ export async function GET(request: NextRequest) {
                 securityChargeAmount: invoice.securityChargeAmount,
                 totalAmount: invoice.totalAmount,
                 paidAmount: paidAmount.toNumber(),
-                outstandingAmount: outstandingAmount.toNumber(),
+                outstandingAmount: totalAmount.minus(paidAmount).toNumber(),
                 status: invoice.status,
                 dueDate: invoice.dueDate,
                 createdAt: invoice.createdAt,
@@ -68,7 +54,6 @@ export async function GET(request: NextRequest) {
         });
 
         return successResponse(data, { total, limit, offset });
-
     } catch (err) {
         console.error('Error fetching invoices:', err);
         return errorResponse('SERVER_ERROR', 'Failed to fetch invoices', 500);
@@ -83,7 +68,6 @@ export async function POST(request: NextRequest) {
     const { auth, error } = await withApiAuth(request);
     if (error) return error;
 
-    // Only owners/partners/associates can create invoices
     if (!['owner', 'partner', 'associate'].includes(auth!.role)) {
         return errorResponse('FORBIDDEN', 'Only attorneys can create invoices', 403);
     }
@@ -105,82 +89,40 @@ export async function POST(request: NextRequest) {
             securityChargeRate = 1.0,
         } = body;
 
-        if (!clientId) {
+        if (!clientId)
             return errorResponse('VALIDATION_ERROR', 'Client ID is required', 400, 'clientId');
-        }
-        if (!billToName) {
+        if (!billToName)
             return errorResponse('VALIDATION_ERROR', 'Bill to name is required', 400, 'billToName');
-        }
-        if (!items || !Array.isArray(items) || items.length === 0) {
+        if (!items || !Array.isArray(items) || items.length === 0)
             return errorResponse('VALIDATION_ERROR', 'At least one line item is required', 400, 'items');
-        }
 
-        // Verify client belongs to workspace
+        // Verify client belongs to this workspace before delegating to service
         const client = await prisma.client.findFirst({
             where: { id: clientId, workspaceId: auth!.workspaceId },
+            select: { id: true },
         });
-
-        if (!client) {
+        if (!client)
             return errorResponse('NOT_FOUND', 'Client not found in this workspace', 404, 'clientId');
-        }
 
-        // Generate invoice number
-        const year = new Date().getFullYear();
-        const count = await prisma.invoice.count({
-            where: {
-                client: { workspaceId: auth!.workspaceId },
-                invoiceNumber: { startsWith: `INV-${year}-` },
-            },
-        });
-        const invoiceNumber = `INV-${year}-${String(count + 1).padStart(4, '0')}`;
-
-        // Calculate amounts using Decimal for precision
-        const subtotalDecimal = items.reduce(
-            (sum: Prisma.Decimal, item: any) => sum.plus(new Prisma.Decimal(item.amount || 0).times(item.quantity || 1)), 
-            new Prisma.Decimal(0)
-        );
-        const vatAmount = subtotalDecimal.times(new Prisma.Decimal(vatRate).dividedBy(100));
-        const securityChargeAmount = subtotalDecimal.times(new Prisma.Decimal(securityChargeRate).dividedBy(100));
-        const totalAmount = subtotalDecimal.plus(vatAmount).plus(securityChargeAmount);
-        
-        const subtotal = subtotalDecimal.toNumber();
-
-        const invoice = await prisma.invoice.create({
-            data: {
-                invoiceNumber,
-                clientId,
-                matterId,
-                billToName,
-                billToAddress,
-                billToCity,
-                billToState,
-                attentionTo,
-                notes,
-                dueDate: dueDate ? new Date(dueDate) : null,
-                vatRate,
-                vatAmount: vatAmount as any,
-                securityChargeRate,
-                securityChargeAmount: securityChargeAmount as any,
-                subtotal: subtotal as any,
-                totalAmount: totalAmount as any,
-                status: 'pending',
-                items: {
-                    create: items.map((item: any, index: number) => ({
-                        description: item.description,
-                        amount: item.amount,
-                        quantity: item.quantity || 1,
-                        order: index,
-                    })),
-                },
-            },
-            include: {
-                client: { select: { id: true, name: true } },
-                items: true,
-            },
+        const result = await InvoiceService.create({
+            clientId,
+            matterId,
+            billToName,
+            billToAddress,
+            billToCity,
+            billToState,
+            attentionTo,
+            notes,
+            dueDate,
+            items,
+            vatRate,
+            securityChargeRate,
         });
 
-        return successResponse(invoice);
+        if (!result.success)
+            return errorResponse('SERVER_ERROR', result.error, 500);
 
+        return successResponse(result.data);
     } catch (err) {
         console.error('Error creating invoice:', err);
         return errorResponse('SERVER_ERROR', 'Failed to create invoice', 500);

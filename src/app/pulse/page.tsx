@@ -1,21 +1,13 @@
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
-import {
-    getPulseFirmStats,
-    getPulseUserStats,
-    getPulseFeedFirmwide,
-    getPulseFeedUser,
-    getMyBriefs,
-} from '@/app/actions/pulse';
-import { getPendingMatterQuestions } from '@/app/actions/matterQuestions';
-import { getOpenAnomalies } from '@/app/actions/anomalies';
+import { Suspense } from "react";
 import { runAnomalyScan } from '@/lib/anomaly/detector';
-import { getTodayWorkEntries } from '@/app/actions/work-entries';
-import PulseClient from './PulseClient';
+import PulseContent from './PulseContent';
+import PulseSkeleton from './PulseSkeleton';
 
 export default async function PulsePage() {
     const session = await auth();
-    if (!session?.user?.id) return redirect('/login');
+    if (!session?.user?.id) redirect('/login');
 
     const workspaceId = session.user.workspaceId;
     if (!workspaceId) {
@@ -27,37 +19,15 @@ export default async function PulsePage() {
     }
 
     // Fire anomaly scan in background — don't block page load.
-    // Cron job at /api/cron/anomaly-scan runs hourly for deep scans.
-    // Here we do a lightweight background refresh; the page reads pre-computed results from DB.
     runAnomalyScan(workspaceId).catch(e => console.error('[Pulse] anomaly scan failed:', e));
 
-    const [firmStats, userStats, firmFeed, userFeed, pendingQuestions, anomalies, myBriefs, todayEntries] = await Promise.all([
-        getPulseFirmStats(workspaceId),
-        getPulseUserStats(workspaceId),
-        getPulseFeedFirmwide(workspaceId),
-        getPulseFeedUser(workspaceId),
-        getPendingMatterQuestions(workspaceId).catch(e => { console.error('[Pulse] pendingQuestions failed:', e); return []; }),
-        getOpenAnomalies(workspaceId).catch(e => { console.error('[Pulse] anomalies failed:', e); return []; }),
-        getMyBriefs(workspaceId),
-        getTodayWorkEntries(workspaceId).catch(e => { console.error('[Pulse] workEntries failed:', e); return []; }),
-    ]);
-
-    const attentionCount = (firmFeed ?? []).filter(i => i.severity === 'urgent').length;
-
     return (
-        <PulseClient
-            firmStats={firmStats}
-            userStats={userStats}
-            firmFeed={firmFeed}
-            userFeed={userFeed}
-            userName={session.user.name || ''}
-            attentionCount={attentionCount}
-            pendingQuestions={pendingQuestions}
-            anomalies={anomalies}
-            myBriefs={myBriefs}
-            todayEntries={todayEntries}
-            userId={session.user.id}
-            workspaceId={workspaceId}
-        />
+        <Suspense fallback={<PulseSkeleton />}>
+            <PulseContent
+                workspaceId={workspaceId}
+                userId={session.user.id}
+                userName={session.user.name || ''}
+            />
+        </Suspense>
     );
 }

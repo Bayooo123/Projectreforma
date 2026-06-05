@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
-import { prisma } from '@/lib/prisma';
 import { withApiAuth, successResponse, errorResponse } from '@/lib/api-auth';
+import { ClientService } from '@/lib/services/clients/client-service';
 
 export const dynamic = 'force-dynamic';
 
@@ -13,71 +13,33 @@ export async function GET(request: NextRequest) {
     if (error) return error;
 
     const { searchParams } = new URL(request.url);
-    const status = searchParams.get('status');
-    const search = searchParams.get('search');
+    const status = searchParams.get('status') ?? undefined;
+    const search = searchParams.get('search') ?? undefined;
     const limit = parseInt(searchParams.get('limit') || '50');
     const offset = parseInt(searchParams.get('offset') || '0');
 
     try {
-        const where: any = {
-            workspaceId: auth!.workspaceId,
-        };
+        const { data, meta } = await ClientService.list(auth!.workspaceId, {
+            status,
+            query: search,
+            limit,
+            offset,
+        });
 
-        if (status) where.status = status;
-        if (search) {
-            where.OR = [
-                { name: { contains: search, mode: 'insensitive' } },
-                { email: { contains: search, mode: 'insensitive' } },
-                { company: { contains: search, mode: 'insensitive' } },
-            ];
-        }
-
-        const [clients, total] = await Promise.all([
-            prisma.client.findMany({
-                where,
-                include: {
-                    _count: {
-                        select: { matters: true, briefs: true, invoices: true },
-                    },
-                },
-                orderBy: { createdAt: 'desc' },
-                take: limit,
-                skip: offset,
-            }),
-            prisma.client.count({ where }),
-        ]);
-
-        // Calculate totals for each client
-        const data = await Promise.all(clients.map(async (client) => {
-            const [billed, payments] = await Promise.all([
-                prisma.invoice.aggregate({
-                    where: { clientId: client.id },
-                    _sum: { totalAmount: true },
-                }),
-                prisma.payment.aggregate({
-                    where: { clientId: client.id },
-                    _sum: { amount: true },
-                }),
-            ]);
-
-            return {
-                id: client.id,
-                name: client.name,
-                email: client.email,
-                phone: client.phone,
-                company: client.company,
-                industry: client.industry,
-                status: client.status,
-                mattersCount: client._count.matters,
-                briefsCount: client._count.briefs,
-                totalBilled: billed._sum.totalAmount || 0,
-                totalPaid: payments._sum.amount || 0,
-                createdAt: client.createdAt,
-            };
-        }));
-
-        return successResponse(data, { total, limit, offset });
-
+        return successResponse(
+            data.map(c => ({
+                id: c.id,
+                name: c.name,
+                email: c.email,
+                phone: c.phone,
+                company: c.company,
+                industry: c.industry,
+                status: c.status,
+                activeMatters: c.activeMatters,
+                createdAt: c.createdAt,
+            })),
+            { total: meta.total, limit, offset }
+        );
     } catch (err) {
         console.error('Error fetching clients:', err);
         return errorResponse('SERVER_ERROR', 'Failed to fetch clients', 500);
@@ -96,24 +58,25 @@ export async function POST(request: NextRequest) {
         const body = await request.json();
         const { name, email, phone, company, industry } = body;
 
-        if (!name) {
-            return errorResponse('VALIDATION_ERROR', 'Client name is required', 400, 'name');
-        }
+        if (!name) return errorResponse('VALIDATION_ERROR', 'Client name is required', 400, 'name');
 
-        const client = await prisma.client.create({
-            data: {
-                name,
-                email,
-                phone,
-                company,
-                industry,
-                status: 'active',
-                workspaceId: auth!.workspaceId,
-            },
+        const result = await ClientService.create({
+            name,
+            email,
+            phone,
+            company,
+            industry,
+            workspaceId: auth!.workspaceId,
         });
 
-        return successResponse(client);
+        if (!result.success) {
+            if (result.error?.includes('email')) {
+                return errorResponse('VALIDATION_ERROR', result.error, 400, 'email');
+            }
+            return errorResponse('SERVER_ERROR', result.error ?? 'Failed to create client', 500);
+        }
 
+        return successResponse(result.data);
     } catch (err: any) {
         console.error('Error creating client:', err);
         if (err.code === 'P2002') {

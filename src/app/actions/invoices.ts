@@ -1,136 +1,49 @@
 'use server';
 
-import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
-import { Prisma } from '@prisma/client';
 import { auth } from '@/auth';
 import { logActivity } from '@/lib/log-activity';
+import { InvoiceService } from '@/lib/services/invoices/invoice-service';
 
-// ============================================
-// INVOICE CRUD OPERATIONS
-// ============================================
+export type { InvoiceLineItem, CreateInvoiceInput } from '@/lib/services/invoices/invoice-service';
 
 export async function generateInvoiceNumber(workspaceId: string): Promise<string> {
-    const year = new Date().getFullYear();
-
-    // Get the count of invoices for this workspace this year
-    const count = await prisma.invoice.count({
-        where: {
-            client: {
-                workspaceId,
-            },
-            invoiceNumber: {
-                startsWith: `INV-${year}-`,
-            },
-        },
-    });
-
-    // Generate invoice number: INV-YYYY-NNNN
-    const invoiceNumber = `INV-${year}-${String(count + 1).padStart(4, '0')}`;
-    return invoiceNumber;
+    return InvoiceService.generateNumber(workspaceId);
 }
 
-interface InvoiceLineItem {
-    description: string;
-    amount: number;
-    quantity: number;
-    order: number;
-}
-
-interface CreateInvoiceData {
-    clientId: string;
-    matterId?: string;
-    billToName: string;
-    billToAddress?: string;
-    billToCity?: string;
-    billToState?: string;
-    attentionTo?: string;
-    notes?: string;
-    dueDate?: Date;
-    items: InvoiceLineItem[];
-    vatRate: number;
-    securityChargeRate: number;
-}
-
-export async function createInvoice(data: CreateInvoiceData) {
+export async function createInvoice(data: Parameters<typeof InvoiceService.create>[0]) {
     try {
         const session = await auth();
+        const result = await InvoiceService.create(data);
+        if (!result.success) return result;
 
-        // Get client to verify workspace
-        const client = await prisma.client.findUnique({
-            where: { id: data.clientId },
-            select: { workspaceId: true, name: true },
-        });
-
-        if (!client) {
-            return { success: false, error: 'Client not found' };
-        }
-
-        // Generate invoice number
-        const invoiceNumber = await generateInvoiceNumber(client.workspaceId);
-
-        // Calculate amounts using Decimal for precision
-        const subtotal = data.items.reduce(
-            (sum, item) => sum.plus(new Prisma.Decimal(item.amount).times(item.quantity)), 
-            new Prisma.Decimal(0)
-        );
-        const vatAmount = subtotal.times(new Prisma.Decimal(data.vatRate).dividedBy(100));
-        const securityChargeAmount = subtotal.times(new Prisma.Decimal(data.securityChargeRate).dividedBy(100));
-        const totalAmount = subtotal.plus(vatAmount).plus(securityChargeAmount);
-
-        // Create invoice with line items
-        const invoice = await prisma.invoice.create({
-            data: {
-                invoiceNumber,
-                clientId: data.clientId,
-                matterId: data.matterId,
-                billToName: data.billToName,
-                billToAddress: data.billToAddress,
-                billToCity: data.billToCity,
-                billToState: data.billToState,
-                attentionTo: data.attentionTo,
-                notes: data.notes,
-                dueDate: data.dueDate,
-                vatRate: data.vatRate,
-                vatAmount,
-                securityChargeRate: data.securityChargeRate,
-                securityChargeAmount,
-                subtotal,
-                totalAmount,
-                status: 'pending',
-                items: {
-                    create: data.items.map(item => ({
-                        description: item.description,
-                        amount: item.amount,
-                        quantity: item.quantity,
-                        order: item.order,
-                    })),
-                },
-            },
-            include: {
-                items: true,
-                client: true,
-            },
-        });
-
+        const { data: invoice, workspaceId } = result;
         revalidatePath('/management/clients');
         revalidatePath('/management/invoices');
 
         if (session?.user?.id) {
-            logActivity({ workspaceId: client.workspaceId, userId: session.user.id, resource: 'INVOICE', action: 'CREATED', resourceId: invoice.id, resourceName: invoice.invoiceNumber }).catch(() => {});
+            logActivity({
+                workspaceId,
+                userId: session.user.id,
+                resource: 'INVOICE',
+                action: 'CREATED',
+                resourceId: invoice.id,
+                resourceName: invoice.invoiceNumber,
+            }).catch(() => {});
         }
 
-        // Notification: New Invoice Created
         try {
             const { createNotification } = await import('@/app/actions/notifications');
+            const total = (invoice as any).totalAmount;
+            const totalNum = typeof total?.toNumber === 'function' ? total.toNumber() : Number(total);
             await createNotification({
-                workspaceId: client.workspaceId,
+                workspaceId,
                 title: 'New Invoice Issued',
-                message: `Invoice #${invoiceNumber} for ${client.name} has been created. Total: ₦${totalAmount.toNumber().toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+                message: `Invoice #${invoice.invoiceNumber} for ${invoice.client.name} has been created. Total: ₦${totalNum.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
                 type: 'info',
                 priority: 'medium',
                 recipients: { role: ['owner', 'partner'] },
-                relatedInvoiceId: invoice.id
+                relatedInvoiceId: invoice.id,
             });
         } catch (e) {
             console.error('Notification error:', e);
@@ -139,51 +52,13 @@ export async function createInvoice(data: CreateInvoiceData) {
         return { success: true, data: invoice };
     } catch (error) {
         console.error('Error creating invoice:', error);
-        // Return the actual error message for debugging
-        const errorMessage = error instanceof Error ? error.message : 'Failed to create invoice';
-        return { success: false, error: errorMessage };
+        return { success: false, error: error instanceof Error ? error.message : 'Failed to create invoice' };
     }
 }
 
 export async function getInvoices(workspaceId: string) {
     try {
-        const invoices = await prisma.invoice.findMany({
-            where: {
-                client: {
-                    workspaceId,
-                },
-            },
-            include: {
-                client: {
-                    select: {
-                        name: true,
-                        email: true,
-                    },
-                },
-                matter: {
-                    select: {
-                        name: true,
-                        caseNumber: true,
-                    },
-                },
-                items: {
-                    orderBy: {
-                        order: 'asc',
-                    },
-                },
-                payments: true,
-                _count: {
-                    select: {
-                        payments: true,
-                    },
-                },
-            },
-            orderBy: {
-                createdAt: 'desc',
-            },
-            take: 200,
-        });
-
+        const { invoices } = await InvoiceService.list(workspaceId);
         return { success: true, data: invoices };
     } catch (error) {
         console.error('Error fetching invoices:', error);
@@ -193,41 +68,8 @@ export async function getInvoices(workspaceId: string) {
 
 export async function getInvoiceById(id: string) {
     try {
-        const invoice = await prisma.invoice.findUnique({
-            where: { id },
-            include: {
-                client: true,
-                matter: {
-                    include: {
-                        lawyers: {
-                            include: {
-                                lawyer: {
-                                    select: {
-                                        name: true,
-                                        email: true,
-                                    },
-                                },
-                            },
-                        },
-                    },
-                },
-                items: {
-                    orderBy: {
-                        order: 'asc',
-                    },
-                },
-                payments: {
-                    orderBy: {
-                        date: 'desc',
-                    },
-                },
-            },
-        });
-
-        if (!invoice) {
-            return { success: false, error: 'Invoice not found' };
-        }
-
+        const invoice = await InvoiceService.getById(id);
+        if (!invoice) return { success: false, error: 'Invoice not found' };
         return { success: true, data: invoice };
     } catch (error) {
         console.error('Error fetching invoice:', error);
@@ -237,15 +79,15 @@ export async function getInvoiceById(id: string) {
 
 export async function updateInvoiceStatus(id: string, status: 'pending' | 'paid' | 'overdue') {
     try {
-        const invoice = await prisma.invoice.update({
-            where: { id },
-            data: { status },
-        });
+        const session = await auth();
+        if (!session?.user?.workspaceId) return { success: false, error: 'Unauthorized' };
+
+        const result = await InvoiceService.updateStatus(id, status, session.user.workspaceId);
+        if (!result.success) return result;
 
         revalidatePath('/management/clients');
         revalidatePath('/management/invoices');
-
-        return { success: true, data: invoice };
+        return result;
     } catch (error) {
         console.error('Error updating invoice status:', error);
         return { success: false, error: 'Failed to update invoice status' };
@@ -254,36 +96,14 @@ export async function updateInvoiceStatus(id: string, status: 'pending' | 'paid'
 
 export async function deleteInvoice(id: string) {
     try {
-        // Check if invoice has payments
-        const invoice = await prisma.invoice.findUnique({
-            where: { id },
-            include: {
-                _count: {
-                    select: {
-                        payments: true,
-                    },
-                },
-            },
-        });
+        const session = await auth();
+        if (!session?.user?.workspaceId) return { success: false, error: 'Unauthorized' };
 
-        if (!invoice) {
-            return { success: false, error: 'Invoice not found' };
-        }
-
-        if (invoice._count.payments > 0) {
-            return {
-                success: false,
-                error: 'Cannot delete invoice with associated payments',
-            };
-        }
-
-        await prisma.invoice.delete({
-            where: { id },
-        });
+        const result = await InvoiceService.delete(id, session.user.workspaceId);
+        if (!result.success) return result;
 
         revalidatePath('/management/clients');
         revalidatePath('/management/invoices');
-
         return { success: true };
     } catch (error) {
         console.error('Error deleting invoice:', error);
@@ -291,110 +111,19 @@ export async function deleteInvoice(id: string) {
     }
 }
 
-// ============================================
-// INVOICE STATS & ANALYTICS
-// ============================================
-
 export async function getInvoiceStats(workspaceId: string) {
     try {
-        const [
-            totalInvoices,
-            paidInvoices,
-            pendingInvoices,
-            overdueInvoices,
-        ] = await Promise.all([
-            prisma.invoice.count({
-                where: {
-                    client: { workspaceId },
-                },
-            }),
-            prisma.invoice.count({
-                where: {
-                    client: { workspaceId },
-                    status: 'paid',
-                },
-            }),
-            prisma.invoice.count({
-                where: {
-                    client: { workspaceId },
-                    status: 'pending',
-                },
-            }),
-            prisma.invoice.count({
-                where: {
-                    client: { workspaceId },
-                    status: 'overdue',
-                },
-            }),
-        ]);
-
-        // Calculate total billed (Invoices)
-        const billedData = await prisma.invoice.aggregate({
-            where: {
-                client: { workspaceId },
-            },
-            _sum: {
-                totalAmount: true,
-            },
-        });
-
-        // Calculate total paid (Actual Payments)
-        const paymentData = await prisma.payment.aggregate({
-            where: {
-                client: { workspaceId },
-            },
-            _sum: {
-                amount: true, // Summing actual payments
-            },
-        });
-
-        const totalBilledDecimal = (billedData._sum.totalAmount as any) || new Prisma.Decimal(0);
-        const totalPaidDecimal = (paymentData._sum.amount as any) || new Prisma.Decimal(0);
-        
-        const totalBilled = totalBilledDecimal.toNumber();
-        const totalPaid = totalPaidDecimal.toNumber();
-        const totalOutstanding = totalBilled - totalPaid;
-
-        return {
-            success: true,
-            data: {
-                totalInvoices,
-                paidInvoices,
-                pendingInvoices,
-                overdueInvoices,
-                totalBilled,
-                totalPaid, // REVENUE
-                totalOutstanding,
-            },
-        };
+        const stats = await InvoiceService.getStats(workspaceId);
+        return { success: true, data: stats };
     } catch (error) {
         console.error('Error fetching invoice stats:', error);
         return { success: false, error: 'Failed to fetch stats' };
     }
 }
 
-// ============================================
-// HELPER FUNCTIONS
-// ============================================
-
 export async function getClientMatters(clientId: string) {
     try {
-        const matters = await prisma.matter.findMany({
-            where: {
-                clientId,
-                status: 'active',
-                deletedAt: null,
-            },
-            select: {
-                id: true,
-                name: true,
-                caseNumber: true,
-            },
-            orderBy: {
-                createdAt: 'desc',
-            },
-        });
-
+        const matters = await InvoiceService.getClientMatters(clientId);
         return { success: true, data: matters };
     } catch (error) {
         console.error('Error fetching client matters:', error);
@@ -404,41 +133,8 @@ export async function getClientMatters(clientId: string) {
 
 export async function getClientInvoices(clientId: string) {
     try {
-        const invoices = await prisma.invoice.findMany({
-            where: {
-                clientId,
-            },
-            include: {
-                items: {
-                    orderBy: {
-                        order: 'asc',
-                    },
-                },
-                payments: true,
-                client: {
-                    select: {
-                        name: true,
-                    }
-                }
-            },
-            orderBy: {
-                createdAt: 'desc',
-            },
-        });
-
-        // Calculate paidAmount for each invoice
-        const invoicesWithPaidAmount = invoices.map(invoice => {
-            const paidAmountDecimal = invoice.payments.reduce(
-                (sum, p) => sum.plus(new Prisma.Decimal(p.amount as any)), 
-                new Prisma.Decimal(0)
-            );
-            return {
-                ...invoice,
-                paidAmount: paidAmountDecimal.toNumber(),
-            };
-        });
-
-        return { success: true, data: invoicesWithPaidAmount };
+        const invoices = await InvoiceService.getByClient(clientId);
+        return { success: true, data: invoices };
     } catch (error) {
         console.error('Error fetching client invoices:', error);
         return { success: false, error: 'Failed to fetch invoices' };

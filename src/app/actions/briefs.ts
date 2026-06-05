@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache';
 import { requireAuth } from '@/lib/auth-utils';
 import { applySentenceCaseToFields, applyTitleCaseToFields } from '@/lib/sentence-case';
 import { logActivity } from '@/lib/log-activity';
+import { BriefService } from '@/lib/services/briefs/brief-service';
 
 export async function getUserBriefs() {
     const user = await requireAuth();
@@ -13,25 +14,14 @@ export async function getUserBriefs() {
     try {
         const membership = await prisma.workspaceMember.findFirst({
             where: { user: { email: user.email } },
-            select: { workspaceId: true }
+            select: { workspaceId: true },
         });
-
         if (!membership) return [];
 
-        const briefs = await prisma.brief.findMany({
-            where: {
-                workspaceId: membership.workspaceId,
-                deletedAt: null
-            },
-            include: {
-                client: { select: { name: true } }
-            },
-            orderBy: { updatedAt: 'desc' },
-            take: 20
-        });
+        const { briefs } = await BriefService.list(membership.workspaceId, { limit: 20 });
         return briefs;
     } catch (err) {
-        console.error("Failed to fetch user briefs", err);
+        console.error('Failed to fetch user briefs', err);
         return [];
     }
 }
@@ -39,52 +29,7 @@ export async function getUserBriefs() {
 export async function getBriefs(workspaceId: string) {
     await requireAuth();
     try {
-        const briefs = await prisma.brief.findMany({
-            where: {
-                workspaceId,
-                deletedAt: null
-            },
-            include: {
-                client: {
-                    select: {
-                        id: true,
-                        name: true,
-                        email: true,
-                    },
-                },
-                lawyer: {
-                    select: {
-                        id: true,
-                        name: true,
-                        email: true,
-                    },
-                },
-                lawyerInCharge: {
-                    select: {
-                        id: true,
-                        name: true,
-                        email: true,
-                    },
-                },
-                matter: {
-                    select: {
-                        id: true,
-                        name: true,
-                        caseNumber: true,
-                    },
-                },
-                _count: {
-                    select: {
-                        documents: true,
-                    },
-                },
-            },
-            orderBy: {
-                updatedAt: 'desc',
-            },
-            take: 50,
-        });
-
+        const { briefs } = await BriefService.list(workspaceId);
         return briefs;
     } catch (error) {
         console.error('[getBriefs] Error fetching briefs:', error);
@@ -95,58 +40,7 @@ export async function getBriefs(workspaceId: string) {
 export async function getBriefById(id: string) {
     await requireAuth();
     try {
-        const brief = await prisma.brief.findUnique({
-            where: {
-                id,
-                deletedAt: null
-            },
-            include: {
-                client: {
-                    select: {
-                        id: true,
-                        name: true,
-                        email: true,
-                        phone: true,
-                        company: true,
-                        status: true,
-                    },
-                },
-                lawyer: {
-                    select: {
-                        id: true,
-                        name: true,
-                        email: true,
-                    },
-                },
-                lawyerInCharge: {
-                    select: {
-                        id: true,
-                        name: true,
-                        email: true,
-                    },
-                },
-                matter: {
-                    select: {
-                        id: true,
-                        name: true,
-                        caseNumber: true,
-                        status: true,
-                        court: true,
-                        judge: true,
-                    },
-                },
-                // documents and folders excluded — fetched lazily client-side
-                // when the Documents tab is opened, avoiding a 200-row join on
-                // every brief page load.
-                workspace: {
-                    select: {
-                        id: true,
-                        name: true,
-                    },
-                },
-            },
-        });
-        return brief;
+        return BriefService.getById(id);
     } catch (error) {
         console.error('Error fetching brief:', error);
         return null;
@@ -169,91 +63,28 @@ export async function createBrief(data: {
     const session = await requireAuth();
     data = applyTitleCaseToFields(data, ['name']);
     data = applySentenceCaseToFields(data, ['description']);
-    const creatorId = data.lawyerId || session.id;
+
     try {
-        console.log('[createBrief] ========== START ==========');
-        console.log('[createBrief] Creating brief with data:', JSON.stringify(data, null, 2));
+        console.log('[createBrief] Creating:', data.briefNumber, data.name);
 
-        // Validate briefNumber is provided
-        if (!data.briefNumber || data.briefNumber.trim() === '') {
-            console.error('[createBrief] ERROR: Brief number is empty!');
-            return { success: false, error: 'Brief number is required' };
-        }
-
-        // Use explicit transaction to ensure atomic operation
-        const result = await prisma.$transaction(async (tx) => {
-            console.log('[createBrief] Starting database transaction...');
-
-            // Check if briefNumber already exists
-            const existing = await tx.brief.findUnique({
-                where: { briefNumber: data.briefNumber }
-            });
-
-            if (existing) {
-                console.error('[createBrief] ERROR: Brief number already exists:', data.briefNumber);
-                throw new Error(`Brief number "${data.briefNumber}" already exists. Please use a different number.`);
-            }
-
-            console.log('[createBrief] Brief number is unique, proceeding with creation...');
-
-            const brief = await tx.brief.create({
-                data: {
-                    briefNumber: data.briefNumber,
-                    name: data.name,
-                    clientId: data.clientId,
-                    lawyerId: creatorId,
-                    lawyerInChargeId: data.lawyerInChargeId || null,
-                    workspaceId: data.workspaceId,
-                    category: data.category,
-                    status: data.status,
-                    dueDate: data.dueDate,
-                    description: data.description,
-                    // Standalone briefs are not litigation-derived
-                    isLitigationDerived: false,
-                    customTitle: null,
-                    parentBriefId: data.parentBriefId || null,
-                },
-                include: {
-                    client: true,
-                    lawyer: {
-                        select: {
-                            id: true,
-                            name: true,
-                            email: true,
-                        },
-                    },
-                },
-            });
-
-            console.log('[createBrief] ✅ Brief created in transaction!');
-            console.log('[createBrief] Brief ID:', brief.id);
-            console.log('[createBrief] Brief Number:', brief.briefNumber);
-            console.log('[createBrief] Brief Name:', brief.name);
-
-            return brief;
-        }, {
-            maxWait: 5000, // Maximum time to wait for a transaction slot (ms)
-            timeout: 10000, // Maximum time the transaction can run (ms)
+        const result = await BriefService.create({
+            ...data,
+            lawyerId: data.lawyerId || session.id,
         });
 
-        console.log('[createBrief] ✅ Transaction committed successfully!');
+        if (!result.success) return result;
+
+        const brief = result.data;
 
         // Verify the brief was actually saved (outside transaction)
-        const verification = await prisma.brief.findUnique({
-            where: { id: result.id }
-        });
-
-        if (verification) {
-            console.log('[createBrief] ✅ VERIFICATION: Brief exists in database');
-        } else {
-            console.error('[createBrief] ❌ VERIFICATION FAILED: Brief not found in database!');
+        const verification = await prisma.brief.findUnique({ where: { id: brief.id } });
+        if (!verification) {
+            console.error('[createBrief] VERIFICATION FAILED: Brief not found in database!');
             throw new Error('Brief was not persisted to database');
         }
 
-        console.log('[createBrief] Calling revalidatePath("/briefs")');
         revalidatePath('/briefs');
 
-        // Notification: New Brief Created
         try {
             const { createNotification } = await import('@/app/actions/notifications');
             await createNotification({
@@ -263,29 +94,20 @@ export async function createBrief(data: {
                 type: 'info',
                 priority: 'medium',
                 recipients: 'ALL',
-                relatedBriefId: result.id
+                relatedBriefId: brief.id,
             });
         } catch (error) {
             console.error('Notification error:', error);
         }
 
-        logActivity({ workspaceId: data.workspaceId, userId: session.id!, resource: 'BRIEF', action: 'CREATED', resourceId: result.id, resourceName: result.name }).catch(() => {});
+        logActivity({ workspaceId: data.workspaceId, userId: session.id!, resource: 'BRIEF', action: 'CREATED', resourceId: brief.id, resourceName: brief.name }).catch(() => {});
 
-        console.log('[createBrief] ========== END ==========');
-        return { success: true, brief: result };
+        return { success: true, brief };
     } catch (error: any) {
-        console.error('[createBrief] ========== ERROR ==========');
-        console.error('[createBrief] Error type:', error.constructor.name);
-        console.error('[createBrief] Error message:', error.message);
-        console.error('[createBrief] Error code:', error.code);
-        console.error('[createBrief] Full error:', error);
-        console.error('[createBrief] ========== ERROR END ==========');
-
-        // Handle Prisma unique constraint error
+        console.error('[createBrief] Error:', error.message, error.code);
         if (error.code === 'P2002') {
             return { success: false, error: 'Brief number already exists. Please use a different number.' };
         }
-
         return { success: false, error: 'Failed to create brief: ' + error.message };
     }
 }
@@ -308,46 +130,30 @@ export async function updateBrief(
     const session = await requireAuth();
     data = applyTitleCaseToFields(data, ['name', 'customTitle']);
     data = applySentenceCaseToFields(data, ['description']);
+
     try {
-        // Get existing brief and user's workspace role
         const existingBrief = await prisma.brief.findUnique({
             where: { id },
-            select: {
-                workspaceId: true,
-                briefNumber: true,
-                lawyerInChargeId: true,
-            }
+            select: { workspaceId: true, briefNumber: true, lawyerInChargeId: true },
         });
-
-        if (!existingBrief) {
-            return { success: false, error: 'Brief not found' };
-        }
-
-        // Sanitize empty-string FKs — Prisma throws on FK violation with empty string
-        if (data.clientId === '') data.clientId = undefined;
-        if (data.lawyerInChargeId === '') data.lawyerInChargeId = undefined;
-        if (data.lawyerId === '') data.lawyerId = undefined;
+        if (!existingBrief) return { success: false, error: 'Brief not found' };
 
         const [membership, workspace] = await Promise.all([
             prisma.workspaceMember.findFirst({
-                where: { userId: session.id, workspaceId: existingBrief.workspaceId }
+                where: { userId: session.id, workspaceId: existingBrief.workspaceId },
             }),
             prisma.workspace.findUnique({
                 where: { id: existingBrief.workspaceId },
-                select: { ownerId: true }
-            })
+                select: { ownerId: true },
+            }),
         ]);
 
         const isWorkspaceOwner = workspace?.ownerId === session.id;
-
         if (!membership && !isWorkspaceOwner) {
             return { success: false, error: 'Not a member of this workspace' };
         }
 
-        // RBAC Check for Lawyer in Charge
         const { canEditLawyerInCharge, BriefPermissions } = await import('@/lib/rbac');
-
-        // Reforma platform admins (isPlatformAdmin = true) bypass all workspace-level role restrictions
         const dbUser = await prisma.user.findUnique({
             where: { email: session.email! },
             select: { isPlatformAdmin: true },
@@ -355,92 +161,43 @@ export async function updateBrief(
         const isReformaSuperAdmin = dbUser?.isPlatformAdmin === true;
 
         if (data.lawyerInChargeId && !isReformaSuperAdmin && !isWorkspaceOwner && !canEditLawyerInCharge(membership?.role ?? '')) {
-            return {
-                success: false,
-                error: 'Only Principal Partners, Partners, and Head of Chambers can change Lawyer in Charge'
-            };
+            return { success: false, error: 'Only Principal Partners, Partners, and Head of Chambers can change Lawyer in Charge' };
         }
 
-        // RBAC Check for Brief Number
         if (data.customBriefNumber && !isReformaSuperAdmin && !isWorkspaceOwner && !BriefPermissions.canEditBriefNumber(membership?.role ?? '')) {
-            return {
-                success: false,
-                error: 'Only senior roles can edit brief numbers'
-            };
+            return { success: false, error: 'Only senior roles can edit brief numbers' };
         }
 
-        // Validate custom brief number uniqueness
         if (data.customBriefNumber) {
             const existing = await prisma.brief.findFirst({
                 where: {
                     workspaceId: existingBrief.workspaceId,
-                    OR: [
-                        { briefNumber: data.customBriefNumber },
-                        { customBriefNumber: data.customBriefNumber }
-                    ],
-                    id: { not: id }
-                }
+                    OR: [{ briefNumber: data.customBriefNumber }, { customBriefNumber: data.customBriefNumber }],
+                    id: { not: id },
+                },
             });
-
-            if (existing) {
-                return {
-                    success: false,
-                    error: 'Brief number already exists in this workspace'
-                };
-            }
+            if (existing) return { success: false, error: 'Brief number already exists in this workspace' };
         }
 
-        // Audit logging for lawyer in charge change
+        // Audit logs for sensitive field changes
         if (data.lawyerInChargeId && data.lawyerInChargeId !== existingBrief.lawyerInChargeId) {
             await prisma.briefLawyerHistory.create({
-                data: {
-                    briefId: id,
-                    previousLawyerId: existingBrief.lawyerInChargeId,
-                    newLawyerId: data.lawyerInChargeId,
-                    changedBy: session.id,
-                    reason: 'Manual reassignment',
-                },
+                data: { briefId: id, previousLawyerId: existingBrief.lawyerInChargeId, newLawyerId: data.lawyerInChargeId, changedBy: session.id, reason: 'Manual reassignment' },
             });
         }
-
-        // Audit logging for brief number change
         if (data.customBriefNumber && data.customBriefNumber !== existingBrief.briefNumber) {
             await prisma.briefActivityLog.create({
-                data: {
-                    briefId: id,
-                    activityType: 'brief_number_changed',
-                    description: `Brief number changed from ${existingBrief.briefNumber} to ${data.customBriefNumber}`,
-                    performedBy: session.id,
-                },
+                data: { briefId: id, activityType: 'brief_number_changed', description: `Brief number changed from ${existingBrief.briefNumber} to ${data.customBriefNumber}`, performedBy: session.id },
             });
         }
 
-        const brief = await prisma.brief.update({
-            where: { id },
-            data,
-            include: {
-                client: true,
-                lawyer: {
-                    select: {
-                        id: true,
-                        name: true,
-                        email: true,
-                    },
-                },
-                lawyerInCharge: {
-                    select: {
-                        id: true,
-                        name: true,
-                        email: true,
-                    },
-                },
-            },
-        });
-        logActivity({ workspaceId: existingBrief?.workspaceId || brief.workspaceId, userId: session.id!, resource: 'BRIEF', action: 'UPDATED', resourceId: brief.id, resourceName: brief.name }).catch(() => {});
+        const result = await BriefService.update(id, data);
+        if (!result.success) return result;
 
+        logActivity({ workspaceId: existingBrief.workspaceId, userId: session.id!, resource: 'BRIEF', action: 'UPDATED', resourceId: id, resourceName: result.data.name }).catch(() => {});
         revalidatePath('/briefs');
         revalidatePath(`/briefs/${id}`);
-        return { success: true, brief };
+        return { success: true, brief: result.data };
     } catch (error) {
         console.error('Error updating brief:', error);
         return { success: false, error: 'Failed to update brief' };
@@ -449,34 +206,20 @@ export async function updateBrief(
 
 export async function deleteBrief(id: string) {
     try {
-        // 1. Fetch brief to identify workspace
         const brief = await prisma.brief.findUnique({
             where: { id },
-            select: { workspaceId: true, status: true, name: true }
+            select: { workspaceId: true, name: true },
         });
+        if (!brief) return { success: false, error: 'Brief not found' };
 
-        if (!brief) {
-            return { success: false, error: 'Brief not found' };
-        }
-
-        // 2. Security Check: Require DELETE_BRIEF permission (or be Workspace Owner)
         const { requirePermission } = await import('@/lib/auth-utils');
         await requirePermission(brief.workspaceId, 'DELETE_BRIEF');
 
-        // 3. Soft Delete Logic
-        const { requireAuth } = await import('@/lib/auth-utils');
         const session = await requireAuth();
-
-        await prisma.brief.update({
-            where: { id },
-            data: {
-                deletedAt: new Date(),
-                status: 'archived',
-            }
-        });
+        const result = await BriefService.softDelete(id, brief.workspaceId);
+        if (!result.success) return result;
 
         logActivity({ workspaceId: brief.workspaceId, userId: session.id!, resource: 'BRIEF', action: 'DELETED', resourceId: id, resourceName: brief.name }).catch(() => {});
-
         revalidatePath('/briefs');
         return { success: true, message: 'Brief moved to trash' };
     } catch (error: any) {
@@ -488,46 +231,12 @@ export async function deleteBrief(id: string) {
 export async function assignLawyer(briefId: string, lawyerId: string) {
     await requireAuth();
     try {
-        const brief = await prisma.brief.update({
-            where: { id: briefId },
-            data: { lawyerId },
-            include: {
-                lawyer: {
-                    select: {
-                        id: true,
-                        name: true,
-                        email: true,
-                    },
-                },
-                matter: true, // Include matter to check for linkage
-            },
-        });
-
-        // Create Notification
-        let message = `You have been assigned brief "${brief.name}" (${brief.briefNumber}).`;
-        if (brief.matter) {
-            message += ` This corresponds to matter "${brief.matter.name}" (${brief.matter.caseNumber}). Check the litigation tracker for the report on the case.`;
-        } else {
-            message += ` Please review the brief details.`;
-        }
-
-        await prisma.notification.create({
-            data: {
-                type: 'info',
-                title: 'New Brief Assignment',
-                message: message,
-                recipientId: lawyerId,
-                recipientType: 'lawyer',
-                relatedBriefId: brief.id,
-                relatedMatterId: brief.matterId,
-                priority: 'medium',
-                channels: JSON.stringify(['in-app']),
-            },
-        });
+        const result = await BriefService.assignLawyer(briefId, lawyerId);
+        if (!result.success) return result;
 
         revalidatePath('/briefs');
         revalidatePath(`/briefs/${briefId}`);
-        return { success: true, brief };
+        return { success: true, brief: result.data };
     } catch (error) {
         console.error('Error assigning lawyer:', error);
         return { success: false, error: 'Failed to assign lawyer' };

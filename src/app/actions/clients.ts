@@ -1,18 +1,14 @@
 'use server';
 
-import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
 import { requireAuth, requirePermission } from '@/lib/auth-utils';
 import { logActivity } from '@/lib/log-activity';
+import { prisma } from '@/lib/prisma';
 import { Prisma } from '@prisma/client';
 import { applyTitleCaseToFields } from '@/lib/sentence-case';
 import { createNotification } from '@/app/actions/notifications';
+import { ClientService } from '@/lib/services/clients/client-service';
 
-// ============================================
-// CLIENT CRUD OPERATIONS
-// ============================================
-
-// Pagination & Filter Types
 export type GetClientsParams = {
     page?: number;
     limit?: number;
@@ -24,98 +20,9 @@ export type GetClientsParams = {
 
 export async function getClients(workspaceId: string, params: GetClientsParams = {}) {
     await requireAuth();
-
-    const page = params.page || 1;
-    const limit = params.limit || 10;
-    const skip = (page - 1) * limit;
-
     try {
-        // Build Where Clause
-        const where: any = { workspaceId, deletedAt: null };
-
-        if (params.query) {
-            where.OR = [
-                { name: { contains: params.query, mode: 'insensitive' } },
-                { email: { contains: params.query, mode: 'insensitive' } },
-                { company: { contains: params.query, mode: 'insensitive' } },
-            ];
-        }
-
-        if (params.status && params.status !== 'all') {
-            where.status = params.status;
-        }
-
-        if (params.industry && params.industry !== 'all') {
-            where.industry = params.industry;
-        }
-
-        // New Interaction Filters
-        if (params.filter === 'active_matters') {
-            where.matters = { some: { status: 'active' } };
-        }
-
-        if (params.filter === 'outstanding') {
-            where.invoices = { some: { status: { in: ['pending', 'overdue'] } } };
-        }
-
-        if (params.filter === 'revenue') {
-            // Clients who have made at least one payment
-            where.payments = { some: {} };
-        }
-
-        // Execute Transaction for Count + Data
-        const [total, clients] = await prisma.$transaction([
-            prisma.client.count({ where }),
-            prisma.client.findMany({
-                where,
-                skip,
-                take: limit,
-                orderBy: { updatedAt: 'desc' },
-                include: {
-                    // Optimized: Only fetch what we strictly need for the list
-                    _count: {
-                        select: {
-                            matters: true,
-                            invoices: true,
-                            payments: true,
-                        },
-                    },
-                    // We need active matters count, but fetching all matters is heavy.
-                    // For now, we'll keep fetching matters but ONLY the status to minimize payload.
-                    matters: {
-                        select: { status: true }
-                    }
-                },
-            }),
-        ]);
-
-        // Process data for UI
-        const clientsWithActivity = clients.map(client => {
-            // Simplified Activity Logic: Use updated_at or create_at
-            // Real computation requires joining ActivityLogs which is expensive.
-            // We'll use the most recent matter update or client creation.
-            const lastActivity = client.updatedAt > client.createdAt ? client.updatedAt : client.createdAt;
-
-            return {
-                ...client,
-                lastActivity,
-                activeMatters: client.matters.filter(m => m.status === 'active').length,
-                // Remove the raw matters array from the response to save bandwidth
-                // (we only needed it for the active count logic above)
-                // Note: In a real app we might want to do this aggregation in SQL/Prisma directly
-            };
-        });
-
-        return {
-            success: true,
-            data: clientsWithActivity,
-            meta: {
-                total,
-                page,
-                limit,
-                totalPages: Math.ceil(total / limit),
-            }
-        };
+        const result = await ClientService.list(workspaceId, params as any);
+        return { success: true, data: result.data, meta: result.meta };
     } catch (error) {
         console.error('Error fetching clients:', error);
         return { success: false, error: 'Failed to fetch clients' };
@@ -131,42 +38,19 @@ export async function getClientById(id: string) {
                 matters: {
                     include: {
                         lawyers: {
-                            include: {
-                                lawyer: {
-                                    select: {
-                                        name: true,
-                                        email: true,
-                                    },
-                                },
-                            },
+                            include: { lawyer: { select: { name: true, email: true } } },
                         },
                     },
                 },
-                invoices: {
-                    include: {
-                        payments: true,
-                    },
-                },
+                invoices: { include: { payments: true } },
                 payments: true,
                 clientCommunications: {
-                    include: {
-                        user: {
-                            select: {
-                                name: true,
-                            },
-                        },
-                    },
-                    orderBy: {
-                        sentAt: 'desc',
-                    },
+                    include: { user: { select: { name: true } } },
+                    orderBy: { sentAt: 'desc' },
                 },
             },
         });
-
-        if (!client) {
-            return { success: false, error: 'Client not found' };
-        }
-
+        if (!client) return { success: false, error: 'Client not found' };
         return { success: true, data: client };
     } catch (error) {
         console.error('Error fetching client:', error);
@@ -185,41 +69,22 @@ interface CreateClientData {
 
 export async function createClient(data: CreateClientData) {
     await requireAuth();
-    // Normalise user-supplied text to sentence case
     data = applyTitleCaseToFields(data, ['name', 'company']);
     try {
-        // Check if email already exists
-        const existingClient = await prisma.client.findUnique({
-            where: { email: data.email },
-        });
-
-        if (existingClient) {
-            return { success: false, error: 'A client with this email already exists' };
-        }
-
-        const client = await prisma.client.create({
-            data: {
-                name: data.name,
-                email: data.email,
-                phone: data.phone,
-                company: data.company,
-                industry: data.industry,
-                workspaceId: data.workspaceId,
-                status: 'active',
-            },
-        });
+        const result = await ClientService.create(data);
+        if (!result.success) return result;
 
         await createNotification({
             workspaceId: data.workspaceId,
             title: 'New client added',
-            message: `${client.name}${client.company ? ` (${client.company})` : ''} has been onboarded as a client.`,
+            message: `${result.data.name}${result.data.company ? ` (${result.data.company})` : ''} has been onboarded as a client.`,
             type: 'success',
             priority: 'low',
             recipients: { role: ['owner', 'partner', 'admin'] },
         }).catch(() => {});
 
         revalidatePath('/management/clients');
-        return { success: true, data: client };
+        return { success: true, data: result.data };
     } catch (error) {
         console.error('Error creating client:', error);
         return { success: false, error: 'Failed to create client' };
@@ -237,30 +102,13 @@ interface UpdateClientData {
 
 export async function updateClient(id: string, data: UpdateClientData) {
     await requireAuth();
-    // Normalise user-supplied text to sentence case
     data = applyTitleCaseToFields(data, ['name', 'company']);
     try {
-        // If email is being updated, check for duplicates
-        if (data.email) {
-            const existingClient = await prisma.client.findFirst({
-                where: {
-                    email: data.email,
-                    NOT: { id },
-                },
-            });
-
-            if (existingClient) {
-                return { success: false, error: 'A client with this email already exists' };
-            }
-        }
-
-        const client = await prisma.client.update({
-            where: { id },
-            data,
-        });
+        const result = await ClientService.update(id, data);
+        if (!result.success) return result;
 
         revalidatePath('/management/clients');
-        return { success: true, data: client };
+        return { success: true, data: result.data };
     } catch (error) {
         console.error('Error updating client:', error);
         return { success: false, error: 'Failed to update client' };
@@ -274,18 +122,14 @@ export async function deleteClient(id: string) {
             where: { id },
             select: { workspaceId: true, name: true },
         });
-
         if (!client) return { success: false, error: 'Client not found' };
 
         await requirePermission(client.workspaceId, 'DELETE_CLIENT');
 
-        await prisma.client.update({
-            where: { id },
-            data: { deletedAt: new Date() },
-        });
+        const result = await ClientService.softDelete(id, client.workspaceId);
+        if (!result.success) return result;
 
         logActivity({ workspaceId: client.workspaceId, userId: session.id!, resource: 'CLIENT', action: 'DELETED', resourceId: id, resourceName: client.name }).catch(() => {});
-
         revalidatePath('/management/clients');
         return { success: true };
     } catch (error: any) {
@@ -294,125 +138,11 @@ export async function deleteClient(id: string) {
     }
 }
 
-// ============================================
-// CLIENT STATS & ANALYTICS
-// ============================================
-
 export async function getClientStats(workspaceId: string) {
     await requireAuth();
     try {
-        const now = new Date();
-        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-
-        const [
-            totalClients,
-            activeClients,
-            totalMatters,
-            activeMatters,
-            totalInvoices,
-            paidInvoices,
-            newClientsThisMonth,
-        ] = await Promise.all([
-            prisma.client.count({
-                where: { workspaceId },
-            }),
-            prisma.client.count({
-                where: {
-                    workspaceId,
-                    status: 'active',
-                },
-            }),
-            prisma.matter.count({
-                where: {
-                    workspace: { id: workspaceId },
-                },
-            }),
-            prisma.matter.count({
-                where: {
-                    workspace: { id: workspaceId },
-                    status: 'active',
-                },
-            }),
-            prisma.invoice.count({
-                where: {
-                    client: { workspaceId },
-                },
-            }),
-            prisma.invoice.count({
-                where: {
-                    client: { workspaceId },
-                    status: 'paid',
-                },
-            }),
-            prisma.client.count({
-                where: {
-                    workspaceId,
-                    createdAt: { gte: startOfMonth },
-                },
-            }),
-        ]);
-
-
-
-        // Calculate total revenue (from actual payments, not just invoices)
-        const revenueData = await prisma.payment.aggregate({
-            where: {
-                client: { workspaceId },
-            },
-            _sum: {
-                amount: true,
-            },
-        });
-
-        const totalRevenue = revenueData._sum.amount || new Prisma.Decimal(0);
-
-        // Calculate outstanding amount (from pending/overdue invoices)
-        // Ideally: (Sum of Pending Invoice Totals) - (Sum of Payments on Pending Invoices)
-        // Simplified for now: Sum of totals of non-paid invoices.
-        // Note: If a partial payment is made, invoice is 'pending'. 
-        // We should subtract the paid amount on those invoices.
-        // Let's stick to the previous implementation for outstanding for now to minimize risk, 
-        // OR improve it. Let's improve it.
-
-        const [outstandingTotals, paymentsOnPending] = await Promise.all([
-            prisma.invoice.aggregate({
-                where: { client: { workspaceId }, status: { in: ['pending', 'overdue'] } },
-                _sum: { totalAmount: true },
-            }),
-            prisma.payment.aggregate({
-                where: { invoice: { status: { in: ['pending', 'overdue'] }, client: { workspaceId } } },
-                _sum: { amount: true },
-            }),
-        ]);
-
-        const outstandingAmount = new Prisma.Decimal(outstandingTotals._sum.totalAmount ?? 0)
-            .minus(new Prisma.Decimal(paymentsOnPending._sum.amount ?? 0));
-
-        // Check if revenue pin is set
-        const workspace = await prisma.workspace.findUnique({
-            where: { id: workspaceId },
-            select: { revenuePin: true }
-        });
-
-        const isLocked = !!workspace?.revenuePin;
-
-        return {
-            success: true,
-            data: {
-                totalClients,
-                activeClients,
-                inactiveClients: totalClients - activeClients,
-                totalMatters,
-                activeMatters,
-                newClientsThisMonth,
-                totalInvoices,
-                paidInvoices,
-                pendingInvoices: totalInvoices - paidInvoices,
-                totalRevenue: isLocked ? null : totalRevenue, // Hide if locked
-                outstandingAmount,
-                isRevenueLocked: isLocked, // Flag for UI
-            },
-        };
+        const stats = await ClientService.getStats(workspaceId);
+        return { success: true, data: stats };
     } catch (error) {
         console.error('Error fetching client stats:', error);
         return { success: false, error: 'Failed to fetch stats' };
@@ -424,27 +154,16 @@ export async function validateRevenuePin(workspaceId: string, pin: string) {
     try {
         const workspace = await prisma.workspace.findUnique({
             where: { id: workspaceId },
-            select: { revenuePin: true }
+            select: { revenuePin: true },
         });
+        if (!workspace?.revenuePin) return { success: false, error: 'No PIN set' };
+        if (workspace.revenuePin !== pin) return { success: false, error: 'Invalid PIN' };
 
-        if (!workspace || !workspace.revenuePin) {
-            return { success: false, error: 'No PIN set' };
-        }
-
-        if (workspace.revenuePin === pin) {
-            // Valid PIN. Return the revenue data.
-            const revenueData = await prisma.payment.aggregate({
-                where: {
-                    client: { workspaceId },
-                },
-                _sum: {
-                    amount: true,
-                },
-            });
-            return { success: true, totalRevenue: revenueData._sum.amount || new Prisma.Decimal(0) };
-        } else {
-            return { success: false, error: 'Invalid PIN' };
-        }
+        const revenueData = await prisma.payment.aggregate({
+            where: { client: { workspaceId } },
+            _sum: { amount: true },
+        });
+        return { success: true, totalRevenue: revenueData._sum.amount || new Prisma.Decimal(0) };
     } catch (error) {
         console.error('Error validating PIN:', error);
         return { success: false, error: 'Validation failed' };
@@ -454,16 +173,8 @@ export async function validateRevenuePin(workspaceId: string, pin: string) {
 export async function setRevenuePin(workspaceId: string, pin: string) {
     await requireAuth();
     try {
-        // Basic validation
-        if (!/^\d{5}$/.test(pin)) {
-            return { success: false, error: 'PIN must be exactly 5 digits' };
-        }
-
-        await prisma.workspace.update({
-            where: { id: workspaceId },
-            data: { revenuePin: pin }
-        });
-
+        if (!/^\d{5}$/.test(pin)) return { success: false, error: 'PIN must be exactly 5 digits' };
+        await prisma.workspace.update({ where: { id: workspaceId }, data: { revenuePin: pin } });
         return { success: true };
     } catch (error) {
         console.error('Error setting PIN:', error);
@@ -471,35 +182,10 @@ export async function setRevenuePin(workspaceId: string, pin: string) {
     }
 }
 
-// ============================================
-// SEARCH & FILTER
-// ============================================
-
 export async function searchClients(workspaceId: string, query: string) {
     await requireAuth();
     try {
-        const clients = await prisma.client.findMany({
-            where: {
-                workspaceId,
-                OR: [
-                    { name: { contains: query, mode: 'insensitive' } },
-                    { email: { contains: query, mode: 'insensitive' } },
-                    { company: { contains: query, mode: 'insensitive' } },
-                    { industry: { contains: query, mode: 'insensitive' } },
-                ],
-            },
-            include: {
-                _count: {
-                    select: {
-                        matters: true,
-                    },
-                },
-            },
-            orderBy: {
-                createdAt: 'desc',
-            },
-        });
-
+        const clients = await ClientService.search(workspaceId, query);
         return { success: true, data: clients };
     } catch (error) {
         console.error('Error searching clients:', error);
@@ -507,37 +193,11 @@ export async function searchClients(workspaceId: string, query: string) {
     }
 }
 
-export async function filterClients(workspaceId: string, filters: {
-    status?: string;
-    industry?: string;
-}) {
+export async function filterClients(workspaceId: string, filters: { status?: string; industry?: string }) {
     await requireAuth();
     try {
-        const where: any = { workspaceId };
-
-        if (filters.status && filters.status !== 'all') {
-            where.status = filters.status;
-        }
-
-        if (filters.industry && filters.industry !== 'all') {
-            where.industry = filters.industry;
-        }
-
-        const clients = await prisma.client.findMany({
-            where,
-            include: {
-                _count: {
-                    select: {
-                        matters: true,
-                    },
-                },
-            },
-            orderBy: {
-                createdAt: 'desc',
-            },
-        });
-
-        return { success: true, data: clients };
+        const result = await ClientService.list(workspaceId, filters);
+        return { success: true, data: result.data };
     } catch (error) {
         console.error('Error filtering clients:', error);
         return { success: false, error: 'Failed to filter clients' };

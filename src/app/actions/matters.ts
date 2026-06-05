@@ -7,6 +7,7 @@ import { logActivity } from '@/lib/log-activity';
 import { createNotification } from '@/app/actions/notifications';
 import { scheduleCourtReminders } from '@/lib/courtReminders';
 import { initializeMilestonesForMatter } from '@/app/actions/litigation-milestones';
+import { MatterService } from '@/lib/services/matters/matter-service';
 
 async function assertWorkspaceMembership(workspaceId: string) {
     const user = await requireAuth();
@@ -154,6 +155,12 @@ export async function getMattersForWorkspace(workspaceId: string) {
         },
         orderBy: { createdAt: 'desc' },
     });
+}
+
+export async function getMattersListForWorkspace(workspaceId: string, params?: { status?: string; clientId?: string; lawyerId?: string }) {
+    await requireAuth();
+    const { matters, total } = await MatterService.list(workspaceId, params);
+    return { success: true, data: matters, total };
 }
 
 export async function recordProceeding(input: {
@@ -390,16 +397,14 @@ export async function updateMatter(
 ) {
     try {
         await requireAuth();
-        const updated = await prisma.matter.update({
-            where: { id: matterId },
-            data: {
-                name: patch.name,
-                court: patch.court ?? null,
-                judge: patch.judge ?? null,
-            },
+        const result = await MatterService.update(matterId, {
+            name: patch.name,
+            court: patch.court ?? undefined,
+            judge: patch.judge ?? undefined,
         });
+        if (!result.success) return result;
         revalidatePath('/calendar');
-        return { success: true, data: updated };
+        return { success: true, data: result.data };
     } catch (error: any) {
         return { success: false, error: error?.message || 'Failed to update matter' };
     }
@@ -412,18 +417,14 @@ export async function deleteMatter(matterId: string) {
             where: { id: matterId },
             select: { workspaceId: true, name: true },
         });
-
         if (!matter) return { success: false, error: 'Matter not found' };
 
         await requirePermission(matter.workspaceId, 'DELETE_MATTER');
 
-        await prisma.matter.update({
-            where: { id: matterId },
-            data: { deletedAt: new Date() },
-        });
+        const result = await MatterService.softDelete(matterId, matter.workspaceId);
+        if (!result.success) return result;
 
         logActivity({ workspaceId: matter.workspaceId, userId: session.id!, resource: 'MATTER', action: 'DELETED', resourceId: matterId, resourceName: matter.name }).catch(() => {});
-
         revalidatePath('/calendar');
         return { success: true };
     } catch (error: any) {
