@@ -76,10 +76,10 @@ export async function POST(req: NextRequest) {
                 data: {
                     ocrText: extractedText,
                     ocrStatus: 'completed',
-                    docType,
-                    versionOfId,
-                    version
-                }
+                    docType: docType,
+                    versionOfId: versionOfId || null,
+                    version: version
+                } as any
             });
 
             // Fire-and-forget: extract timeline events (vision + text)

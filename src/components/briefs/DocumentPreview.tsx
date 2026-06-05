@@ -34,7 +34,7 @@ interface VersionItem {
     url: string;
 }
 
-export default function DocumentPreview({ document, onClose, onNavigate, canNavigate }: DocumentPreviewProps) {
+export default function DocumentPreview({ document, onClose, onNavigate, canNavigate, onVersionSelect }: DocumentPreviewProps) {
     const [numPages, setNumPages] = useState<number>(0);
     // const [pageNumber, setPageNumber] = useState<number>(1); // Removed for continuous scroll
     const [loading, setLoading] = useState(true);

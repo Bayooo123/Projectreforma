@@ -76,7 +76,14 @@
       "Bash(mkdir -p archived)",
       "Bash(mv apply-schema.ts apply_schema_manual.js backfill-appearances.js backfill-matter-briefs.js backup_expenses.ts change_ascolp_password.ts cleanup_ascolp_clients.ts data-recovery-audit.ts delete_ascolp_briefs.ts enable-ascolp-logins.ts fix-matter-metadata.ts manual-migration.ts migrate-admin-codes.ts migrate-brief-metadata.ts migrate-lawyer-tokens.mjs normalize_emails.ts onboard_ascolp_users.ts reseed-base.ts reset-ascolp-passwords.ts reset-ascolp-user.ts reset-ascolp.js restore-ascolp-data.ts restore_expenses.js restore_expenses.ts seed-brief-attribution.ts seed-compliance.ts seed-demo.mjs seed-demo-v2.mjs setup-ascolp-access.ts unify_clients.ts archived/)",
       "Bash(mv setup-ascolp-email.ts archived/)",
-      "Bash(python -c \"import json,sys; p=json.load\\(sys.stdin\\); print\\('Next:', p.get\\('dependencies',{}\\).get\\('next','?'\\)\\); print\\('Scripts:', list\\(p.get\\('scripts',{}\\).keys\\(\\)\\)\\)\")"
+      "Bash(python -c \"import json,sys; p=json.load\\(sys.stdin\\); print\\('Next:', p.get\\('dependencies',{}\\).get\\('next','?'\\)\\); print\\('Scripts:', list\\(p.get\\('scripts',{}\\).keys\\(\\)\\)\\)\")",
+      "Bash(grep -n \"revokingMemberId\\\\|</>$\\\\|/>$\" src/app/management/it/ITManagementClient.tsx)",
+      "Bash(sed -n '387,400p' src/components/calendar/MatterDetailModal.tsx)",
+      "Bash(sed -n '983,1010p' src/app/settings/page.tsx)",
+      "Bash(sed -n '578,600p' src/components/management/WorkspaceSettingsModal.tsx)",
+      "Bash(sed -n '176,179p' src/components/calendar/MatterDetailModal.tsx)",
+      "Bash(sed -n '293,296p' src/app/settings/page.tsx)",
+      "Bash(sed -n '130,133p' src/components/management/WorkspaceSettingsModal.tsx)"
     ],
     "additionalDirectories": [
       "c:\\Users\\DELL\\.gemini\\antigravity\\scratch\\reforma-os\\src\\lib\\services",

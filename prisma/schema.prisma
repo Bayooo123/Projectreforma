@@ -572,6 +572,11 @@ model Document {
   uploadedAt DateTime        @default(now())
   ocrStatus  String          @default("pending")
   ocrText    String?
+  docType    String?         // classification: Motion, Order, Opinion, etc.
+  versionOfId String?        // Link to the parent document this version supersedes
+  version    Int             @default(1)
+  versionOf  Document?       @relation("DocumentVersions", fields: [versionOfId], references: [id])
+  versions   Document[]      @relation("DocumentVersions")
   brief          Brief                  @relation(fields: [briefId], references: [id], onDelete: Cascade)
   folder         Folder?                @relation(fields: [folderId], references: [id], onDelete: Cascade)
   chunks         DocumentChunk[]
@@ -579,6 +584,7 @@ model Document {
 
   @@index([briefId])
   @@index([folderId])
+  @@index([versionOfId])
 }
 
 model Folder {
@@ -1139,6 +1145,7 @@ model InboundEmail {
   attachmentCount Int        @default(0)
   attachmentNames String?
   receivedAt      DateTime   @default(now())
+  entities        Json?      // Extracted party names, court names, etc.
 
   workspace       Workspace?        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   client          Client?           @relation(fields: [clientId], references: [id], onDelete: SetNull)

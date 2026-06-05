@@ -78,6 +78,7 @@ interface PulseClientProps {
     pendingQuestions: PendingQuestion[];
     anomalies: any[];
     myBriefs: MyBrief[];
+    todayEntries: any[];
     userId: string;
     workspaceId: string;
 }
@@ -91,6 +92,7 @@ export default function PulseClient({
     pendingQuestions,
     anomalies,
     myBriefs,
+    todayEntries,
 }: PulseClientProps) {
     const [view, setView] = useState<'firm' | 'user'>('firm');
     const [filter, setFilter] = useState<FilterType>('all');
