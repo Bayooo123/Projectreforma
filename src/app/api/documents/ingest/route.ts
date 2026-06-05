@@ -55,10 +55,9 @@ export async function POST(req: NextRequest) {
             const docType = classifyDocumentContent(extractedText);
 
             // 3.2. Version Detection (Deterministic)
-            const existingDocs = await prisma.document.findMany({
+            const existingDocs = (await prisma.document.findMany({
                 where: { briefId, id: { not: documentId }, ocrStatus: 'completed' },
-                select: { id: true, ocrText: true, version: true } as any,
-            }) as Array<{ id: string; ocrText: string | null; version: number }>;
+            }) as unknown) as Array<{ id: string; ocrText: string | null; version: number }>;
 
             let versionOfId: string | undefined;
             let version = 1;
