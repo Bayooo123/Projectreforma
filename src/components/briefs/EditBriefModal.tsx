@@ -3,7 +3,7 @@
 import { X, Loader, Plus } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import styles from './BriefUploadModal.module.css'; // Reuse existing styles
-import { updateBrief } from '@/app/actions/briefs';
+import { updateBrief, getBriefLawyerAssignments } from '@/app/actions/briefs';
 import { getClientsForWorkspace, getLawyersForWorkspace, createClientQuick } from '@/lib/briefs';
 import { PinProtection } from '@/components/auth/PinProtection';
 
@@ -35,6 +35,8 @@ const EditBriefModal = ({ isOpen, onClose, onSuccess, brief, workspaceId }: Edit
     const [customBriefNumber, setCustomBriefNumber] = useState('');
     const [selectedClientId, setSelectedClientId] = useState('');
     const [selectedLawyerInChargeId, setSelectedLawyerInChargeId] = useState('');
+    const [lawyer2Id, setLawyer2Id] = useState('');
+    const [lawyer3Id, setLawyer3Id] = useState('');
     const [category, setCategory] = useState('');
     const [status, setStatus] = useState('active');
     const [description, setDescription] = useState('');
@@ -74,16 +76,17 @@ const EditBriefModal = ({ isOpen, onClose, onSuccess, brief, workspaceId }: Edit
     const loadData = async () => {
         setIsLoadingData(true);
         try {
-            const [clientsData, lawyersData] = await Promise.all([
+            const [clientsData, lawyersData, assignments] = await Promise.all([
                 getClientsForWorkspace(workspaceId),
                 getLawyersForWorkspace(workspaceId),
+                brief?.id ? getBriefLawyerAssignments(brief.id) : Promise.resolve([]),
             ]);
-
             setClients(clientsData);
             setLawyers(lawyersData);
-        } catch (error) {
-            console.error('Error loading data:', error);
-            alert('Failed to load clients and lawyers');
+            setLawyer2Id(assignments[0]?.lawyer?.id ?? '');
+            setLawyer3Id(assignments[1]?.lawyer?.id ?? '');
+        } catch {
+            alert('Failed to load form data');
         } finally {
             setIsLoadingData(false);
         }
@@ -115,7 +118,15 @@ const EditBriefModal = ({ isOpen, onClose, onSuccess, brief, workspaceId }: Edit
         e.preventDefault();
 
         if (!selectedLawyerInChargeId) {
-            alert('Please select a lawyer in charge');
+            alert('Please select a lead lawyer');
+            return;
+        }
+        if (!lawyer2Id) {
+            alert('Please assign at least one assisting lawyer (Lawyer 2 is required)');
+            return;
+        }
+        if (lawyer2Id === selectedLawyerInChargeId || lawyer3Id === selectedLawyerInChargeId || (lawyer3Id && lawyer3Id === lawyer2Id)) {
+            alert('Each lawyer slot must be a different person');
             return;
         }
 
@@ -136,14 +147,20 @@ const EditBriefModal = ({ isOpen, onClose, onSuccess, brief, workspaceId }: Edit
             // Wait, if it's standalone, we might want to update `name`.
             // The `updateBrief` action signature now takes `customTitle`. 
 
+            const assigningLawyers = [
+                { lawyerId: lawyer2Id, role: 'assisting' },
+                ...(lawyer3Id ? [{ lawyerId: lawyer3Id, role: 'assisting' }] : []),
+            ];
+
             const updateData: any = {
-                customTitle: briefName, // Always set customTitle for edits
+                customTitle: briefName,
                 customBriefNumber: customBriefNumber !== brief.briefNumber ? customBriefNumber : undefined,
                 clientId: selectedClientId,
                 lawyerInChargeId: selectedLawyerInChargeId,
                 category,
                 status,
                 description: description || undefined,
+                assignments: assigningLawyers,
             };
 
             // Remove undefined keys
@@ -285,20 +302,60 @@ const EditBriefModal = ({ isOpen, onClose, onSuccess, brief, workspaceId }: Edit
                                     )}
                                 </div>
 
+                                {/* Lawyer 1 — Lead (required) */}
                                 <div className={styles.formGroup}>
-                                    <label className={styles.label}>Lawyer in Charge *</label>
+                                    <label className={styles.label}>Lead Lawyer *</label>
                                     <select
                                         className={styles.select}
                                         value={selectedLawyerInChargeId}
                                         onChange={e => setSelectedLawyerInChargeId(e.target.value)}
                                         required
                                     >
-                                        <option value="">Select Lawyer...</option>
-                                        {lawyers.map(lawyer => (
-                                            <option key={lawyer.id} value={lawyer.id}>
-                                                {lawyer.name || lawyer.email} ({lawyer.role})
+                                        <option value="">Select Lead Lawyer...</option>
+                                        {lawyers.map(l => (
+                                            <option key={l.id} value={l.id}>
+                                                {l.name || l.email} ({l.role})
                                             </option>
                                         ))}
+                                    </select>
+                                </div>
+
+                                {/* Lawyer 2 — Assisting (required) */}
+                                <div className={styles.formGroup}>
+                                    <label className={styles.label}>Assisting Lawyer *</label>
+                                    <select
+                                        className={styles.select}
+                                        value={lawyer2Id}
+                                        onChange={e => setLawyer2Id(e.target.value)}
+                                        required
+                                    >
+                                        <option value="">Select Assisting Lawyer...</option>
+                                        {lawyers
+                                            .filter(l => l.id !== selectedLawyerInChargeId)
+                                            .map(l => (
+                                                <option key={l.id} value={l.id}>
+                                                    {l.name || l.email} ({l.role})
+                                                </option>
+                                            ))}
+                                    </select>
+                                </div>
+
+                                {/* Lawyer 3 — Optional */}
+                                <div className={styles.formGroup}>
+                                    <label className={styles.label}>Additional Lawyer (Optional)</label>
+                                    <select
+                                        className={styles.select}
+                                        value={lawyer3Id}
+                                        onChange={e => setLawyer3Id(e.target.value)}
+                                    >
+                                        <option value="">None</option>
+                                        {lawyers
+                                            .filter(l => l.id !== selectedLawyerInChargeId && l.id !== lawyer2Id)
+                                            .map(l => (
+                                                <option key={l.id} value={l.id}>
+                                                    {l.name || l.email} ({l.role})
+                                                </option>
+                                            ))}
                                     </select>
                                 </div>
 

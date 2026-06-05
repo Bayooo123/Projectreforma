@@ -3,7 +3,7 @@
 import { X, UploadCloud, Loader, Plus } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import styles from './BriefUploadModal.module.css';
-import { createBrief, getBriefs } from '@/app/actions/briefs';
+import { createBrief, getBriefs, setBriefLawyerAssignments } from '@/app/actions/briefs';
 import { getClientsForWorkspace, getLawyersForWorkspace, generateBriefNumber, createClientQuick } from '@/lib/briefs';
 
 interface BriefUploadModalProps {
@@ -33,6 +33,8 @@ const BriefUploadModal = ({ isOpen, onClose, onSuccess, workspaceId }: BriefUplo
     const [briefName, setBriefName] = useState('');
     const [selectedClientId, setSelectedClientId] = useState('');
     const [selectedLawyerId, setSelectedLawyerId] = useState('');
+    const [lawyer2Id, setLawyer2Id] = useState('');
+    const [lawyer3Id, setLawyer3Id] = useState('');
     const [category, setCategory] = useState('');
     const [status, setStatus] = useState('active');
     const [description, setDescription] = useState('');
@@ -107,6 +109,18 @@ const BriefUploadModal = ({ isOpen, onClose, onSuccess, workspaceId }: BriefUplo
             alert('Please select a client');
             return;
         }
+        if (!selectedLawyerId) {
+            alert('Please select a lead lawyer');
+            return;
+        }
+        if (!lawyer2Id) {
+            alert('Please assign at least one assisting lawyer (Lawyer 2 is required)');
+            return;
+        }
+        if (lawyer2Id === selectedLawyerId || lawyer3Id === selectedLawyerId || (lawyer3Id && lawyer3Id === lawyer2Id)) {
+            alert('Each lawyer slot must be a different person');
+            return;
+        }
 
         setIsSubmitting(true);
 
@@ -116,6 +130,7 @@ const BriefUploadModal = ({ isOpen, onClose, onSuccess, workspaceId }: BriefUplo
                 name: briefName,
                 clientId: selectedClientId,
                 lawyerId: selectedLawyerId,
+                lawyerInChargeId: selectedLawyerId,
                 workspaceId,
                 category,
                 status,
@@ -123,24 +138,26 @@ const BriefUploadModal = ({ isOpen, onClose, onSuccess, workspaceId }: BriefUplo
                 parentBriefId: selectedParentBriefId || undefined,
             });
 
-            if (result.success) {
-                console.log('[BriefUploadModal] Brief created successfully!', result.brief);
-                // Reset form
+            if (result.success && result.brief) {
+                // Save assisting lawyers via BriefLawyer table
+                const assistingLawyers = [
+                    { lawyerId: lawyer2Id, role: 'assisting' },
+                    ...(lawyer3Id ? [{ lawyerId: lawyer3Id, role: 'assisting' }] : []),
+                ];
+                await setBriefLawyerAssignments(result.brief.id, assistingLawyers);
+
                 setBriefName('');
                 setSelectedClientId('');
                 setSelectedLawyerId('');
+                setLawyer2Id('');
+                setLawyer3Id('');
                 setCategory('');
                 setStatus('active');
                 setDescription('');
                 setSelectedParentBriefId('');
 
-                // Show success message
                 alert('Brief created successfully!');
-
-                // Call onSuccess to trigger refresh with the new brief data
-                console.log('[BriefUploadModal] Calling onSuccess callback with brief data');
                 onSuccess(result.brief);
-                console.log('[BriefUploadModal] onSuccess callback completed');
             } else {
                 alert('Failed to create brief: ' + result.error);
             }
@@ -257,20 +274,60 @@ const BriefUploadModal = ({ isOpen, onClose, onSuccess, workspaceId }: BriefUplo
                                 )}
                             </div>
 
-                            {/* Row 3: Lawyer */}
+                            {/* Lawyer 1 — Lead (required) */}
                             <div className={styles.formGroup}>
-                                <label className={styles.label}>Lawyer in Charge</label>
+                                <label className={styles.label}>Lead Lawyer *</label>
                                 <select
                                     className={styles.select}
                                     value={selectedLawyerId}
                                     onChange={e => setSelectedLawyerId(e.target.value)}
+                                    required
                                 >
-                                    <option value="">Unassigned — assign later</option>
-                                    {lawyers.map(lawyer => (
-                                        <option key={lawyer.id} value={lawyer.id}>
-                                            {lawyer.name || lawyer.email} ({lawyer.role})
+                                    <option value="">Select Lead Lawyer...</option>
+                                    {lawyers.map(l => (
+                                        <option key={l.id} value={l.id}>
+                                            {l.name || l.email} ({l.role})
                                         </option>
                                     ))}
+                                </select>
+                            </div>
+
+                            {/* Lawyer 2 — Assisting (required) */}
+                            <div className={styles.formGroup}>
+                                <label className={styles.label}>Assisting Lawyer *</label>
+                                <select
+                                    className={styles.select}
+                                    value={lawyer2Id}
+                                    onChange={e => setLawyer2Id(e.target.value)}
+                                    required
+                                >
+                                    <option value="">Select Assisting Lawyer...</option>
+                                    {lawyers
+                                        .filter(l => l.id !== selectedLawyerId)
+                                        .map(l => (
+                                            <option key={l.id} value={l.id}>
+                                                {l.name || l.email} ({l.role})
+                                            </option>
+                                        ))}
+                                </select>
+                            </div>
+
+                            {/* Lawyer 3 — Optional */}
+                            <div className={styles.formGroup}>
+                                <label className={styles.label}>Additional Lawyer (Optional)</label>
+                                <select
+                                    className={styles.select}
+                                    value={lawyer3Id}
+                                    onChange={e => setLawyer3Id(e.target.value)}
+                                >
+                                    <option value="">None</option>
+                                    {lawyers
+                                        .filter(l => l.id !== selectedLawyerId && l.id !== lawyer2Id)
+                                        .map(l => (
+                                            <option key={l.id} value={l.id}>
+                                                {l.name || l.email} ({l.role})
+                                            </option>
+                                        ))}
                                 </select>
                             </div>
 

@@ -788,3 +788,36 @@ export async function generateBriefSummary(briefId: string): Promise<{ success: 
         data: { briefType: result.briefType, prose: result.prose, chronology: result.chronology, generatedAt: now },
     };
 }
+
+// ── Brief lawyer assignments ──────────────────────────────────────────────────
+
+export async function getBriefLawyerAssignments(briefId: string) {
+    await requireAuth();
+    return prisma.briefLawyer.findMany({
+        where: { briefId },
+        include: { lawyer: { select: { id: true, name: true, email: true } } },
+        orderBy: { createdAt: 'asc' },
+    });
+}
+
+export async function setBriefLawyerAssignments(
+    briefId: string,
+    assignments: { lawyerId: string; role: string }[],
+): Promise<{ success: boolean; error?: string }> {
+    await requireAuth();
+    try {
+        await prisma.$transaction([
+            prisma.briefLawyer.deleteMany({ where: { briefId } }),
+            ...(assignments.length > 0
+                ? [prisma.briefLawyer.createMany({
+                    data: assignments.map(a => ({ briefId, lawyerId: a.lawyerId, role: a.role })),
+                    skipDuplicates: true,
+                })]
+                : []),
+        ]);
+        revalidatePath(`/briefs/${briefId}`);
+        return { success: true };
+    } catch (err: any) {
+        return { success: false, error: err?.message ?? 'Failed to update assignments' };
+    }
+}
