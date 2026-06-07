@@ -1,0 +1,288 @@
+.page {
+    min-height: 100vh;
+    background: #F1F5F9;
+    padding-bottom: 120px;
+}
+
+/* ── Header ── */
+.header {
+    padding: calc(env(safe-area-inset-top, 0px) + 20px) 20px 0;
+    background: #F1F5F9;
+}
+
+.eyebrow {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: #059669;
+    font-weight: 500;
+}
+
+.title {
+    font-family: 'Source Serif 4', Georgia, serif;
+    font-size: 30px;
+    font-weight: 600;
+    letter-spacing: -0.015em;
+    line-height: 1.05;
+    color: #0F172A;
+    margin-top: 4px;
+}
+
+/* ── Hero Card ── */
+.hero {
+    margin: 20px 20px 0;
+    background: linear-gradient(155deg, #064e3b, #022c22);
+    border-radius: 20px;
+    padding: 24px;
+    position: relative;
+    overflow: hidden;
+}
+
+.hero::after {
+    content: '';
+    position: absolute;
+    right: -40px;
+    top: -40px;
+    width: 180px;
+    height: 180px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(16,185,129,.18), transparent 70%);
+}
+
+.heroStats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    position: relative;
+    z-index: 1;
+}
+
+.heroStat {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.heroStat:first-child {
+    grid-column: 1 / -1;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+    padding-bottom: 16px;
+    margin-bottom: 4px;
+}
+
+.heroLabel {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: rgba(167,243,208,0.7);
+    font-weight: 500;
+}
+
+.heroValue {
+    font-family: 'Source Serif 4', Georgia, serif;
+    font-size: 28px;
+    font-weight: 700;
+    color: #ffffff;
+    letter-spacing: -0.02em;
+    line-height: 1;
+}
+
+.heroValueSm {
+    font-family: 'Source Serif 4', Georgia, serif;
+    font-size: 20px;
+    font-weight: 600;
+    color: #ffffff;
+    letter-spacing: -0.02em;
+    line-height: 1;
+}
+
+/* ── Segment Control ── */
+.segmentWrap {
+    margin: 16px 20px 0;
+    display: flex;
+    gap: 4px;
+    background: #E2E8F0;
+    border-radius: 12px;
+    padding: 4px;
+}
+
+.segBtn {
+    flex: 1;
+    padding: 8px 4px;
+    border: none;
+    background: none;
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    color: #475569;
+    border-radius: 9px;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+}
+
+.segBtnActive {
+    background: #ffffff;
+    color: #064e3b;
+    box-shadow: 0 1px 3px rgba(15,23,42,0.1);
+}
+
+/* ── Transaction List ── */
+.list {
+    margin: 16px 0 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 0 16px;
+}
+
+.card {
+    background: #ffffff;
+    border: 1px solid #E2E8F0;
+    border-radius: 16px;
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    box-shadow: 0 1px 3px rgba(15,23,42,.04);
+    text-decoration: none;
+    color: inherit;
+    cursor: pointer;
+    transition: transform 0.14s;
+}
+
+.card:active {
+    transform: scale(0.985);
+}
+
+.cardIcon {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.cardBody {
+    flex: 1;
+    min-width: 0;
+}
+
+.cardName {
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 14.5px;
+    font-weight: 600;
+    color: #0F172A;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.cardSub {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: #94A3B8;
+    margin-top: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.cardTrail {
+    text-align: right;
+    flex-shrink: 0;
+}
+
+.cardAmount {
+    font-family: 'Source Serif 4', Georgia, serif;
+    font-size: 15px;
+    font-weight: 600;
+    color: #0F172A;
+}
+
+.cardAmountPos {
+    color: #059669;
+}
+
+.cardAmountNeg {
+    color: #EF4444;
+}
+
+.cardPill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 10.5px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 99px;
+    margin-top: 3px;
+}
+
+.pillPaid {
+    background: #D1FAE5;
+    color: #065F46;
+}
+
+.pillPending {
+    background: #FEF3C7;
+    color: #92400E;
+}
+
+.pillOverdue {
+    background: #FEE2E2;
+    color: #B91C1C;
+}
+
+.pillDot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: currentColor;
+}
+
+/* ── Empty state ── */
+.empty {
+    text-align: center;
+    padding: 48px 20px;
+    color: #94A3B8;
+    font-size: 14px;
+}
+
+/* ── FAB for new invoice ── */
+.newBtn {
+    position: fixed;
+    bottom: calc(75px + env(safe-area-inset-bottom));
+    right: 20px;
+    background: #059669;
+    color: white;
+    border: none;
+    border-radius: 99px;
+    padding: 12px 20px;
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    box-shadow: 0 4px 14px rgba(5,150,105,0.4);
+    cursor: pointer;
+    text-decoration: none;
+    z-index: 40;
+    transition: transform 0.15s;
+}
+
+.newBtn:active {
+    transform: scale(0.95);
+}
+
+/* ── Desktop hide ── */
+@media (min-width: 769px) {
+    .newBtn {
+        display: none;
+    }
+}

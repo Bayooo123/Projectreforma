@@ -14,6 +14,9 @@ import {
   Inbox,
   Plus,
   LayoutGrid,
+  DollarSign,
+  Bell,
+  Settings,
 } from 'lucide-react';
 import styles from './BottomNavigation.module.css';
 import { useState } from 'react';
@@ -22,9 +25,10 @@ interface BottomNavigationProps {
   user?: {
     role?: string | null;
   };
+  unreadNotifications?: number;
 }
 
-const BottomNavigation = ({ user }: BottomNavigationProps) => {
+const BottomNavigation = ({ user, unreadNotifications = 0 }: BottomNavigationProps) => {
   const pathname = usePathname();
   const [showFabMenu, setShowFabMenu] = useState(false);
   const [showMoreDrawer, setShowMoreDrawer] = useState(false);
@@ -32,20 +36,22 @@ const BottomNavigation = ({ user }: BottomNavigationProps) => {
   const isAdminOrOwner = user?.role === 'admin' || user?.role === 'owner';
 
   const primaryNav = [
-    { name: 'Pulse', href: '/pulse', icon: Activity },
+    { name: 'Today', href: '/pulse', icon: Activity },
     { name: 'Briefs', href: '/briefs', icon: FileText },
   ];
 
   const secondaryNav = [
-    { name: 'Calendar', href: '/calendar', icon: Gavel },
+    { name: 'Court', href: '/calendar', icon: Gavel },
   ];
 
   const moreNav = [
-    { name: 'Email Inbox', href: '/emails', icon: Inbox },
+    { name: 'Finance', href: '/finance', icon: DollarSign },
     { name: 'Clients', href: '/management/clients', icon: Users },
-    { name: 'Office', href: '/management/office', icon: Briefcase },
+    { name: 'Email Inbox', href: '/emails', icon: Inbox },
     { name: 'Compliance', href: '/management/compliance', icon: ShieldCheck },
     { name: 'Analytics', href: '/analytics', icon: BarChart2 },
+    { name: 'Notifications', href: '/notifications', icon: Bell },
+    { name: 'Settings', href: '/settings', icon: Settings },
     ...(isAdminOrOwner ? [{ name: 'IT Mgmt', href: '/management/it', icon: Terminal }] : []),
   ];
 

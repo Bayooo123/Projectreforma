@@ -1,0 +1,191 @@
+.page {
+    min-height: 100vh;
+    background: #F1F5F9;
+    padding-bottom: 120px;
+}
+
+/* ── Header ── */
+.header {
+    padding: calc(env(safe-area-inset-top, 0px) + 20px) 20px 16px;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.eyebrow {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: #059669;
+    font-weight: 500;
+}
+
+.title {
+    font-family: 'Source Serif 4', Georgia, serif;
+    font-size: 30px;
+    font-weight: 600;
+    letter-spacing: -0.015em;
+    line-height: 1.1;
+    color: #0F172A;
+    margin-top: 4px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: #EF4444;
+    color: white;
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    min-width: 20px;
+    height: 20px;
+    border-radius: 99px;
+    padding: 0 6px;
+}
+
+.markAllBtn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: none;
+    border: 1.5px solid #E2E8F0;
+    border-radius: 10px;
+    padding: 8px 12px;
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: #475569;
+    cursor: pointer;
+    white-space: nowrap;
+    flex-shrink: 0;
+    transition: border-color 0.15s, color 0.15s;
+}
+
+.markAllBtn:hover {
+    border-color: #059669;
+    color: #059669;
+}
+
+.markAllBtn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* ── Groups ── */
+.group {
+    margin-bottom: 4px;
+}
+
+.groupLabel {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10.5px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: #94A3B8;
+    font-weight: 500;
+    padding: 12px 20px 8px;
+}
+
+.groupItems {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 0 16px;
+}
+
+/* ── Notification card ── */
+.notifCard {
+    background: #ffffff;
+    border: 1px solid #E2E8F0;
+    border-radius: 16px;
+    padding: 14px;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    cursor: pointer;
+    transition: transform 0.14s;
+    position: relative;
+}
+
+.notifCard:active {
+    transform: scale(0.985);
+}
+
+.notifUnread {
+    border-left: 3px solid #059669;
+    background: #F0FDF9;
+}
+
+.notifIcon {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.notifBody {
+    flex: 1;
+    min-width: 0;
+}
+
+.notifTop {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 8px;
+}
+
+.notifTitle {
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    color: #0F172A;
+    line-height: 1.3;
+    flex: 1;
+}
+
+.notifTime {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10.5px;
+    color: #94A3B8;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.notifMessage {
+    font-size: 13px;
+    color: #475569;
+    margin-top: 4px;
+    line-height: 1.45;
+}
+
+.unreadDot {
+    width: 8px;
+    height: 8px;
+    background: #059669;
+    border-radius: 50%;
+    flex-shrink: 0;
+    margin-top: 3px;
+}
+
+/* ── Empty ── */
+.empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 80px 20px;
+    color: #94A3B8;
+    font-size: 14px;
+}

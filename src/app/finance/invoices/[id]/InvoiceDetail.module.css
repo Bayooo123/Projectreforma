@@ -1,0 +1,264 @@
+.page {
+    min-height: 100vh;
+    background: #F1F5F9;
+    padding-bottom: 120px;
+}
+
+/* ── Hero ── */
+.hero {
+    background: linear-gradient(155deg, #064e3b, #022c22);
+    padding: calc(env(safe-area-inset-top, 0px) + 20px) 20px 28px;
+    position: relative;
+}
+
+.backBtn {
+    position: absolute;
+    top: calc(env(safe-area-inset-top, 0px) + 16px);
+    left: 16px;
+    width: 36px;
+    height: 36px;
+    background: rgba(255,255,255,0.15);
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    cursor: pointer;
+    backdrop-filter: blur(4px);
+}
+
+.heroContent {
+    text-align: center;
+    padding-top: 20px;
+}
+
+.heroMono {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: rgba(167,243,208,0.8);
+    font-weight: 500;
+}
+
+.heroClient {
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 16px;
+    font-weight: 600;
+    color: rgba(255,255,255,0.9);
+    margin-top: 4px;
+}
+
+.heroAmount {
+    font-family: 'Source Serif 4', Georgia, serif;
+    font-size: 36px;
+    font-weight: 700;
+    color: #ffffff;
+    letter-spacing: -0.02em;
+    margin-top: 8px;
+    line-height: 1;
+}
+
+.badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 5px 12px;
+    border-radius: 99px;
+    margin-top: 12px;
+}
+
+.badgePaid { background: #D1FAE5; color: #065F46; }
+.badgePending { background: #FEF3C7; color: #92400E; }
+.badgeOverdue { background: #FEE2E2; color: #B91C1C; }
+
+/* ── Body ── */
+.body {
+    padding: 16px 16px 0;
+}
+
+.section {
+    background: #ffffff;
+    border: 1px solid #E2E8F0;
+    border-radius: 16px;
+    padding: 18px;
+    margin-bottom: 12px;
+    box-shadow: 0 1px 3px rgba(15,23,42,.04);
+}
+
+.sectionTitle {
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #94A3B8;
+    margin-bottom: 14px;
+}
+
+.metaGrid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+}
+
+.metaItem {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.metaLabel {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10.5px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #94A3B8;
+}
+
+.metaValue {
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    color: #0F172A;
+}
+
+/* ── Line items ── */
+.lineItems {
+    display: flex;
+    flex-direction: column;
+}
+
+.lineItem {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid #EEF2F6;
+}
+
+.lineItem:first-child {
+    padding-top: 0;
+}
+
+.lineItemLeft {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    flex: 1;
+    min-width: 0;
+}
+
+.lineItemName {
+    font-size: 13.5px;
+    font-weight: 600;
+    color: #0F172A;
+}
+
+.lineItemSub {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: #94A3B8;
+    margin-top: 2px;
+}
+
+.lineItemAmount {
+    font-family: 'Source Serif 4', Georgia, serif;
+    font-size: 14px;
+    font-weight: 600;
+    color: #0F172A;
+    white-space: nowrap;
+}
+
+.lineItemTotal {
+    display: flex;
+    justify-content: space-between;
+    padding: 12px 0 0;
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    color: #0F172A;
+}
+
+/* ── Payments ── */
+.paymentList {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.paymentRow {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.paymentMethod {
+    font-size: 13.5px;
+    font-weight: 600;
+    color: #0F172A;
+}
+
+.paymentDate {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: #94A3B8;
+    margin-top: 2px;
+}
+
+.paymentAmount {
+    font-family: 'Source Serif 4', Georgia, serif;
+    font-size: 14px;
+    font-weight: 600;
+    color: #059669;
+}
+
+.outstandingRow {
+    display: flex;
+    justify-content: space-between;
+    padding-top: 10px;
+    border-top: 1px solid #EEF2F6;
+    font-size: 13px;
+    font-weight: 700;
+    color: #EF4444;
+}
+
+/* ── Actions ── */
+.actions {
+    position: fixed;
+    bottom: calc(65px + env(safe-area-inset-bottom));
+    left: 0;
+    right: 0;
+    padding: 12px 16px;
+    background: rgba(255,255,255,0.95);
+    backdrop-filter: blur(10px);
+    border-top: 1px solid #E2E8F0;
+}
+
+.primaryBtn {
+    width: 100%;
+    height: 52px;
+    background: linear-gradient(135deg, #10B981, #047857);
+    color: white;
+    border: none;
+    border-radius: 14px;
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(5,150,105,0.35);
+    transition: transform 0.14s;
+}
+
+.primaryBtn:active {
+    transform: scale(0.98);
+}
+
+.primaryBtn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}

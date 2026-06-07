@@ -45,15 +45,20 @@
         display: none !important;
     }
 
+    /* Hide the desktop header on mobile — bottom nav handles navigation */
+    .headerWrapper {
+        display: none !important;
+    }
+
     .mainContent {
         margin-left: 0;
         padding-bottom: calc(65px + env(safe-area-inset-bottom));
     }
 
     .contentContainer {
-        padding: 1rem;
-        padding-bottom: 1.5rem;
-        animation: none; /* skip transform animation on mobile to avoid jank */
+        padding: 0;
+        padding-bottom: 0;
+        animation: none;
     }
 }
 

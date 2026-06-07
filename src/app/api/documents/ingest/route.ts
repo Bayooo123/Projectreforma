@@ -30,86 +30,22 @@ export async function POST(req: NextRequest) {
             access: 'public',
         });
 
-        const documentId = nanoid();
-
-        // 2. Create document record
-        await prisma.document.create({
-            data: {
-                id: documentId,
-                name: file.name,
-                type: file.type.split('/')[1] || 'unknown',
-                size: file.size,
-                url: blob.url,
-                briefId: briefId,
-                ocrStatus: 'pending'
-            }
+        // 2. Process via Central Ingestion Service
+        const { DocumentIngestionService } = await import('@/lib/services/ingestion');
+        const result = await DocumentIngestionService.ingest({
+            name: file.name,
+            buffer,
+            contentType: file.type,
+            size: file.size,
+            briefId,
+            url: blob.url
         });
-
-        // 3. Try text extraction (optional - don't fail upload if this fails)
-        let extractedText = '';
-        try {
-            const { TextExtractor } = await import('@/lib/ingestion/text-extractor');
-            extractedText = await TextExtractor.extract(buffer, file.type);
-
-            // 3.1. Classify Document Content (Deterministic)
-            const docType = classifyDocumentContent(extractedText);
-
-            // 3.2. Version Detection (Deterministic)
-            const existingDocs = (await prisma.document.findMany({
-                where: { briefId, id: { not: documentId }, ocrStatus: 'completed' },
-            }) as unknown) as Array<{ id: string; ocrText: string | null; version: number }>;
-
-            let versionOfId: string | undefined;
-            let version = 1;
-
-            for (const existing of existingDocs) {
-                if (existing.ocrText && isVersionOf(extractedText, existing.ocrText)) {
-                    versionOfId = existing.id;
-                    version = existing.version + 1;
-                    break;
-                }
-            }
-
-            // Update document with extracted text, classification and version info
-            await prisma.document.update({
-                where: { id: documentId },
-                data: {
-                    ocrText: extractedText,
-                    ocrStatus: 'completed',
-                    docType: docType,
-                    versionOfId: versionOfId || null,
-                    version: version
-                } as any
-            });
-
-            // Fire-and-forget: extract timeline events (vision + text)
-            import('@/lib/services/doc-timeline-extractor').then(({ extractDocumentTimeline }) =>
-                extractDocumentTimeline(documentId, file.name, briefId, extractedText, blob.url, file.type.split('/')[1] || '')
-                    .catch(e => console.error('[Ingest] Timeline extraction failed:', e))
-            ).catch(() => {});
-
-        } catch (extractError) {
-            console.warn('[Ingest] Text extraction failed (non-fatal):', extractError);
-            await prisma.document.update({
-                where: { id: documentId },
-                data: { ocrStatus: 'failed' }
-            });
-
-            // Still attempt timeline extraction via vision even when text extraction failed
-            import('@/lib/services/doc-timeline-extractor').then(({ extractDocumentTimeline }) =>
-                extractDocumentTimeline(documentId, file.name, briefId, null, blob.url, file.type.split('/')[1] || '')
-                    .catch(e => console.error('[Ingest] Vision timeline extraction failed:', e))
-            ).catch(() => {});
-        }
-
-        // 4. Vectorization is skipped for now (requires pgvector + API key)
-        // This can be enabled later when the full RAG pipeline is needed
 
         return NextResponse.json({
             success: true,
-            documentId,
+            documentId: (result as any).documentId,
             url: blob.url,
-            textExtracted: extractedText.length > 0
+            textExtracted: !(result as any).error
         });
 
     } catch (error) {

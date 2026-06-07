@@ -37,6 +37,14 @@ async function uploadAttachments(
     inboundEmailId: string,
     briefId: string | null
 ): Promise<void> {
+    const { DocumentIngestionService } = await import('@/lib/services/ingestion');
+    
+    let correspondenceFolderId: string | null = null;
+    if (briefId) {
+        const folder = await DocumentIngestionService.getOrCreateCorrespondenceFolder(briefId, workspaceId);
+        correspondenceFolderId = folder.id;
+    }
+
     for (const att of attachments) {
         try {
             if (!ALLOWED_ATTACHMENT_TYPES.includes(att.contentType)) {
@@ -58,7 +66,7 @@ async function uploadAttachments(
                 contentType: att.contentType,
             });
 
-            // Always create EmailAttachment record
+            // Always create EmailAttachment record for the Email timeline
             await prisma.emailAttachment.create({
                 data: {
                     inboundEmailId,
@@ -69,21 +77,20 @@ async function uploadAttachments(
                 },
             });
 
-            // If matched to a brief, also create a Document so it appears in the brief vault
+            // If matched to a brief, perform full ingestion so it appears in the regular Documents vault
             if (briefId) {
-                const ext = safeName.split('.').pop()?.toLowerCase() || 'bin';
-                await prisma.document.create({
-                    data: {
-                        name: att.name,
-                        url: blob.url,
-                        type: ext,
-                        size: buffer.byteLength,
-                        briefId,
-                    },
+                await DocumentIngestionService.ingest({
+                    name: att.name,
+                    buffer,
+                    contentType: att.contentType,
+                    size: buffer.byteLength,
+                    briefId,
+                    folderId: correspondenceFolderId,
+                    url: blob.url,
                 });
-                console.log(`📎 Attachment "${att.name}" → Brief vault + EmailAttachment`);
+                console.log(`📎 Attachment "${att.name}" ingested into Brief vault (Correspondence folder)`);
             } else {
-                console.log(`📎 Attachment "${att.name}" → EmailAttachment (unmatched)`);
+                console.log(`📎 Attachment "${att.name}" → EmailAttachment only (no brief match)`);
             }
         } catch (err) {
             console.error(`Error uploading attachment "${att.name}":`, err);
