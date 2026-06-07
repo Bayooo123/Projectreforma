@@ -5,11 +5,12 @@ import ClientDetailClient from './ClientDetailClient';
 
 export const dynamic = 'force-dynamic';
 
-export default async function ClientDetailPage({ params }: { params: { id: string } }) {
+export default async function ClientDetailPage({ params }: { params: Promise<{ id: string }> }) {
+    const { id } = await params;
     const session = await auth();
     if (!session?.user?.id) redirect('/login');
 
-    const result = await getClientById(params.id);
+    const result = await getClientById(id);
     if (!result.success || !result.data) notFound();
 
     return <ClientDetailClient client={result.data as any} />;

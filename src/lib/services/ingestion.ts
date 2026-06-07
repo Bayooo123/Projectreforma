@@ -99,7 +99,7 @@ export class DocumentIngestionService {
     /**
      * Ensures existence of a specific folder for automated categorisation
      */
-    static async getOrCreateCorrespondenceFolder(briefId: string, workspaceId: string) {
+    static async getOrCreateCorrespondenceFolder(briefId: string) {
         let folder = await prisma.folder.findFirst({
             where: { briefId, name: 'Correspondence' }
         });
@@ -109,8 +109,7 @@ export class DocumentIngestionService {
                 data: {
                     name: 'Correspondence',
                     description: 'Automated folder for email attachments and correspondence.',
-                    briefId,
-                    workspaceId
+                    briefId
                 }
             });
         }

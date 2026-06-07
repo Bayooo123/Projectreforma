@@ -41,7 +41,7 @@ async function uploadAttachments(
     
     let correspondenceFolderId: string | null = null;
     if (briefId) {
-        const folder = await DocumentIngestionService.getOrCreateCorrespondenceFolder(briefId, workspaceId);
+        const folder = await DocumentIngestionService.getOrCreateCorrespondenceFolder(briefId);
         correspondenceFolderId = folder.id;
     }
 
