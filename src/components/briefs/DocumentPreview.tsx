@@ -120,20 +120,34 @@ export default function DocumentPreview({ document, onClose, onNavigate, canNavi
             );
         }
 
-        // DOCX Preview (using Google Docs Viewer)
-        if (['doc', 'docx'].includes(extension)) {
+        // Office documents — Microsoft Office Online Viewer (reliable for public URLs)
+        if (['doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx'].includes(extension)) {
+            const officeUrl = `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(document.url)}`;
             return (
                 <div className={styles.docxContainer}>
                     <iframe
-                        src={`https://docs.google.com/gview?url=${encodeURIComponent(document.url)}&embedded=true`}
+                        src={officeUrl}
                         className={styles.iframe}
                         onLoad={() => setLoading(false)}
+                        title={document.name}
                     />
                 </div>
             );
         }
 
-        // Fallback for unsupported types
+        // Plain text
+        if (['txt', 'csv', 'md'].includes(extension)) {
+            return (
+                <iframe
+                    src={document.url}
+                    className={styles.iframe}
+                    onLoad={() => setLoading(false)}
+                    title={document.name}
+                />
+            );
+        }
+
+        // Fallback — download prompt
         return (
             <div className={styles.unsupported}>
                 <p>Preview not available for this file type</p>
