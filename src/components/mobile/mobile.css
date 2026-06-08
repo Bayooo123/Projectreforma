@@ -481,6 +481,10 @@
   font-weight: 600;
   color: var(--rm-t1);
   line-height: 1.25;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 .rm-brief-card .no {
   font-family: var(--rm-mono);
