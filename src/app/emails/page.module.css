@@ -843,41 +843,42 @@
     align-self: center;
 }
 
-/* ── Suggestion row ──────────────────────────────────────────────────────── */
-.groupSuggestions {
-    background: #f5f3ff;
-    border: 1px solid #e0e7ff;
-    border-radius: 8px;
-    padding: 0.55rem 0.7rem;
-    display: flex;
-    flex-direction: column;
-    gap: 0.35rem;
-}
-
-.groupSuggestLabel {
-    font-size: 0.62rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: #7c3aed;
-}
-
-.groupSuggestion {
+/* ── Best match block ────────────────────────────────────────────────────── */
+.groupBestMatch {
     display: flex;
     align-items: center;
     gap: 0.65rem;
+    background: #f5f3ff;
+    border: 1px solid #c4b5fd;
+    border-radius: 8px;
+    padding: 0.6rem 0.75rem;
 }
 
-.suggestionInfo {
+.bestMatchLeft {
     flex: 1;
     min-width: 0;
     display: flex;
     flex-direction: column;
-    gap: 1px;
+    gap: 2px;
+}
+
+.bestMatchLabel {
+    font-size: 0.6rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #7c3aed;
+}
+
+.bestMatchRight {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
 }
 
 .suggestionName {
-    font-size: 0.78rem;
+    font-size: 0.8rem;
     font-weight: 600;
     color: var(--text-primary);
     white-space: nowrap;
@@ -888,22 +889,6 @@
 .suggestionMeta {
     font-size: 0.67rem;
     color: var(--text-secondary);
-}
-
-.suggestionReason {
-    font-size: 0.65rem;
-    color: #7c3aed;
-    font-style: italic;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.suggestionRight {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    flex-shrink: 0;
 }
 
 .confDot {
@@ -920,12 +905,12 @@
     display: inline-flex;
     align-items: center;
     gap: 4px;
-    padding: 4px 10px;
+    padding: 5px 12px;
     border-radius: 6px;
     border: 1px solid var(--primary);
     background: var(--primary);
     color: white;
-    font-size: 0.7rem;
+    font-size: 0.72rem;
     font-weight: 600;
     cursor: pointer;
     transition: opacity 0.12s;
@@ -934,13 +919,85 @@
 .linkAllBtn:hover:not(:disabled) { opacity: 0.85; }
 .linkAllBtn:disabled { opacity: 0.5; cursor: default; }
 
+/* ── Action toggle buttons ───────────────────────────────────────────────── */
+.groupActions {
+    display: flex;
+    gap: 6px;
+}
+
+.groupActionBtn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 10px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: none;
+    color: var(--text-secondary);
+    font-size: 0.7rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.12s;
+}
+.groupActionBtn:hover { border-color: var(--primary); color: var(--primary); }
+.groupActionBtnActive { border-color: var(--primary); color: var(--primary); background: #eef2ff; }
+
+/* ── Browse section ──────────────────────────────────────────────────────── */
+.groupBrowse {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.groupBrowseSearch {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+}
+
+.groupBrowseInput {
+    flex: 1;
+    border: none;
+    background: none;
+    outline: none;
+    font-size: 0.78rem;
+    color: var(--text-primary);
+}
+
+.groupBriefList {
+    max-height: 180px;
+    overflow-y: auto;
+}
+
+.groupBriefRow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    border: none;
+    border-bottom: 1px solid var(--border);
+    background: none;
+    cursor: pointer;
+    text-align: left;
+    gap: 0.5rem;
+    transition: background 0.1s;
+}
+.groupBriefRow:last-child { border-bottom: none; }
+.groupBriefRow:hover { background: #f5f3ff; }
+.groupBriefRow:disabled { opacity: 0.6; cursor: default; }
+.groupBriefRowHighlight { background: #ede9fe; }
+.groupBriefRowHighlight:hover { background: #ddd6fe; }
+
 /* ── Create brief row ────────────────────────────────────────────────────── */
 .groupCreate {
     display: flex;
     gap: 6px;
     align-items: center;
-    padding-top: 0.35rem;
-    border-top: 1px solid var(--border);
+    padding: 0.5rem 0;
 }
 
 .groupNameInput {

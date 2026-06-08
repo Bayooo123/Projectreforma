@@ -282,31 +282,34 @@ function BulkBar({ count, onLinkAll, onCreateBrief, onClear }: BulkBarProps) {
 
 interface TriagePanelProps {
     groups: TriageGroup[];
+    briefs: InboxBrief[];
     onLink: (emailIds: string[], briefId: string, briefName: string) => void;
     onClose: () => void;
 }
 
-function TriagePanel({ groups: initialGroups, onLink, onClose }: TriagePanelProps) {
-    const [localGroups, setLocalGroups] = useState<TriageGroup[]>(initialGroups);
-    const [newNames, setNewNames] = useState<Record<string, string>>(
+function TriagePanel({ groups: initialGroups, briefs, onLink, onClose }: TriagePanelProps) {
+    const [localGroups, setLocalGroups]   = useState<TriageGroup[]>(initialGroups);
+    const [expanded, setExpanded]         = useState<Record<string, 'browse' | 'create' | null>>({});
+    const [searches, setSearches]         = useState<Record<string, string>>({});
+    const [newNames, setNewNames]         = useState<Record<string, string>>(
         () => Object.fromEntries(initialGroups.map(g => [g.key, g.suggestedNewBriefName]))
     );
-    const [newCats, setNewCats] = useState<Record<string, string>>(
+    const [newCats, setNewCats]           = useState<Record<string, string>>(
         () => Object.fromEntries(initialGroups.map(g => [g.key, 'Litigation']))
     );
-    const [busy, setBusy] = useState<string | null>(null);
-    const [, startTransition] = useTransition();
+    const [busy, setBusy]                 = useState<string | null>(null);
+    const [, startTransition]             = useTransition();
 
     const dismiss = (groupKey: string, linkedIds: string[], briefId: string, briefName: string) => {
         onLink(linkedIds, briefId, briefName);
         setLocalGroups(prev => prev.filter(g => g.key !== groupKey));
     };
 
-    const handleLink = (group: TriageGroup, sug: TriageSuggestion) => {
+    const handleLinkById = (group: TriageGroup, briefId: string, briefName: string) => {
         setBusy(group.key);
         startTransition(async () => {
-            const res = await bulkLinkEmailsToBrief(group.emailIds, sug.briefId);
-            if (res.success) dismiss(group.key, group.emailIds, sug.briefId, sug.briefName);
+            const res = await bulkLinkEmailsToBrief(group.emailIds, briefId);
+            if (res.success) dismiss(group.key, group.emailIds, briefId, briefName);
             setBusy(null);
         });
     };
@@ -321,6 +324,9 @@ function TriagePanel({ groups: initialGroups, onLink, onClose }: TriagePanelProp
             setBusy(null);
         });
     };
+
+    const toggleExpand = (key: string, mode: 'browse' | 'create') =>
+        setExpanded(prev => ({ ...prev, [key]: prev[key] === mode ? null : mode }));
 
     const totalEmails = localGroups.reduce((n, g) => n + g.emailIds.length, 0);
 
@@ -345,89 +351,156 @@ function TriagePanel({ groups: initialGroups, onLink, onClose }: TriagePanelProp
                     </div>
                 ) : (
                     <div className={styles.triageGroups}>
-                        {localGroups.map(group => (
-                            <div key={group.key} className={styles.triageGroup}>
-                                <div className={styles.groupHead}>
-                                    <span className={styles.groupLabel}>{group.label || '(No subject)'}</span>
-                                    <span className={styles.groupCount}>{group.emailIds.length}</span>
-                                </div>
+                        {localGroups.map(group => {
+                            const sug = group.suggestions[0] ?? null;
+                            const browseOpen = expanded[group.key] === 'browse';
+                            const createOpen = expanded[group.key] === 'create';
+                            const q = (searches[group.key] ?? '').toLowerCase();
+                            const filteredBriefs = briefs
+                                .filter(b => !q || b.name.toLowerCase().includes(q) || b.briefNumber.toLowerCase().includes(q) || (b.clientName ?? '').toLowerCase().includes(q))
+                                .slice(0, 20);
 
-                                <div className={styles.groupEmails}>
-                                    {group.emailPreviews.map(e => (
-                                        <span key={e.id} className={styles.groupEmailPill} title={e.fromEmail}>
-                                            {e.fromName || e.fromEmail}
-                                        </span>
-                                    ))}
-                                    {group.emailIds.length > group.emailPreviews.length && (
-                                        <span className={styles.groupEmailMore}>+{group.emailIds.length - group.emailPreviews.length}</span>
+                            return (
+                                <div key={group.key} className={styles.triageGroup}>
+                                    {/* Group heading */}
+                                    <div className={styles.groupHead}>
+                                        <span className={styles.groupLabel}>{group.label || '(No subject)'}</span>
+                                        <span className={styles.groupCount}>{group.emailIds.length}</span>
+                                    </div>
+
+                                    {/* Sender pills */}
+                                    <div className={styles.groupEmails}>
+                                        {group.emailPreviews.map(e => (
+                                            <span key={e.id} className={styles.groupEmailPill} title={e.fromEmail}>
+                                                {e.fromName || e.fromEmail}
+                                            </span>
+                                        ))}
+                                        {group.emailIds.length > group.emailPreviews.length && (
+                                            <span className={styles.groupEmailMore}>+{group.emailIds.length - group.emailPreviews.length}</span>
+                                        )}
+                                    </div>
+
+                                    {/* Best match — primary action */}
+                                    {sug && (
+                                        <div className={styles.groupBestMatch}>
+                                            <div className={styles.bestMatchLeft}>
+                                                <span className={styles.bestMatchLabel}>Best match</span>
+                                                <span className={styles.suggestionName}>{sug.briefName}</span>
+                                                <span className={styles.suggestionMeta}>
+                                                    {sug.briefNumber}{sug.clientName ? ` · ${sug.clientName}` : ''}
+                                                </span>
+                                            </div>
+                                            <div className={styles.bestMatchRight}>
+                                                <span
+                                                    className={`${styles.confDot} ${sug.confidence >= 0.7 ? styles.confHigh : sug.confidence >= 0.4 ? styles.confMid : styles.confLow}`}
+                                                    title={`${Math.round(sug.confidence * 100)}% confidence`}
+                                                />
+                                                <button
+                                                    className={styles.linkAllBtn}
+                                                    onClick={() => handleLinkById(group, sug.briefId, sug.briefName)}
+                                                    disabled={busy === group.key}
+                                                >
+                                                    {busy === group.key
+                                                        ? <RefreshCw size={11} className={styles.spinning} />
+                                                        : <Link2 size={11} />
+                                                    }
+                                                    Link All
+                                                </button>
+                                            </div>
+                                        </div>
                                     )}
-                                </div>
 
-                                {group.suggestions.length > 0 && (
-                                    <div className={styles.groupSuggestions}>
-                                        <span className={styles.groupSuggestLabel}>AI Match</span>
-                                        {group.suggestions.map(sug => (
-                                            <div key={sug.briefId} className={styles.groupSuggestion}>
-                                                <div className={styles.suggestionInfo}>
-                                                    <span className={styles.suggestionName}>{sug.briefName}</span>
-                                                    <span className={styles.suggestionMeta}>
-                                                        {sug.briefNumber}{sug.clientName ? ` · ${sug.clientName}` : ''}
-                                                    </span>
-                                                    <span className={styles.suggestionReason}>{sug.reasoning}</span>
-                                                </div>
-                                                <div className={styles.suggestionRight}>
-                                                    <span
-                                                        className={`${styles.confDot} ${sug.confidence >= 0.7 ? styles.confHigh : sug.confidence >= 0.4 ? styles.confMid : styles.confLow}`}
-                                                        title={`${Math.round(sug.confidence * 100)}% confidence`}
-                                                    />
+                                    {/* Action toggles */}
+                                    <div className={styles.groupActions}>
+                                        <button
+                                            className={`${styles.groupActionBtn} ${browseOpen ? styles.groupActionBtnActive : ''}`}
+                                            onClick={() => toggleExpand(group.key, 'browse')}
+                                        >
+                                            <Search size={11} />
+                                            {sug ? 'Other briefs' : 'Find brief'}
+                                            <ChevronDown size={10} style={{ transform: browseOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }} />
+                                        </button>
+                                        <button
+                                            className={`${styles.groupActionBtn} ${createOpen ? styles.groupActionBtnActive : ''}`}
+                                            onClick={() => toggleExpand(group.key, 'create')}
+                                        >
+                                            <Plus size={11} />
+                                            New brief
+                                            <ChevronDown size={10} style={{ transform: createOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }} />
+                                        </button>
+                                    </div>
+
+                                    {/* Browse existing briefs */}
+                                    {browseOpen && (
+                                        <div className={styles.groupBrowse}>
+                                            <div className={styles.groupBrowseSearch}>
+                                                <Search size={12} style={{ color: 'var(--text-secondary)', flexShrink: 0 }} />
+                                                <input
+                                                    autoFocus
+                                                    className={styles.groupBrowseInput}
+                                                    placeholder="Search briefs…"
+                                                    value={searches[group.key] ?? ''}
+                                                    onChange={e => setSearches(prev => ({ ...prev, [group.key]: e.target.value }))}
+                                                />
+                                            </div>
+                                            <div className={styles.groupBriefList}>
+                                                {filteredBriefs.length === 0 && (
+                                                    <p className={styles.noResults}>No briefs found</p>
+                                                )}
+                                                {filteredBriefs.map(b => (
                                                     <button
-                                                        className={styles.linkAllBtn}
-                                                        onClick={() => handleLink(group, sug)}
+                                                        key={b.id}
+                                                        className={`${styles.groupBriefRow} ${sug?.briefId === b.id ? styles.groupBriefRowHighlight : ''}`}
+                                                        onClick={() => handleLinkById(group, b.id, b.name)}
                                                         disabled={busy === group.key}
                                                     >
-                                                        {busy === group.key
-                                                            ? <RefreshCw size={11} className={styles.spinning} />
-                                                            : <Link2 size={11} />
-                                                        }
-                                                        Link All
+                                                        <div className={styles.briefRowMain}>
+                                                            <span className={styles.briefRowName}>{b.name}</span>
+                                                            <span className={styles.briefRowMeta}>{b.briefNumber}{b.clientName ? ` · ${b.clientName}` : ''}</span>
+                                                        </div>
+                                                        <span className={styles.briefRowCat}>{b.category}</span>
                                                     </button>
-                                                </div>
+                                                ))}
                                             </div>
-                                        ))}
-                                    </div>
-                                )}
+                                        </div>
+                                    )}
 
-                                <div className={styles.groupCreate}>
-                                    <input
-                                        className={styles.groupNameInput}
-                                        value={newNames[group.key] ?? ''}
-                                        onChange={e => setNewNames(prev => ({ ...prev, [group.key]: e.target.value }))}
-                                        placeholder="Brief name…"
-                                    />
-                                    <div className={styles.selectWrap} style={{ minWidth: 110 }}>
-                                        <select
-                                            className={styles.createSelect}
-                                            value={newCats[group.key] ?? 'Litigation'}
-                                            onChange={e => setNewCats(prev => ({ ...prev, [group.key]: e.target.value }))}
-                                        >
-                                            {CATEGORIES.map(c => <option key={c}>{c}</option>)}
-                                        </select>
-                                        <ChevronDown size={11} className={styles.selectArrow} />
-                                    </div>
-                                    <button
-                                        className={styles.createGroupBtn}
-                                        onClick={() => handleCreate(group)}
-                                        disabled={busy === group.key || !newNames[group.key]?.trim()}
-                                    >
-                                        {busy === group.key
-                                            ? <RefreshCw size={11} className={styles.spinning} />
-                                            : <Plus size={11} />
-                                        }
-                                        Create Brief
-                                    </button>
+                                    {/* Create new brief */}
+                                    {createOpen && (
+                                        <div className={styles.groupCreate}>
+                                            <input
+                                                autoFocus
+                                                className={styles.groupNameInput}
+                                                value={newNames[group.key] ?? ''}
+                                                onChange={e => setNewNames(prev => ({ ...prev, [group.key]: e.target.value }))}
+                                                placeholder="Brief name…"
+                                            />
+                                            <div className={styles.selectWrap} style={{ minWidth: 110 }}>
+                                                <select
+                                                    className={styles.createSelect}
+                                                    value={newCats[group.key] ?? 'Litigation'}
+                                                    onChange={e => setNewCats(prev => ({ ...prev, [group.key]: e.target.value }))}
+                                                >
+                                                    {CATEGORIES.map(c => <option key={c}>{c}</option>)}
+                                                </select>
+                                                <ChevronDown size={11} className={styles.selectArrow} />
+                                            </div>
+                                            <button
+                                                className={styles.createGroupBtn}
+                                                onClick={() => handleCreate(group)}
+                                                disabled={busy === group.key || !newNames[group.key]?.trim()}
+                                            >
+                                                {busy === group.key
+                                                    ? <RefreshCw size={11} className={styles.spinning} />
+                                                    : <Plus size={11} />
+                                                }
+                                                Create
+                                            </button>
+                                        </div>
+                                    )}
                                 </div>
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
                 )}
             </div>
@@ -696,6 +769,7 @@ export default function EmailInboxClient({ emails: initial = [], briefs: initial
             {triageOpen && (
                 <TriagePanel
                     groups={triageGroups}
+                    briefs={briefs}
                     onLink={handleDone}
                     onClose={() => setTriageOpen(false)}
                 />
