@@ -3,13 +3,13 @@
 import { useState, useMemo, useTransition, useEffect } from 'react';
 import {
     Mail, Link2, Plus, Search, X, Check, AlertCircle,
-    ChevronDown, Unlink, FileText, CheckSquare, Square, RefreshCw,
+    ChevronDown, Unlink, FileText, CheckSquare, Square, RefreshCw, Layers,
 } from 'lucide-react';
 import {
-    InboxEmail, InboxBrief,
+    InboxEmail, InboxBrief, TriageGroup, TriageSuggestion,
     linkEmailToBrief, unlinkEmail,
     bulkLinkEmailsToBrief, quickCreateBriefAndLink,
-    getInboxEmails, getInboxBriefs,
+    getInboxEmails, getInboxBriefs, triageUnlinkedEmails,
 } from '@/app/actions/email-inbox';
 import styles from './page.module.css';
 import { useIsMobile } from '@/hooks/useIsMobile';
@@ -278,6 +278,163 @@ function BulkBar({ count, onLinkAll, onCreateBrief, onClear }: BulkBarProps) {
     );
 }
 
+// ── Triage Panel ─────────────────────────────────────────────────────────────
+
+interface TriagePanelProps {
+    groups: TriageGroup[];
+    onLink: (emailIds: string[], briefId: string, briefName: string) => void;
+    onClose: () => void;
+}
+
+function TriagePanel({ groups: initialGroups, onLink, onClose }: TriagePanelProps) {
+    const [localGroups, setLocalGroups] = useState<TriageGroup[]>(initialGroups);
+    const [newNames, setNewNames] = useState<Record<string, string>>(
+        () => Object.fromEntries(initialGroups.map(g => [g.key, g.suggestedNewBriefName]))
+    );
+    const [newCats, setNewCats] = useState<Record<string, string>>(
+        () => Object.fromEntries(initialGroups.map(g => [g.key, 'Litigation']))
+    );
+    const [busy, setBusy] = useState<string | null>(null);
+    const [, startTransition] = useTransition();
+
+    const dismiss = (groupKey: string, linkedIds: string[], briefId: string, briefName: string) => {
+        onLink(linkedIds, briefId, briefName);
+        setLocalGroups(prev => prev.filter(g => g.key !== groupKey));
+    };
+
+    const handleLink = (group: TriageGroup, sug: TriageSuggestion) => {
+        setBusy(group.key);
+        startTransition(async () => {
+            const res = await bulkLinkEmailsToBrief(group.emailIds, sug.briefId);
+            if (res.success) dismiss(group.key, group.emailIds, sug.briefId, sug.briefName);
+            setBusy(null);
+        });
+    };
+
+    const handleCreate = (group: TriageGroup) => {
+        const name = newNames[group.key]?.trim();
+        if (!name) return;
+        setBusy(group.key);
+        startTransition(async () => {
+            const res = await quickCreateBriefAndLink(group.emailIds, name, newCats[group.key] ?? 'Litigation');
+            if (res.success) dismiss(group.key, group.emailIds, res.briefId!, name);
+            setBusy(null);
+        });
+    };
+
+    const totalEmails = localGroups.reduce((n, g) => n + g.emailIds.length, 0);
+
+    return (
+        <div className={styles.triageOverlay} onClick={onClose}>
+            <div className={styles.triageModal} onClick={e => e.stopPropagation()}>
+                <div className={styles.triageHeader}>
+                    <div className={styles.triageTitleRow}>
+                        <Layers size={16} className={styles.triageIcon} />
+                        <span className={styles.triageTitle}>Group &amp; Link Emails</span>
+                    </div>
+                    <span className={styles.triageMeta}>
+                        {localGroups.length} group{localGroups.length !== 1 ? 's' : ''} · {totalEmails} email{totalEmails !== 1 ? 's' : ''}
+                    </span>
+                    <button className={styles.closeBtn} onClick={onClose}><X size={16} /></button>
+                </div>
+
+                {localGroups.length === 0 ? (
+                    <div className={styles.triageEmpty}>
+                        <Check size={32} style={{ color: '#059669' }} />
+                        <p>All groups linked!</p>
+                    </div>
+                ) : (
+                    <div className={styles.triageGroups}>
+                        {localGroups.map(group => (
+                            <div key={group.key} className={styles.triageGroup}>
+                                <div className={styles.groupHead}>
+                                    <span className={styles.groupLabel}>{group.label || '(No subject)'}</span>
+                                    <span className={styles.groupCount}>{group.emailIds.length}</span>
+                                </div>
+
+                                <div className={styles.groupEmails}>
+                                    {group.emailPreviews.map(e => (
+                                        <span key={e.id} className={styles.groupEmailPill} title={e.fromEmail}>
+                                            {e.fromName || e.fromEmail}
+                                        </span>
+                                    ))}
+                                    {group.emailIds.length > group.emailPreviews.length && (
+                                        <span className={styles.groupEmailMore}>+{group.emailIds.length - group.emailPreviews.length}</span>
+                                    )}
+                                </div>
+
+                                {group.suggestions.length > 0 && (
+                                    <div className={styles.groupSuggestions}>
+                                        <span className={styles.groupSuggestLabel}>AI Match</span>
+                                        {group.suggestions.map(sug => (
+                                            <div key={sug.briefId} className={styles.groupSuggestion}>
+                                                <div className={styles.suggestionInfo}>
+                                                    <span className={styles.suggestionName}>{sug.briefName}</span>
+                                                    <span className={styles.suggestionMeta}>
+                                                        {sug.briefNumber}{sug.clientName ? ` · ${sug.clientName}` : ''}
+                                                    </span>
+                                                    <span className={styles.suggestionReason}>{sug.reasoning}</span>
+                                                </div>
+                                                <div className={styles.suggestionRight}>
+                                                    <span
+                                                        className={`${styles.confDot} ${sug.confidence >= 0.7 ? styles.confHigh : sug.confidence >= 0.4 ? styles.confMid : styles.confLow}`}
+                                                        title={`${Math.round(sug.confidence * 100)}% confidence`}
+                                                    />
+                                                    <button
+                                                        className={styles.linkAllBtn}
+                                                        onClick={() => handleLink(group, sug)}
+                                                        disabled={busy === group.key}
+                                                    >
+                                                        {busy === group.key
+                                                            ? <RefreshCw size={11} className={styles.spinning} />
+                                                            : <Link2 size={11} />
+                                                        }
+                                                        Link All
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+
+                                <div className={styles.groupCreate}>
+                                    <input
+                                        className={styles.groupNameInput}
+                                        value={newNames[group.key] ?? ''}
+                                        onChange={e => setNewNames(prev => ({ ...prev, [group.key]: e.target.value }))}
+                                        placeholder="Brief name…"
+                                    />
+                                    <div className={styles.selectWrap} style={{ minWidth: 110 }}>
+                                        <select
+                                            className={styles.createSelect}
+                                            value={newCats[group.key] ?? 'Litigation'}
+                                            onChange={e => setNewCats(prev => ({ ...prev, [group.key]: e.target.value }))}
+                                        >
+                                            {CATEGORIES.map(c => <option key={c}>{c}</option>)}
+                                        </select>
+                                        <ChevronDown size={11} className={styles.selectArrow} />
+                                    </div>
+                                    <button
+                                        className={styles.createGroupBtn}
+                                        onClick={() => handleCreate(group)}
+                                        disabled={busy === group.key || !newNames[group.key]?.trim()}
+                                    >
+                                        {busy === group.key
+                                            ? <RefreshCw size={11} className={styles.spinning} />
+                                            : <Plus size={11} />
+                                        }
+                                        Create Brief
+                                    </button>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+}
+
 // ── Main ──────────────────────────────────────────────────────────────────────
 
 interface Props { emails?: InboxEmail[]; briefs?: InboxBrief[]; }
@@ -291,6 +448,9 @@ export default function EmailInboxClient({ emails: initial = [], briefs: initial
     const [panelTarget, setPanelTarget]     = useState<{ emailIds: string[]; subject: string; mode?: 'search' | 'create' } | null>(null);
     const [refreshing, setRefreshing]       = useState(false);
     const [loading, setLoading]             = useState(initial.length === 0);
+    const [triageLoading, setTriageLoading] = useState(false);
+    const [triageGroups, setTriageGroups]   = useState<TriageGroup[]>([]);
+    const [triageOpen, setTriageOpen]       = useState(false);
     const [, startTransition]               = useTransition();
 
     useEffect(() => {
@@ -381,6 +541,17 @@ export default function EmailInboxClient({ emails: initial = [], briefs: initial
         }
     };
 
+    const handleTriage = async () => {
+        setTriageLoading(true);
+        try {
+            const groups = await triageUnlinkedEmails();
+            setTriageGroups(groups);
+            setTriageOpen(true);
+        } finally {
+            setTriageLoading(false);
+        }
+    };
+
     const isMobile = useIsMobile();
 
     return (
@@ -394,10 +565,24 @@ export default function EmailInboxClient({ emails: initial = [], briefs: initial
                         <p className={styles.subtitle}>{emails.length} emails · {unlinkedCount} unlinked</p>
                     </div>
                 </div>
-                <button className={styles.refreshBtn} onClick={handleRefresh} disabled={refreshing} title="Refresh email list">
-                    <RefreshCw size={14} className={refreshing ? styles.spinning : ''} />
-                    {refreshing ? 'Refreshing…' : 'Refresh'}
-                </button>
+                <div style={{ display: 'flex', gap: 6 }}>
+                    <button
+                        className={styles.triageBtn}
+                        onClick={handleTriage}
+                        disabled={triageLoading || unlinkedCount === 0}
+                        title={unlinkedCount === 0 ? 'No unlinked emails' : 'Group similar unlinked emails and suggest briefs'}
+                    >
+                        {triageLoading
+                            ? <RefreshCw size={14} className={styles.spinning} />
+                            : <Layers size={14} />
+                        }
+                        {triageLoading ? 'Analysing…' : 'Group Unlinked'}
+                    </button>
+                    <button className={styles.refreshBtn} onClick={handleRefresh} disabled={refreshing} title="Refresh email list">
+                        <RefreshCw size={14} className={refreshing ? styles.spinning : ''} />
+                        {refreshing ? 'Refreshing…' : 'Refresh'}
+                    </button>
+                </div>
             </div>
 
             <div className={styles.body}>
@@ -505,6 +690,15 @@ export default function EmailInboxClient({ emails: initial = [], briefs: initial
                         />
                     </div>
                 </BottomSheet>
+            )}
+
+            {/* Triage Overlay */}
+            {triageOpen && (
+                <TriagePanel
+                    groups={triageGroups}
+                    onLink={handleDone}
+                    onClose={() => setTriageOpen(false)}
+                />
             )}
         </div>
     );
