@@ -1,8 +1,8 @@
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
-import { X, ChevronLeft, ChevronRight, Download, ExternalLink, Loader2, FileText, Upload } from 'lucide-react';
-import { getDocuments } from '@/app/actions/documents';
+import { X, ChevronLeft, ChevronRight, Download, ExternalLink, Loader2, FileText, Upload, Mail } from 'lucide-react';
+import { getDocuments, getEmailDocumentsForBrief } from '@/app/actions/documents';
 import styles from './BriefDocsQuickView.module.css';
 
 interface Doc {
@@ -12,6 +12,7 @@ interface Doc {
     type: string;
     size: number;
     uploadedAt: Date;
+    fromEmail?: boolean;
 }
 
 interface Props {
@@ -42,8 +43,23 @@ export default function BriefDocsQuickView({ briefId, briefName, onClose, onUplo
     const blobUrlRef = useRef<string | null>(null);
 
     useEffect(() => {
-        getDocuments(briefId).then(data => {
-            setDocs(data as Doc[]);
+        Promise.all([
+            getDocuments(briefId),
+            getEmailDocumentsForBrief(briefId),
+        ]).then(([regular, email]) => {
+            const merged: Doc[] = [
+                ...(regular as Doc[]),
+                ...email.map(att => ({
+                    id: att.id,
+                    name: att.name,
+                    url: att.url,
+                    type: att.type,
+                    size: att.size,
+                    uploadedAt: att.uploadedAt,
+                    fromEmail: true,
+                })),
+            ];
+            setDocs(merged);
             setLoading(false);
         });
     }, [briefId]);
@@ -153,14 +169,12 @@ export default function BriefDocsQuickView({ briefId, briefName, onClose, onUplo
                                 </button>
                             </div>
                         ) : doc && isOffice(doc.name) ? (
-                            <div className={styles.center}>
-                                <FileText size={44} className={styles.emptyIcon} />
-                                <p className={styles.emptyTitle}>{doc.name}</p>
-                                <p className={styles.emptyText}>Word/Office files cannot preview in the browser.</p>
-                                <a href={doc.url} target="_blank" rel="noopener noreferrer" className={styles.uploadBtn}>
-                                    <ExternalLink size={14} /> Open file
-                                </a>
-                            </div>
+                            <iframe
+                                key={doc.id}
+                                src={`https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(doc.url)}`}
+                                className={styles.iframe}
+                                title={doc.name}
+                            />
                         ) : blobUrl === 'loading' || blobUrl === null ? (
                             <div className={styles.center}>
                                 <Loader2 size={28} className={styles.spinner} />
@@ -222,7 +236,7 @@ export default function BriefDocsQuickView({ briefId, briefName, onClose, onUplo
                                 onClick={() => setIndex(i)}
                                 title={d.name}
                             >
-                                <FileText size={12} />
+                                {d.fromEmail ? <Mail size={12} /> : <FileText size={12} />}
                                 <span className={styles.thumbName}>{d.name.replace(/\.[^.]+$/, '')}</span>
                             </button>
                         ))}
