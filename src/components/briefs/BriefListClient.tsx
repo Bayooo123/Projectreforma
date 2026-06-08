@@ -14,6 +14,8 @@ import BriefUploadModal from './BriefUploadModal';
 import { getBriefDisplayTitle } from '@/lib/brief-display';
 import { toTitleCase } from '@/lib/sentence-case';
 import BriefDocsQuickView from './BriefDocsQuickView';
+import { useIsMobile } from '@/hooks/useIsMobile';
+import { Icon, Pill } from '@/components/mobile/MobileShared';
 
 interface BriefListClientProps {
     initialBriefs: any[];
@@ -187,6 +189,163 @@ export default function BriefListClient({ initialBriefs, workspaceId }: Omit<Bri
     };
 
     flatten(rootBriefs);
+
+    const isMobile = useIsMobile();
+
+    const statusKind = (s: string) => {
+        const l = s.toLowerCase();
+        if (l === 'active') return 'active';
+        if (l === 'finalized') return 'finalized';
+        return 'pending';
+    };
+
+    if (isMobile) {
+        return (
+            <>
+                <div className="rm-screen">
+                    <div className="rm-scroll">
+                        {/* Header */}
+                        <div className="rm-hdr" style={{ borderBottom: '1px solid var(--rm-border)' }}>
+                            <div className="rm-hdr-row" style={{ alignItems: 'center' }}>
+                                <div>
+                                    <span className="rm-eyebrow">Documents</span>
+                                    <h1 className="rm-h1">Briefs</h1>
+                                </div>
+                                <button
+                                    className="rm-icon-btn dark"
+                                    onClick={() => setShowSortMenu(v => !v)}
+                                >
+                                    <Icon n="filter" s={18} />
+                                </button>
+                            </div>
+                            <div className="rm-search" style={{ margin: '14px 0 0' }}>
+                                <Icon n="search" s={16} c="var(--rm-t3)" />
+                                <input
+                                    type="text"
+                                    placeholder="Search briefs, clients, case no."
+                                    value={searchQuery}
+                                    onChange={e => setSearchQuery(e.target.value)}
+                                />
+                            </div>
+                            {/* Segmented control */}
+                            <div className="rm-seg">
+                                {(['all', 'active', 'finalized'] as const).map(s => (
+                                    <button
+                                        key={s}
+                                        className={statusFilter === s ? 'on' : ''}
+                                        onClick={() => setStatusFilter(s)}
+                                    >
+                                        {s === 'all' ? 'All' : s === 'active' ? 'Active' : 'Finalized'}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Sort menu */}
+                        {showSortMenu && (
+                            <>
+                                <div style={{ position: 'fixed', inset: 0, zIndex: 39 }} onClick={() => setShowSortMenu(false)} />
+                                <div style={{
+                                    position: 'fixed', top: 'calc(env(safe-area-inset-top, 0px) + 76px)', right: 20,
+                                    background: '#fff', borderRadius: 14, border: '1px solid var(--rm-border)',
+                                    boxShadow: '0 8px 24px rgba(15,23,42,.14)', zIndex: 40, overflow: 'hidden', minWidth: 160,
+                                }}>
+                                    {(['recent', 'name', 'client', 'status'] as const).map(opt => (
+                                        <button
+                                            key={opt}
+                                            onClick={() => { setSortBy(opt); setShowSortMenu(false); }}
+                                            style={{
+                                                width: '100%', padding: '13px 16px', textAlign: 'left', border: 'none',
+                                                background: sortBy === opt ? '#ECFDF5' : '#fff',
+                                                color: sortBy === opt ? '#065F46' : '#475569',
+                                                fontWeight: sortBy === opt ? 700 : 500, fontSize: 14,
+                                                fontFamily: 'var(--rm-ui)', cursor: 'pointer',
+                                            }}
+                                        >
+                                            {opt === 'recent' ? 'Most recent' : opt === 'name' ? 'Brief name' : opt === 'client' ? 'Client name' : 'Status'}
+                                        </button>
+                                    ))}
+                                </div>
+                            </>
+                        )}
+
+                        {/* Brief list */}
+                        <div className="rm-sec-label">
+                            <span className="t">Briefs ({displayedBriefs.length})</span>
+                        </div>
+                        <div className="rm-list">
+                            {displayedBriefs.length === 0 ? (
+                                <div className="rm-empty">
+                                    <Icon n="file" s={32} c="#94A3B8" />
+                                    <p>{searchQuery ? 'No briefs match your search' : 'Create your first brief to get started'}</p>
+                                </div>
+                            ) : displayedBriefs.map(brief => (
+                                <Link key={brief.id} href={`/briefs/${brief.id}`} className="rm-brief-card">
+                                    <div className="row1">
+                                        <div style={{ minWidth: 0 }}>
+                                            <div className="nm">{getBriefDisplayTitle(brief)}</div>
+                                            <div className="no">
+                                                {brief.briefNumber}{brief.ref ? ` · ${brief.ref}` : ''}
+                                            </div>
+                                        </div>
+                                        <Pill kind={statusKind(brief.status)}>
+                                            {brief.status.charAt(0).toUpperCase() + brief.status.slice(1).toLowerCase()}
+                                        </Pill>
+                                    </div>
+                                    <div className="row2">
+                                        <div className="kv">
+                                            <span className="lab">Client</span>
+                                            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 110 }}>
+                                                {brief.client?.name ? toTitleCase(brief.client.name) : 'Unassigned'}
+                                            </span>
+                                        </div>
+                                        <span style={{ fontSize: 12, color: 'var(--rm-t3)', whiteSpace: 'nowrap' }}>
+                                            {brief.category}
+                                        </span>
+                                        <div className="docs">
+                                            <Icon n="doc" s={13} />
+                                            <span>{brief._count?.documents ?? 0}</span>
+                                        </div>
+                                    </div>
+                                </Link>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* FAB */}
+                    <div className="rm-cta-fixed">
+                        <button className="rm-btn-primary" onClick={() => setIsUploadModalOpen(true)}>
+                            <Icon n="plus" s={18} />
+                            New Brief
+                        </button>
+                    </div>
+                </div>
+
+                <BriefUploadModal
+                    isOpen={isUploadModalOpen}
+                    onClose={() => setIsUploadModalOpen(false)}
+                    onSuccess={handleCreateSuccess}
+                    workspaceId={workspaceId}
+                />
+                <EditBriefModal
+                    isOpen={!!editingBrief}
+                    onClose={() => setEditingBrief(null)}
+                    onSuccess={handleUpdateSuccess}
+                    brief={editingBrief}
+                    workspaceId={workspaceId}
+                />
+                <ConfirmDialog
+                    open={!!deletingBriefId}
+                    title="Delete brief"
+                    message="This will permanently delete the brief and all its documents. This cannot be undone."
+                    confirmLabel="Delete"
+                    danger
+                    onConfirm={() => { if (deletingBriefId) handleDelete(deletingBriefId); setDeletingBriefId(null); }}
+                    onCancel={() => setDeletingBriefId(null)}
+                />
+            </>
+        );
+    }
 
     return (
         <div className={styles.container}>
@@ -390,47 +549,6 @@ export default function BriefListClient({ initialBriefs, workspaceId }: Omit<Bri
                     );
                 })()}
 
-                {/* Mobile App Card View */}
-                <div className={styles.mobileCardsList}>
-                    {displayedBriefs.map((brief) => (
-                        <div key={brief.id} className={styles.briefCard}>
-                            <div className={styles.cardHeader}>
-                                <div>
-                                    <Link href={`/briefs/${brief.id}`} className={styles.cardTitle}>
-                                        {getBriefDisplayTitle(brief)}
-                                    </Link>
-                                    <div className={styles.cardSubtitle}>{brief.briefNumber} &middot; {brief.ref}</div>
-                                </div>
-                                <button
-                                    className={styles.actionBtn}
-                                    onClick={(e) => toggleActions(brief.id, e)}
-                                    style={{ width: '44px', height: '44px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                                >
-                                    <MoreVertical size={20} />
-                                </button>
-                            </div>
-                            
-                            <div className={styles.cardBody}>
-                                <div className={styles.cardRow}>
-                                    <span className={styles.cardLabel}>Client</span>
-                                    <span className={styles.cardValue}>{brief.client?.name ? toTitleCase(brief.client.name) : 'Unassigned'}</span>
-                                </div>
-                                <div className={styles.cardRow}>
-                                    <span className={styles.cardLabel}>Lawyer</span>
-                                    <span className={styles.cardValue}>{brief.lawyerInCharge?.name || brief.lawyer?.name || 'Unassigned'}</span>
-                                </div>
-                            </div>
-
-                            <div className={styles.cardFooter}>
-                                <span className={styles.cardLabel}>{brief.category}</span>
-                                <span className={`${styles.statusBadge} ${styles[brief.status.toLowerCase()]}`}>
-                                    <span className={styles.statusDot}></span>
-                                    {brief.status}
-                                </span>
-                            </div>
-                        </div>
-                    ))}
-                </div>
             </>
             )}
 
