@@ -293,13 +293,13 @@ export default function BriefListClient({ initialBriefs, workspaceId }: Omit<Bri
                                         </Pill>
                                     </div>
                                     <div className="row2">
-                                        <div className="kv">
+                                        <div className="kv" style={{ flex: 1, minWidth: 0 }}>
                                             <span className="lab">Client</span>
-                                            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 110 }}>
+                                            <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                                 {brief.client?.name ? toTitleCase(brief.client.name) : 'Unassigned'}
                                             </span>
                                         </div>
-                                        <span style={{ fontSize: 12, color: 'var(--rm-t3)', whiteSpace: 'nowrap' }}>
+                                        <span style={{ fontSize: 12, color: 'var(--rm-t3)', whiteSpace: 'nowrap', flexShrink: 0 }}>
                                             {brief.category}
                                         </span>
                                         <div className="docs">

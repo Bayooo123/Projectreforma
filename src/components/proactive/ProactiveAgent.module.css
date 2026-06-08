@@ -328,3 +328,7 @@
 }
 .sendBtn:hover:not(:disabled) { background: #14b8a6; transform: scale(1.05); }
 .sendBtn:disabled { background: rgba(255, 255, 255, 0.1); color: rgba(255, 255, 255, 0.2); cursor: not-allowed; transform: none; }
+
+@media (max-width: 768px) {
+    .toggle, .panel { display: none !important; }
+}
