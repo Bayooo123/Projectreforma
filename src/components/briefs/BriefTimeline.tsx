@@ -1,9 +1,12 @@
 'use client';
 
 import { useState } from 'react';
+import dynamic from 'next/dynamic';
 import { Gavel, CalendarX, Users, CheckCircle2, Clock, FileText, Activity, BookOpen, Flag, Loader, ScrollText, Sparkles, ChevronDown, ChevronUp, RefreshCw, Mail, Paperclip } from 'lucide-react';
 import { generateBriefSummary, TimelineEvent, BriefSummaryData, TimelineEmailData } from '@/app/actions/briefs';
 import styles from './BriefTimeline.module.css';
+
+const DocumentPreview = dynamic(() => import('./DocumentPreview'), { ssr: false });
 
 // ── Email Correspondence Panel (zero-token, computed from timeline events) ────
 
@@ -216,43 +219,65 @@ function formatBytes(bytes: number) {
 
 function EmailCard({ email }: { email: TimelineEmailData }) {
     const [expanded, setExpanded] = useState(false);
-    const sender = email.fromName ? `${email.fromName} <${email.fromEmail}>` : email.fromEmail;
+    const [previewAtt, setPreviewAtt] = useState<{ id: string; name: string; url: string; type: string } | null>(null);
+    const sender = email.fromName || email.fromEmail;
+    const preview = (email.bodyPreview || email.body || '').replace(/\s+/g, ' ').trim().slice(0, 140);
 
     return (
-        <div className={styles.emailCard}>
-            <button className={styles.emailCardHeader} onClick={() => setExpanded(v => !v)}>
-                <span className={styles.emailSender}>{sender}</span>
-                {expanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-            </button>
+        <>
+            <div className={styles.emailCard}>
+                <button className={styles.emailCardHeader} onClick={() => setExpanded(v => !v)}>
+                    <span className={styles.emailSender}>{sender}</span>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 6, marginLeft: 'auto' }}>
+                        {email.attachments.length > 0 && (
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: '0.65rem', color: '#0d9488', background: '#f0fdfa', border: '1px solid #99f6e4', borderRadius: 4, padding: '1px 5px' }}>
+                                <Paperclip size={10} />
+                                {email.attachments.length}
+                            </span>
+                        )}
+                        {expanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                    </span>
+                </button>
 
-            {expanded && (
-                <div className={styles.emailBody}>
-                    {email.body
-                        ? <pre className={styles.emailBodyText}>{email.body}</pre>
-                        : email.bodyPreview
-                            ? <p className={styles.emailBodyText}>{email.bodyPreview}</p>
-                            : <p className={styles.emailBodyEmpty}>No content available.</p>
-                    }
-                    {email.attachments.length > 0 && (
-                        <div className={styles.emailAttachments}>
-                            {email.attachments.map(att => (
-                                <a
-                                    key={att.id}
-                                    href={att.url}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className={styles.emailAttachment}
-                                >
-                                    <Paperclip size={11} />
-                                    <span>{att.name}</span>
-                                    <span className={styles.emailAttachmentSize}>{formatBytes(att.size)}</span>
-                                </a>
-                            ))}
-                        </div>
-                    )}
-                </div>
-            )}
-        </div>
+                {preview && !expanded && (
+                    <p style={{ margin: '0.3rem 0.7rem 0.5rem', fontSize: '0.7rem', color: 'var(--text-secondary)', lineHeight: 1.5, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as any }}>
+                        {preview}
+                    </p>
+                )}
+
+                {expanded && (
+                    <div className={styles.emailBody}>
+                        {email.body
+                            ? <pre className={styles.emailBodyText}>{email.body}</pre>
+                            : email.bodyPreview
+                                ? <p className={styles.emailBodyText}>{email.bodyPreview}</p>
+                                : <p className={styles.emailBodyEmpty}>No content available.</p>
+                        }
+                        {email.attachments.length > 0 && (
+                            <div className={styles.emailAttachments}>
+                                {email.attachments.map(att => (
+                                    <button
+                                        key={att.id}
+                                        className={styles.emailAttachment}
+                                        onClick={() => setPreviewAtt({ id: att.id, name: att.name, url: att.url, type: att.contentType })}
+                                        title="Preview document"
+                                    >
+                                        <Paperclip size={11} />
+                                        <span>{att.name}</span>
+                                        <span className={styles.emailAttachmentSize}>{formatBytes(att.size)}</span>
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                )}
+            </div>
+
+            <DocumentPreview
+                document={previewAtt}
+                onClose={() => setPreviewAtt(null)}
+            />
+        </>
     );
 }
 

@@ -92,6 +92,61 @@ export async function deleteDocument(id: string, briefId: string) {
     }
 }
 
+export async function getEmailDocumentsForBrief(briefId: string) {
+    try {
+        // Find all email attachments linked to this brief via PulseEvent
+        const pulseEvents = await prisma.pulseEvent.findMany({
+            where: { briefId, inboundEmailId: { not: null } },
+            select: {
+                inboundEmail: {
+                    select: {
+                        subject: true,
+                        fromName: true,
+                        receivedAt: true,
+                        attachments: {
+                            select: { id: true, name: true, url: true, contentType: true, size: true, uploadedAt: true },
+                        },
+                    },
+                },
+            },
+        });
+
+        // Collect existing document URLs so we don't double-list already-ingested attachments
+        const existingUrls = new Set(
+            (await prisma.document.findMany({ where: { briefId }, select: { url: true } })).map(d => d.url)
+        );
+
+        const seen = new Set<string>();
+        const attachments: Array<{
+            id: string; name: string; url: string; type: string; size: number;
+            uploadedAt: Date; subject: string | null; senderName: string | null;
+        }> = [];
+
+        for (const pe of pulseEvents) {
+            if (!pe.inboundEmail) continue;
+            for (const att of pe.inboundEmail.attachments) {
+                if (seen.has(att.id) || existingUrls.has(att.url)) continue;
+                seen.add(att.id);
+                attachments.push({
+                    id: att.id,
+                    name: att.name,
+                    url: att.url,
+                    type: att.contentType,
+                    size: att.size,
+                    uploadedAt: att.uploadedAt,
+                    subject: pe.inboundEmail.subject,
+                    senderName: pe.inboundEmail.fromName,
+                });
+            }
+        }
+
+        return attachments;
+    } catch (error) {
+        console.error('Error fetching email documents for brief:', error);
+        return [];
+    }
+}
+
 export async function getDocumentVersions(documentId: string) {
     try {
         // Fetch without explicit select so all scalar fields (including versionOfId) are returned

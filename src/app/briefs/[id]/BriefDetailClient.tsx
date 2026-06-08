@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Clock, Tag, User, Building, Calendar, Upload, Loader, FileText, Trash2, Edit, Folder, FolderPlus, FolderInput, CornerUpLeft } from 'lucide-react';
+import { ArrowLeft, Clock, Tag, User, Building, Calendar, Upload, Loader, FileText, Trash2, Edit, Folder, FolderPlus, FolderInput, CornerUpLeft, Mail, Paperclip } from 'lucide-react';
 import { getBriefDisplayTitle, getBriefDisplayNumber } from '@/lib/brief-display';
 import DocumentUpload from '@/components/briefs/DocumentUpload';
 import DocumentPreview from '@/components/briefs/DocumentPreview';
@@ -78,7 +78,7 @@ interface Brief {
     inboundEmailId: string;
 }
 
-import { getDocuments } from '@/app/actions/documents';
+import { getDocuments, getEmailDocumentsForBrief } from '@/app/actions/documents';
 import { getFolders, deleteFolder } from '@/app/actions/folders';
 import { logBriefViewed, getBriefTimeline, getBriefSummary, TimelineEvent, BriefSummaryData } from '@/app/actions/briefs';
 import BriefTimeline from '@/components/briefs/BriefTimeline';
@@ -92,6 +92,7 @@ export default function BriefDetailClient({ brief }: BriefDetailClientProps) {
     const searchParams = useSearchParams();
     const [documents, setDocuments] = useState<DocItem[]>([]);
     const [folders, setFolders] = useState<NonNullable<Brief['folders']>>([]);
+    const [emailDocs, setEmailDocs] = useState<Awaited<ReturnType<typeof getEmailDocumentsForBrief>>>([]);
     const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
     const [previewDocument, setPreviewDocument] = useState<DocItem | null>(null);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -133,12 +134,14 @@ export default function BriefDetailClient({ brief }: BriefDetailClientProps) {
     const refreshData = async (silent = false) => {
         if (!silent) setIsRefreshing(true);
         try {
-            const [newDocs, newFolders] = await Promise.all([
+            const [newDocs, newFolders, newEmailDocs] = await Promise.all([
                 getDocuments(brief.id),
-                getFolders(brief.id)
+                getFolders(brief.id),
+                getEmailDocumentsForBrief(brief.id),
             ]);
             setDocuments(newDocs as any);
             setFolders(newFolders as any);
+            setEmailDocs(newEmailDocs);
         } catch (error) {
             console.error('Error refreshing data:', error);
         } finally {
@@ -458,6 +461,52 @@ export default function BriefDetailClient({ brief }: BriefDetailClientProps) {
                                 </div>
                             </div>
                         ))}
+                    </div>
+                )}
+
+                {/* ── Email Inbox Attachments ─────────────────────────── */}
+                {emailDocs.length > 0 && (
+                    <div style={{ marginTop: '2rem' }}>
+                        <div className={styles.documentsHeader} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
+                            <Mail size={16} style={{ color: '#0d9488' }} />
+                            <h2 className={styles.documentsTitle}>
+                                From Email Inbox
+                                <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', fontWeight: 400, marginLeft: '0.4rem' }}>({emailDocs.length} attachment{emailDocs.length !== 1 ? 's' : ''} not yet filed)</span>
+                            </h2>
+                        </div>
+                        <div className={styles.documentsList}>
+                            {emailDocs.map(att => (
+                                <div key={att.id} className={styles.documentCard}>
+                                    <div className={styles.documentIcon} style={{ background: '#f0fdfa', color: '#0d9488' }}>
+                                        <Paperclip size={20} />
+                                    </div>
+                                    <div className={styles.documentInfo}>
+                                        <h4 className={styles.documentName}>{att.name}</h4>
+                                        <div className={styles.documentMeta}>
+                                            <span>{formatFileSize(att.size)}</span>
+                                            <span>•</span>
+                                            <span>Received {formatDate(att.uploadedAt)}</span>
+                                            {att.subject && (
+                                                <>
+                                                    <span>•</span>
+                                                    <span style={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                        Re: {att.subject}
+                                                    </span>
+                                                </>
+                                            )}
+                                        </div>
+                                    </div>
+                                    <div className={styles.documentActions}>
+                                        <button
+                                            className={styles.viewBtn}
+                                            onClick={() => setPreviewDocument({ id: att.id, name: att.name, url: att.url, type: att.type, size: att.size, uploadedAt: att.uploadedAt })}
+                                        >
+                                            Preview
+                                        </button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
                     </div>
                 )}
                 </div>}
