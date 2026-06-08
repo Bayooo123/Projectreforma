@@ -9,6 +9,8 @@ import ScheduleMeetingModal from '@/components/calendar/ScheduleMeetingModal';
 import AddMatterModal from '@/components/calendar/AddMatterModal';
 import RecordProceedingModal from '@/components/calendar/RecordProceedingModal';
 import styles from './page.module.css';
+import { useIsMobile } from '@/hooks/useIsMobile';
+import { Icon } from '@/components/mobile/MobileShared';
 
 import { CalendarEvent } from '@/types/legal';
 import { getCalendarEvents } from '@/app/actions/calendar-events';
@@ -100,6 +102,156 @@ export default function CalendarClient({
         setEvents(prev => prev.filter(e => e.id !== id));
         setSelectedEvent(null);
     };
+
+    const isMobile = useIsMobile();
+
+    if (isMobile) {
+        // Sort events chronologically starting from today
+        const sortedHearings = [...filteredEvents]
+            .filter(e => e.type === 'COURT' || e.type === 'COURT_DATE')
+            .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+        const getEventDateInfo = (dateStr: string | Date) => {
+            const d = new Date(dateStr);
+            const day = d.getDate().toString().padStart(2, '0');
+            const month = d.toLocaleDateString('en-US', { month: 'short' }).toUpperCase();
+            return { day, month };
+        };
+
+        return (
+            <div className="rm-screen">
+                <div className="rm-scroll">
+                    {/* Header */}
+                    <div className="rm-hdr" style={{ borderBottom: '1px solid var(--rm-border)' }}>
+                        <div className="rm-hdr-row" style={{ alignItems: 'center' }}>
+                            <div>
+                                <span className="rm-eyebrow">Calendar</span>
+                                <h1 className="rm-h1">Court hearings</h1>
+                            </div>
+                            <button className="rm-icon-btn dark" onClick={() => setIsRecordProceedingOpen(true)}>
+                                <Plus size={20} />
+                            </button>
+                        </div>
+
+                        {/* Search bar */}
+                        <div className="rm-search" style={{ margin: '14px 0 0' }}>
+                            <Search size={16} />
+                            <input
+                                type="text"
+                                placeholder="Search matters or courts..."
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                            />
+                        </div>
+                    </div>
+
+                    {/* Hearing List */}
+                    <div className="rm-sec-label">
+                        <span className="t">Upcoming Hearings ({sortedHearings.length})</span>
+                    </div>
+                    <div className="rm-list">
+                        {sortedHearings.map(event => {
+                            const { day, month } = getEventDateInfo(event.date);
+                            return (
+                                <div
+                                    key={event.id}
+                                    className="rm-hear"
+                                    onClick={() => handleEventClick(event)}
+                                >
+                                    <div className="when-box">
+                                        <span className="d">{day}</span>
+                                        <span className="mo">{month}</span>
+                                    </div>
+                                    <div className="mid">
+                                        <div className="nm">{event.title || event.matter?.name || 'Hearing'}</div>
+                                        <div className="cn">{event.matter?.caseNumber || 'No case number'}</div>
+                                        <div className="cr">
+                                            <Icon n="building" s={13} c="#94A3B8" />
+                                            <span>{event.court || 'Courtroom not specified'}</span>
+                                        </div>
+                                    </div>
+                                    <div style={{ display: 'flex', alignItems: 'center' }}>
+                                        <Icon n="chevR" s={16} c="#94A3B8" />
+                                    </div>
+                                </div>
+                            );
+                        })}
+
+                        {sortedHearings.length === 0 && (
+                            <div className="rm-empty">
+                                <Icon n="cal" s={32} c="#94A3B8" />
+                                <p>No upcoming court hearings scheduled</p>
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                {/* Floating CTA fixed at bottom */}
+                <div className="rm-cta-fixed">
+                    <button className="rm-btn-primary" onClick={() => setIsRecordProceedingOpen(true)}>
+                        <Icon n="gavel" s={18} />
+                        Record Court Proceeding
+                    </button>
+                </div>
+
+                {/* Modals */}
+                <AddMatterModal
+                    isOpen={isAddMatterModalOpen}
+                    onClose={() => setIsAddMatterModalOpen(false)}
+                    workspaceId={workspaceId}
+                    userId={userId}
+                    onSuccess={handleRefresh}
+                />
+
+                <RecordProceedingModal
+                    isOpen={isRecordProceedingOpen}
+                    onClose={() => setIsRecordProceedingOpen(false)}
+                    workspaceId={workspaceId}
+                    userId={userId}
+                    onSuccess={handleRefresh}
+                />
+
+                <ScheduleMeetingModal
+                    isOpen={isScheduleMeetingModalOpen}
+                    onClose={() => setIsScheduleMeetingModalOpen(false)}
+                    workspaceId={workspaceId}
+                    userId={userId}
+                    onSuccess={handleRefresh}
+                />
+
+                {selectedEvent && (selectedEvent.type === 'COURT' || selectedEvent.type === 'COURT_DATE') && (
+                    <CourtEventModal
+                        isOpen={!!selectedEvent}
+                        onClose={() => setSelectedEvent(null)}
+                        event={selectedEvent}
+                        workspaceId={workspaceId}
+                        userId={userId}
+                        userRole={userRole}
+                        userEmail={userEmail}
+                        isOwner={isOwner}
+                        onUpdate={(patch) => {
+                            setSelectedEvent(prev => prev ? { ...prev, ...patch } : prev);
+                            setEvents(prev => prev.map(e => e.id === selectedEvent.id ? { ...e, ...patch } : e));
+                        }}
+                        onDelete={handleEventDeleted}
+                    />
+                )}
+
+                {selectedEvent && selectedEvent.type === 'MEETING' && (
+                    <MeetingEventModal
+                        isOpen={!!selectedEvent}
+                        onClose={() => setSelectedEvent(null)}
+                        event={selectedEvent}
+                        userId={userId}
+                        userRole={userRole}
+                        userEmail={userEmail}
+                        isOwner={isOwner}
+                        onDelete={handleEventDeleted}
+                    />
+                )}
+            </div>
+        );
+    }
 
     return (
         <div className={styles.container}>

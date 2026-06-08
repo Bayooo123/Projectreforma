@@ -12,6 +12,8 @@ import {
     getInboxEmails, getInboxBriefs,
 } from '@/app/actions/email-inbox';
 import styles from './page.module.css';
+import { useIsMobile } from '@/hooks/useIsMobile';
+import { BottomSheet } from '@/components/mobile/MobileShared';
 
 const CATEGORIES = ['Litigation', 'Corporate', 'Real Estate', 'Employment', 'Tax', 'Criminal', 'Arbitration', 'Advisory', 'Other'];
 
@@ -379,10 +381,12 @@ export default function EmailInboxClient({ emails: initial = [], briefs: initial
         }
     };
 
+    const isMobile = useIsMobile();
+
     return (
-        <div className={styles.root}>
+        <div className={styles.root} style={isMobile ? { paddingBottom: 60 } : undefined}>
             {/* Header */}
-            <div className={styles.header}>
+            <div className={styles.header} style={isMobile ? { paddingTop: 'calc(env(safe-area-inset-top, 0px) + 20px)' } : undefined}>
                 <div className={styles.headerLeft}>
                     <Mail size={20} className={styles.headerIcon} />
                     <div>
@@ -471,7 +475,7 @@ export default function EmailInboxClient({ emails: initial = [], briefs: initial
                 </div>
 
                 {/* Right: link panel */}
-                {panelTarget && (
+                {panelTarget && !isMobile && (
                     <div className={styles.panelCol}>
                         <LinkPanel
                             emailIds={panelTarget.emailIds}
@@ -483,6 +487,25 @@ export default function EmailInboxClient({ emails: initial = [], briefs: initial
                     </div>
                 )}
             </div>
+
+            {/* Mobile Bottom Sheet Link Panel */}
+            {panelTarget && isMobile && (
+                <BottomSheet
+                    title={panelTarget.emailIds.length > 1 ? `Link ${panelTarget.emailIds.length} emails` : 'Link to Brief'}
+                    isOpen={!!panelTarget}
+                    onClose={() => setPanelTarget(null)}
+                >
+                    <div className="rm-sheet-body" style={{ maxHeight: '70vh', overflowY: 'auto' }}>
+                        <LinkPanel
+                            emailIds={panelTarget.emailIds}
+                            firstSubject={panelTarget.subject}
+                            briefs={briefs}
+                            onDone={handleDone}
+                            onClose={() => setPanelTarget(null)}
+                        />
+                    </div>
+                </BottomSheet>
+            )}
         </div>
     );
 }

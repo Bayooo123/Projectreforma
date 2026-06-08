@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react';
 import { X, AlertCircle, Loader2, Globe, CheckCircle2, Link2 } from 'lucide-react';
 import { ComplianceTask, updateComplianceTask, createComplianceObligation } from '@/app/actions/compliance';
+import { useIsMobile } from '@/hooks/useIsMobile';
+import { BottomSheet } from '@/components/mobile/MobileShared';
 
 interface EditObligationPanelProps {
     isOpen: boolean;
@@ -55,6 +57,8 @@ export default function EditObligationPanel({
         }
     }, [isOpen, task]);
 
+    const isMobile = useIsMobile();
+
     if (!isOpen) return null;
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -92,6 +96,131 @@ export default function EditObligationPanel({
             setIsSaving(false);
         }
     };
+
+    if (isMobile) {
+        return (
+            <BottomSheet
+                title={task ? 'Edit Obligation' : 'Add Obligation'}
+                isOpen={isOpen}
+                onClose={onClose}
+            >
+                <div className="rm-sheet-body">
+                    {error && (
+                        <div style={{ padding: 12, background: '#FEE2E2', color: '#B91C1C', borderRadius: 10, fontSize: 13, marginBottom: 16 }}>
+                            {error}
+                        </div>
+                    )}
+                    <form onSubmit={handleSubmit}>
+                        <div className="rm-field">
+                            <label>Explicit Action Required *</label>
+                            <textarea
+                                required
+                                value={actionRequired}
+                                onChange={e => setActionRequired(e.target.value)}
+                                className="rm-textarea"
+                                placeholder="e.g. Conduct independent ISO 27001 data audit..."
+                            />
+                        </div>
+
+                        <div className="rm-field">
+                            <label>Regulatory Body *</label>
+                            <input
+                                type="text"
+                                required
+                                value={regulatoryBody}
+                                onChange={e => setRegulatoryBody(e.target.value)}
+                                className="rm-input"
+                                placeholder="e.g. NDPC / NITDA"
+                            />
+                        </div>
+
+                        <div className="rm-field">
+                            <label>Core Requirement *</label>
+                            <input
+                                type="text"
+                                required
+                                value={nature}
+                                onChange={e => setNature(e.target.value)}
+                                className="rm-input"
+                                placeholder="e.g. Regulatory Compliance Filing"
+                            />
+                        </div>
+
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                            <div className="rm-field">
+                                <label>Interval *</label>
+                                <input
+                                    type="text"
+                                    required
+                                    value={frequency}
+                                    onChange={e => setFrequency(e.target.value)}
+                                    className="rm-input"
+                                    placeholder="e.g. Annual"
+                                />
+                            </div>
+
+                            <div className="rm-field">
+                                <label>Deadline</label>
+                                <input
+                                    type="date"
+                                    value={dueDate}
+                                    onChange={e => setDueDate(e.target.value)}
+                                    className="rm-input"
+                                    style={{ padding: '11px 12px' }}
+                                />
+                            </div>
+                        </div>
+
+                        <div className="rm-field">
+                            <label>Fulfillment Status *</label>
+                            <select
+                                value={status}
+                                onChange={e => setStatus(e.target.value)}
+                                className="rm-select"
+                            >
+                                <option value="pending">PENDING</option>
+                                <option value="due_soon">DUE SOON</option>
+                                <option value="overdue">OVERDUE</option>
+                                <option value="concluded">CONCLUDED</option>
+                                <option value="complied">COMPLIED</option>
+                            </select>
+                        </div>
+
+                        <div className="rm-field">
+                            <label>Compliance Link</label>
+                            <input
+                                type="url"
+                                value={evidenceUrl}
+                                onChange={e => setEvidenceUrl(e.target.value)}
+                                className="rm-input"
+                                placeholder="https://..."
+                            />
+                        </div>
+
+                        <div style={{ display: 'flex', gap: 12, marginTop: 24 }}>
+                            <button
+                                type="button"
+                                className="rm-btn-ghost"
+                                style={{ flex: 1 }}
+                                onClick={onClose}
+                                disabled={isSaving}
+                            >
+                                Dismiss
+                            </button>
+                            <button
+                                type="submit"
+                                className="rm-btn-primary"
+                                style={{ flex: 2 }}
+                                disabled={isSaving}
+                            >
+                                {isSaving ? 'Saving...' : task ? 'Update Record' : 'Create Record'}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </BottomSheet>
+        );
+    }
 
     return (
         <div className="fixed inset-0 z-50 flex justify-end">

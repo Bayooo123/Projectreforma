@@ -9,6 +9,8 @@ import {
     getAnalyticsMetrics, getTopClients, getCourtVisits,
     getExpenseDistribution, getLawyerStats,
 } from '@/app/actions/analytics';
+import { useIsMobile } from '@/hooks/useIsMobile';
+import { Icon, Donut, AreaChart } from '@/components/mobile/MobileShared';
 
 interface AnalyticsClientProps {
     initialMetrics: any;
@@ -269,6 +271,167 @@ export default function AnalyticsClient({
     // We create a plausible breakdown from what we know.
     const expenseTotal = metrics?.expenses?.total || 0;
     const expenseCount = metrics?.expenses?.count || 0;
+
+    const isMobile = useIsMobile();
+
+    if (isMobile) {
+        return (
+            <PinProtection workspaceId={workspaceId} featureId="analytics" variant="analytics">
+                <div className="rm-screen">
+                    <div className="rm-scroll" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                        {/* Header */}
+                        <div className="rm-hdr" style={{ paddingBottom: 0 }}>
+                            <div className="rm-hdr-row" style={{ alignItems: 'center' }}>
+                                <div>
+                                    <span className="rm-eyebrow">Analytics</span>
+                                    <h1 className="rm-h1">Performance</h1>
+                                </div>
+                                <div style={{ display: 'flex', gap: 4 }}>
+                                    {['this-month', 'this-quarter'].map(f => (
+                                        <button
+                                            key={f}
+                                            onClick={() => handleFilterChange(f)}
+                                            className="rm-icon-btn"
+                                            style={{
+                                                width: 'auto',
+                                                height: 32,
+                                                padding: '0 12px',
+                                                borderRadius: 8,
+                                                fontSize: 12,
+                                                fontWeight: 600,
+                                                background: filter === f ? '#064e3b' : '#fff',
+                                                color: filter === f ? '#fff' : '#475569',
+                                                borderColor: filter === f ? '#064e3b' : 'var(--rm-border)'
+                                            }}
+                                        >
+                                            {f === 'this-month' ? 'Month' : 'Quarter'}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* KPI 1: Revenue Card */}
+                        <div className="rm-an-card">
+                            <span className="ttl">Total Revenue</span>
+                            <div style={{ display: 'flex', alignItems: 'baseline', marginTop: 10 }}>
+                                <span className="big" style={{ fontSize: '28px' }}>{formatCurrencyFull(metrics?.revenue?.total || 0)}</span>
+                                <span
+                                    className="delta"
+                                    style={{
+                                        color: revenueGrowth >= 0 ? '#065F46' : '#B91C1C',
+                                        background: revenueGrowth >= 0 ? '#D1FAE5' : '#FEE2E2',
+                                        marginLeft: 8,
+                                        fontSize: 12,
+                                        fontWeight: 600,
+                                        padding: '2px 8px',
+                                        borderRadius: 99
+                                    }}
+                                >
+                                    {revenueGrowth >= 0 ? '+' : ''}{revenueGrowth.toFixed(1)}%
+                                </span>
+                            </div>
+                            <span className="sub">vs last period</span>
+                        </div>
+
+                        {/* KPI 2: Active Matters Card */}
+                        <div className="rm-an-card">
+                            <span className="ttl">Active Cases</span>
+                            <div className="big" style={{ marginTop: 10, fontSize: '28px' }}>{metrics?.matters?.active || 0}</div>
+                            <span className="sub">+{metrics?.matters?.newThisMonth || 0} new this period</span>
+                        </div>
+
+                        {/* KPI 3: Client Concentration */}
+                        <div className="rm-an-card">
+                            <span className="ttl">Client Concentration</span>
+                            <div className="big" style={{ marginTop: 10, fontSize: '28px', color: topClientRevPct > 40 ? '#D97706' : undefined }}>
+                                {topClientRevPct}%
+                            </div>
+                            <span className="sub">
+                                {topClientRevPct > 40 ? 'High concentration risk' : 'Healthy distribution'}
+                            </span>
+                        </div>
+
+                        {/* KPI 4: Operating Burn */}
+                        <div className="rm-an-card">
+                            <span className="ttl">Operating Burn</span>
+                            <div className="big" style={{ marginTop: 10, fontSize: '28px', color: '#B91C1C' }}>
+                                {formatCurrencyFull(expenseTotal)}
+                            </div>
+                            <span className="sub">{metrics?.expenses?.count || 0} entries recorded</span>
+                        </div>
+
+                        {/* Monthly Trend Area Chart */}
+                        <div className="rm-an-card">
+                            <span className="ttl">Monthly Revenue Trend</span>
+                            <div style={{ marginTop: 16 }}>
+                                <AreaChart data={revenueTrend} h={140} color="#059669" />
+                            </div>
+                        </div>
+
+                        {/* Top Clients Donut Chart */}
+                        <div className="rm-an-card">
+                            <span className="ttl">Revenue by Client</span>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginTop: 16 }}>
+                                <Donut
+                                    data={(topClients || []).slice(0, 5).map((tc, idx) => ({
+                                        value: tc.totalRevenue || 0,
+                                        color: CHART_COLORS[idx % CHART_COLORS.length]
+                                    }))}
+                                    size={96}
+                                    thick={12}
+                                />
+                                <div className="rm-legend" style={{ flex: 1 }}>
+                                    {(topClients || []).slice(0, 4).map((tc, idx) => {
+                                        const pct = Math.round(((tc.totalRevenue || 0) / topClientTotal) * 100);
+                                        return (
+                                            <div className="li" key={tc.name} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                                <span className="sw" style={{ background: CHART_COLORS[idx % CHART_COLORS.length], width: 10, height: 10, borderRadius: 2 }} />
+                                                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 100, fontSize: 12 }}>
+                                                    {tc.name}
+                                                </span>
+                                                <span className="vl" style={{ marginLeft: 'auto', fontWeight: 600 }}>{pct}%</span>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Court Visits Horizontal Bars */}
+                        <div className="rm-an-card">
+                            <span className="ttl">Court Appearances</span>
+                            <div className="rm-hbar" style={{ marginTop: 16 }}>
+                                {heavyLoading ? (
+                                    <div style={{ textAlign: 'center', padding: 20, color: '#94A3B8' }}>Loading appearances...</div>
+                                ) : courtVisits.length === 0 ? (
+                                    <div style={{ textAlign: 'center', padding: 20, color: '#94A3B8' }}>No records</div>
+                                ) : (
+                                    courtVisits.slice(0, 5).map(cv => {
+                                        const maxVal = Math.max(...courtVisits.map(c => c.count), 1);
+                                        const pct = Math.round((cv.count / maxVal) * 100);
+                                        return (
+                                            <div className="li" key={cv.court} style={{ marginTop: 12 }}>
+                                                <div className="hl" style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 4 }}>
+                                                    <span className="n" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 200 }}>
+                                                        {cv.court}
+                                                    </span>
+                                                    <span className="v" style={{ fontWeight: 600 }}>{cv.count}</span>
+                                                </div>
+                                                <div className="track" style={{ height: 6, background: '#E2E8F0', borderRadius: 99, overflow: 'hidden' }}>
+                                                    <div className="f" style={{ width: `${pct}%`, height: '100%', borderRadius: 99, background: 'linear-gradient(90deg, #10B981, #059669)' }} />
+                                                </div>
+                                            </div>
+                                        );
+                                    })
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </PinProtection>
+        );
+    }
 
     return (
         <PinProtection workspaceId={workspaceId} featureId="analytics" variant="analytics">

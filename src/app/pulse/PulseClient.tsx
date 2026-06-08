@@ -12,6 +12,8 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import styles from './Pulse.module.css';
+import { useIsMobile } from '@/hooks/useIsMobile';
+import { Icon } from '@/components/mobile/MobileShared';
 import type {
     PulseItem,
     PulseFirmStats,
@@ -93,6 +95,7 @@ export default function PulseClient({
     anomalies,
     myBriefs,
     todayEntries,
+    userName,
 }: PulseClientProps) {
     const [view, setView] = useState<'firm' | 'user'>('firm');
     const [filter, setFilter] = useState<FilterType>('all');
@@ -119,13 +122,129 @@ export default function PulseClient({
         return result;
     }, [filteredFeed, sectionLabels]);
 
-    const today = new Date();
-    const dateLabel = today.toLocaleDateString('en-GB', {
-        weekday: 'long',
-        day: 'numeric',
-        month: 'long',
-        year: 'numeric',
-    });
+    const isMobile = useIsMobile();
+    const dateLabel = new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+
+    if (isMobile) {
+        const nextHearing = feed.find(i => i.categories.includes('calendar'));
+        return (
+            <div className="rm-screen">
+                <div className="rm-scroll">
+                    {/* Greeting */}
+                    <div className="rm-hdr-row" style={{ padding: 'calc(env(safe-area-inset-top, 0px) + 20px) 20px 2px', alignItems: 'center' }}>
+                        <div className="rm-greet" style={{ padding: 0 }}>
+                            <span className="rm-eyebrow">{dateLabel}</span>
+                            <h1 style={{ marginTop: 2, fontSize: '28px' }}>Good morning, <span className="nm" style={{ color: '#065F46' }}>{userName || 'Counsel'}</span></h1>
+                        </div>
+                        <div className="rm-avatar">{userName ? userName.split(' ').slice(0, 2).map(n => n[0]).join('').toUpperCase() : 'C'}</div>
+                    </div>
+
+                    {/* Metric Chips */}
+                    <div className="rm-chips-scroll">
+                        <div className="rm-mchip">
+                            <div className="ic" style={{ background: '#ECFDF5', color: '#065F46' }}>
+                                <Icon n="file" s={16} />
+                            </div>
+                            <div className="v">{userStats.myBriefs}</div>
+                            <div className="l">My Briefs</div>
+                        </div>
+                        <div className="rm-mchip">
+                            <div className="ic" style={{ background: userStats.tasksOverdue > 0 ? '#FEE2E2' : '#F1F5F9', color: userStats.tasksOverdue > 0 ? '#B91C1C' : '#475569' }}>
+                                <Icon n="alert" s={16} />
+                            </div>
+                            <div className="v">{userStats.tasksOverdue}</div>
+                            <div className="l">Tasks Overdue</div>
+                        </div>
+                        <div className="rm-mchip">
+                            <div className="ic" style={{ background: '#EEF4FF', color: '#1E40AF' }}>
+                                <Icon n="gavel" s={16} />
+                            </div>
+                            <div className="v">{userStats.myHearings}</div>
+                            <div className="l">My Hearings</div>
+                        </div>
+                    </div>
+
+                    {/* Hero Court Card */}
+                    {nextHearing && (
+                        <Link href={nextHearing.ctaHref} style={{ textDecoration: 'none', color: 'inherit' }}>
+                            <div className="rm-hero" style={{ marginTop: '16px' }}>
+                                <div className="top">
+                                    <span className="tag-live">
+                                        <span className="dot" />
+                                        {nextHearing.severity === 'urgent' ? 'Urgent' : 'Upcoming'}
+                                    </span>
+                                    <span className="cd">{nextHearing.timeLabel}</span>
+                                </div>
+                                <h2>{nextHearing.title}</h2>
+                                <div className="meta">
+                                    <div className="r">
+                                        <Icon n="clock" s={14} c="rgba(234,244,239,.8)" />
+                                        <span>Today</span>
+                                    </div>
+                                    <div className="r">
+                                        <Icon n="pin" s={14} c="rgba(234,244,239,.8)" />
+                                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                            {nextHearing.description}
+                                        </span>
+                                    </div>
+                                </div>
+                                <div className="when">
+                                    <span className="t">Live Appearance</span>
+                                    <span className="go">View brief <Icon n="chevR" s={14} c="#A7F3D0" /></span>
+                                </div>
+                            </div>
+                        </Link>
+                    )}
+
+                    {/* Needs Action List */}
+                    <div className="rm-sec-label" style={{ marginTop: '24px' }}>
+                        <span className="t">Needs Your Attention</span>
+                    </div>
+                    <div className="rm-list">
+                        {filteredFeed.filter(i => i.severity === 'urgent').map(item => {
+                            let iconName = 'alert';
+                            let iconBg = '#FEE2E2';
+                            let iconColor = '#B91C1C';
+                            if (item.categories.includes('billing')) {
+                                iconName = 'naira';
+                                iconBg = '#ECFDF5';
+                                iconColor = '#059669';
+                            } else if (item.categories.includes('calendar')) {
+                                iconName = 'cal';
+                                iconBg = '#EEF4FF';
+                                iconColor = '#1E40AF';
+                            } else if (item.categories.includes('compliance')) {
+                                iconName = 'shield';
+                                iconBg = '#FEF3C7';
+                                iconColor = '#D97706';
+                            }
+
+                            return (
+                                <Link key={item.id} href={item.ctaHref} style={{ textDecoration: 'none', color: 'inherit' }}>
+                                    <div className="rm-need">
+                                        <div className="ic" style={{ background: iconBg, color: iconColor }}>
+                                            <Icon n={iconName} s={20} />
+                                        </div>
+                                        <div className="mid">
+                                            <div className="ttl">{item.title}</div>
+                                            <div className="sb">{item.description}</div>
+                                        </div>
+                                        <Icon n="chevR" s={16} c="#94A3B8" />
+                                    </div>
+                                </Link>
+                            );
+                        })}
+                        {filteredFeed.filter(i => i.severity === 'urgent').length === 0 && (
+                            <div className="rm-empty">
+                                <Icon n="checkc" s={32} c="#059669" />
+                                <p>All clear! No items require your urgent attention.</p>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className={styles.page}>
