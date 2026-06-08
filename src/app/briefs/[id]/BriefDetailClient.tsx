@@ -341,12 +341,13 @@ export default function BriefDetailClient({ brief }: BriefDetailClientProps) {
                         : <BriefTimeline briefId={brief.id} initialEvents={initialTimeline} initialSummary={initialSummary} />
                 )}
 
-                {activeTab === 'documents' && <div>
+                {activeTab === 'documents' && <div style={{ paddingBottom: '80px' }}>
+                {/* ── Upload row ─────────────────────────────────────────── */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
                     <div style={{ flex: 1, minWidth: '300px' }}>
                         <DocumentUpload briefId={brief.id} folderId={currentFolderId} onUploadComplete={handleUploadComplete} />
                     </div>
-                    <button 
+                    <button
                         onClick={() => setIsCreateFolderModalOpen(true)}
                         style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem 1rem', backgroundColor: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', color: 'var(--text-primary)', fontWeight: 500, cursor: 'pointer' }}
                     >
@@ -355,11 +356,12 @@ export default function BriefDetailClient({ brief }: BriefDetailClientProps) {
                     </button>
                 </div>
 
+                {/* ── Section header ─────────────────────────────────────── */}
                 <div className={styles.documentsHeader}>
                     <div className="flex items-center gap-2">
                         <h2 className={styles.documentsTitle} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                             {currentFolderId !== null && (
-                                <button 
+                                <button
                                     onClick={() => setCurrentFolderId(currentFolder?.parentId || null)}
                                     style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: '0.25rem', borderRadius: '4px', backgroundColor: 'var(--surface)', color: 'var(--text-secondary)' }}
                                     title="Go Back"
@@ -367,31 +369,33 @@ export default function BriefDetailClient({ brief }: BriefDetailClientProps) {
                                     <CornerUpLeft size={16} />
                                 </button>
                             )}
-                            {currentFolderId === null ? 'Main Brief Files' : currentFolder?.name} 
-                            <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', fontWeight: 400 }}>({visibleDocuments.length} docs, {visibleFolders.length} folders)</span>
+                            {currentFolderId === null ? 'Documents' : currentFolder?.name}
+                            <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', fontWeight: 400 }}>
+                                ({visibleDocuments.length + (currentFolderId === null ? emailDocs.length : 0)} files
+                                {visibleFolders.length > 0 ? `, ${visibleFolders.length} folders` : ''})
+                            </span>
                         </h2>
                         <button
                             onClick={() => refreshData()}
                             disabled={isRefreshing}
                             className="p-1 hover:bg-slate-100 rounded-full text-slate-400 hover:text-slate-600 transition-colors"
-                            title="Refresh List"
+                            title="Refresh"
                         >
                             <Loader size={14} className={isRefreshing ? 'animate-spin' : ''} />
                         </button>
                     </div>
                 </div>
 
-                {visibleFolders.length === 0 && visibleDocuments.length === 0 ? (
+                {/* ── Unified list ───────────────────────────────────────── */}
+                {visibleFolders.length === 0 && visibleDocuments.length === 0 && (currentFolderId !== null || emailDocs.length === 0) ? (
                     <div className={styles.emptyState}>
                         <FileText size={48} className={styles.emptyIcon} />
-                        <h3 className={styles.emptyTitle}>This location is empty</h3>
-                        <p className={styles.emptyText}>
-                            Upload documents or create folders to keep everything organized.
-                        </p>
+                        <h3 className={styles.emptyTitle}>No documents yet</h3>
+                        <p className={styles.emptyText}>Drag and drop files above, or select from your system to get started.</p>
                     </div>
                 ) : (
                     <div className={styles.documentsList}>
-                        {/* Render Folders First */}
+                        {/* Folders */}
                         {visibleFolders.map((folder) => (
                             <div key={folder.id} className={styles.documentCard} style={{ backgroundColor: 'var(--surface)', cursor: 'pointer' }} onClick={() => setCurrentFolderId(folder.id)}>
                                 <div className={styles.documentIcon} style={{ backgroundColor: 'transparent', color: '#6b7280' }}>
@@ -412,10 +416,7 @@ export default function BriefDetailClient({ brief }: BriefDetailClientProps) {
                                 <div className={styles.documentActions} onClick={(e) => e.stopPropagation()}>
                                     <button
                                         className={styles.deleteBtn}
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            setDeletingFolder({ id: folder.id, name: folder.name });
-                                        }}
+                                        onClick={(e) => { e.stopPropagation(); setDeletingFolder({ id: folder.id, name: folder.name }); }}
                                         title="Delete Folder"
                                     >
                                         <Trash2 size={16} />
@@ -424,7 +425,7 @@ export default function BriefDetailClient({ brief }: BriefDetailClientProps) {
                             </div>
                         ))}
 
-                        {/* Render Documents */}
+                        {/* Uploaded documents */}
                         {visibleDocuments.map((doc) => (
                             <div key={doc.id} className={styles.documentCard}>
                                 <div className={styles.documentIcon}>
@@ -435,78 +436,57 @@ export default function BriefDetailClient({ brief }: BriefDetailClientProps) {
                                     <div className={styles.documentMeta}>
                                         <span>{formatFileSize(doc.size)}</span>
                                         <span>•</span>
-                                        <span>Uploaded {formatDate(doc.uploadedAt)}</span>
-                                        <div className="ml-2">
-                                            {getOCRStatusBadge(doc.ocrStatus)}
-                                        </div>
+                                        <span>{formatDate(doc.uploadedAt)}</span>
+                                        <div className="ml-2">{getOCRStatusBadge(doc.ocrStatus)}</div>
+                                    </div>
+                                </div>
+                                <div className={styles.documentActions}>
+                                    <button onClick={() => setMovingDoc(doc)} className={styles.viewBtn} style={{ color: 'var(--text-secondary)' }} title="Move">
+                                        <FolderInput size={16} />
+                                    </button>
+                                    <button onClick={() => setPreviewDocument(doc)} className={styles.viewBtn}>View</button>
+                                    <button className={styles.deleteBtn}><Trash2 size={16} /></button>
+                                </div>
+                            </div>
+                        ))}
+
+                        {/* Email inbox attachments — shown inline in root only */}
+                        {currentFolderId === null && emailDocs.map((att) => (
+                            <div key={att.id} className={styles.documentCard}>
+                                <div className={styles.documentIcon} style={{ background: '#f0fdfa', color: '#0d9488' }}>
+                                    <Paperclip size={22} />
+                                </div>
+                                <div className={styles.documentInfo}>
+                                    <h4 className={styles.documentName} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                                        {att.name}
+                                        <span style={{ fontSize: '0.65rem', fontWeight: 600, color: '#0d9488', background: '#f0fdfa', border: '1px solid #99f6e4', borderRadius: 4, padding: '1px 5px', whiteSpace: 'nowrap' }}>
+                                            <Mail size={9} style={{ display: 'inline', marginRight: 2 }} />Email
+                                        </span>
+                                    </h4>
+                                    <div className={styles.documentMeta}>
+                                        <span>{formatFileSize(att.size)}</span>
+                                        <span>•</span>
+                                        <span>{formatDate(att.uploadedAt)}</span>
+                                        {att.subject && (
+                                            <>
+                                                <span>•</span>
+                                                <span style={{ maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                    {att.subject}
+                                                </span>
+                                            </>
+                                        )}
                                     </div>
                                 </div>
                                 <div className={styles.documentActions}>
                                     <button
-                                        onClick={() => setMovingDoc(doc)}
-                                        className={styles.viewBtn} style={{ color: 'var(--text-secondary)' }}
-                                        title="Move Document"
-                                    >
-                                        <FolderInput size={16} style={{ marginRight: '4px', display: 'inline' }} />
-                                    </button>
-                                    <button
-                                        onClick={() => setPreviewDocument(doc)}
                                         className={styles.viewBtn}
+                                        onClick={() => setPreviewDocument({ id: att.id, name: att.name, url: att.url, type: att.type, size: att.size, uploadedAt: att.uploadedAt })}
                                     >
-                                        View
-                                    </button>
-                                    <button className={styles.deleteBtn}>
-                                        <Trash2 size={16} />
+                                        Preview
                                     </button>
                                 </div>
                             </div>
                         ))}
-                    </div>
-                )}
-
-                {/* ── Email Inbox Attachments ─────────────────────────── */}
-                {emailDocs.length > 0 && (
-                    <div style={{ marginTop: '2rem' }}>
-                        <div className={styles.documentsHeader} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
-                            <Mail size={16} style={{ color: '#0d9488' }} />
-                            <h2 className={styles.documentsTitle}>
-                                From Email Inbox
-                                <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', fontWeight: 400, marginLeft: '0.4rem' }}>({emailDocs.length} attachment{emailDocs.length !== 1 ? 's' : ''} not yet filed)</span>
-                            </h2>
-                        </div>
-                        <div className={styles.documentsList}>
-                            {emailDocs.map(att => (
-                                <div key={att.id} className={styles.documentCard}>
-                                    <div className={styles.documentIcon} style={{ background: '#f0fdfa', color: '#0d9488' }}>
-                                        <Paperclip size={20} />
-                                    </div>
-                                    <div className={styles.documentInfo}>
-                                        <h4 className={styles.documentName}>{att.name}</h4>
-                                        <div className={styles.documentMeta}>
-                                            <span>{formatFileSize(att.size)}</span>
-                                            <span>•</span>
-                                            <span>Received {formatDate(att.uploadedAt)}</span>
-                                            {att.subject && (
-                                                <>
-                                                    <span>•</span>
-                                                    <span style={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                                        Re: {att.subject}
-                                                    </span>
-                                                </>
-                                            )}
-                                        </div>
-                                    </div>
-                                    <div className={styles.documentActions}>
-                                        <button
-                                            className={styles.viewBtn}
-                                            onClick={() => setPreviewDocument({ id: att.id, name: att.name, url: att.url, type: att.type, size: att.size, uploadedAt: att.uploadedAt })}
-                                        >
-                                            Preview
-                                        </button>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
                     </div>
                 )}
                 </div>}

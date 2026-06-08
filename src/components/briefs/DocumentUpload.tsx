@@ -121,10 +121,11 @@ export default function DocumentUpload({ briefId, folderId, onUploadComplete }: 
 
     return (
         <div className={styles.container}>
-            <div className="flex items-center justify-between mb-4">
-                <h3 className={styles.title}>Document Vault</h3>
-                {isUploading && <Loader className="animate-spin text-primary" size={16} />}
-            </div>
+            {isUploading && (
+                <div className="flex justify-end mb-2">
+                    <Loader className="animate-spin text-primary" size={16} />
+                </div>
+            )}
 
             <div
                 className={`${styles.dropzone} ${dragActive ? styles.active : ''} ${isUploading ? styles.uploading : ''}`}
