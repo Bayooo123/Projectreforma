@@ -669,6 +669,57 @@
 .createBtn:hover:not(:disabled) { opacity: 0.88; }
 .createBtn:disabled { opacity: 0.5; cursor: default; }
 
+/* ── Auto-file button ────────────────────────────────────────────────────── */
+.autoFileBtn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 16px;
+    border-radius: 8px;
+    border: none;
+    background: var(--primary);
+    color: white;
+    font-size: 0.75rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: opacity 0.12s;
+}
+.autoFileBtn:hover:not(:disabled) { opacity: 0.88; }
+.autoFileBtn:disabled { opacity: 0.45; cursor: default; }
+
+/* ── Auto-file result banner ─────────────────────────────────────────────── */
+.autoFileBanner {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0.55rem 1rem;
+    background: #ecfdf5;
+    border-bottom: 1px solid #a7f3d0;
+    flex-shrink: 0;
+}
+
+.autoFileBannerIcon { color: #059669; flex-shrink: 0; }
+
+.autoFileBannerText {
+    flex: 1;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: #065f46;
+}
+
+.autoFileBannerDismiss {
+    display: flex;
+    align-items: center;
+    padding: 2px;
+    border: none;
+    background: none;
+    color: #059669;
+    cursor: pointer;
+    border-radius: 4px;
+    flex-shrink: 0;
+}
+.autoFileBannerDismiss:hover { background: #a7f3d0; }
+
 /* ── Triage button ───────────────────────────────────────────────────────── */
 .triageBtn {
     display: inline-flex;

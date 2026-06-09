@@ -241,6 +241,148 @@ export interface TriageGroup {
     suggestedNewBriefName: string;
 }
 
+// ── Auto-file ─────────────────────────────────────────────────────────────────
+
+export interface AutoFileResult {
+    linked: number;
+    created: number;
+    details: { label: string; action: 'linked' | 'created'; briefName: string; emailCount: number }[];
+}
+
+function inferCategory(subject: string): string {
+    const s = subject.toLowerCase();
+    if (/\bv\b|\bversus\b|\bcourt\b|\bhearing\b|\bjudgment\b|\bappeal\b|\bplaintiff\b|\bdefendant\b|\bsuit\b/.test(s)) return 'Litigation';
+    if (/\bcompan|\bincorporat|\bshares?\b|\bdirector\b|\bshareholder\b/.test(s)) return 'Corporate';
+    if (/\bland\b|\bpropert|\blease\b|\btenancy\b|\bestate\b/.test(s)) return 'Real Estate';
+    if (/\btax\b|\bvat\b|\bfirs\b|\brevenue\b/.test(s)) return 'Tax';
+    if (/\bemploy|\bdismiss|\btermina|\bredundan/.test(s)) return 'Employment';
+    if (/\bcrimin|\bpolice\b|\barrest\b|\bcharge\b|\bprosec/.test(s)) return 'Criminal';
+    if (/\barbitrat/.test(s)) return 'Arbitration';
+    return 'Advisory';
+}
+
+export async function autoFileAllEmails(): Promise<AutoFileResult> {
+    const user = await requireAuth();
+
+    const membership = await prisma.workspaceMember.findFirst({
+        where: { user: { email: user.email! } },
+        select: { workspaceId: true },
+    });
+    if (!membership) return { linked: 0, created: 0, details: [] };
+
+    const { workspaceId } = membership;
+
+    // Fetch all unlinked emails
+    const allEmails = await prisma.inboundEmail.findMany({
+        where: { workspaceId, matterId: null },
+        select: { id: true, fromEmail: true, subject: true, bodyPreview: true, receivedAt: true },
+        orderBy: { receivedAt: 'desc' },
+        take: 500,
+    });
+
+    const pulseLinked = await prisma.pulseEvent.findMany({
+        where: { inboundEmailId: { in: allEmails.map(e => e.id) }, briefId: { not: null } },
+        select: { inboundEmailId: true },
+    });
+    const linkedIds = new Set(pulseLinked.map(p => p.inboundEmailId!));
+    const unlinked = allEmails.filter(e => !linkedIds.has(e.id));
+
+    if (unlinked.length === 0) return { linked: 0, created: 0, details: [] };
+
+    // Fetch existing briefs for matching
+    const briefs = await prisma.brief.findMany({
+        where: { workspaceId, deletedAt: null },
+        select: { id: true, briefNumber: true, name: true, client: { select: { name: true } } },
+    });
+
+    // Group by fuzzy subject (same logic as triage)
+    const groupMap = new Map<string, typeof unlinked>();
+    for (const email of unlinked) {
+        const key = email.subject
+            .replace(/^(fwd?:|re:)\s*/gi, '')
+            .split(/\s+[—–-]\s+/)[0]
+            .replace(/\bversus\b/gi, 'v')
+            .replace(/\bvs\.?\b/gi, 'v')
+            .trim()
+            .toLowerCase();
+
+        let matched: string | null = null;
+        for (const existingKey of groupMap.keys()) {
+            if (wordOverlap(key, existingKey) >= 0.5) { matched = existingKey; break; }
+        }
+        const target = matched ?? key;
+        if (!groupMap.has(target)) groupMap.set(target, []);
+        groupMap.get(target)!.push(email);
+    }
+
+    const groups = Array.from(groupMap.entries());
+
+    // Word-overlap match each group against existing briefs (no AI — speed first)
+    const matched: { emailIds: string[]; briefId: string; briefName: string; label: string }[] = [];
+    const unmatched: { emailIds: string[]; label: string; key: string }[] = [];
+
+    for (const [key, emails] of groups) {
+        const label = emails[0].subject
+            .replace(/^(fwd?:|re:)\s*/gi, '')
+            .split(/\s+[—–-]\s+/)[0]
+            .trim();
+
+        const best = briefs
+            .map(b => ({ b, score: wordOverlap(key, normalizeSubjectKey(b.name)) }))
+            .filter(m => m.score >= 0.4)
+            .sort((a, b) => b.score - a.score)[0];
+
+        if (best) {
+            matched.push({ emailIds: emails.map(e => e.id), briefId: best.b.id, briefName: best.b.name, label });
+        } else {
+            unmatched.push({ emailIds: emails.map(e => e.id), label, key });
+        }
+    }
+
+    const details: AutoFileResult['details'] = [];
+
+    // Link matched groups in parallel
+    await Promise.all(
+        matched.map(async g => {
+            await bulkLinkEmailsToBrief(g.emailIds, g.briefId);
+            details.push({ label: g.label, action: 'linked', briefName: g.briefName, emailCount: g.emailIds.length });
+        })
+    );
+
+    // Create briefs for unmatched groups sequentially (safe brief numbering)
+    let briefCount = await prisma.brief.count({ where: { workspaceId } });
+    for (const g of unmatched) {
+        briefCount++;
+        const briefNumber = `BRF-${String(briefCount).padStart(4, '0')}`;
+        const name = g.label.slice(0, 100) || '(Untitled)';
+        const category = inferCategory(g.label);
+
+        const newBrief = await prisma.brief.create({
+            data: {
+                briefNumber,
+                name,
+                category,
+                status: 'active',
+                workspaceId,
+                lawyerId: user.id!,
+                isLitigationDerived: category === 'Litigation',
+            },
+        });
+
+        await bulkLinkEmailsToBrief(g.emailIds, newBrief.id);
+        details.push({ label: g.label, action: 'created', briefName: newBrief.name, emailCount: g.emailIds.length });
+    }
+
+    revalidatePath('/emails');
+    revalidatePath('/briefs');
+
+    return {
+        linked:  matched.length,
+        created: unmatched.length,
+        details,
+    };
+}
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 const STOP_WORDS = new Set([

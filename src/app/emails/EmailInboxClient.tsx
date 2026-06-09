@@ -3,13 +3,13 @@
 import { useState, useMemo, useTransition, useEffect } from 'react';
 import {
     Mail, Link2, Plus, Search, X, Check, AlertCircle,
-    ChevronDown, Unlink, FileText, CheckSquare, Square, RefreshCw, Layers,
+    ChevronDown, Unlink, FileText, CheckSquare, Square, RefreshCw, Layers, Zap,
 } from 'lucide-react';
 import {
-    InboxEmail, InboxBrief, TriageGroup, TriageSuggestion,
+    InboxEmail, InboxBrief, TriageGroup, TriageSuggestion, AutoFileResult,
     linkEmailToBrief, unlinkEmail,
     bulkLinkEmailsToBrief, quickCreateBriefAndLink,
-    getInboxEmails, getInboxBriefs, triageUnlinkedEmails,
+    getInboxEmails, getInboxBriefs, triageUnlinkedEmails, autoFileAllEmails,
 } from '@/app/actions/email-inbox';
 import styles from './page.module.css';
 import { useIsMobile } from '@/hooks/useIsMobile';
@@ -524,6 +524,8 @@ export default function EmailInboxClient({ emails: initial = [], briefs: initial
     const [triageLoading, setTriageLoading] = useState(false);
     const [triageGroups, setTriageGroups]   = useState<TriageGroup[]>([]);
     const [triageOpen, setTriageOpen]       = useState(false);
+    const [autoFiling, setAutoFiling]       = useState(false);
+    const [autoFileResult, setAutoFileResult] = useState<AutoFileResult | null>(null);
     const [, startTransition]               = useTransition();
 
     useEffect(() => {
@@ -625,6 +627,20 @@ export default function EmailInboxClient({ emails: initial = [], briefs: initial
         }
     };
 
+    const handleAutoFile = async () => {
+        setAutoFiling(true);
+        setAutoFileResult(null);
+        try {
+            const result = await autoFileAllEmails();
+            setAutoFileResult(result);
+            // Refresh email list to reflect newly linked emails
+            const fresh = await getInboxEmails('all');
+            setEmails(fresh);
+        } finally {
+            setAutoFiling(false);
+        }
+    };
+
     const isMobile = useIsMobile();
 
     return (
@@ -640,20 +656,31 @@ export default function EmailInboxClient({ emails: initial = [], briefs: initial
                 </div>
                 <div style={{ display: 'flex', gap: 6 }}>
                     <button
+                        className={styles.autoFileBtn}
+                        onClick={handleAutoFile}
+                        disabled={autoFiling || unlinkedCount === 0}
+                        title={unlinkedCount === 0 ? 'No unlinked emails' : 'Automatically file all unlinked emails into briefs'}
+                    >
+                        {autoFiling
+                            ? <RefreshCw size={14} className={styles.spinning} />
+                            : <Zap size={14} />
+                        }
+                        {autoFiling ? 'Filing…' : 'Auto-file All'}
+                    </button>
+                    <button
                         className={styles.triageBtn}
                         onClick={handleTriage}
                         disabled={triageLoading || unlinkedCount === 0}
-                        title={unlinkedCount === 0 ? 'No unlinked emails' : 'Group similar unlinked emails and suggest briefs'}
+                        title="Review and manually assign email groups"
                     >
                         {triageLoading
                             ? <RefreshCw size={14} className={styles.spinning} />
                             : <Layers size={14} />
                         }
-                        {triageLoading ? 'Analysing…' : 'Group Unlinked'}
+                        {triageLoading ? 'Loading…' : 'Review'}
                     </button>
-                    <button className={styles.refreshBtn} onClick={handleRefresh} disabled={refreshing} title="Refresh email list">
+                    <button className={styles.refreshBtn} onClick={handleRefresh} disabled={refreshing} title="Refresh">
                         <RefreshCw size={14} className={refreshing ? styles.spinning : ''} />
-                        {refreshing ? 'Refreshing…' : 'Refresh'}
                     </button>
                 </div>
             </div>
@@ -702,6 +729,22 @@ export default function EmailInboxClient({ emails: initial = [], briefs: initial
                             onCreateBrief={() => openBulkPanel('create')}
                             onClear={clearSelection}
                         />
+                    )}
+
+                    {/* Auto-file result banner */}
+                    {autoFileResult && (
+                        <div className={styles.autoFileBanner}>
+                            <Zap size={14} className={styles.autoFileBannerIcon} />
+                            <span className={styles.autoFileBannerText}>
+                                {autoFileResult.linked > 0 && `${autoFileResult.linked} group${autoFileResult.linked !== 1 ? 's' : ''} linked`}
+                                {autoFileResult.linked > 0 && autoFileResult.created > 0 && ' · '}
+                                {autoFileResult.created > 0 && `${autoFileResult.created} new brief${autoFileResult.created !== 1 ? 's' : ''} created`}
+                                {autoFileResult.linked === 0 && autoFileResult.created === 0 && 'Nothing to file — inbox is clean'}
+                            </span>
+                            <button className={styles.autoFileBannerDismiss} onClick={() => setAutoFileResult(null)}>
+                                <X size={13} />
+                            </button>
+                        </div>
                     )}
 
                     {/* List */}
