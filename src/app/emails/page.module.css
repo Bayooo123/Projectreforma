@@ -720,6 +720,24 @@
 }
 .autoFileBannerDismiss:hover { background: #a7f3d0; }
 
+/* ── Rollback button ─────────────────────────────────────────────────────── */
+.rollbackBtn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 6px 12px;
+    border-radius: 8px;
+    border: 1px solid #fca5a5;
+    background: #fff1f2;
+    color: #dc2626;
+    font-size: 0.72rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.12s;
+}
+.rollbackBtn:hover:not(:disabled) { background: #fee2e2; }
+.rollbackBtn:disabled { opacity: 0.5; cursor: default; }
+
 /* ── Triage button ───────────────────────────────────────────────────────── */
 .triageBtn {
     display: inline-flex;

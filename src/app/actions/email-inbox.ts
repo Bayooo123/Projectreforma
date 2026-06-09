@@ -241,6 +241,58 @@ export interface TriageGroup {
     suggestedNewBriefName: string;
 }
 
+// ── Rollback auto-file ────────────────────────────────────────────────────────
+
+export async function reverseAutoFileBriefs(): Promise<{ deleted: number; unlinked: number }> {
+    const user = await requireAuth();
+
+    const membership = await prisma.workspaceMember.findFirst({
+        where: { user: { email: user.email! } },
+        select: { workspaceId: true },
+    });
+    if (!membership) return { deleted: 0, unlinked: 0 };
+
+    const { workspaceId } = membership;
+
+    // Find briefs created in the last 6 hours that look auto-generated:
+    // only email PulseEvents, no documents, no court dates
+    const recentBriefs = await prisma.brief.findMany({
+        where: {
+            workspaceId,
+            createdAt: { gte: new Date(Date.now() - 6 * 60 * 60 * 1000) },
+        },
+        select: {
+            id: true,
+            pulseEvents: { select: { source: true, inboundEmailId: true } },
+            documents:   { select: { id: true } },
+        },
+    });
+
+    const autoCreated = recentBriefs.filter(b =>
+        b.documents.length === 0 &&
+        b.pulseEvents.length > 0 &&
+        b.pulseEvents.every(pe => pe.source === 'email' && pe.inboundEmailId !== null)
+    );
+
+    if (autoCreated.length === 0) return { deleted: 0, unlinked: 0 };
+
+    const briefIds = autoCreated.map(b => b.id);
+
+    // Unlink emails — set briefId back to null on affected PulseEvents
+    const unlinkResult = await prisma.pulseEvent.updateMany({
+        where: { briefId: { in: briefIds } },
+        data: { briefId: null, matterId: null },
+    });
+
+    // Delete the auto-created briefs (cascades activities etc.)
+    await prisma.brief.deleteMany({ where: { id: { in: briefIds } } });
+
+    revalidatePath('/briefs');
+    revalidatePath('/emails');
+
+    return { deleted: briefIds.length, unlinked: unlinkResult.count };
+}
+
 // ── Auto-file ─────────────────────────────────────────────────────────────────
 
 export interface AutoFileResult {
@@ -341,7 +393,7 @@ export async function autoFileAllEmails(): Promise<AutoFileResult> {
 
     const details: AutoFileResult['details'] = [];
 
-    // Link matched groups in parallel
+    // Link matched groups in parallel — unmatched emails stay unlinked for manual review
     await Promise.all(
         matched.map(async g => {
             await bulkLinkEmailsToBrief(g.emailIds, g.briefId);
@@ -349,36 +401,12 @@ export async function autoFileAllEmails(): Promise<AutoFileResult> {
         })
     );
 
-    // Create briefs for unmatched groups sequentially (safe brief numbering)
-    let briefCount = await prisma.brief.count({ where: { workspaceId } });
-    for (const g of unmatched) {
-        briefCount++;
-        const briefNumber = `BRF-${String(briefCount).padStart(4, '0')}`;
-        const name = g.label.slice(0, 100) || '(Untitled)';
-        const category = inferCategory(g.label);
-
-        const newBrief = await prisma.brief.create({
-            data: {
-                briefNumber,
-                name,
-                category,
-                status: 'active',
-                workspaceId,
-                lawyerId: user.id!,
-                isLitigationDerived: category === 'Litigation',
-            },
-        });
-
-        await bulkLinkEmailsToBrief(g.emailIds, newBrief.id);
-        details.push({ label: g.label, action: 'created', briefName: newBrief.name, emailCount: g.emailIds.length });
-    }
-
     revalidatePath('/emails');
     revalidatePath('/briefs');
 
     return {
         linked:  matched.length,
-        created: unmatched.length,
+        created: 0,
         details,
     };
 }

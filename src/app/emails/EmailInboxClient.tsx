@@ -9,7 +9,7 @@ import {
     InboxEmail, InboxBrief, TriageGroup, TriageSuggestion, AutoFileResult,
     linkEmailToBrief, unlinkEmail,
     bulkLinkEmailsToBrief, quickCreateBriefAndLink,
-    getInboxEmails, getInboxBriefs, triageUnlinkedEmails, autoFileAllEmails,
+    getInboxEmails, getInboxBriefs, triageUnlinkedEmails, autoFileAllEmails, reverseAutoFileBriefs,
 } from '@/app/actions/email-inbox';
 import styles from './page.module.css';
 import { useIsMobile } from '@/hooks/useIsMobile';
@@ -524,8 +524,9 @@ export default function EmailInboxClient({ emails: initial = [], briefs: initial
     const [triageLoading, setTriageLoading] = useState(false);
     const [triageGroups, setTriageGroups]   = useState<TriageGroup[]>([]);
     const [triageOpen, setTriageOpen]       = useState(false);
-    const [autoFiling, setAutoFiling]       = useState(false);
+    const [autoFiling, setAutoFiling]         = useState(false);
     const [autoFileResult, setAutoFileResult] = useState<AutoFileResult | null>(null);
+    const [rollingBack, setRollingBack]       = useState(false);
     const [, startTransition]               = useTransition();
 
     useEffect(() => {
@@ -627,6 +628,19 @@ export default function EmailInboxClient({ emails: initial = [], briefs: initial
         }
     };
 
+    const handleRollback = async () => {
+        if (!confirm('This will delete all auto-created briefs from the last 6 hours and unlink their emails. Continue?')) return;
+        setRollingBack(true);
+        try {
+            const res = await reverseAutoFileBriefs();
+            setAutoFileResult({ linked: 0, created: -res.deleted, details: [] });
+            const fresh = await getInboxEmails('all');
+            setEmails(fresh);
+        } finally {
+            setRollingBack(false);
+        }
+    };
+
     const handleAutoFile = async () => {
         setAutoFiling(true);
         setAutoFileResult(null);
@@ -682,6 +696,10 @@ export default function EmailInboxClient({ emails: initial = [], briefs: initial
                     <button className={styles.refreshBtn} onClick={handleRefresh} disabled={refreshing} title="Refresh">
                         <RefreshCw size={14} className={refreshing ? styles.spinning : ''} />
                     </button>
+                    <button className={styles.rollbackBtn} onClick={handleRollback} disabled={rollingBack} title="Undo last Auto-file — deletes auto-created briefs from last 6 hours">
+                        {rollingBack ? <RefreshCw size={13} className={styles.spinning} /> : <X size={13} />}
+                        {rollingBack ? 'Undoing…' : 'Undo Auto-file'}
+                    </button>
                 </div>
             </div>
 
@@ -736,10 +754,12 @@ export default function EmailInboxClient({ emails: initial = [], briefs: initial
                         <div className={styles.autoFileBanner}>
                             <Zap size={14} className={styles.autoFileBannerIcon} />
                             <span className={styles.autoFileBannerText}>
-                                {autoFileResult.linked > 0 && `${autoFileResult.linked} group${autoFileResult.linked !== 1 ? 's' : ''} linked`}
-                                {autoFileResult.linked > 0 && autoFileResult.created > 0 && ' · '}
-                                {autoFileResult.created > 0 && `${autoFileResult.created} new brief${autoFileResult.created !== 1 ? 's' : ''} created`}
-                                {autoFileResult.linked === 0 && autoFileResult.created === 0 && 'Nothing to file — inbox is clean'}
+                                {autoFileResult.created < 0
+                                    ? `${Math.abs(autoFileResult.created)} auto-created brief${Math.abs(autoFileResult.created) !== 1 ? 's' : ''} deleted — emails restored to unlinked`
+                                    : autoFileResult.linked > 0
+                                        ? `${autoFileResult.linked} group${autoFileResult.linked !== 1 ? 's' : ''} linked to existing briefs`
+                                        : 'Nothing matched — use Review to assign manually'
+                                }
                             </span>
                             <button className={styles.autoFileBannerDismiss} onClick={() => setAutoFileResult(null)}>
                                 <X size={13} />
