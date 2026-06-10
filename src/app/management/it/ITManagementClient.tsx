@@ -1265,22 +1265,25 @@ function BriefAttributionTab() {
                 </div>
             </div>
 
-            {/* Column headers */}
-            <div style={{
-                display: 'grid', gridTemplateColumns: '100px 1fr 175px 175px 175px 72px',
-                gap: 10, padding: '6px 12px',
-                background: '#f8fafc', borderRadius: '7px 7px 0 0',
-                border: '1px solid #e2e8f0', borderBottom: 'none',
-            }}>
-                {['Brief No.', 'Brief Name', 'Lawyer 1 (Lead)', 'Lawyer 2', 'Lawyer 3', ''].map(h => (
-                    <span key={h} style={{ fontSize: 10, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                        {h}
-                    </span>
-                ))}
-            </div>
+            {/* Scrollable table: sticky header + rows */}
+            <div style={{ border: '1px solid #e2e8f0', borderRadius: 7, overflowY: 'auto', maxHeight: 'calc(100vh - 280px)' }}>
+                {/* Sticky column headers */}
+                <div style={{
+                    display: 'grid', gridTemplateColumns: '100px 1fr 175px 175px 175px 72px',
+                    gap: 10, padding: '6px 12px',
+                    background: '#f8fafc',
+                    borderBottom: '1px solid #e2e8f0',
+                    position: 'sticky', top: 0, zIndex: 2,
+                }}>
+                    {['Brief No.', 'Brief Name', 'Lawyer 1 (Lead)', 'Lawyer 2', 'Lawyer 3', ''].map(h => (
+                        <span key={h} style={{ fontSize: 10, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                            {h}
+                        </span>
+                    ))}
+                </div>
 
             {/* Rows */}
-            <div style={{ border: '1px solid #e2e8f0', borderRadius: '0 0 7px 7px', overflow: 'hidden' }}>
+            <div>
                 {filtered.length === 0 && (
                     <div style={{ padding: '2rem', textAlign: 'center', color: '#94a3b8', fontSize: 13 }}>
                         No briefs match your search.
@@ -1374,6 +1377,7 @@ function BriefAttributionTab() {
                     );
                 })}
             </div>
+            </div>{/* end scrollable table */}
 
             <p style={{ fontSize: 10, color: '#94a3b8', marginTop: 10 }}>
                 Changes take effect immediately. Each user will see their updated My Briefs on Pulse after saving.
