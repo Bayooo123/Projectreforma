@@ -1,9 +1,10 @@
 'use client';
 
 import {
-    FileText, Calendar, Users, BarChart3, Shield, ArrowRight,
-    Zap, CheckCircle2, Loader2, TrendingUp, ShieldCheck,
-    Scale, ChevronDown, ChevronUp, Sparkles, Brain
+    FileText, Calendar, Users, BarChart3, ArrowRight,
+    CheckCircle2, Loader2, TrendingUp, ShieldCheck,
+    Scale, ChevronDown, ChevronUp, Sparkles, Brain,
+    Phone, MessageSquare, Clock, Send, Shield
 } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -23,7 +24,7 @@ const FAQS = [
     },
     {
         q: 'How is my firm\'s data secured?',
-        a: 'All data is encrypted at rest and in transit. We use enterprise-grade PostgreSQL infrastructure hosted in the EU with automated daily backups. Role-based access controls ensure that only the right people can see the right information.',
+        a: 'All data is encrypted at rest and in transit. We use enterprise-grade PostgreSQL infrastructure with automated daily backups. Role-based access controls ensure that only the right people can see the right information.',
     },
     {
         q: 'Can I import existing client and matter records?',
@@ -31,54 +32,11 @@ const FAQS = [
     },
     {
         q: 'What subscription plans are available?',
-        a: 'Reforma offers tiered plans based on firm size and feature requirements. Pricing is in Naira with no foreign exchange exposure. Contact us or join the waitlist to receive current pricing details for your firm.',
+        a: 'Reforma offers tiered plans based on firm size and feature requirements. Pricing is in Naira with no foreign exchange exposure. Contact us or book a demo to receive current pricing details for your firm.',
     },
     {
         q: 'Does Reforma work on mobile?',
         a: 'Yes. Reforma is a Progressive Web App (PWA) — it installs on your phone like a native app and works across iOS, Android, and desktop. Push notifications keep your team updated on court dates and deadlines wherever they are.',
-    },
-];
-
-const FEATURES = [
-    {
-        icon: FileText,
-        title: 'Briefs & Documents',
-        desc: 'Centralise your entire document archive. Search through years of litigation and advisory work in seconds with built-in OCR and AI-powered retrieval.',
-    },
-    {
-        icon: Scale,
-        title: 'Matter Management',
-        desc: 'Track every case from intake to judgment. Assign lawyers, log court outcomes, set milestones, and never miss a next court date.',
-    },
-    {
-        icon: Calendar,
-        title: 'Court Calendar',
-        desc: 'A single calendar for every court date, deadline, and appointment across your firm. Automated reminders sent 3 days, 2 days, and day-of.',
-    },
-    {
-        icon: TrendingUp,
-        title: 'Invoicing & Payments',
-        desc: 'Generate professional Naira invoices with your letterhead in one click. Accept online payments via Monnify and track every kobo owed.',
-    },
-    {
-        icon: BarChart3,
-        title: 'Firm Analytics',
-        desc: 'Revenue trends, lawyer productivity, client value, and compliance scores — all in one dashboard updated in real time.',
-    },
-    {
-        icon: Brain,
-        title: 'Eureka AI',
-        desc: 'Your firm\'s AI legal assistant. Ask questions, draft documents, and retrieve case history in plain English — grounded in your actual workspace data.',
-    },
-    {
-        icon: ShieldCheck,
-        title: 'Compliance Tracker',
-        desc: 'Never miss a regulatory filing. Track obligations across NBA, SEC, CAC, and FIRS with automated deadline alerts and completion scoring.',
-    },
-    {
-        icon: Users,
-        title: 'Team & Access Control',
-        desc: 'Nine seniority-based roles from Intern to Managing Partner. Each role sees only what they need. Guests and external counsel handled gracefully.',
     },
 ];
 
@@ -95,19 +53,156 @@ function FAQItem({ q, a }: { q: string; a: string }) {
     );
 }
 
+function BrowserMock() {
+    return (
+        <div className={styles.browserMock}>
+            <div className={styles.browserChrome}>
+                <div className={styles.chromeDots}>
+                    <span style={{ background: '#ef4444' }} />
+                    <span style={{ background: '#f59e0b' }} />
+                    <span style={{ background: '#22c55e' }} />
+                </div>
+                <div className={styles.chromeUrl}>app.reforma.ng/pulse</div>
+            </div>
+            <div className={styles.browserBody}>
+                <div className={styles.mockSidebar}>
+                    <div className={styles.mockLogoMark}>R</div>
+                    <div className={styles.mockNavItems}>
+                        {['P', 'B', 'C', '₦', '✦'].map((l, i) => (
+                            <div key={i} className={`${styles.mockNavItem} ${i === 0 ? styles.mockNavActive : ''}`}>{l}</div>
+                        ))}
+                    </div>
+                </div>
+                <div className={styles.mockMain}>
+                    <div className={styles.mockHeader}>
+                        <span className={styles.mockTitle}>Pulse</span>
+                        <span className={styles.mockDate}>Mon, 9 Jun 2026</span>
+                    </div>
+                    <div className={styles.mockStats}>
+                        <div className={styles.mockStatCard}>
+                            <span className={styles.mockStatVal}>24</span>
+                            <span className={styles.mockStatLbl}>Active Matters</span>
+                        </div>
+                        <div className={styles.mockStatCard}>
+                            <span className={styles.mockStatVal}>₦4.2M</span>
+                            <span className={styles.mockStatLbl}>Outstanding</span>
+                        </div>
+                        <div className={`${styles.mockStatCard} ${styles.mockStatGreen}`}>
+                            <span className={`${styles.mockStatVal} ${styles.mockStatValGreen}`}>96%</span>
+                            <span className={styles.mockStatLbl}>Compliance</span>
+                        </div>
+                    </div>
+                    <div className={styles.mockSectionLabel}>TODAY&apos;S COURT DATES</div>
+                    <div className={styles.mockCourtList}>
+                        {[
+                            { name: 'Adeyemi v. UBA', court: 'FHC Lagos', time: '09:00', live: true },
+                            { name: 'Okonkwo Estate', court: 'LSHC', time: '11:30', live: false },
+                            { name: 'SEC v. Pinnacle', court: 'IST Abuja', time: '14:00', live: false },
+                        ].map(m => (
+                            <div key={m.name} className={styles.mockCourtItem}>
+                                <div className={styles.mockCourtTime}>
+                                    {m.time}
+                                    {m.live && <span className={styles.mockLivePill}>LIVE</span>}
+                                </div>
+                                <div>
+                                    <div className={styles.mockCourtName}>{m.name}</div>
+                                    <div className={styles.mockCourtVenue}>{m.court}</div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function PhoneMock() {
+    return (
+        <div className={styles.phoneWrap}>
+            <div className={styles.phoneFrame}>
+                <div className={styles.phoneNotch} />
+                <div className={styles.phoneScreen}>
+                    <div className={styles.phoneTime}>09:15</div>
+                    <div className={styles.phoneDate}>Monday, 9 June</div>
+                    <div className={styles.phoneCards}>
+                        <div className={styles.phoneCard}>
+                            <div className={styles.phoneCardDot} style={{ background: '#f59e0b' }} />
+                            <div>
+                                <div className={styles.phoneCardTitle}>Court at 09:00</div>
+                                <div className={styles.phoneCardSub}>Adeyemi v. UBA · FHC Lagos</div>
+                            </div>
+                        </div>
+                        <div className={styles.phoneCard}>
+                            <div className={styles.phoneCardDot} style={{ background: '#34d399' }} />
+                            <div>
+                                <div className={styles.phoneCardTitle}>₦750,000 received</div>
+                                <div className={styles.phoneCardSub}>Okonkwo Estate · just now</div>
+                            </div>
+                        </div>
+                        <div className={styles.phoneCard}>
+                            <div className={styles.phoneCardDot} style={{ background: '#818cf8' }} />
+                            <div>
+                                <div className={styles.phoneCardTitle}>Draft ready</div>
+                                <div className={styles.phoneCardSub}>Notice of Appeal · Eureka</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function EurekaChatMock() {
+    return (
+        <div className={styles.eurekaMock}>
+            <div className={styles.eurekaMockHeader}>
+                <div className={styles.eurekaMockDot} />
+                <div className={styles.eurekaIconWrap}><Brain size={14} /></div>
+                <span>Eureka</span>
+                <span className={styles.eurekaStatusBadge}>Active</span>
+            </div>
+            <div className={styles.eurekaMockBody}>
+                <div className={styles.eurekaUserMsg}>
+                    Draft a Notice of Appeal for Adeyemi v. UBA. We want to challenge the ruling on limitation of action.
+                </div>
+                <div className={styles.eurekaAiMsg}>
+                    <div className={styles.eurekaAiHeader}>
+                        <Brain size={12} />
+                        Eureka — drawing from BRF-0042
+                    </div>
+                    <p className={styles.eurekaAiText}>
+                        Based on the case file for <strong>Adeyemi v. UBA (BRF-0042)</strong>, FHC Lagos — Coram: Adeola J — here is a draft Notice of Appeal:
+                    </p>
+                    <div className={styles.eurekaDraftBlock}>
+                        <div className={styles.eurekaDraftTitle}>NOTICE OF APPEAL</div>
+                        <p>IN THE COURT OF APPEAL</p>
+                        <p>LAGOS JUDICIAL DIVISION</p>
+                        <p>BETWEEN</p>
+                        <p>SAMUEL ADEYEMI ......... <em>Appellant</em></p>
+                        <p>AND</p>
+                        <p>UNITED BANK FOR AFRICA PLC .. <em>Respondent</em></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
+
 export default function LandingPage() {
     const [scrolled, setScrolled] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [submitStatus, setSubmitStatus] = useState<'idle' | 'success' | 'error'>('idle');
     const [message, setMessage] = useState('');
-    const waitlistRef = useRef<HTMLDivElement>(null);
+    const ctaRef = useRef<HTMLElement>(null);
 
     useEffect(() => {
         const htmlPrev = document.documentElement.style.overflowY;
         const bodyPrev = document.body.style.overflowY;
         document.documentElement.style.overflowY = 'auto';
         document.body.style.overflowY = 'auto';
-        const handleScroll = () => setScrolled(window.scrollY > 50);
+        const handleScroll = () => setScrolled(window.scrollY > 60);
         window.addEventListener('scroll', handleScroll);
         return () => {
             window.removeEventListener('scroll', handleScroll);
@@ -116,7 +211,7 @@ export default function LandingPage() {
         };
     }, []);
 
-    const scrollToWaitlist = () => waitlistRef.current?.scrollIntoView({ behavior: 'smooth' });
+    const scrollToCta = () => ctaRef.current?.scrollIntoView({ behavior: 'smooth' });
 
     async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
         event.preventDefault();
@@ -142,11 +237,20 @@ export default function LandingPage() {
             {/* ── Nav ─────────────────────────────────────── */}
             <nav className={`${styles.nav} ${scrolled ? styles.navScrolled : ''}`}>
                 <div className={styles.navInner}>
-                    <Image src="/images/logo-reforma.png" alt="Reforma" width={130} height={32} priority />
+                    <Image
+                        src="/images/logo-reforma.png"
+                        alt="Reforma"
+                        width={130}
+                        height={32}
+                        priority
+                        className={scrolled ? '' : styles.navLogoInvert}
+                    />
                     <div className={styles.navRight}>
-                        <Link href="/login" className={styles.navLogin}>Log in</Link>
-                        <button onClick={scrollToWaitlist} className={styles.navCta}>
-                            Request Access
+                        <Link href="/login" className={`${styles.navLogin} ${scrolled ? '' : styles.navLoginLight}`}>
+                            Log in
+                        </Link>
+                        <button onClick={scrollToCta} className={`${styles.navCta} ${scrolled ? '' : styles.navCtaOutline}`}>
+                            Book a live demo
                         </button>
                     </div>
                 </div>
@@ -155,86 +259,101 @@ export default function LandingPage() {
             {/* ── Hero ─────────────────────────────────────── */}
             <section className={styles.hero}>
                 <div className={styles.heroInner}>
-                    <div className={styles.heroBadge}>
-                        <Sparkles size={13} />
-                        Built for Nigerian Legal Practice
-                    </div>
-                    <h1 className={styles.heroTitle}>
-                        Run Your Firm <br />
-                        <span className={styles.heroAccent}>With Precision.</span>
-                    </h1>
-                    <p className={styles.heroSub}>
-                        Reforma brings briefs, matters, invoicing, compliance, and AI into a single
-                        platform designed for the modern Nigerian law firm.
-                    </p>
-                    <div className={styles.heroCtas}>
-                        <button onClick={scrollToWaitlist} className={styles.btnPrimary}>
-                            Request Early Access <ArrowRight size={17} />
+                    <div className={styles.heroLeft}>
+                        <div className={styles.heroBadge}>
+                            <span className={styles.heroBadgeDot} />
+                            Now in private pilot · Lagos · Abuja · Port Harcourt
+                        </div>
+                        <h1 className={styles.heroTitle}>
+                            Serious<br />Infrastructure<br />
+                            <span className={styles.heroAccent}>for Nigerian Law.</span>
+                        </h1>
+                        <p className={styles.heroSub}>
+                            Briefs, court calendars, Naira invoicing, compliance tracking,
+                            and an AI assistant — built for the way Nigerian firms actually work.
+                        </p>
+                        <button onClick={scrollToCta} className={styles.heroBtn}>
+                            Book a live demo <ArrowRight size={16} />
                         </button>
-                        <Link href="/register?pilot=true" className={styles.btnOutline}>
-                            Join Pilot Program
-                        </Link>
+                        <div className={styles.heroTrust}>
+                            <div className={styles.heroTrustItem}>
+                                <Shield size={13} /> NDPR-ready
+                            </div>
+                            <span className={styles.heroTrustDot}>·</span>
+                            <div className={styles.heroTrustItem}>
+                                <Scale size={13} /> Nigerian courts
+                            </div>
+                            <span className={styles.heroTrustDot}>·</span>
+                            <div className={styles.heroTrustItem}>
+                                <ShieldCheck size={13} /> End-to-end encrypted
+                            </div>
+                        </div>
                     </div>
-                    <div className={styles.heroStats}>
-                        <div className={styles.heroStat}>
-                            <span className={styles.heroStatNum}>8+</span>
-                            <span className={styles.heroStatLabel}>Core modules</span>
-                        </div>
-                        <div className={styles.heroStatDivider} />
-                        <div className={styles.heroStat}>
-                            <span className={styles.heroStatNum}>9</span>
-                            <span className={styles.heroStatLabel}>Role types</span>
-                        </div>
-                        <div className={styles.heroStatDivider} />
-                        <div className={styles.heroStat}>
-                            <span className={styles.heroStatNum}>₦</span>
-                            <span className={styles.heroStatLabel}>Naira-native</span>
-                        </div>
-                        <div className={styles.heroStatDivider} />
-                        <div className={styles.heroStat}>
-                            <span className={styles.heroStatNum}>PWA</span>
-                            <span className={styles.heroStatLabel}>Works on mobile</span>
-                        </div>
+                    <div className={styles.heroRight}>
+                        <BrowserMock />
                     </div>
                 </div>
             </section>
 
-            {/* ── Demo Video ───────────────────────────────── */}
-            <section className={styles.videoSection}>
-                <div className={styles.container}>
-                    <p className={styles.eyebrow}>Product Demo</p>
-                    <h2 className={styles.sectionTitle}>See Reforma in Action</h2>
-                    <p className={styles.sectionSub}>
-                        Watch how Reforma transforms the daily operations of a modern Nigerian law firm.
-                    </p>
-                    <div className={styles.videoWrap}>
-                        <iframe
-                            src="https://www.youtube.com/embed/z69dSOj_qog"
-                            className={styles.videoFrame}
-                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                            allowFullScreen
-                            title="Reforma Demo"
-                        />
-                    </div>
+            {/* ── Proof Strip ──────────────────────────────── */}
+            <div className={styles.proofStrip}>
+                <div className={styles.proofInner}>
+                    <span className={styles.proofLabel}>Currently in pilot with law firms across</span>
+                    <span className={styles.proofCities}>Lagos · Abuja · Port Harcourt</span>
                 </div>
-            </section>
+            </div>
 
             {/* ── Features ─────────────────────────────────── */}
             <section className={styles.features}>
-                <div className={styles.container}>
-                    <p className={styles.eyebrow}>Platform</p>
+                <div className={styles.featuresInner}>
+                    <p className={styles.eyebrow}>What&apos;s Inside</p>
                     <h2 className={styles.sectionTitle}>Everything Your Firm Needs</h2>
                     <p className={styles.sectionSub}>
                         A complete operational infrastructure — not a collection of disconnected tools.
                     </p>
-                    <div className={styles.featuresGrid}>
-                        {FEATURES.map(f => (
-                            <div key={f.title} className={styles.featureCard}>
-                                <div className={styles.featureIconWrap}>
-                                    <f.icon size={20} />
-                                </div>
-                                <h3 className={styles.featureTitle}>{f.title}</h3>
-                                <p className={styles.featureDesc}>{f.desc}</p>
+
+                    <div className={styles.heroFeatureGrid}>
+                        {[
+                            {
+                                icon: Brain,
+                                title: 'Eureka AI',
+                                tag: 'AI-powered',
+                                desc: 'Ask in plain English. Get answers grounded in your actual files — not generic legal text.',
+                            },
+                            {
+                                icon: TrendingUp,
+                                title: 'Naira Invoicing',
+                                tag: 'Finance',
+                                desc: 'Professional ₦ invoices with your letterhead. Accept Monnify payments. Zero chasing.',
+                            },
+                            {
+                                icon: ShieldCheck,
+                                title: 'Compliance Tracker',
+                                tag: 'Regulatory',
+                                desc: 'Never miss an NBA, CAC, FIRS, or SEC deadline again. Automated alerts and scoring.',
+                            },
+                        ].map(f => (
+                            <div key={f.title} className={styles.heroFeatureCard}>
+                                <div className={styles.heroFeatureTag}>{f.tag}</div>
+                                <div className={styles.heroFeatureIconWrap}><f.icon size={22} /></div>
+                                <h3 className={styles.heroFeatureTitle}>{f.title}</h3>
+                                <p className={styles.heroFeatureDesc}>{f.desc}</p>
+                            </div>
+                        ))}
+                    </div>
+
+                    <div className={styles.supportGrid}>
+                        {[
+                            { icon: Scale, title: 'Matter Management', desc: 'Track every case from intake to judgment. Assign lawyers, log outcomes, set milestones.' },
+                            { icon: Calendar, title: 'Court Calendar', desc: 'One calendar for every date and deadline across your firm. Reminders 3 days, 2 days, day-of.' },
+                            { icon: FileText, title: 'Briefs & Documents', desc: 'Centralise your entire archive. Full-text OCR search across years of work in seconds.' },
+                            { icon: Users, title: 'Team & Roles', desc: 'Nine seniority-based roles from Intern to Managing Partner. Tight access controls.' },
+                            { icon: BarChart3, title: 'Firm Analytics', desc: 'Revenue, productivity, client value, compliance scores — all in one live dashboard.' },
+                        ].map(f => (
+                            <div key={f.title} className={styles.supportCard}>
+                                <div className={styles.supportIconWrap}><f.icon size={17} /></div>
+                                <h4 className={styles.supportTitle}>{f.title}</h4>
+                                <p className={styles.supportDesc}>{f.desc}</p>
                             </div>
                         ))}
                     </div>
@@ -245,13 +364,12 @@ export default function LandingPage() {
             <section className={styles.why}>
                 <div className={styles.whyInner}>
                     <div className={styles.whyText}>
-                        <p className={styles.eyebrow}>Why Reforma</p>
+                        <p className={styles.eyebrowGreen}>Why Reforma</p>
                         <h2 className={styles.whyTitle}>Designed for the Way Nigerian Lawyers Actually Work</h2>
                         <p className={styles.whyBody}>
-                            Most legal software is built for American or British firms and bolted on to the Nigerian
-                            context. Reforma is different — it was designed from day one for Lagos, Abuja, and Port
-                            Harcourt, with Naira invoicing, Nigerian court schedules, and local compliance requirements
-                            built into the core.
+                            Most legal software is built for American or British firms and bolted onto the Nigerian
+                            context. Reforma was designed from day one for Lagos, Abuja, and Port Harcourt — with
+                            Naira invoicing, Nigerian court schedules, and local compliance built into the core.
                         </p>
                         <ul className={styles.whyList}>
                             {[
@@ -259,53 +377,56 @@ export default function LandingPage() {
                                 'Court calendar with Nigerian procedural timelines',
                                 'NBA, CAC, FIRS, and SEC compliance tracking',
                                 'Role hierarchy matching Nigerian firm seniority structure',
-                                'AI assistant trained on your firm\'s own data — not generic legal text',
+                                'AI assistant grounded in your firm\'s own data — not generic legal text',
                             ].map(item => (
                                 <li key={item} className={styles.whyItem}>
-                                    <CheckCircle2 size={17} className={styles.whyCheck} />
+                                    <CheckCircle2 size={15} className={styles.whyCheck} />
                                     {item}
                                 </li>
                             ))}
                         </ul>
-                        <button onClick={scrollToWaitlist} className={styles.btnPrimary} style={{ marginTop: '2rem' }}>
-                            Request Early Access <ArrowRight size={17} />
+                        <button onClick={scrollToCta} className={styles.btnPrimary} style={{ marginTop: '2rem' }}>
+                            Book a live demo <ArrowRight size={16} />
                         </button>
                     </div>
                     <div className={styles.whyVisual}>
-                        <div className={styles.whyCard}>
-                            <div className={styles.whyCardHeader}>
-                                <div className={styles.whyCardDot} style={{ background: '#ef4444' }} />
-                                <div className={styles.whyCardDot} style={{ background: '#f59e0b' }} />
-                                <div className={styles.whyCardDot} style={{ background: '#22c55e' }} />
-                                <span className={styles.whyCardTitle}>Pulse Dashboard</span>
+                        <div className={styles.dashMock}>
+                            <div className={styles.dashMockHeader}>
+                                <div className={styles.dashMockDots}>
+                                    <span style={{ background: '#ef4444' }} />
+                                    <span style={{ background: '#f59e0b' }} />
+                                    <span style={{ background: '#22c55e' }} />
+                                </div>
+                                <span className={styles.dashMockTitle}>Pulse Dashboard</span>
                             </div>
-                            <div className={styles.whyCardBody}>
-                                <div className={styles.whyStatRow}>
-                                    <div className={styles.whyStat}>
-                                        <span className={styles.whyStatVal}>24</span>
-                                        <span className={styles.whyStatLbl}>Active Matters</span>
+                            <div className={styles.dashMockBody}>
+                                <div className={styles.dashStatRow}>
+                                    <div className={styles.dashStat}>
+                                        <span className={styles.dashStatVal}>24</span>
+                                        <span className={styles.dashStatLbl}>Active Matters</span>
                                     </div>
-                                    <div className={styles.whyStat}>
-                                        <span className={styles.whyStatVal}>₦4.2M</span>
-                                        <span className={styles.whyStatLbl}>Outstanding</span>
+                                    <div className={styles.dashStat}>
+                                        <span className={styles.dashStatVal}>₦4.2M</span>
+                                        <span className={styles.dashStatLbl}>Outstanding</span>
                                     </div>
-                                    <div className={styles.whyStat}>
-                                        <span className={styles.whyStatVal}>96%</span>
-                                        <span className={styles.whyStatLbl}>Compliance</span>
+                                    <div className={styles.dashStat}>
+                                        <span className={`${styles.dashStatVal} ${styles.dashStatValGreen}`}>96%</span>
+                                        <span className={styles.dashStatLbl}>Compliance</span>
                                     </div>
                                 </div>
-                                <div className={styles.whyActivity}>
-                                    <p className={styles.whyActivityLabel}>Today's Court Dates</p>
+                                <div className={styles.dashActivityLabel}>LIVE ACTIVITY</div>
+                                <div className={styles.dashActivity}>
                                     {[
-                                        { name: 'Adeyemi v. UBA', court: 'Federal High Court, Lagos' },
-                                        { name: 'Okonkwo Estate', court: 'Lagos State High Court' },
-                                        { name: 'SEC v. Pinnacle', court: 'Investment & Securities Tribunal' },
-                                    ].map(m => (
-                                        <div key={m.name} className={styles.whyActivityItem}>
-                                            <Scale size={13} className={styles.whyActivityIcon} />
+                                        { text: 'Adeyemi v. UBA', sub: 'FHC Lagos · 09:00', accent: '#f59e0b' },
+                                        { text: 'Invoice #INV-0084 sent', sub: '₦750,000 · Okonkwo Estate', accent: '#34d399' },
+                                        { text: 'SEC filing due in 3 days', sub: 'Pinnacle Capital Ltd', accent: '#ef4444' },
+                                        { text: 'Eureka draft ready', sub: 'Notice of Appeal · BRF-0042', accent: '#818cf8' },
+                                    ].map((item, i) => (
+                                        <div key={i} className={styles.dashActivityItem}>
+                                            <div className={styles.dashActivityDot} style={{ background: item.accent }} />
                                             <div>
-                                                <p className={styles.whyActivityName}>{m.name}</p>
-                                                <p className={styles.whyActivityCourt}>{m.court}</p>
+                                                <div className={styles.dashActivityText}>{item.text}</div>
+                                                <div className={styles.dashActivitySub}>{item.sub}</div>
                                             </div>
                                         </div>
                                     ))}
@@ -316,79 +437,179 @@ export default function LandingPage() {
                 </div>
             </section>
 
+            {/* ── Mobile Section ───────────────────────────── */}
+            <section className={styles.mobile}>
+                <div className={styles.mobileInner}>
+                    <div className={styles.mobileLeft}>
+                        <p className={styles.eyebrowLight}>Mobile</p>
+                        <h2 className={styles.mobileTitle}>
+                            Your office,<br />in your pocket.
+                        </h2>
+                        <p className={styles.mobileSub}>
+                            Reforma is a Progressive Web App. Install it on your phone like a native app
+                            and get push notifications for court dates, payments, and deadlines — wherever you are.
+                        </p>
+                        <div className={styles.mobileMoments}>
+                            {[
+                                { icon: Clock, text: 'Court reminders — 3 days, 2 days, morning-of' },
+                                { icon: TrendingUp, text: 'Instant payment alerts the moment a client pays' },
+                                { icon: Brain, text: 'Eureka AI in your pocket — ask questions on the move' },
+                            ].map(m => (
+                                <div key={m.text} className={styles.mobileMoment}>
+                                    <div className={styles.mobileMomentIcon}><m.icon size={14} /></div>
+                                    <span>{m.text}</span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                    <div className={styles.mobileRight}>
+                        <PhoneMock />
+                    </div>
+                </div>
+            </section>
+
+            {/* ── Eureka Section ───────────────────────────── */}
+            <section className={styles.eureka}>
+                <div className={styles.eurekaInner}>
+                    <div className={styles.eurekaLeft}>
+                        <p className={styles.eyebrowLight}>Eureka AI</p>
+                        <h2 className={styles.eurekaTitle}>
+                            Your firm&apos;s AI.<br />Grounded in your actual work.
+                        </h2>
+                        <p className={styles.eurekaSub}>
+                            Unlike general AI assistants, Eureka knows your cases, your clients,
+                            and your document archive. It drafts, retrieves, and answers — in context.
+                        </p>
+                        <div className={styles.eurekaCaps}>
+                            {[
+                                'Draft documents grounded in your case history',
+                                'Retrieve precedents from your own archive',
+                                'Answer questions about any brief in plain English',
+                                'Summarise long documents in seconds',
+                            ].map(cap => (
+                                <div key={cap} className={styles.eurekaCap}>
+                                    <Sparkles size={12} className={styles.eurekaCapIcon} />
+                                    {cap}
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                    <div className={styles.eurekaRight}>
+                        <EurekaChatMock />
+                    </div>
+                </div>
+            </section>
+
             {/* ── FAQ ──────────────────────────────────────── */}
-            <section className={styles.faq}>
+            <section className={styles.faq} id="faq">
                 <div className={styles.faqInner}>
                     <p className={styles.eyebrow}>FAQ</p>
                     <h2 className={styles.sectionTitle}>Common Questions</h2>
-                    <p className={styles.sectionSub}>
-                        Everything you need to know before getting started.
-                    </p>
+                    <p className={styles.sectionSub}>Everything you need to know before getting started.</p>
                     <div className={styles.faqList}>
                         {FAQS.map(f => <FAQItem key={f.q} q={f.q} a={f.a} />)}
                     </div>
                 </div>
             </section>
 
-            {/* ── Waitlist ─────────────────────────────────── */}
-            <section ref={waitlistRef} className={styles.waitlist}>
-                <div className={styles.waitlistInner}>
-                    <p className={styles.eyebrowLight}>Early Access</p>
-                    <h2 className={styles.waitlistTitle}>Ready to Modernise Your Practice?</h2>
-                    <p className={styles.waitlistSub}>
-                        We are currently onboarding Nigerian law firms through a curated waitlist.
-                        Secure your position today.
-                    </p>
-
-                    {submitStatus === 'success' ? (
-                        <div className={styles.successBox}>
-                            <CheckCircle2 size={36} className={styles.successIcon} />
-                            <h3 className={styles.successTitle}>Application Received</h3>
-                            <p className={styles.successMsg}>{message}</p>
+            {/* ── CTA ──────────────────────────────────────── */}
+            <section ref={ctaRef} id="cta" className={styles.cta}>
+                <div className={styles.ctaInner}>
+                    <div className={styles.ctaLeft}>
+                        <p className={styles.eyebrowLight}>Get Started</p>
+                        <h2 className={styles.ctaTitle}>Book a live demo.</h2>
+                        <p className={styles.ctaSub}>
+                            We will walk you through the platform and set up a pilot workspace
+                            for your firm — in under 30 minutes.
+                        </p>
+                        <div className={styles.ctaContacts}>
+                            <a href="tel:+2349031812675" className={styles.ctaContactItem}>
+                                <Phone size={14} />
+                                +234 903 181 2675
+                            </a>
+                            <a href="mailto:info@reforma.ng" className={styles.ctaContactItem}>
+                                <MessageSquare size={14} />
+                                info@reforma.ng
+                            </a>
                         </div>
-                    ) : (
-                        <form onSubmit={handleSubmit} className={styles.form}>
-                            <input
-                                name="email"
-                                type="email"
-                                placeholder="Managing Partner / Professional Email"
-                                required
-                                className={styles.input}
-                            />
-                            <input
-                                name="firmName"
-                                type="text"
-                                placeholder="Name of Law Firm"
-                                required
-                                className={styles.input}
-                            />
-                            <button type="submit" disabled={isSubmitting} className={styles.submitBtn}>
-                                {isSubmitting
-                                    ? <><Loader2 size={16} className={styles.spin} /> Submitting…</>
-                                    : 'Join the Waitlist'
-                                }
-                            </button>
-                            {submitStatus === 'error' && (
-                                <p className={styles.formError}>{message}</p>
-                            )}
-                        </form>
-                    )}
+                    </div>
+                    <div className={styles.ctaRight}>
+                        {submitStatus === 'success' ? (
+                            <div className={styles.successBox}>
+                                <CheckCircle2 size={36} className={styles.successIcon} />
+                                <h3 className={styles.successTitle}>Request Received</h3>
+                                <p className={styles.successMsg}>We&apos;ll be in touch within one business day to schedule your demo.</p>
+                            </div>
+                        ) : (
+                            <form onSubmit={handleSubmit} className={styles.form}>
+                                <input
+                                    name="email"
+                                    type="email"
+                                    placeholder="Professional email address"
+                                    required
+                                    className={styles.input}
+                                />
+                                <input
+                                    name="firmName"
+                                    type="text"
+                                    placeholder="Name of law firm"
+                                    required
+                                    className={styles.input}
+                                />
+                                <select name="market" className={`${styles.input} ${styles.select}`} defaultValue="">
+                                    <option value="" disabled>Select your city</option>
+                                    <option value="Lagos">Lagos</option>
+                                    <option value="Abuja">Abuja</option>
+                                    <option value="Port Harcourt">Port Harcourt</option>
+                                    <option value="Other">Other city</option>
+                                </select>
+                                <button type="submit" disabled={isSubmitting} className={styles.submitBtn}>
+                                    {isSubmitting
+                                        ? <><Loader2 size={15} className={styles.spin} /> Sending…</>
+                                        : <><Send size={14} /> Book your demo</>
+                                    }
+                                </button>
+                                {submitStatus === 'error' && <p className={styles.formError}>{message}</p>}
+                            </form>
+                        )}
+                    </div>
                 </div>
             </section>
 
             {/* ── Footer ───────────────────────────────────── */}
             <footer className={styles.footer}>
                 <div className={styles.footerInner}>
-                    <div className={styles.footerLeft}>
-                        <Image src="/images/logo-reforma.png" alt="Reforma" width={110} height={28} />
+                    <div className={styles.footerCol}>
+                        <Image
+                            src="/images/logo-reforma.png"
+                            alt="Reforma"
+                            width={110}
+                            height={28}
+                            className={styles.footerLogo}
+                        />
                         <p className={styles.footerTagline}>Serious Infrastructure for Nigerian Law.</p>
+                        <p className={styles.footerCopy}>© {new Date().getFullYear()} Reforma. All rights reserved.</p>
                     </div>
-                    <div className={styles.footerRight}>
+                    <div className={styles.footerCol}>
+                        <h4 className={styles.footerColTitle}>Product</h4>
+                        <Link href="#" className={styles.footerLink}>Briefs &amp; Documents</Link>
+                        <Link href="#" className={styles.footerLink}>Court Calendar</Link>
+                        <Link href="#" className={styles.footerLink}>Invoicing</Link>
+                        <Link href="#" className={styles.footerLink}>Compliance</Link>
+                        <Link href="#" className={styles.footerLink}>Eureka AI</Link>
+                    </div>
+                    <div className={styles.footerCol}>
+                        <h4 className={styles.footerColTitle}>Company</h4>
                         <Link href="/login" className={styles.footerLink}>Log in</Link>
                         <Link href="/register" className={styles.footerLink}>Register</Link>
-                        <span className={styles.footerCopy}>
-                            © {new Date().getFullYear()} Reforma. All rights reserved.
-                        </span>
+                        <Link href="#faq" className={styles.footerLink}>FAQ</Link>
+                        <Link href="#cta" className={styles.footerLink}>Book a demo</Link>
+                    </div>
+                    <div className={styles.footerCol}>
+                        <h4 className={styles.footerColTitle}>Contact</h4>
+                        <a href="tel:+2349031812675" className={styles.footerLink}>+234 903 181 2675</a>
+                        <a href="mailto:info@reforma.ng" className={styles.footerLink}>info@reforma.ng</a>
+                        <p className={styles.footerAddress}>Lagos · Abuja · Port Harcourt</p>
                     </div>
                 </div>
             </footer>

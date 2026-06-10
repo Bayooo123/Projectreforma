@@ -6,7 +6,7 @@ const WaitlistSchema = z.object({
     email: z.string().email('Please enter a valid email address'),
     name: z.string().min(2, 'Name must be at least 2 characters').optional(),
     firmName: z.string().min(2, 'Firm name must be at least 2 characters').optional(),
-    market: z.enum(['US', 'UK', 'SA', 'Other']).optional(),
+    market: z.string().optional(),
 });
 
 export async function joinWaitlist(formData: FormData) {
@@ -50,7 +50,7 @@ export async function joinWaitlist(formData: FormData) {
 
         return {
             success: true,
-            message: "You've been added to the waitlist. We'll be in touch soon.",
+            message: "We'll be in touch within one business day to schedule your live demo.",
         };
     } catch (error) {
         console.error('Waitlist submission error:', error);
