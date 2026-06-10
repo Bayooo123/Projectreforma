@@ -5,8 +5,9 @@ import {
     Users, ShieldCheck, ClipboardList, Monitor, Activity,
     Plus, Trash2, Edit2, Check, X, ChevronDown,
     UserX, RefreshCw, Loader2, FileText, Download,
-    Ban, AlertTriangle, Clock, LogOut, Mail, RotateCcw, GitBranch
+    Ban, AlertTriangle, Clock, LogOut, Mail, RotateCcw, GitBranch, Inbox
 } from 'lucide-react';
+import EmailInboxClient from '@/app/emails/EmailInboxClient';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import {
     getGuestMembers, inviteGuestMember, updateGuestMember, revokeGuestMember,
@@ -18,7 +19,7 @@ import {
     getBriefAttributions, updateBriefAttribution,
 } from '@/app/actions/it-management';
 
-type Tab = 'guests' | 'roles' | 'audit' | 'sessions' | 'activity' | 'deleted' | 'attribution';
+type Tab = 'inbox' | 'guests' | 'roles' | 'audit' | 'sessions' | 'activity' | 'deleted' | 'attribution';
 
 const ROLES = ['owner', 'admin', 'lawyer', 'paralegal', 'viewer'];
 
@@ -30,18 +31,21 @@ const ROLE_DESCRIPTIONS: Record<string, string> = {
     viewer: 'Read-only access',
 };
 
-export default function ITManagementClient({ workspaceId }: { workspaceId: string }) {
-    const [activeTab, setActiveTab] = useState<Tab>('guests');
+export default function ITManagementClient({ workspaceId, isAdmin = false }: { workspaceId: string; isAdmin?: boolean }) {
+    const [activeTab, setActiveTab] = useState<Tab>('inbox');
 
-    const tabs: { id: Tab; label: string; icon: React.ElementType }[] = [
-        { id: 'guests', label: 'Guest Accounts', icon: Users },
-        { id: 'roles', label: 'Roles & Permissions', icon: ShieldCheck },
-        { id: 'audit', label: 'Audit Log', icon: ClipboardList },
-        { id: 'sessions', label: 'Session Control', icon: Monitor },
-        { id: 'activity', label: 'Activity Log', icon: Activity },
-        { id: 'deleted', label: 'Deleted Records', icon: Trash2 },
-        { id: 'attribution', label: 'Brief Attribution', icon: GitBranch },
+    const allTabs: { id: Tab; label: string; icon: React.ElementType; adminOnly?: boolean }[] = [
+        { id: 'inbox', label: 'Email Inbox', icon: Inbox },
+        { id: 'guests', label: 'Guest Accounts', icon: Users, adminOnly: true },
+        { id: 'roles', label: 'Roles & Permissions', icon: ShieldCheck, adminOnly: true },
+        { id: 'audit', label: 'Audit Log', icon: ClipboardList, adminOnly: true },
+        { id: 'sessions', label: 'Session Control', icon: Monitor, adminOnly: true },
+        { id: 'activity', label: 'Activity Log', icon: Activity, adminOnly: true },
+        { id: 'deleted', label: 'Deleted Records', icon: Trash2, adminOnly: true },
+        { id: 'attribution', label: 'Brief Attribution', icon: GitBranch, adminOnly: true },
     ];
+
+    const tabs = allTabs.filter(t => !t.adminOnly || isAdmin);
 
     return (
         <div style={{ maxWidth: 1100, margin: '0 auto' }}>
@@ -50,7 +54,9 @@ export default function ITManagementClient({ workspaceId }: { workspaceId: strin
                     IT Management
                 </h1>
                 <p style={{ color: '#64748b', fontSize: '0.9rem' }}>
-                    Control access, roles, audit trails, and active sessions across your workspace.
+                    {isAdmin
+                        ? 'Control access, roles, audit trails, and active sessions across your workspace.'
+                        : 'Manage your firm\'s email inbox — link emails to briefs and triage unlinked mail.'}
                 </p>
             </div>
 
@@ -77,6 +83,7 @@ export default function ITManagementClient({ workspaceId }: { workspaceId: strin
                 ))}
             </div>
 
+            {activeTab === 'inbox' && <EmailInboxClient />}
             {activeTab === 'guests' && <GuestAccountsTab workspaceId={workspaceId} />}
             {activeTab === 'roles' && <RolesTab />}
             {activeTab === 'audit' && <AuditLogTab />}

@@ -13,7 +13,6 @@ import {
   LogOut,
   ShieldAlert,
   Terminal,
-  Inbox,
 } from 'lucide-react';
 import styles from './Sidebar.module.css';
 import { signOut } from 'next-auth/react'; // Use client-side signOut
@@ -55,13 +54,12 @@ const Sidebar = ({ user, workspace }: SidebarProps) => {
   const navItems = [
     { name: 'The Pulse', href: '/pulse', icon: Activity },
     { name: 'Briefs Manager', href: '/briefs', icon: FileText },
-    { name: 'Email Inbox', href: '/emails', icon: Inbox },
     { name: 'Calendar and meetings', href: '/calendar', icon: Gavel },
     { name: 'Client Management', href: '/management/clients', icon: Users },
     { name: 'Office Manager', href: '/management/office', icon: Briefcase },
     { name: 'Compliance', href: '/management/compliance', icon: ShieldCheck },
     { name: 'Analytics', href: '/analytics', icon: BarChart2 },
-    ...(isAdminOrOwner ? [{ name: 'IT Management', href: '/management/it', icon: Terminal }] : []),
+    { name: 'IT Management', href: '/management/it', icon: Terminal },
   ];
 
   const isActive = (path: string) => {

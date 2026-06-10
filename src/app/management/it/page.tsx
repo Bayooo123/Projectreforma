@@ -19,18 +19,11 @@ export default async function ITManagementPage() {
         select: { ownerId: true },
     }) : null;
 
-    const hasAccess = member && (
+    const isAdmin = !!(member && (
         ['admin', 'owner'].includes(member.role) || workspace?.ownerId === session.user.id
-    );
+    ));
 
-    if (!hasAccess) {
-        return (
-            <div style={{ padding: '3rem', textAlign: 'center' }}>
-                <h2 style={{ fontSize: '1.25rem', fontWeight: 600, marginBottom: '0.5rem' }}>Access Denied</h2>
-                <p style={{ color: '#64748b' }}>Only workspace admins can access IT Management.</p>
-            </div>
-        );
-    }
+    if (!member) redirect('/briefs');
 
-    return <ITManagementClient workspaceId={member.workspaceId} />;
+    return <ITManagementClient workspaceId={member.workspaceId} isAdmin={isAdmin} />;
 }
