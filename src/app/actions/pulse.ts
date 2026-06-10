@@ -153,7 +153,7 @@ export async function getPulseUserStats(workspaceId: string): Promise<PulseUserS
 
     try {
         const assignmentFilter = getBriefAssignmentsFilter(userId);
-        const [myBriefs, myBriefsAsPrimary, tasksOverdue, myHearings] = await Promise.all([
+        const [myBriefs, myBriefsAsLead, myBriefsAsSupport, tasksOverdue, myHearings] = await Promise.all([
             prisma.brief.count({
                 where: {
                     ...assignmentFilter,
@@ -162,13 +162,14 @@ export async function getPulseUserStats(workspaceId: string): Promise<PulseUserS
                 }
             }),
             prisma.brief.count({ where: { lawyerInChargeId: userId, status: { equals: 'active', mode: 'insensitive' }, deletedAt: null } }),
+            prisma.briefLawyer.count({ where: { lawyerId: userId, brief: { status: { equals: 'active', mode: 'insensitive' }, deletedAt: null } } }),
             prisma.task.count({ where: { assignedToId: userId, status: { not: 'completed' }, dueDate: { lt: startOfToday } } }),
             prisma.calendarEntry.count({ where: { date: { gte: startOfToday, lte: weekEnd }, appearances: { some: { id: userId } } } }),
         ]);
 
         return {
             myBriefs,
-            myBriefsSubLabel: myBriefsAsPrimary > 0 ? `Primary on ${myBriefsAsPrimary}` : 'Supporting role',
+            myBriefsSubLabel: myBriefs === 0 ? 'None active' : `Lead: ${myBriefsAsLead} · Support: ${myBriefsAsSupport}`,
             tasksOverdue,
             myHearings,
             unreadNotifications: 0,
@@ -398,7 +399,7 @@ export interface MyBrief {
     client: { name: string } | null;
     lawyerInCharge: { id: string; name: string | null } | null;
     documentCount: number;
-    role: 'lead' | 'creator' | 'assisting';
+    role: 'lead' | 'support';
 }
 
 export async function getMyBriefs(workspaceId: string): Promise<MyBrief[]> {
@@ -454,9 +455,7 @@ export async function getMyBriefs(workspaceId: string): Promise<MyBrief[]> {
             client: b.client,
             lawyerInCharge: b.lawyerInCharge,
             documentCount: b._count.documents,
-            role: b.lawyerInChargeId === userId ? 'lead'
-                : b.lawyerId === userId ? 'creator'
-                : 'assisting',
+            role: b.lawyerInChargeId === userId ? 'lead' : 'support',
         }));
     } catch (e) {
         console.error('[Pulse] getMyBriefs error:', e);

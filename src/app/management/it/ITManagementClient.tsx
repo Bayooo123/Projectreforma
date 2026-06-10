@@ -1203,12 +1203,12 @@ function BriefAttributionTab() {
 
             {/* Column headers */}
             <div style={{
-                display: 'grid', gridTemplateColumns: '1fr 180px 180px 180px 80px',
+                display: 'grid', gridTemplateColumns: '100px 1fr 175px 175px 175px 72px',
                 gap: 10, padding: '6px 12px',
                 background: '#f8fafc', borderRadius: '7px 7px 0 0',
                 border: '1px solid #e2e8f0', borderBottom: 'none',
             }}>
-                {['Brief', 'Primary Handler', 'Secondary 1', 'Secondary 2', ''].map(h => (
+                {['Brief No.', 'Brief Name', 'Lawyer 1 (Lead)', 'Lawyer 2', 'Lawyer 3', ''].map(h => (
                     <span key={h} style={{ fontSize: 10, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
                         {h}
                     </span>
@@ -1235,19 +1235,26 @@ function BriefAttributionTab() {
                         <div
                             key={brief.id}
                             style={{
-                                display: 'grid', gridTemplateColumns: '1fr 180px 180px 180px 80px',
+                                display: 'grid', gridTemplateColumns: '100px 1fr 175px 175px 175px 72px',
                                 gap: 10, padding: '10px 12px', alignItems: 'center',
                                 background: i % 2 === 0 ? '#fff' : '#fafafa',
                                 borderTop: i > 0 ? '1px solid #f1f5f9' : undefined,
                             }}
                         >
+                            {/* Brief number */}
+                            <div style={{ minWidth: 0 }}>
+                                <div style={{ fontSize: 11, fontWeight: 700, color: '#1e293b', fontFamily: 'monospace' }}>
+                                    {brief.ref || '—'}
+                                </div>
+                                <div style={{ fontSize: 10, color: '#94a3b8', marginTop: 1 }}>
+                                    {brief.category}
+                                </div>
+                            </div>
+
                             {/* Brief name */}
                             <div style={{ minWidth: 0 }}>
                                 <div style={{ fontSize: 12, fontWeight: 600, color: '#1e293b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                     {brief.name}
-                                </div>
-                                <div style={{ fontSize: 10, color: '#94a3b8', marginTop: 1 }}>
-                                    {brief.ref} · {brief.category}
                                 </div>
                             </div>
 

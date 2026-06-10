@@ -32,9 +32,8 @@ export default function MyBriefsGrid({ briefs }: Props) {
     }
 
     const ROLE_COLORS: Record<string, { bg: string; color: string; label: string }> = {
-        lead:      { bg: '#f0fdfa', color: '#0d9488', label: 'Lead' },
-        creator:   { bg: '#eff6ff', color: '#2563eb', label: 'Creator' },
-        assisting: { bg: '#f5f3ff', color: '#6d28d9', label: 'Assisting' },
+        lead:    { bg: '#f0fdfa', color: '#0d9488', label: 'Lawyer 1' },
+        support: { bg: '#f5f3ff', color: '#6d28d9', label: 'Support' },
     };
 
     return (
@@ -53,7 +52,7 @@ export default function MyBriefsGrid({ briefs }: Props) {
                     const title = b.customTitle || b.name;
                     const ref = b.customBriefNumber || b.briefNumber;
                     const due = formatDue(b.dueDate);
-                    const role = ROLE_COLORS[b.role] || ROLE_COLORS.assisting;
+                    const role = ROLE_COLORS[b.role] || ROLE_COLORS.support;
 
                     return (
                         <Link key={b.id} href={`/briefs/${b.id}`} style={cardStyle}>
