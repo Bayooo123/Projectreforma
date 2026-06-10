@@ -1119,6 +1119,8 @@ function BriefAttributionTab() {
     const [search, setSearch] = useState('');
     const [saving, setSaving] = useState<string | null>(null);
     const [saved, setSaved] = useState<string | null>(null);
+    const [savingAll, setSavingAll] = useState(false);
+    const [savedAll, setSavedAll] = useState(false);
     const [isPending, startTransition] = useTransition();
 
     // local edits keyed by briefId
@@ -1146,6 +1148,14 @@ function BriefAttributionTab() {
         setEdits(prev => ({ ...prev, [briefId]: { ...prev[briefId], [field]: value } }));
     }
 
+    function isDirtyBrief(brief: BriefRow) {
+        const e = edits[brief.id];
+        if (!e) return false;
+        return (e.primaryId || '') !== (brief.primaryId || '') ||
+            (e.sec1Id || '') !== (brief.secondaries[0]?.lawyerId || '') ||
+            (e.sec2Id || '') !== (brief.secondaries[1]?.lawyerId || '');
+    }
+
     function handleSave(briefId: string) {
         const e = edits[briefId];
         if (!e) return;
@@ -1162,11 +1172,43 @@ function BriefAttributionTab() {
         });
     }
 
+    async function handleSaveAll() {
+        const dirtyBriefs = briefs.filter(isDirtyBrief);
+        if (dirtyBriefs.length === 0) return;
+        setSavingAll(true);
+        await Promise.all(dirtyBriefs.map(b => {
+            const e = edits[b.id];
+            return updateBriefAttribution(b.id, {
+                primaryId: e.primaryId || null,
+                secondary1Id: e.sec1Id || null,
+                secondary2Id: e.sec2Id || null,
+            });
+        }));
+        // Sync local brief state so rows go clean
+        setBriefs(prev => prev.map(b => {
+            const e = edits[b.id];
+            if (!e) return b;
+            return {
+                ...b,
+                primaryId: e.primaryId || null,
+                primaryName: members.find(m => m.id === e.primaryId)?.name ?? null,
+                secondaries: [e.sec1Id, e.sec2Id].filter(Boolean).map(id => ({
+                    lawyerId: id,
+                    name: members.find(m => m.id === id)?.name ?? id,
+                })),
+            };
+        }));
+        setSavingAll(false);
+        setSavedAll(true);
+        setTimeout(() => setSavedAll(false), 2500);
+    }
+
     const filtered = briefs.filter(b =>
         !search || b.name.toLowerCase().includes(search.toLowerCase()) || b.ref?.toLowerCase().includes(search.toLowerCase())
     );
 
     const unattributed = briefs.filter(b => !b.primaryId).length;
+    const dirtyCount = briefs.filter(isDirtyBrief).length;
 
     if (loading) return (
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: '#94a3b8', padding: '2rem 0' }}>
@@ -1189,16 +1231,38 @@ function BriefAttributionTab() {
                         )}
                     </p>
                 </div>
-                <input
-                    type="text"
-                    placeholder="Search briefs..."
-                    value={search}
-                    onChange={e => setSearch(e.target.value)}
-                    style={{
-                        padding: '7px 12px', border: '1px solid #e2e8f0', borderRadius: 7,
-                        fontSize: 12, outline: 'none', width: 220, color: '#1e293b',
-                    }}
-                />
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <input
+                        type="text"
+                        placeholder="Search briefs..."
+                        value={search}
+                        onChange={e => setSearch(e.target.value)}
+                        style={{
+                            padding: '7px 12px', border: '1px solid #e2e8f0', borderRadius: 7,
+                            fontSize: 12, outline: 'none', width: 200, color: '#1e293b',
+                        }}
+                    />
+                    <button
+                        onClick={handleSaveAll}
+                        disabled={dirtyCount === 0 || savingAll || isPending}
+                        style={{
+                            display: 'flex', alignItems: 'center', gap: 6,
+                            padding: '7px 14px', borderRadius: 7, border: 'none',
+                            fontSize: 12, fontWeight: 700, cursor: dirtyCount > 0 && !savingAll ? 'pointer' : 'default',
+                            background: savedAll ? '#f0fdfa' : dirtyCount > 0 ? '#1e293b' : '#f1f5f9',
+                            color: savedAll ? '#0d9488' : dirtyCount > 0 ? '#fff' : '#94a3b8',
+                            transition: 'all 0.15s', whiteSpace: 'nowrap',
+                        }}
+                    >
+                        {savingAll ? (
+                            <><Loader2 size={13} style={{ animation: 'spin 0.8s linear infinite' }} /> Saving…</>
+                        ) : savedAll ? (
+                            <><Check size={13} /> All saved</>
+                        ) : (
+                            <>Save All{dirtyCount > 0 ? ` (${dirtyCount})` : ''}</>
+                        )}
+                    </button>
+                </div>
             </div>
 
             {/* Column headers */}
