@@ -5,7 +5,8 @@ import {
     Users, ShieldCheck, ClipboardList, Monitor, Activity,
     Plus, Trash2, Edit2, Check, X, ChevronDown,
     UserX, RefreshCw, Loader2, FileText, Download,
-    Ban, AlertTriangle, Clock, LogOut, Mail, RotateCcw, GitBranch, Inbox
+    Ban, AlertTriangle, Clock, LogOut, Mail, RotateCcw, GitBranch, Inbox,
+    BookOpen, CheckCircle2, Circle,
 } from 'lucide-react';
 import EmailInboxClient from '@/app/emails/EmailInboxClient';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
@@ -18,8 +19,10 @@ import {
     toggleMemberCanDelete, getDeletedRecords, restoreRecord,
     getBriefAttributions, updateBriefAttribution,
 } from '@/app/actions/it-management';
+import { getTeamWorkLogs, updateWorkEntryStatus, deleteWorkEntry } from '@/app/actions/work-entries';
+import type { WorkEntry } from '@/app/actions/work-entries';
 
-type Tab = 'inbox' | 'guests' | 'roles' | 'audit' | 'sessions' | 'activity' | 'deleted' | 'attribution';
+type Tab = 'inbox' | 'guests' | 'roles' | 'audit' | 'sessions' | 'activity' | 'deleted' | 'attribution' | 'worklogs';
 
 const ROLES = ['owner', 'admin', 'lawyer', 'paralegal', 'viewer'];
 
@@ -43,6 +46,7 @@ export default function ITManagementClient({ workspaceId, isAdmin = false }: { w
         { id: 'activity', label: 'Activity Log', icon: Activity, adminOnly: true },
         { id: 'deleted', label: 'Deleted Records', icon: Trash2, adminOnly: true },
         { id: 'attribution', label: 'Brief Attribution', icon: GitBranch, adminOnly: true },
+        { id: 'worklogs', label: 'Work Logs', icon: BookOpen, adminOnly: true },
     ];
 
     const tabs = allTabs.filter(t => !t.adminOnly || isAdmin);
@@ -91,6 +95,7 @@ export default function ITManagementClient({ workspaceId, isAdmin = false }: { w
             {activeTab === 'activity' && <ActivityLogTab />}
             {activeTab === 'deleted' && <DeletedRecordsTab />}
             {activeTab === 'attribution' && <BriefAttributionTab />}
+            {activeTab === 'worklogs' && <WorkLogsTab workspaceId={workspaceId} />}
         </div>
     );
 }
@@ -1414,5 +1419,198 @@ function LawyerSelect({
                 <option key={m.id} value={m.id}>{m.name}</option>
             ))}
         </select>
+    );
+}
+
+// ─── Work Logs Tab ─────────────────────────────────────────────────────────────
+
+const WL_STATUS_META: Record<string, { label: string; color: string; bg: string }> = {
+    PLANNED:     { label: 'Planned',     color: '#475569', bg: '#f1f5f9' },
+    IN_PROGRESS: { label: 'In Progress', color: '#2563eb', bg: '#eff6ff' },
+    SUBMITTED:   { label: 'Submitted',   color: '#0d9488', bg: '#f0fdfa' },
+    COMPLETED:   { label: 'Completed',   color: '#059669', bg: '#ecfdf5' },
+    OVERDUE:     { label: 'Overdue',     color: '#dc2626', bg: '#fee2e2' },
+};
+
+const WL_PRIORITY_META: Record<string, { label: string; color: string }> = {
+    low:    { label: 'Low',    color: '#64748b' },
+    medium: { label: 'Medium', color: '#d97706' },
+    high:   { label: 'High',   color: '#dc2626' },
+};
+
+function WorkLogsTab({ workspaceId }: { workspaceId: string }) {
+    const [entries, setEntries] = useState<WorkEntry[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().slice(0, 10));
+    const [filterUser, setFilterUser] = useState('');
+    const [filterStatus, setFilterStatus] = useState('');
+    const [, startTransition] = useTransition();
+
+    useEffect(() => { load(); }, [selectedDate]);
+
+    function load() {
+        setLoading(true);
+        getTeamWorkLogs(workspaceId, selectedDate).then(data => {
+            setEntries(data);
+            setLoading(false);
+        });
+    }
+
+    function handleStatus(id: string, status: 'IN_PROGRESS' | 'SUBMITTED' | 'COMPLETED' | 'OVERDUE') {
+        setEntries(prev => prev.map(e => e.id === id ? { ...e, status } : e));
+        startTransition(async () => { await updateWorkEntryStatus(id, status); });
+    }
+
+    function handleDelete(id: string) {
+        setEntries(prev => prev.filter(e => e.id !== id));
+        startTransition(async () => { await deleteWorkEntry(id); });
+    }
+
+    const users = Array.from(new Map(entries.map(e => [e.userId, e.user])).values());
+
+    const filtered = entries.filter(e => {
+        if (filterUser && e.userId !== filterUser) return false;
+        if (filterStatus && e.status !== filterStatus) return false;
+        return true;
+    });
+
+    // Group by user
+    const byUser: Map<string, WorkEntry[]> = new Map();
+    for (const e of filtered) {
+        const key = e.userId;
+        if (!byUser.has(key)) byUser.set(key, []);
+        byUser.get(key)!.push(e);
+    }
+
+    const completedCount = entries.filter(e => e.status === 'COMPLETED' || e.status === 'SUBMITTED').length;
+    const overdueCount = entries.filter(e => e.status === 'OVERDUE').length;
+    const submittedUsers = new Set(entries.map(e => e.userId)).size;
+
+    return (
+        <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20, flexWrap: 'wrap' }}>
+                <div>
+                    <label style={{ fontSize: 11, color: '#94a3b8', display: 'block', marginBottom: 3 }}>Date</label>
+                    <input
+                        type="date"
+                        value={selectedDate}
+                        onChange={e => setSelectedDate(e.target.value)}
+                        style={{ fontSize: 12, padding: '5px 10px', border: '1px solid #e2e8f0', borderRadius: 6, color: '#1e293b' }}
+                    />
+                </div>
+                <div>
+                    <label style={{ fontSize: 11, color: '#94a3b8', display: 'block', marginBottom: 3 }}>Member</label>
+                    <select value={filterUser} onChange={e => setFilterUser(e.target.value)} style={{ fontSize: 12, padding: '5px 10px', border: '1px solid #e2e8f0', borderRadius: 6, color: '#1e293b' }}>
+                        <option value="">All members</option>
+                        {users.map(u => <option key={u.id} value={u.id}>{u.name || u.email}</option>)}
+                    </select>
+                </div>
+                <div>
+                    <label style={{ fontSize: 11, color: '#94a3b8', display: 'block', marginBottom: 3 }}>Status</label>
+                    <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} style={{ fontSize: 12, padding: '5px 10px', border: '1px solid #e2e8f0', borderRadius: 6, color: '#1e293b' }}>
+                        <option value="">All statuses</option>
+                        {Object.entries(WL_STATUS_META).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+                    </select>
+                </div>
+                <button onClick={load} style={{ marginTop: 18, padding: '5px 12px', fontSize: 12, border: '1px solid #e2e8f0', borderRadius: 6, background: '#f8fafc', cursor: 'pointer' }}>
+                    <RefreshCw size={12} style={{ display: 'inline', marginRight: 4 }} />Refresh
+                </button>
+            </div>
+
+            {/* Summary stats */}
+            <div style={{ display: 'flex', gap: 12, marginBottom: 20 }}>
+                {[
+                    { label: 'Total tasks', value: entries.length, color: '#1e293b' },
+                    { label: 'Completed', value: completedCount, color: '#059669' },
+                    { label: 'Overdue', value: overdueCount, color: overdueCount > 0 ? '#dc2626' : '#94a3b8' },
+                    { label: 'Members logged', value: submittedUsers, color: '#2563eb' },
+                ].map(s => (
+                    <div key={s.label} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, padding: '10px 14px', minWidth: 90 }}>
+                        <div style={{ fontSize: 20, fontWeight: 700, color: s.color }}>{s.value}</div>
+                        <div style={{ fontSize: 10, color: '#94a3b8', marginTop: 2 }}>{s.label}</div>
+                    </div>
+                ))}
+            </div>
+
+            {loading && <p style={{ color: '#94a3b8', fontSize: 12 }}>Loading…</p>}
+
+            {!loading && filtered.length === 0 && (
+                <p style={{ color: '#94a3b8', fontSize: 12 }}>No work log entries for this date.</p>
+            )}
+
+            {!loading && Array.from(byUser.entries()).map(([uid, userEntries]) => {
+                const u = userEntries[0].user;
+                const done = userEntries.filter(e => e.status === 'COMPLETED' || e.status === 'SUBMITTED').length;
+                return (
+                    <div key={uid} style={{ marginBottom: 20, border: '1px solid #e2e8f0', borderRadius: 10, overflow: 'hidden' }}>
+                        {/* Member header */}
+                        <div style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0', padding: '8px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                <div style={{ width: 28, height: 28, borderRadius: '50%', background: '#064e3b', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700 }}>
+                                    {(u.name || u.email).split(' ').slice(0, 2).map((n: string) => n[0]).join('').toUpperCase()}
+                                </div>
+                                <span style={{ fontSize: 13, fontWeight: 600, color: '#1e293b' }}>{u.name || u.email}</span>
+                            </div>
+                            <span style={{ fontSize: 11, color: '#94a3b8' }}>{done}/{userEntries.length} done</span>
+                        </div>
+
+                        {/* Tasks */}
+                        <div style={{ padding: '8px 14px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+                            {userEntries.map(entry => {
+                                const sm = WL_STATUS_META[entry.status] || WL_STATUS_META.PLANNED;
+                                const pm = WL_PRIORITY_META[entry.priority] || WL_PRIORITY_META.medium;
+                                const done = entry.status === 'COMPLETED' || entry.status === 'SUBMITTED';
+                                const ref = entry.brief ? (entry.brief.customBriefNumber || entry.brief.briefNumber) : null;
+                                return (
+                                    <div key={entry.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '6px 0', borderBottom: '1px solid #f1f5f9' }}>
+                                        <span style={{ color: done ? '#059669' : '#cbd5e1', marginTop: 1 }}>
+                                            {done ? <CheckCircle2 size={14} /> : <Circle size={14} />}
+                                        </span>
+                                        <div style={{ flex: 1, minWidth: 0 }}>
+                                            <div style={{ fontSize: 12, fontWeight: 600, color: done ? '#94a3b8' : '#1e293b', textDecoration: done ? 'line-through' : 'none' }}>
+                                                {entry.title}
+                                            </div>
+                                            {entry.description && (
+                                                <div style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>{entry.description}</div>
+                                            )}
+                                            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 4, alignItems: 'center' }}>
+                                                <span style={{ fontSize: 10, fontWeight: 600, padding: '1px 6px', borderRadius: 20, background: sm.bg, color: sm.color }}>
+                                                    {sm.label}
+                                                </span>
+                                                <span style={{ fontSize: 10, color: pm.color, fontWeight: 500 }}>{pm.label}</span>
+                                                {ref && <span style={{ fontSize: 10, color: '#64748b' }}>{ref}</span>}
+                                                {entry.dueDate && (
+                                                    <span style={{ fontSize: 10, color: '#94a3b8', display: 'flex', alignItems: 'center', gap: 2 }}>
+                                                        <Clock size={10} />
+                                                        {new Date(entry.dueDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+                                        {/* Status picker */}
+                                        <select
+                                            value={entry.status}
+                                            onChange={e => handleStatus(entry.id, e.target.value as any)}
+                                            style={{ fontSize: 10, padding: '3px 6px', border: '1px solid #e2e8f0', borderRadius: 5, color: '#1e293b', cursor: 'pointer' }}
+                                        >
+                                            {Object.entries(WL_STATUS_META).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+                                        </select>
+                                        <button
+                                            onClick={() => handleDelete(entry.id)}
+                                            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#e2e8f0', padding: 2 }}
+                                            title="Delete entry"
+                                            onMouseEnter={e => (e.currentTarget.style.color = '#dc2626')}
+                                            onMouseLeave={e => (e.currentTarget.style.color = '#e2e8f0')}
+                                        >
+                                            <Trash2 size={13} />
+                                        </button>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                );
+            })}
+        </div>
     );
 }

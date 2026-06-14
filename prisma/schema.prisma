@@ -1245,7 +1245,10 @@ model WorkEntry {
   workspaceId   String
   userId        String
   briefId       String?
-  description   String
+  title         String
+  description   String?
+  priority      String          @default("medium")
+  dueDate       DateTime?
   date          DateTime        @default(now())
   status        WorkEntryStatus @default(PLANNED)
   completedAt   DateTime?
@@ -1258,6 +1261,7 @@ model WorkEntry {
 
   @@index([workspaceId, date])
   @@index([userId, date])
+  @@index([workspaceId, status])
 }
 
 model BriefLawyer {
@@ -1278,7 +1282,9 @@ model BriefLawyer {
 enum WorkEntryStatus {
   PLANNED
   IN_PROGRESS
+  SUBMITTED
   COMPLETED
+  OVERDUE
 }
 
 enum LitigationMilestoneType {

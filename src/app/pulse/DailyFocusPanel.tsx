@@ -4,7 +4,7 @@ import { useState, useTransition } from 'react';
 import { Plus, Check, Loader2, Trash2, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
 import { createWorkEntry, updateWorkEntryStatus, deleteWorkEntry } from '@/app/actions/work-entries';
-import type { WorkEntryWithRelations } from '@/app/actions/work-entries';
+import type { WorkEntry as WorkEntryWithRelations } from '@/app/actions/work-entries';
 import type { MyBrief } from '@/app/actions/pulse';
 
 interface Props {
@@ -36,7 +36,7 @@ export default function DailyFocusPanel({ view, workspaceId, userId, initialEntr
     function handleAdd() {
         if (!newDesc.trim()) return;
         startTransition(async () => {
-            const res = await createWorkEntry({ workspaceId, briefId: newBriefId || null, description: newDesc.trim() });
+            const res = await createWorkEntry({ workspaceId, briefId: newBriefId || null, title: newDesc.trim(), description: null });
             if (res.success && res.data) {
                 setEntries(prev => [...prev, res.data as WorkEntryWithRelations]);
                 setNewDesc('');
