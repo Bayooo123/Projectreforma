@@ -243,3 +243,45 @@ export async function getStorageUsage(workspaceId: string) {
         return { success: false, error: error?.message || 'Failed to fetch storage usage' };
     }
 }
+
+export async function getUserTheme() {
+    try {
+        const user = await requireAuth();
+        const data = await prisma.user.findUnique({
+            where: { id: user.id },
+            select: {
+                themeSource: true,
+                personalAccentColor: true,
+                personalSecondaryColor: true,
+                personalBrandColor: true,
+            },
+        });
+        return { success: true, theme: data };
+    } catch (error: any) {
+        return { success: false, error: error?.message };
+    }
+}
+
+export async function updateUserTheme(data: {
+    themeSource: 'workspace' | 'personal';
+    personalAccentColor?: string | null;
+    personalSecondaryColor?: string | null;
+    personalBrandColor?: string | null;
+}) {
+    try {
+        const user = await requireAuth();
+        await prisma.user.update({
+            where: { id: user.id },
+            data: {
+                themeSource: data.themeSource,
+                personalAccentColor: data.personalAccentColor ?? null,
+                personalSecondaryColor: data.personalSecondaryColor ?? null,
+                personalBrandColor: data.personalBrandColor ?? null,
+            },
+        });
+        revalidatePath('/');
+        return { success: true };
+    } catch (error: any) {
+        return { success: false, error: error?.message };
+    }
+}

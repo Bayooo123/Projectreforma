@@ -55,6 +55,26 @@ export default async function RootLayout({
   const user = userData?.user;
   const workspaceData = userData?.workspace;
 
+  // Resolve theme: personal overrides workspace if user opted in
+  let resolvedAccentColor = (workspaceData as any)?.accentColor || '#3182ce';
+  let resolvedSecondaryColor = (workspaceData as any)?.secondaryColor || '#1e293b';
+  let resolvedBrandColor = (workspaceData as any)?.brandColor || '#121826';
+
+  if (user?.id) {
+    try {
+      const { prisma: db } = await import('@/lib/prisma');
+      const userTheme = await db.user.findUnique({
+        where: { id: user.id },
+        select: { themeSource: true, personalAccentColor: true, personalSecondaryColor: true, personalBrandColor: true },
+      });
+      if (userTheme?.themeSource === 'personal') {
+        if (userTheme.personalAccentColor) resolvedAccentColor = userTheme.personalAccentColor;
+        if (userTheme.personalSecondaryColor) resolvedSecondaryColor = userTheme.personalSecondaryColor;
+        if (userTheme.personalBrandColor) resolvedBrandColor = userTheme.personalBrandColor;
+      }
+    } catch { /* non-fatal */ }
+  }
+
   // Resolve pathname server-side to avoid client-side layout toggling
   const rawPathname = headersList.get('x-pathname') || '';
   const pathname = rawPathname.replace(/\/$/, '') || '/'; // Normalize trailing slash
@@ -79,9 +99,9 @@ export default async function RootLayout({
       <body
         className={`${ibmPlexSans.variable} ${sourceSerif4.variable}`}
         style={{
-          ['--brand-color' as any]: (workspaceData as any)?.brandColor || '#121826',
-          ['--secondary-color' as any]: (workspaceData as any)?.secondaryColor || '#1e293b',
-          ['--accent-color' as any]: (workspaceData as any)?.accentColor || '#3182ce',
+          ['--brand-color' as any]: resolvedBrandColor,
+          ['--secondary-color' as any]: resolvedSecondaryColor,
+          ['--accent-color' as any]: resolvedAccentColor,
           minHeight: '100vh'
         }}
       >

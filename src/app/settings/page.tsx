@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
-import { User, Building2, Lock, Loader, FileText, AlertCircle, Key, Copy, Trash2, Plus, Eye, EyeOff, Check, HardDrive, CreditCard, CheckCircle, Clock, XCircle, Brain } from 'lucide-react';
-import { updateWorkspaceSettings, getWorkspaceSettings, getStorageUsage, getInstitutionalEmail, claimInstitutionalEmail } from '@/app/actions/settings';
+import { User, Building2, Lock, Loader, FileText, AlertCircle, Key, Copy, Trash2, Plus, Eye, EyeOff, Check, HardDrive, CreditCard, CheckCircle, Clock, XCircle, Brain, Palette, RotateCcw } from 'lucide-react';
+import { updateWorkspaceSettings, getWorkspaceSettings, getStorageUsage, getInstitutionalEmail, claimInstitutionalEmail, getUserTheme, updateUserTheme } from '@/app/actions/settings';
 import { getUserProfile, updateUserProfile } from '@/app/actions/members';
 import { getBankAccounts, createBankAccount, deleteBankAccount } from '@/app/actions/bank-accounts';
 import { generateApiKey, listApiKeys, revokeApiKey } from '@/app/actions/api-keys';
@@ -15,7 +15,7 @@ import ConfirmDialog from '@/components/ui/ConfirmDialog';
 
 export default function SettingsPage() {
     const { data: session } = useSession();
-    const [activeTab, setActiveTab] = useState<'profile' | 'firm' | 'apikeys' | 'security' | 'storage' | 'subscription'>('profile');
+    const [activeTab, setActiveTab] = useState<'profile' | 'firm' | 'appearance' | 'apikeys' | 'security' | 'storage' | 'subscription'>('profile');
     const [deletingAccountId, setDeletingAccountId] = useState<string | null>(null);
     const [revokingKeyId, setRevokingKeyId] = useState<string | null>(null);
 
@@ -28,10 +28,19 @@ export default function SettingsPage() {
     const [firmCode, setFirmCode] = useState('');
     const [joinPassword, setJoinPassword] = useState('');
     const [letterheadUrl, setLetterheadUrl] = useState('');
-    const [brandColor, setBrandColor] = useState('#121826');
-    // Temp state for editing
+    const [brandColor, setBrandColor] = useState('#064e3b');
+    // Workspace theme colours (all 3)
     const [editLetterheadUrl, setEditLetterheadUrl] = useState('');
-    const [editBrandColor, setEditBrandColor] = useState('#121826');
+    const [editBrandColor, setEditBrandColor] = useState('#064e3b');
+    const [editSecondaryColor, setEditSecondaryColor] = useState('#022c22');
+    const [editAccentColor, setEditAccentColor] = useState('#059669');
+    // User personal theme
+    const [themeSource, setThemeSource] = useState<'workspace' | 'personal'>('workspace');
+    const [personalAccentColor, setPersonalAccentColor] = useState('#059669');
+    const [personalSecondaryColor, setPersonalSecondaryColor] = useState('#022c22');
+    const [personalBrandColor, setPersonalBrandColor] = useState('#064e3b');
+    const [isSavingTheme, setIsSavingTheme] = useState(false);
+    const [themeSaved, setThemeSaved] = useState(false);
 
     // Institutional Memory Email
     const [institutionalEmail, setInstitutionalEmail] = useState<string | null>(null);
@@ -84,23 +93,39 @@ export default function SettingsPage() {
 
     const loadSettings = async (workspaceId: string) => {
         setIsLoading(true);
-        const settingsRes = await getWorkspaceSettings(workspaceId);
+        const [settingsRes, emailRes, accountsRes, userThemeRes] = await Promise.all([
+            getWorkspaceSettings(workspaceId),
+            getInstitutionalEmail(workspaceId),
+            getBankAccounts(workspaceId),
+            getUserTheme(),
+        ]);
+
         if (settingsRes.success && settingsRes.workspace) {
             setFirmCode(settingsRes.workspace.firmCode || '');
             setLetterheadUrl(settingsRes.workspace.letterheadUrl || '');
             setEditLetterheadUrl(settingsRes.workspace.letterheadUrl || '');
-            setBrandColor(settingsRes.workspace.brandColor || '#121826');
-            setEditBrandColor(settingsRes.workspace.brandColor || '#121826');
+            const bc = settingsRes.workspace.brandColor || '#064e3b';
+            const sc = (settingsRes.workspace as any).secondaryColor || '#022c22';
+            const ac = (settingsRes.workspace as any).accentColor || '#059669';
+            setBrandColor(bc);
+            setEditBrandColor(bc);
+            setEditSecondaryColor(sc);
+            setEditAccentColor(ac);
         }
 
-        const emailRes = await getInstitutionalEmail(workspaceId);
         if (emailRes.success) {
             setInstitutionalEmail(emailRes.emailAddress || null);
         }
 
-        const accountsRes = await getBankAccounts(workspaceId);
         if (accountsRes.success && accountsRes.accounts) {
             setBankAccounts(accountsRes.accounts);
+        }
+
+        if (userThemeRes.success && userThemeRes.theme) {
+            setThemeSource((userThemeRes.theme.themeSource as 'workspace' | 'personal') || 'workspace');
+            setPersonalAccentColor(userThemeRes.theme.personalAccentColor || '#059669');
+            setPersonalSecondaryColor(userThemeRes.theme.personalSecondaryColor || '#022c22');
+            setPersonalBrandColor(userThemeRes.theme.personalBrandColor || '#064e3b');
         }
 
         setIsLoading(false);
@@ -240,15 +265,32 @@ export default function SettingsPage() {
             letterheadUrl: editLetterheadUrl,
             firmCode: firmCode || null,
             joinPassword: joinPassword || undefined,
-            brandColor: editBrandColor
+            brandColor: editBrandColor,
+            secondaryColor: editSecondaryColor,
+            accentColor: editAccentColor,
         });
         if (result.success) {
-            setJoinPassword(''); // Clear password field after save for security
+            setJoinPassword('');
             setLetterheadUrl(editLetterheadUrl);
             setBrandColor(editBrandColor);
-            alert('Firm settings saved!');
+            alert('Firm settings saved! Reload the page to see theme changes.');
         }
         setIsSaving(false);
+    };
+
+    const handleSaveUserTheme = async () => {
+        setIsSavingTheme(true);
+        const res = await updateUserTheme({
+            themeSource,
+            personalAccentColor: themeSource === 'personal' ? personalAccentColor : null,
+            personalSecondaryColor: themeSource === 'personal' ? personalSecondaryColor : null,
+            personalBrandColor: themeSource === 'personal' ? personalBrandColor : null,
+        });
+        setIsSavingTheme(false);
+        if (res.success) {
+            setThemeSaved(true);
+            setTimeout(() => { setThemeSaved(false); window.location.reload(); }, 1200);
+        }
     };
 
     const handleSendResetLink = async () => {
@@ -304,6 +346,9 @@ export default function SettingsPage() {
                     </button>
                     <button className={`${styles.tab} ${activeTab === 'firm' ? styles.activeTab : ''}`} onClick={() => setActiveTab('firm')}>
                         <Building2 size={18} /> Firm
+                    </button>
+                    <button className={`${styles.tab} ${activeTab === 'appearance' ? styles.activeTab : ''}`} onClick={() => setActiveTab('appearance')}>
+                        <Palette size={18} /> Appearance
                     </button>
                     {canManageApiKeys && (
                         <button className={`${styles.tab} ${activeTab === 'apikeys' ? styles.activeTab : ''}`} onClick={() => setActiveTab('apikeys')}>
@@ -431,38 +476,62 @@ export default function SettingsPage() {
                                 </div>
                             </div>
                             <div className={styles.formGroup} style={{ marginTop: '1rem' }}>
-                                <label>Brand Color</label>
-                                <p className={styles.hint} style={{ marginBottom: '1rem' }}>
-                                    Choose a primary color for your workspace theme (sidebar accents, buttons, etc).
+                                <label style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)' }}>Workspace Theme Colours</label>
+                                <p className={styles.hint} style={{ marginBottom: '1.25rem' }}>
+                                    These colours apply workspace-wide. Each user can optionally override them in Appearance settings.
                                 </p>
-                                <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-                                    <input
-                                        type="color"
-                                        value={editBrandColor}
-                                        onChange={(e) => setEditBrandColor(e.target.value)}
-                                        style={{ width: '60px', height: '40px', padding: '2px', border: '1px solid var(--border)', borderRadius: '4px', cursor: 'pointer' }}
-                                    />
-                                    <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                        {['#121826', '#0f172a', '#1e293b', '#2d3748', '#3182ce', '#38a169', '#d53f8c', '#805ad5'].map(color => (
-                                            <button
-                                                key={color}
-                                                type="button"
-                                                onClick={() => setEditBrandColor(color)}
-                                                style={{
-                                                    width: '24px',
-                                                    height: '24px',
-                                                    borderRadius: '50%',
-                                                    backgroundColor: color,
-                                                    border: editBrandColor === color ? '2px solid white' : '1px solid rgba(0,0,0,0.1)',
-                                                    boxShadow: editBrandColor === color ? '0 0 0 2px var(--primary)' : 'none',
-                                                    cursor: 'pointer'
-                                                }}
-                                            />
-                                        ))}
+
+                                {/* Live preview */}
+                                <div style={{ marginBottom: '1.5rem', border: '1px solid var(--border)', borderRadius: '10px', overflow: 'hidden' }}>
+                                    <div style={{ background: '#f8fafc', padding: '0.5rem 0.75rem', fontSize: '0.75rem', color: 'var(--text-tertiary)', borderBottom: '1px solid var(--border)' }}>
+                                        Preview
                                     </div>
-                                    <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', fontFamily: 'monospace' }}>
-                                        {editBrandColor.toUpperCase()}
-                                    </span>
+                                    <div style={{ display: 'flex', height: 80 }}>
+                                        <div style={{ width: 48, background: editSecondaryColor, display: 'flex', flexDirection: 'column', gap: 6, padding: 8, alignItems: 'center' }}>
+                                            {[editAccentColor, '#ffffff55', '#ffffff33'].map((c, i) => (
+                                                <div key={i} style={{ width: 24, height: 6, borderRadius: 99, background: c }} />
+                                            ))}
+                                        </div>
+                                        <div style={{ flex: 1, background: '#f8fafc', padding: 10, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                                            <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                                                <div style={{ width: 50, height: 14, borderRadius: 4, background: editAccentColor }} />
+                                                <div style={{ width: 30, height: 14, borderRadius: 4, background: '#e2e8f0' }} />
+                                            </div>
+                                            <div style={{ display: 'flex', gap: 6 }}>
+                                                <div style={{ width: 60, height: 28, borderRadius: 5, background: editAccentColor, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                    <span style={{ fontSize: 9, color: '#fff', fontWeight: 700 }}>Button</span>
+                                                </div>
+                                                <div style={{ width: 28, height: 28, borderRadius: 5, border: `1.5px solid ${editAccentColor}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                    <span style={{ fontSize: 9, color: editAccentColor, fontWeight: 700 }}>Alt</span>
+                                                </div>
+                                            </div>
+                                            <div style={{ fontSize: 9, color: editBrandColor, fontWeight: 600 }}>Brand text · Link colour</div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem' }}>
+                                    <ColorPicker
+                                        label="Primary (Buttons & Links)"
+                                        hint="Used for buttons, active nav links, and primary actions"
+                                        value={editAccentColor}
+                                        onChange={setEditAccentColor}
+                                        presets={['#059669','#3182ce','#0057B8','#7c3aed','#dc2626','#d97706','#0891b2','#475569']}
+                                    />
+                                    <ColorPicker
+                                        label="Sidebar Background"
+                                        hint="Navigation sidebar colour — usually a dark shade"
+                                        value={editSecondaryColor}
+                                        onChange={setEditSecondaryColor}
+                                        presets={['#022c22','#064e3b','#0f172a','#1e293b','#0A2342','#1a1a2e','#18181b','#3730a3']}
+                                    />
+                                    <ColorPicker
+                                        label="Brand Text"
+                                        hint="Used for headings and brand-coloured text elements"
+                                        value={editBrandColor}
+                                        onChange={setEditBrandColor}
+                                        presets={['#065f46','#1e40af','#6d28d9','#9a3412','#D4AF37','#0369a1','#374151','#121826']}
+                                    />
                                 </div>
                             </div>
                             <div className={styles.actions}>
@@ -572,6 +641,119 @@ export default function SettingsPage() {
                             </div>
                         </div>
                     </>
+                )}
+
+                {activeTab === 'appearance' && (
+                    <div className={styles.card}>
+                        <div className={styles.cardHeader}>
+                            <Palette className={styles.icon} />
+                            <h2>Personal Appearance</h2>
+                        </div>
+                        <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
+                            Override your firm's workspace theme with personal colours. Only you will see these changes.
+                        </p>
+
+                        {/* Theme source toggle */}
+                        <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1.75rem' }}>
+                            {(['workspace', 'personal'] as const).map(src => (
+                                <button
+                                    key={src}
+                                    type="button"
+                                    onClick={() => setThemeSource(src)}
+                                    style={{
+                                        flex: 1, padding: '0.875rem 1rem',
+                                        border: `2px solid ${themeSource === src ? 'var(--primary)' : 'var(--border)'}`,
+                                        borderRadius: '10px', background: themeSource === src ? 'var(--primary-bg)' : 'var(--surface)',
+                                        cursor: 'pointer', textAlign: 'left',
+                                    }}
+                                >
+                                    <div style={{ fontSize: '0.9rem', fontWeight: 700, color: themeSource === src ? 'var(--primary-text)' : 'var(--text-primary)', marginBottom: '0.25rem' }}>
+                                        {src === 'workspace' ? 'Workspace Default' : 'Personal Theme'}
+                                    </div>
+                                    <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                                        {src === 'workspace'
+                                            ? 'Use the colours configured by your workspace admin'
+                                            : 'Set your own colour preferences, visible only to you'}
+                                    </div>
+                                </button>
+                            ))}
+                        </div>
+
+                        {themeSource === 'personal' && (
+                            <>
+                                {/* Personal preview */}
+                                <div style={{ marginBottom: '1.5rem', border: '1px solid var(--border)', borderRadius: '10px', overflow: 'hidden' }}>
+                                    <div style={{ background: '#f8fafc', padding: '0.5rem 0.75rem', fontSize: '0.75rem', color: 'var(--text-tertiary)', borderBottom: '1px solid var(--border)' }}>
+                                        Your personal preview
+                                    </div>
+                                    <div style={{ display: 'flex', height: 80 }}>
+                                        <div style={{ width: 48, background: personalSecondaryColor, display: 'flex', flexDirection: 'column', gap: 6, padding: 8, alignItems: 'center' }}>
+                                            {[personalAccentColor, '#ffffff55', '#ffffff33'].map((c, i) => (
+                                                <div key={i} style={{ width: 24, height: 6, borderRadius: 99, background: c }} />
+                                            ))}
+                                        </div>
+                                        <div style={{ flex: 1, background: '#f8fafc', padding: 10, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                                            <div style={{ display: 'flex', gap: 6 }}>
+                                                <div style={{ width: 60, height: 26, borderRadius: 5, background: personalAccentColor, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                    <span style={{ fontSize: 9, color: '#fff', fontWeight: 700 }}>Button</span>
+                                                </div>
+                                            </div>
+                                            <div style={{ fontSize: 9, color: personalBrandColor, fontWeight: 600 }}>Brand text · Link colour</div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
+                                    <ColorPicker
+                                        label="Primary Colour"
+                                        hint="Buttons and active elements"
+                                        value={personalAccentColor}
+                                        onChange={setPersonalAccentColor}
+                                        presets={['#059669','#3182ce','#0057B8','#7c3aed','#dc2626','#d97706','#0891b2','#475569']}
+                                    />
+                                    <ColorPicker
+                                        label="Sidebar Colour"
+                                        hint="Navigation sidebar background"
+                                        value={personalSecondaryColor}
+                                        onChange={setPersonalSecondaryColor}
+                                        presets={['#022c22','#064e3b','#0f172a','#1e293b','#0A2342','#1a1a2e','#18181b','#3730a3']}
+                                    />
+                                    <ColorPicker
+                                        label="Brand Text"
+                                        hint="Headings and branded text"
+                                        value={personalBrandColor}
+                                        onChange={setPersonalBrandColor}
+                                        presets={['#065f46','#1e40af','#6d28d9','#9a3412','#D4AF37','#0369a1','#374151','#121826']}
+                                    />
+                                </div>
+                            </>
+                        )}
+
+                        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+                            <button
+                                onClick={handleSaveUserTheme}
+                                disabled={isSavingTheme || themeSaved}
+                                className={styles.saveBtn}
+                                style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+                            >
+                                {isSavingTheme
+                                    ? <><Loader className="spin" size={16} /> Saving…</>
+                                    : themeSaved
+                                        ? <><Check size={16} /> Saved — reloading</>
+                                        : 'Save Appearance'
+                                }
+                            </button>
+                            {themeSource === 'personal' && (
+                                <button
+                                    type="button"
+                                    onClick={() => { setThemeSource('workspace'); handleSaveUserTheme(); }}
+                                    style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.625rem 1rem', fontSize: '0.875rem', background: 'transparent', border: '1px solid var(--border)', borderRadius: '8px', cursor: 'pointer', color: 'var(--text-secondary)' }}
+                                >
+                                    <RotateCcw size={14} /> Reset to workspace default
+                                </button>
+                            )}
+                        </div>
+                    </div>
                 )}
 
                 {activeTab === 'apikeys' && canManageApiKeys && (
@@ -1004,4 +1186,121 @@ export default function SettingsPage() {
             onCancel={() => setRevokingKeyId(null)}
         /></>
     );
+}
+
+// ─── Color Picker Component ────────────────────────────────────────────────────
+
+function ColorPicker({
+    label, hint, value, onChange, presets,
+}: {
+    label: string;
+    hint?: string;
+    value: string;
+    onChange: (v: string) => void;
+    presets?: string[];
+}) {
+    const [hexInput, setHexInput] = useState(value);
+    const [rVal, gVal, bVal] = hexToRgb(value);
+    const [showRgb, setShowRgb] = useState(false);
+
+    function handleHexInput(raw: string) {
+        setHexInput(raw);
+        const clean = raw.startsWith('#') ? raw : '#' + raw;
+        if (/^#[0-9a-fA-F]{6}$/.test(clean)) onChange(clean);
+    }
+
+    function handleRgb(r: number, g: number, b: number) {
+        const hex = `#${r.toString(16).padStart(2,'0')}${g.toString(16).padStart(2,'0')}${b.toString(16).padStart(2,'0')}`;
+        onChange(hex);
+        setHexInput(hex);
+    }
+
+    // Sync hex input when value changes externally (e.g. from preset click)
+    if (hexInput !== value && /^#[0-9a-fA-F]{6}$/.test(value)) {
+        setHexInput(value);
+    }
+
+    return (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            <div style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-primary)' }}>{label}</div>
+            {hint && <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', lineHeight: 1.4 }}>{hint}</div>}
+
+            {/* Colour picker + hex input */}
+            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                <input
+                    type="color"
+                    value={value}
+                    onChange={e => { onChange(e.target.value); setHexInput(e.target.value); }}
+                    style={{ width: 38, height: 38, padding: 2, border: '1px solid var(--border)', borderRadius: 6, cursor: 'pointer', flexShrink: 0 }}
+                />
+                <input
+                    type="text"
+                    value={hexInput}
+                    onChange={e => handleHexInput(e.target.value)}
+                    maxLength={7}
+                    placeholder="#000000"
+                    style={{ flex: 1, minWidth: 0, fontSize: '0.8rem', fontFamily: 'monospace', padding: '5px 8px', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--surface)', color: 'var(--text-primary)' }}
+                />
+            </div>
+
+            {/* Preset swatches */}
+            {presets && (
+                <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                    {presets.map(p => (
+                        <button
+                            key={p}
+                            type="button"
+                            onClick={() => { onChange(p); setHexInput(p); }}
+                            title={p}
+                            style={{
+                                width: 20, height: 20, borderRadius: '50%',
+                                background: p, border: value === p ? '2px solid var(--text-primary)' : '1px solid rgba(0,0,0,0.15)',
+                                boxShadow: value === p ? '0 0 0 2px var(--primary)' : 'none',
+                                cursor: 'pointer', padding: 0,
+                            }}
+                        />
+                    ))}
+                </div>
+            )}
+
+            {/* RGB toggle */}
+            <button
+                type="button"
+                onClick={() => setShowRgb(v => !v)}
+                style={{ fontSize: '0.7rem', color: 'var(--text-tertiary)', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', padding: 0 }}
+            >
+                {showRgb ? '▲ Hide RGB' : '▼ RGB input'}
+            </button>
+            {showRgb && (
+                <div style={{ display: 'flex', gap: 4 }}>
+                    {[['R', rVal], ['G', gVal], ['B', bVal]].map(([ch, val], i) => (
+                        <div key={ch as string} style={{ flex: 1 }}>
+                            <div style={{ fontSize: '0.65rem', color: 'var(--text-tertiary)', marginBottom: 2 }}>{ch}</div>
+                            <input
+                                type="number"
+                                min={0} max={255}
+                                value={val as number}
+                                onChange={e => {
+                                    const nums = [rVal, gVal, bVal];
+                                    nums[i] = Math.max(0, Math.min(255, Number(e.target.value)));
+                                    handleRgb(nums[0], nums[1], nums[2]);
+                                }}
+                                style={{ width: '100%', fontSize: '0.75rem', padding: '4px 6px', border: '1px solid var(--border)', borderRadius: 5, background: 'var(--surface)', color: 'var(--text-primary)' }}
+                            />
+                        </div>
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+}
+
+function hexToRgb(hex: string): [number, number, number] {
+    const clean = hex.replace('#', '');
+    if (clean.length !== 6) return [0, 0, 0];
+    return [
+        parseInt(clean.slice(0, 2), 16),
+        parseInt(clean.slice(2, 4), 16),
+        parseInt(clean.slice(4, 6), 16),
+    ];
 }

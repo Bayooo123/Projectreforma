@@ -197,6 +197,12 @@ model User {
   workEntries                  WorkEntry[]            @relation("UserWorkEntries")
   pulseEventAssignments        PulseEvent[]           @relation("PulseEventAssignee")
 
+  // Personal theme overrides
+  themeSource          String?  @default("workspace")
+  personalAccentColor  String?
+  personalSecondaryColor String?
+  personalBrandColor   String?
+
   @@index([email])
   @@index([lawyerToken])
 }
