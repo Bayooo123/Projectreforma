@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, useOptimistic } from 'react';
+import { useState, useTransition, useEffect, useRef } from 'react';
 import { CheckCircle2, Circle, Clock, Plus, Trash2, ChevronDown, FileText, AlertCircle } from 'lucide-react';
 import type { WorkEntry } from '@/app/actions/work-entries';
 import {
@@ -22,6 +22,8 @@ interface Props {
     userId: string;
     initialEntries: WorkEntry[];
     briefs: Brief[];
+    openForm?: boolean;
+    onFormOpened?: () => void;
 }
 
 const PRIORITY_META: Record<string, { label: string; color: string; bg: string }> = {
@@ -38,10 +40,22 @@ const STATUS_META: Record<string, { label: string; color: string; bg: string; ic
     OVERDUE:     { label: 'Overdue',     color: '#dc2626', bg: '#fee2e2', icon: <AlertCircle size={13} /> },
 };
 
-export default function DailyWorkLogPanel({ workspaceId, initialEntries, briefs }: Props) {
+export default function DailyWorkLogPanel({ workspaceId, initialEntries, briefs, openForm, onFormOpened }: Props) {
     const [entries, setEntries] = useState<WorkEntry[]>(initialEntries);
     const [showForm, setShowForm] = useState(false);
     const [isPending, startTransition] = useTransition();
+    const panelRef = useRef<HTMLDivElement>(null);
+
+    // When the parent triggers openForm, open the add form and scroll into view
+    useEffect(() => {
+        if (openForm) {
+            setShowForm(true);
+            setTimeout(() => {
+                panelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 50);
+            onFormOpened?.();
+        }
+    }, [openForm]);
 
     // form state
     const [title, setTitle] = useState('');
@@ -88,7 +102,7 @@ export default function DailyWorkLogPanel({ workspaceId, initialEntries, briefs 
     }
 
     return (
-        <div style={panelStyle}>
+        <div ref={panelRef} style={panelStyle}>
             {/* Header */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
                 <div>

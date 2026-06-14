@@ -9,6 +9,7 @@ import {
     Mail,
     Star,
     TrendingUp,
+    ClipboardList,
 } from 'lucide-react';
 import Link from 'next/link';
 import styles from './Pulse.module.css';
@@ -113,6 +114,7 @@ export default function PulseClient({
 }: PulseClientProps) {
     const [view, setView] = useState<'firm' | 'user'>('firm');
     const [filter, setFilter] = useState<FilterType>('all');
+    const [logWorkOpen, setLogWorkOpen] = useState(false);
 
     const feed = view === 'firm' ? firmFeed : userFeed;
     const sectionLabels = view === 'firm' ? SECTION_LABELS_FIRM : SECTION_LABELS_USER;
@@ -273,18 +275,35 @@ export default function PulseClient({
                         )}
                     </p>
                 </div>
-                <div className={styles.toggleWrap}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <div className={styles.toggleWrap}>
+                        <button
+                            className={`${styles.toggleBtn} ${view === 'firm' ? styles.toggleActive : ''}`}
+                            onClick={() => { setView('firm'); setFilter('all'); }}
+                        >
+                            Firmwide
+                        </button>
+                        <button
+                            className={`${styles.toggleBtn} ${view === 'user' ? styles.toggleActive : ''}`}
+                            onClick={() => { setView('user'); setFilter('all'); }}
+                        >
+                            My Pulse
+                        </button>
+                    </div>
                     <button
-                        className={`${styles.toggleBtn} ${view === 'firm' ? styles.toggleActive : ''}`}
-                        onClick={() => { setView('firm'); setFilter('all'); }}
+                        onClick={() => { setView('user'); setFilter('all'); setLogWorkOpen(true); }}
+                        title="Log work"
+                        style={{
+                            display: 'flex', alignItems: 'center', gap: '0.375rem',
+                            padding: '0.5rem 0.875rem',
+                            background: '#064e3b', color: '#ffffff',
+                            border: 'none', borderRadius: '8px',
+                            fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer',
+                            whiteSpace: 'nowrap',
+                        }}
                     >
-                        Firmwide
-                    </button>
-                    <button
-                        className={`${styles.toggleBtn} ${view === 'user' ? styles.toggleActive : ''}`}
-                        onClick={() => { setView('user'); setFilter('all'); }}
-                    >
-                        My Pulse
+                        <ClipboardList size={14} />
+                        Log work
                     </button>
                 </div>
             </div>
@@ -343,6 +362,8 @@ export default function PulseClient({
                         userId={userId}
                         initialEntries={todayEntries}
                         briefs={briefs}
+                        openForm={logWorkOpen}
+                        onFormOpened={() => setLogWorkOpen(false)}
                     />
                 )}
 
