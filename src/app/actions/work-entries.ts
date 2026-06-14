@@ -7,6 +7,7 @@ import { revalidatePath } from 'next/cache';
 export type WorkEntry = {
     id: string;
     userId: string;
+    createdById: string | null;
     workspaceId: string;
     briefId: string | null;
     title: string;
@@ -19,29 +20,54 @@ export type WorkEntry = {
     completedNote: string | null;
     createdAt: Date;
     user: { id: string; name: string | null; email: string };
+    createdBy: { id: string; name: string | null; email: string } | null;
     brief: { id: string; name: string; customTitle: string | null; briefNumber: string; customBriefNumber: string | null } | null;
 };
 
 const INCLUDE = {
     user: { select: { id: true, name: true, email: true } },
+    createdBy: { select: { id: true, name: true, email: true } },
     brief: { select: { id: true, name: true, customTitle: true, briefNumber: true, customBriefNumber: true } },
 } as const;
 
+async function isAdminOrOwner(workspaceId: string, userId: string): Promise<boolean> {
+    const member = await prisma.workspaceMember.findFirst({
+        where: { workspaceId, userId, status: 'active' },
+        select: { role: true },
+    });
+    return !!(member && ['admin', 'owner', 'managing partner'].includes(member.role?.toLowerCase() ?? ''));
+}
+
+/**
+ * Create a work entry.
+ * Admins/owners may specify targetUserId to log on behalf of another team member.
+ * Regular members can only log for themselves.
+ */
 export async function createWorkEntry(data: {
     workspaceId: string;
+    targetUserId?: string | null;
     briefId?: string | null;
     title: string;
     description?: string | null;
     priority?: string;
     dueDate?: Date | string | null;
 }) {
-    const user = await requireAuth();
-    if (!user.id) return { success: false as const, error: 'Unauthorized' };
+    const caller = await requireAuth();
+    if (!caller.id) return { success: false as const, error: 'Unauthorized' };
+
+    // Determine who the entry is assigned to
+    let assignedToId = caller.id;
+    if (data.targetUserId && data.targetUserId !== caller.id) {
+        const admin = await isAdminOrOwner(data.workspaceId, caller.id);
+        if (!admin) return { success: false as const, error: 'Only admins can log work on behalf of others' };
+        assignedToId = data.targetUserId;
+    }
 
     const entry = await prisma.workEntry.create({
         data: {
             workspaceId: data.workspaceId,
-            userId: user.id,
+            userId: assignedToId,
+            createdById: caller.id,
             briefId: data.briefId || null,
             title: data.title.trim(),
             description: data.description?.trim() || null,
@@ -57,12 +83,24 @@ export async function createWorkEntry(data: {
     return { success: true as const, data: entry as WorkEntry };
 }
 
+/**
+ * Update status. Admins can update anyone's entry; regular members only their own.
+ */
 export async function updateWorkEntryStatus(
     id: string,
     status: 'IN_PROGRESS' | 'SUBMITTED' | 'COMPLETED' | 'OVERDUE',
     completedNote?: string,
 ) {
-    await requireAuth();
+    const caller = await requireAuth();
+
+    const entry = await prisma.workEntry.findUnique({ where: { id }, select: { userId: true, workspaceId: true } });
+    if (!entry) return { success: false, error: 'Entry not found' };
+
+    // Non-admins can only update their own entries
+    if (entry.userId !== caller.id) {
+        const admin = await isAdminOrOwner(entry.workspaceId, caller.id);
+        if (!admin) return { success: false, error: 'Cannot update another member\'s entry' };
+    }
 
     const isTerminal = status === 'COMPLETED' || status === 'SUBMITTED';
     await prisma.workEntry.update({
@@ -79,12 +117,22 @@ export async function updateWorkEntryStatus(
 }
 
 export async function deleteWorkEntry(id: string) {
-    await requireAuth();
+    const caller = await requireAuth();
+
+    const entry = await prisma.workEntry.findUnique({ where: { id }, select: { userId: true, workspaceId: true } });
+    if (!entry) return { success: false };
+
+    if (entry.userId !== caller.id) {
+        const admin = await isAdminOrOwner(entry.workspaceId, caller.id);
+        if (!admin) return { success: false, error: 'Cannot delete another member\'s entry' };
+    }
+
     await prisma.workEntry.delete({ where: { id } });
     revalidatePath('/pulse');
     return { success: true };
 }
 
+/** Today's entries assigned TO the current user (for My Pulse). */
 export async function getTodayWorkEntries(workspaceId: string): Promise<WorkEntry[]> {
     const user = await requireAuth();
 
@@ -96,7 +144,7 @@ export async function getTodayWorkEntries(workspaceId: string): Promise<WorkEntr
     return prisma.workEntry.findMany({
         where: {
             workspaceId,
-            userId: user.id,
+            userId: user.id,          // entries ASSIGNED TO me
             date: { gte: startOfDay, lte: endOfDay },
         },
         include: INCLUDE,
@@ -104,7 +152,8 @@ export async function getTodayWorkEntries(workspaceId: string): Promise<WorkEntr
     }) as Promise<WorkEntry[]>;
 }
 
-export async function getTeamWorkLogs(workspaceId: string, date?: string): Promise<WorkEntry[]> {
+/** Today's full firm-wide log — all members, all entries (for Firmwide board). */
+export async function getFirmWorkLog(workspaceId: string, date?: string): Promise<WorkEntry[]> {
     await requireAuth();
 
     const targetDate = date ? new Date(date) : new Date();
@@ -123,13 +172,26 @@ export async function getTeamWorkLogs(workspaceId: string, date?: string): Promi
     }) as Promise<WorkEntry[]>;
 }
 
-export async function getWorkLogStats(workspaceId: string): Promise<{
-    todayTotal: number;
-    todayCompleted: number;
-    todayOverdue: number;
-    membersSubmitted: number;
-    membersTotal: number;
-}> {
+/** All team members for the morning briefing form. */
+export async function getWorkspaceTeamMembers(workspaceId: string) {
+    await requireAuth();
+    return prisma.workspaceMember.findMany({
+        where: { workspaceId, status: 'active' },
+        select: {
+            userId: true,
+            role: true,
+            user: { select: { id: true, name: true, email: true } },
+        },
+        orderBy: { user: { name: 'asc' } },
+    });
+}
+
+/** For IT Management Work Logs tab date browsing. */
+export async function getTeamWorkLogs(workspaceId: string, date?: string): Promise<WorkEntry[]> {
+    return getFirmWorkLog(workspaceId, date);
+}
+
+export async function getWorkLogStats(workspaceId: string) {
     const startOfDay = new Date();
     startOfDay.setHours(0, 0, 0, 0);
     const endOfDay = new Date();
@@ -143,11 +205,5 @@ export async function getWorkLogStats(workspaceId: string): Promise<{
         prisma.workspaceMember.count({ where: { workspaceId, status: 'active' } }),
     ]);
 
-    return {
-        todayTotal,
-        todayCompleted,
-        todayOverdue,
-        membersSubmitted: submitted.length,
-        membersTotal: members,
-    };
+    return { todayTotal, todayCompleted, todayOverdue, membersSubmitted: submitted.length, membersTotal: members };
 }

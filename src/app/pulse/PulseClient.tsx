@@ -27,6 +27,7 @@ import PendingQuestionsPanel from './PendingQuestionsPanel';
 import AnomalyPanel from './AnomalyPanel';
 import MyBriefsGrid from './MyBriefsGrid';
 import DailyWorkLogPanel from './DailyWorkLogPanel';
+import FirmWorkLogBoard from './FirmWorkLogBoard';
 import type { WorkEntry } from '@/app/actions/work-entries';
 
 const ICON_MAP: Record<PulseIconType, React.ElementType> = {
@@ -81,6 +82,12 @@ interface Brief {
     customBriefNumber: string | null;
 }
 
+interface TeamMember {
+    userId: string;
+    role: string | null;
+    user: { id: string; name: string | null; email: string };
+}
+
 interface PulseClientProps {
     firmStats: PulseFirmStats;
     userStats: PulseUserStats;
@@ -92,9 +99,12 @@ interface PulseClientProps {
     anomalies: any[];
     myBriefs: MyBrief[];
     todayEntries: WorkEntry[];
+    firmWorkLog: WorkEntry[];
+    teamMembers: TeamMember[];
     briefs: Brief[];
     userId: string;
     workspaceId: string;
+    isAdmin: boolean;
 }
 
 export default function PulseClient({
@@ -107,10 +117,13 @@ export default function PulseClient({
     anomalies,
     myBriefs,
     todayEntries,
+    firmWorkLog,
+    teamMembers,
     briefs,
     userName,
     userId,
     workspaceId,
+    isAdmin,
 }: PulseClientProps) {
     const [view, setView] = useState<'firm' | 'user'>('firm');
     const [filter, setFilter] = useState<FilterType>('all');
@@ -356,6 +369,16 @@ export default function PulseClient({
 
             {/* Feed Area */}
             <div className={styles.feedArea}>
+                {view === 'firm' && (
+                    <FirmWorkLogBoard
+                        workspaceId={workspaceId}
+                        currentUserId={userId}
+                        isAdmin={isAdmin}
+                        initialEntries={firmWorkLog}
+                        teamMembers={teamMembers}
+                        briefs={briefs}
+                    />
+                )}
                 {view === 'user' && (
                     <DailyWorkLogPanel
                         workspaceId={workspaceId}
