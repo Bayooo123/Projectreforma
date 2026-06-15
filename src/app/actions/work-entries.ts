@@ -33,10 +33,14 @@ const INCLUDE = {
 };
 
 async function isAdminOrOwner(workspaceId: string, userId: string): Promise<boolean> {
-    const member = await prisma.workspaceMember.findFirst({
-        where: { workspaceId, userId, status: 'active' },
-        select: { role: true },
-    });
+    const [member, user] = await Promise.all([
+        prisma.workspaceMember.findFirst({
+            where: { workspaceId, userId, status: 'active' },
+            select: { role: true },
+        }),
+        prisma.user.findUnique({ where: { id: userId }, select: { isPlatformAdmin: true } }),
+    ]);
+    if (user?.isPlatformAdmin) return true;
     return !!(member && ['admin', 'owner', 'managing partner'].includes(member.role?.toLowerCase() ?? ''));
 }
 

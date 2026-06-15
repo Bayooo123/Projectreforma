@@ -20,7 +20,7 @@ export default async function PulseContent({ workspaceId, userId, userName }: Pu
     const [
         firmStats, userStats, firmFeed, userFeed,
         pendingQuestions, anomalies, myBriefs,
-        todayEntries, firmWorkLog, teamMembers, briefs, memberRecord,
+        todayEntries, firmWorkLog, teamMembers, briefs, memberRecord, userRecord,
     ] = await Promise.all([
         PulseService.getFirmStats(workspaceId),
         PulseService.getUserStats(workspaceId, userId),
@@ -41,10 +41,14 @@ export default async function PulseContent({ workspaceId, userId, userName }: Pu
             where: { workspaceId, userId, status: 'active' },
             select: { role: true },
         }),
+        prisma.user.findUnique({ where: { id: userId }, select: { isPlatformAdmin: true } }),
     ]);
 
     const adminRoles = ['admin', 'owner', 'managing partner'];
-    const isAdmin = !!(memberRecord?.role && adminRoles.includes(memberRecord.role.toLowerCase()));
+    const isAdmin = !!(
+        userRecord?.isPlatformAdmin ||
+        (memberRecord?.role && adminRoles.includes(memberRecord.role.toLowerCase()))
+    );
 
     const attentionCount = (firmFeed ?? []).filter(i => i.severity === 'urgent').length;
 
