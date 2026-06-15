@@ -385,6 +385,8 @@ export default function PulseClient({
                         userId={userId}
                         initialEntries={todayEntries}
                         briefs={briefs}
+                        teamMembers={teamMembers}
+                        isAdmin={isAdmin}
                         openForm={logWorkOpen}
                         onFormOpened={() => setLogWorkOpen(false)}
                     />

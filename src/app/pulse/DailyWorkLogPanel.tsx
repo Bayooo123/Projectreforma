@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition, useEffect, useRef } from 'react';
-import { CheckCircle2, Circle, Clock, Plus, Trash2, ChevronDown, FileText, AlertCircle } from 'lucide-react';
+import { CheckCircle2, Circle, Clock, Plus, Trash2, ChevronDown, FileText, AlertCircle, User } from 'lucide-react';
 import type { WorkEntry } from '@/app/actions/work-entries';
 import {
     createWorkEntry,
@@ -17,11 +17,19 @@ interface Brief {
     customBriefNumber: string | null;
 }
 
+interface TeamMember {
+    userId: string;
+    role: string | null;
+    user: { id: string; name: string | null; email: string };
+}
+
 interface Props {
     workspaceId: string;
     userId: string;
     initialEntries: WorkEntry[];
     briefs: Brief[];
+    teamMembers?: TeamMember[];
+    isAdmin?: boolean;
     openForm?: boolean;
     onFormOpened?: () => void;
 }
@@ -40,13 +48,12 @@ const STATUS_META: Record<string, { label: string; color: string; bg: string; ic
     OVERDUE:     { label: 'Overdue',     color: '#dc2626', bg: '#fee2e2', icon: <AlertCircle size={13} /> },
 };
 
-export default function DailyWorkLogPanel({ workspaceId, initialEntries, briefs, openForm, onFormOpened }: Props) {
+export default function DailyWorkLogPanel({ workspaceId, userId, initialEntries, briefs, teamMembers, isAdmin, openForm, onFormOpened }: Props) {
     const [entries, setEntries] = useState<WorkEntry[]>(initialEntries);
     const [showForm, setShowForm] = useState(false);
     const [isPending, startTransition] = useTransition();
     const panelRef = useRef<HTMLDivElement>(null);
 
-    // When the parent triggers openForm, open the add form and scroll into view
     useEffect(() => {
         if (openForm) {
             setShowForm(true);
@@ -63,9 +70,11 @@ export default function DailyWorkLogPanel({ workspaceId, initialEntries, briefs,
     const [briefId, setBriefId] = useState('');
     const [priority, setPriority] = useState('medium');
     const [dueDate, setDueDate] = useState('');
+    const [targetUserId, setTargetUserId] = useState(''); // '' = self
     const [submitting, setSubmitting] = useState(false);
 
     const completedCount = entries.filter(e => e.status === 'COMPLETED' || e.status === 'SUBMITTED').length;
+    const loggingForOther = isAdmin && targetUserId && targetUserId !== userId;
 
     async function handleAdd(e: React.FormEvent) {
         e.preventDefault();
@@ -73,6 +82,7 @@ export default function DailyWorkLogPanel({ workspaceId, initialEntries, briefs,
         setSubmitting(true);
         const res = await createWorkEntry({
             workspaceId,
+            targetUserId: targetUserId || null,
             title,
             description: description || null,
             briefId: briefId || null,
@@ -80,8 +90,9 @@ export default function DailyWorkLogPanel({ workspaceId, initialEntries, briefs,
             dueDate: dueDate || null,
         });
         if (res.success) {
-            setEntries(prev => [...prev, res.data]);
-            setTitle(''); setDescription(''); setBriefId(''); setPriority('medium'); setDueDate('');
+            // Only add to local list if logged for self
+            if (!loggingForOther) setEntries(prev => [...prev, res.data]);
+            setTitle(''); setDescription(''); setBriefId(''); setPriority('medium'); setDueDate(''); setTargetUserId('');
             setShowForm(false);
         }
         setSubmitting(false);
@@ -135,6 +146,29 @@ export default function DailyWorkLogPanel({ workspaceId, initialEntries, briefs,
             {/* Add form */}
             {showForm && (
                 <form onSubmit={handleAdd} style={formStyle}>
+                    {/* Log for selector — admins only */}
+                    {isAdmin && teamMembers && teamMembers.length > 0 && (
+                        <div>
+                            <label style={{ fontSize: 10, color: '#64748b', display: 'flex', alignItems: 'center', gap: 4, marginBottom: 4 }}>
+                                <User size={10} /> Logging for
+                            </label>
+                            <select
+                                value={targetUserId}
+                                onChange={e => setTargetUserId(e.target.value)}
+                                style={{ ...inputStyle, fontWeight: targetUserId && targetUserId !== userId ? 600 : 'normal' }}
+                            >
+                                <option value="">Myself</option>
+                                {teamMembers
+                                    .filter(m => m.userId !== userId)
+                                    .map(m => (
+                                        <option key={m.userId} value={m.userId}>
+                                            {m.user.name || m.user.email.split('@')[0]}
+                                            {m.role ? ` (${m.role})` : ''}
+                                        </option>
+                                    ))}
+                            </select>
+                        </div>
+                    )}
                     <input
                         autoFocus
                         placeholder="Task title *"
@@ -187,7 +221,7 @@ export default function DailyWorkLogPanel({ workspaceId, initialEntries, briefs,
                             disabled={submitting || !title.trim()}
                             style={{ ...btnStyle, background: '#064e3b', color: '#fff', marginTop: 14, opacity: submitting || !title.trim() ? 0.5 : 1 }}
                         >
-                            {submitting ? 'Adding…' : 'Add'}
+                            {submitting ? 'Adding…' : loggingForOther ? 'Log for them' : 'Add'}
                         </button>
                     </div>
                 </form>
