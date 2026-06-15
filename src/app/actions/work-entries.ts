@@ -1,6 +1,7 @@
 'use server';
 
 import { prisma } from '@/lib/prisma';
+import { Prisma } from '@prisma/client';
 import { requireAuth } from '@/lib/auth-utils';
 import { revalidatePath } from 'next/cache';
 
@@ -63,22 +64,21 @@ export async function createWorkEntry(data: {
         assignedToId = data.targetUserId;
     }
 
-    // All relations as connect objects (checked mode) — avoids Prisma's XOR union ambiguity
-    const entry = await prisma.workEntry.create({
-        data: {
-            workspace: { connect: { id: data.workspaceId } },
-            user: { connect: { id: assignedToId } },
-            createdBy: { connect: { id: caller.id } },
-            brief: data.briefId ? { connect: { id: data.briefId } } : undefined,
-            title: data.title.trim(),
-            description: data.description?.trim() || null,
-            priority: data.priority || 'medium',
-            dueDate: data.dueDate ? new Date(data.dueDate) : null,
-            date: new Date(),
-            status: 'PLANNED',
-        },
-        include: INCLUDE,
-    });
+    // Assign to a typed variable first — this uses excess-property checking against WorkEntryCreateInput
+    // directly, bypassing the XOR union ambiguity that fires on inline object literals.
+    const createData: Prisma.WorkEntryCreateInput = {
+        workspace: { connect: { id: data.workspaceId } },
+        user: { connect: { id: assignedToId } },
+        createdBy: { connect: { id: caller.id } },
+        brief: data.briefId ? { connect: { id: data.briefId } } : undefined,
+        title: data.title.trim(),
+        description: data.description?.trim() || null,
+        priority: data.priority || 'medium',
+        dueDate: data.dueDate ? new Date(data.dueDate) : null,
+        date: new Date(),
+        status: 'PLANNED',
+    };
+    const entry = await prisma.workEntry.create({ data: createData, include: INCLUDE });
 
     revalidatePath('/pulse');
     return { success: true as const, data: entry as unknown as WorkEntry };
