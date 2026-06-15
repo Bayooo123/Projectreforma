@@ -3,6 +3,7 @@
 import { prisma } from '@/lib/prisma';
 import { requireAuth } from '@/lib/auth-utils';
 import { revalidatePath } from 'next/cache';
+import type { Prisma } from '@prisma/client';
 
 export type WorkEntry = {
     id: string;
@@ -75,7 +76,7 @@ export async function createWorkEntry(data: {
             dueDate: data.dueDate ? new Date(data.dueDate) : null,
             date: new Date(),
             status: 'PLANNED',
-        },
+        } as Prisma.WorkEntryUncheckedCreateInput,
         include: INCLUDE,
     });
 
