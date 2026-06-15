@@ -16,32 +16,37 @@ interface PulseContentProps {
     userName: string;
 }
 
+const empty: any[] = [];
+
 export default async function PulseContent({ workspaceId, userId, userName }: PulseContentProps) {
     const [
         firmStats, userStats, firmFeed, userFeed,
         pendingQuestions, anomalies, myBriefs,
         todayEntries, firmWorkLog, teamMembers, briefs, memberRecord, userRecord,
     ] = await Promise.all([
-        PulseService.getFirmStats(workspaceId),
-        PulseService.getUserStats(workspaceId, userId),
-        getPulseFeedFirmwide(workspaceId),
-        getPulseFeedUser(workspaceId),
-        getPendingMatterQuestions(workspaceId).catch(() => [] as any[]),
-        getOpenAnomalies(workspaceId).catch(() => [] as any[]),
-        getMyBriefs(workspaceId),
-        getTodayWorkEntries(workspaceId).catch(() => [] as any[]),
-        getFirmWorkLog(workspaceId).catch(() => [] as any[]),
-        getWorkspaceTeamMembers(workspaceId).catch(() => [] as any[]),
+        PulseService.getFirmStats(workspaceId).catch(() => ({ activeBriefs: 0, activeBriefsDelta: '—', unbilledMatters: 0, unbilledAmount: '₦0', hearingsThisWeek: 0, nextHearingLabel: '—', openEscalations: 0 })),
+        PulseService.getUserStats(workspaceId, userId).catch(() => ({ myBriefs: 0, myBriefsSubLabel: '', tasksOverdue: 0, myHearings: 0, unreadNotifications: 0 })),
+        getPulseFeedFirmwide(workspaceId).catch(() => empty),
+        getPulseFeedUser(workspaceId).catch(() => empty),
+        getPendingMatterQuestions(workspaceId).catch(() => empty),
+        getOpenAnomalies(workspaceId).catch(() => empty),
+        getMyBriefs(workspaceId).catch(() => empty),
+        getTodayWorkEntries(workspaceId).catch(() => empty),
+        getFirmWorkLog(workspaceId).catch(() => empty),
+        getWorkspaceTeamMembers(workspaceId).catch(() => empty),
         prisma.brief.findMany({
             where: { workspaceId, deletedAt: null, status: 'active' },
             select: { id: true, name: true, customTitle: true, briefNumber: true, customBriefNumber: true },
             orderBy: { briefNumber: 'asc' },
-        }),
+        }).catch(() => empty),
         prisma.workspaceMember.findFirst({
             where: { workspaceId, userId, status: 'active' },
             select: { role: true },
-        }),
-        prisma.user.findUnique({ where: { id: userId }, select: { isPlatformAdmin: true } }),
+        }).catch(() => null),
+        prisma.user.findUnique({
+            where: { id: userId },
+            select: { isPlatformAdmin: true },
+        }).catch(() => null),
     ]);
 
     const adminRoles = ['admin', 'owner', 'managing partner'];
@@ -50,7 +55,7 @@ export default async function PulseContent({ workspaceId, userId, userName }: Pu
         (memberRecord?.role && adminRoles.includes(memberRecord.role.toLowerCase()))
     );
 
-    const attentionCount = (firmFeed ?? []).filter(i => i.severity === 'urgent').length;
+    const attentionCount = (firmFeed ?? []).filter((i: any) => i.severity === 'urgent').length;
 
     return (
         <PulseClient
