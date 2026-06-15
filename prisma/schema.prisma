@@ -195,6 +195,7 @@ model User {
   resolvedAnomalies            WorkspaceAnomaly[]     @relation("AnomalyResolver")
   pushSubscriptions            PushSubscription[]
   workEntries                  WorkEntry[]            @relation("UserWorkEntries")
+  createdWorkEntries           WorkEntry[]            @relation("WorkEntryCreator")
   pulseEventAssignments        PulseEvent[]           @relation("PulseEventAssignee")
 
   // Personal theme overrides
@@ -1249,7 +1250,8 @@ model WorkspaceAnomaly {
 model WorkEntry {
   id            String          @id @default(cuid())
   workspaceId   String
-  userId        String
+  userId        String          // Person the task is assigned TO
+  createdById   String?         // Person who logged it (may differ if admin logs on behalf)
   briefId       String?
   title         String
   description   String?
@@ -1263,6 +1265,7 @@ model WorkEntry {
   updatedAt     DateTime        @updatedAt
   workspace     Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   user          User            @relation("UserWorkEntries", fields: [userId], references: [id], onDelete: Cascade)
+  createdBy     User?           @relation("WorkEntryCreator", fields: [createdById], references: [id])
   brief         Brief?          @relation(fields: [briefId], references: [id])
 
   @@index([workspaceId, date])
