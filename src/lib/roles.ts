@@ -90,3 +90,26 @@ export function getAssignableRoles(userRole: string, isOwner: boolean = false): 
 export function isValidRole(role: string): boolean {
     return ROLE_VALUES.some(r => r.toLowerCase() === role.toLowerCase());
 }
+
+/**
+ * Roles that identify qualified lawyers / legal professionals.
+ * These are the only roles that should appear in work logs, court assignments,
+ * brief lawyer-in-charge selectors, and attendance records.
+ * Non-legal roles (viewer, admin, practice manager, intern, etc.) are excluded.
+ * Handles both singular ("Chamber") and plural ("Chambers") variants.
+ */
+const LEGAL_ROLE_KEYWORDS = [
+    'associate',
+    'senior associate',
+    'deputy head of chamber',
+    'head of chamber',
+    'partner',
+    'principal partner',
+    'managing partner',
+];
+
+export function isLegalRole(role: string | null | undefined): boolean {
+    if (!role) return false;
+    const lower = role.toLowerCase();
+    return LEGAL_ROLE_KEYWORDS.some(k => lower === k || lower === k + 's');
+}

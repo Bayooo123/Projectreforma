@@ -8,6 +8,7 @@ import { getOpenAnomalies } from '@/app/actions/anomalies';
 import { getTodayWorkEntries, getFirmWorkLog } from '@/app/actions/work-entries';
 import { PulseService } from '@/lib/services/pulse/pulse-service';
 import { prisma } from '@/lib/prisma';
+import { isLegalRole } from '@/lib/roles';
 import PulseClient from './PulseClient';
 
 interface PulseContentProps {
@@ -85,6 +86,9 @@ export default async function PulseContent({ workspaceId, userId, userName }: Pu
         (memberRecord?.role && adminRoles.includes(memberRecord.role.toLowerCase()))
     );
 
+    // Only lawyers appear in work logs, assignments, and firm-wide views
+    const legalTeamMembers = (teamMembers as any[]).filter((m: any) => isLegalRole(m.role));
+
     const attentionCount = (firmFeed ?? []).filter((i: any) => i.severity === 'urgent').length;
 
     return (
@@ -100,7 +104,7 @@ export default async function PulseContent({ workspaceId, userId, userName }: Pu
             myBriefs={myBriefs}
             todayEntries={todayEntries}
             firmWorkLog={firmWorkLog}
-            teamMembers={teamMembers}
+            teamMembers={legalTeamMembers}
             briefs={briefs}
             userId={userId}
             workspaceId={workspaceId}
