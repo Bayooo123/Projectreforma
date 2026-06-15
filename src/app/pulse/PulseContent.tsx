@@ -5,7 +5,7 @@ import {
 } from '@/app/actions/pulse';
 import { getPendingMatterQuestions } from '@/app/actions/matterQuestions';
 import { getOpenAnomalies } from '@/app/actions/anomalies';
-import { getTodayWorkEntries, getFirmWorkLog, getWorkspaceTeamMembers } from '@/app/actions/work-entries';
+import { getTodayWorkEntries, getFirmWorkLog } from '@/app/actions/work-entries';
 import { PulseService } from '@/lib/services/pulse/pulse-service';
 import { prisma } from '@/lib/prisma';
 import PulseClient from './PulseClient';
@@ -31,9 +31,39 @@ export default async function PulseContent({ workspaceId, userId, userName }: Pu
         getPendingMatterQuestions(workspaceId).catch(() => empty),
         getOpenAnomalies(workspaceId).catch(() => empty),
         getMyBriefs(workspaceId).catch(() => empty),
-        getTodayWorkEntries(workspaceId).catch(() => empty),
-        getFirmWorkLog(workspaceId).catch(() => empty),
-        getWorkspaceTeamMembers(workspaceId).catch(() => empty),
+        (() => {
+            const today = new Date();
+            const start = new Date(today); start.setHours(0, 0, 0, 0);
+            const end = new Date(today); end.setHours(23, 59, 59, 999);
+            return prisma.workEntry.findMany({
+                where: { workspaceId, userId, date: { gte: start, lte: end } },
+                include: {
+                    user: { select: { id: true, name: true, email: true } },
+                    createdBy: { select: { id: true, name: true, email: true } },
+                    brief: { select: { id: true, name: true, customTitle: true, briefNumber: true, customBriefNumber: true } },
+                },
+                orderBy: [{ createdAt: 'asc' }],
+            });
+        })().catch(() => empty),
+        (() => {
+            const today = new Date();
+            const start = new Date(today); start.setHours(0, 0, 0, 0);
+            const end = new Date(today); end.setHours(23, 59, 59, 999);
+            return prisma.workEntry.findMany({
+                where: { workspaceId, date: { gte: start, lte: end } },
+                include: {
+                    user: { select: { id: true, name: true, email: true } },
+                    createdBy: { select: { id: true, name: true, email: true } },
+                    brief: { select: { id: true, name: true, customTitle: true, briefNumber: true, customBriefNumber: true } },
+                },
+                orderBy: [{ user: { name: 'asc' } }, { createdAt: 'asc' }],
+            });
+        })().catch(() => empty),
+        prisma.workspaceMember.findMany({
+            where: { workspaceId, status: 'active' },
+            select: { userId: true, role: true, user: { select: { id: true, name: true, email: true } } },
+            orderBy: { user: { name: 'asc' } },
+        }).catch(() => empty),
         prisma.brief.findMany({
             where: { workspaceId, deletedAt: null, status: 'active' },
             select: { id: true, name: true, customTitle: true, briefNumber: true, customBriefNumber: true },
