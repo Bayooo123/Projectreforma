@@ -81,7 +81,7 @@ export async function createWorkEntry(data: {
     });
 
     revalidatePath('/pulse');
-    return { success: true as const, data: entry as WorkEntry };
+    return { success: true as const, data: entry as unknown as WorkEntry };
 }
 
 /**
