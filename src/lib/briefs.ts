@@ -52,74 +52,32 @@ export async function getBriefs(workspaceId: string) {
 
 
 /**
- * Get all lawyers/users for a workspace
+ * Get lawyers for a workspace — only members with legal roles.
+ * Uses isLegalRole() as the single source of truth so non-legal staff
+ * (viewers, admins, practice managers, etc.) are excluded everywhere:
+ * brief creation, brief editing, court appearances, and all calendar forms.
  */
 export async function getLawyersForWorkspace(workspaceId: string) {
     try {
-        // 1. Get workspace and its owner
-        const workspace = await prisma.workspace.findUnique({
-            where: { id: workspaceId },
-            include: {
-                owner: {
-                    select: {
-                        id: true,
-                        name: true,
-                        email: true,
-                    },
-                },
-            },
-        });
+        const { isLegalRole } = await import('@/lib/roles');
 
-        if (!workspace) return [];
-
-        // 2. Get workspace members with exclusions
         const members = await prisma.workspaceMember.findMany({
-            where: {
-                workspaceId,
-                // Exclude characters known to be non-legal support
-                NOT: [
-                    { designation: { contains: 'Practice Manager', mode: 'insensitive' } },
-                    { designation: { contains: 'Head of IT', mode: 'insensitive' } },
-                    { user: { email: { in: ['henrietta@abiolasanniandco.com', 'deji@abiolasanniandco.com'] } } }
-                ]
-            },
+            where: { workspaceId, status: 'active' },
             orderBy: { joinedAt: 'asc' },
             include: {
-                user: {
-                    select: {
-                        id: true,
-                        name: true,
-                        email: true,
-                    },
-                },
+                user: { select: { id: true, name: true, email: true } },
             },
         });
 
-        // 3. Map members to Lawyer format
-        const lawyersList = members.map(m => ({
-            id: m.user.id,
-            name: m.user.name || m.user.email,
-            email: m.user.email,
-            role: m.role,
-            designation: m.designation
-        }));
-
-        // 4. Add owner if not already in the list and not explicitly excluded
-        const excludedEmails = ['henrietta@abiolasanniandco.com', 'deji@abiolasanniandco.com'];
-        const isOwnerExcluded = excludedEmails.includes(workspace.owner.email);
-        const isOwnerInList = lawyersList.some(l => l.id === workspace.owner.id);
-
-        if (!isOwnerInList && !isOwnerExcluded) {
-            lawyersList.push({
-                id: workspace.owner.id,
-                name: workspace.owner.name || workspace.owner.email,
-                email: workspace.owner.email,
-                role: 'Admin', // Default role for owner if not a member record
-                designation: 'Managing Partner'
-            });
-        }
-
-        return lawyersList;
+        return members
+            .filter(m => isLegalRole(m.role))
+            .map(m => ({
+                id: m.user.id,
+                name: m.user.name || m.user.email,
+                email: m.user.email,
+                role: m.role,
+                designation: m.designation,
+            }));
     } catch (error) {
         console.error('Error fetching lawyers:', error);
         return [];
