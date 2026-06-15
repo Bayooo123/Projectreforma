@@ -52,7 +52,7 @@ const RESOURCE_LINKS: Record<string, (id: string) => string> = {
 
 export default function AnomalyPanel({ anomalies: initial }: AnomalyPanelProps) {
     const [anomalies, setAnomalies] = useState(initial);
-    const [collapsed, setCollapsed] = useState(false);
+    const [collapsed, setCollapsed] = useState(true);
     const [acting, setActing] = useState<string | null>(null);
 
     const visible = anomalies.filter(a => a.status === 'open' || a.status === 'acknowledged');

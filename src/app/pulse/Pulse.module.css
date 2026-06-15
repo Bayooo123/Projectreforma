@@ -72,10 +72,10 @@
 
 /* ─── Stats Row ─── */
 .statsRow {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    display: flex;
+    flex-wrap: wrap;
     gap: 10px;
-    padding: 14px 20px;
+    padding: 8px 20px;
     background: var(--surface, #fff);
     border-bottom: 1px solid var(--border, #E2E8F0);
     flex-shrink: 0;
@@ -83,25 +83,28 @@
 
 .statCard {
     background: var(--surface-subtle, #F8FAFC);
-    border-radius: 10px;
-    padding: 10px 12px;
+    border-radius: 8px;
+    padding: 6px 12px;
     border: 1px solid var(--border-subtle, #F1F5F9);
+    flex: 1;
+    min-width: 140px;
+    max-width: 220px;
 }
 
 .statLabel {
-    font-size: 10px;
+    font-size: 9px;
     color: var(--text-tertiary, #9CA3AF);
-    margin-bottom: 4px;
+    margin-bottom: 2px;
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    font-weight: 500;
+    font-weight: 600;
 }
 
 .statVal {
-    font-size: 22px;
+    font-size: 16px;
     font-weight: 600;
     color: var(--text-primary, #111827);
-    line-height: 1;
+    line-height: 1.2;
 }
 
 .statValUrgent {
@@ -110,8 +113,8 @@
 :global(.dark) .statValUrgent { color: #fca5a5; }
 
 .statDelta {
-    font-size: 10px;
-    margin-top: 4px;
+    font-size: 9px;
+    margin-top: 2px;
 }
 
 .deltaUp {

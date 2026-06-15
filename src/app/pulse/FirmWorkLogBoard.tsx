@@ -178,6 +178,7 @@ export default function FirmWorkLogBoard({
     workspaceId, currentUserId, isAdmin, initialEntries, teamMembers,
 }: Props) {
     const [entries, setEntries] = useState<WorkEntry[]>(initialEntries);
+    const [showAssignForm, setShowAssignForm] = useState(false);
 
     function handleAdded(newEntries: WorkEntry[]) {
         setEntries(prev => [...prev, ...newEntries]);
@@ -205,16 +206,39 @@ export default function FirmWorkLogBoard({
         <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 10, padding: '12px 14px', marginBottom: 10 }}>
             {/* Header */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-                <span style={{ fontSize: 11, fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                    Today's Work Log
-                </span>
-                <span style={{ fontSize: 11, color: '#94a3b8' }}>
-                    {new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}
-                </span>
+                <div>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                        Today's Work Log
+                    </span>
+                    <span style={{ fontSize: 11, color: '#94a3b8', marginLeft: 8 }}>
+                        {new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}
+                    </span>
+                </div>
+                {isAdmin && (
+                    <button
+                        onClick={() => setShowAssignForm(v => !v)}
+                        style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 4,
+                            fontSize: 11,
+                            fontWeight: 600,
+                            padding: '4px 10px',
+                            border: '1px solid #d1fae5',
+                            borderRadius: 6,
+                            background: '#ecfdf5',
+                            color: '#065f46',
+                            cursor: 'pointer',
+                        }}
+                    >
+                        <Plus size={12} />
+                        {showAssignForm ? 'Hide form' : 'Assign work'}
+                    </button>
+                )}
             </div>
 
             {/* Batch entry form — admin only */}
-            {isAdmin && (
+            {isAdmin && showAssignForm && (
                 <MorningBriefingForm
                     workspaceId={workspaceId}
                     teamMembers={teamMembers}

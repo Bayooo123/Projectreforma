@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from 'react';
-import { BrainCircuit, X, Check } from 'lucide-react';
+import { BrainCircuit, X, Check, ChevronDown, ChevronUp } from 'lucide-react';
 import { answerMatterQuestion, dismissMatterQuestion } from '@/app/actions/matterQuestions';
 
 interface Question {
@@ -20,6 +20,7 @@ export default function PendingQuestionsPanel({ questions }: Props) {
     const [hidden, setHidden] = useState<Set<string>>(new Set());
     const [answers, setAnswers] = useState<Record<string, string>>({});
     const [submitting, setSubmitting] = useState<string | null>(null);
+    const [collapsed, setCollapsed] = useState(true);
 
     const visible = questions.filter(q => !hidden.has(q.id));
     if (visible.length === 0) return null;
@@ -51,23 +52,36 @@ export default function PendingQuestionsPanel({ questions }: Props) {
             overflow: 'hidden',
         }}>
             {/* Header */}
-            <div style={{
-                display: 'flex', alignItems: 'center', gap: 8,
-                padding: '10px 14px',
-                borderBottom: '1px solid #fde68a',
-                background: '#fffbeb',
-            }}>
-                <BrainCircuit size={14} color="#b45309" />
-                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#92400e' }}>
-                    Eureka needs your input
-                </span>
-                <span style={{ fontSize: '0.72rem', color: '#b45309', marginLeft: 4 }}>
-                    {visible.length} court outcome{visible.length !== 1 ? 's' : ''} unrecorded
-                </span>
-            </div>
+            <button
+                onClick={() => setCollapsed(c => !c)}
+                style={{
+                    width: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '10px 14px',
+                    border: 'none',
+                    borderBottom: collapsed ? 'none' : '1px solid #fde68a',
+                    background: '#fffbeb',
+                    cursor: 'pointer',
+                    outline: 'none',
+                }}
+            >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <BrainCircuit size={14} color="#b45309" />
+                    <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#92400e' }}>
+                        Eureka needs your input
+                    </span>
+                    <span style={{ fontSize: '0.72rem', color: '#b45309', marginLeft: 4 }}>
+                        {visible.length} court outcome{visible.length !== 1 ? 's' : ''} unrecorded
+                    </span>
+                </div>
+                {collapsed ? <ChevronDown size={14} color="#b45309" /> : <ChevronUp size={14} color="#b45309" />}
+            </button>
 
             {/* Questions */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+            {!collapsed && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
                 {visible.map((q, idx) => {
                     const hearingDate = new Date(q.calendarEntry.date).toLocaleDateString('en-GB', {
                         weekday: 'short', day: 'numeric', month: 'short',
@@ -165,6 +179,7 @@ export default function PendingQuestionsPanel({ questions }: Props) {
                     );
                 })}
             </div>
+            )}
         </div>
     );
 }

@@ -1,5 +1,6 @@
+import { useState } from 'react';
 import Link from 'next/link';
-import { FileText, Clock, Scale } from 'lucide-react';
+import { FileText, Clock, Scale, ChevronDown, ChevronUp } from 'lucide-react';
 import type { MyBrief } from '@/app/actions/pulse';
 
 interface Props {
@@ -7,6 +8,8 @@ interface Props {
 }
 
 export default function MyBriefsGrid({ briefs }: Props) {
+    const [collapsed, setCollapsed] = useState(true);
+
     if (briefs.length === 0) {
         return (
             <div style={sectionStyle}>
@@ -37,17 +40,36 @@ export default function MyBriefsGrid({ briefs }: Props) {
     };
 
     return (
-        <div style={sectionStyle}>
-            <div style={sectionHeaderStyle}>
-                <span style={sectionTitleStyle}>My Briefs</span>
-                <span style={{ fontSize: 10, color: '#94a3b8' }}>{briefs.length} active</span>
-            </div>
+        <div style={{ ...sectionStyle, padding: collapsed ? 0 : '12px 14px' }}>
+            <button
+                onClick={() => setCollapsed(c => !c)}
+                style={{
+                    width: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    background: 'none',
+                    border: 'none',
+                    padding: '12px 14px',
+                    cursor: 'pointer',
+                    outline: 'none',
+                    borderBottom: collapsed ? 'none' : '1px solid #e2e8f0',
+                }}
+            >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={sectionTitleStyle}>My Briefs</span>
+                    <span style={{ fontSize: 10, color: '#94a3b8' }}>{briefs.length} active</span>
+                </div>
+                {collapsed ? <ChevronDown size={14} color="#475569" /> : <ChevronUp size={14} color="#475569" />}
+            </button>
 
-            <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
-                gap: 8,
-            }}>
+            {!collapsed && (
+                <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
+                    gap: 8,
+                    marginTop: 10,
+                }}>
                 {briefs.map(b => {
                     const title = b.customTitle || b.name;
                     const ref = b.customBriefNumber || b.briefNumber;
@@ -97,7 +119,8 @@ export default function MyBriefsGrid({ briefs }: Props) {
                         </Link>
                     );
                 })}
-            </div>
+                </div>
+            )}
         </div>
     );
 }
