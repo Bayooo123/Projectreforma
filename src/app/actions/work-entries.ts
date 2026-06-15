@@ -3,7 +3,6 @@
 import { prisma } from '@/lib/prisma';
 import { requireAuth } from '@/lib/auth-utils';
 import { revalidatePath } from 'next/cache';
-import type { Prisma } from '@prisma/client';
 
 export type WorkEntry = {
     id: string;
@@ -25,11 +24,12 @@ export type WorkEntry = {
     brief: { id: string; name: string; customTitle: string | null; briefNumber: string; customBriefNumber: string | null } | null;
 };
 
+// No "as const" — it makes keys readonly and breaks Prisma's conditional type inference for optional relations
 const INCLUDE = {
     user: { select: { id: true, name: true, email: true } },
     createdBy: { select: { id: true, name: true, email: true } },
     brief: { select: { id: true, name: true, customTitle: true, briefNumber: true, customBriefNumber: true } },
-} as const;
+};
 
 async function isAdminOrOwner(workspaceId: string, userId: string): Promise<boolean> {
     const member = await prisma.workspaceMember.findFirst({
@@ -56,7 +56,6 @@ export async function createWorkEntry(data: {
     const caller = await requireAuth();
     if (!caller.id) return { success: false as const, error: 'Unauthorized' };
 
-    // Determine who the entry is assigned to
     let assignedToId = caller.id;
     if (data.targetUserId && data.targetUserId !== caller.id) {
         const admin = await isAdminOrOwner(data.workspaceId, caller.id);
@@ -64,19 +63,20 @@ export async function createWorkEntry(data: {
         assignedToId = data.targetUserId;
     }
 
+    // All relations as connect objects (checked mode) — avoids Prisma's XOR union ambiguity
     const entry = await prisma.workEntry.create({
         data: {
-            workspaceId: data.workspaceId,
-            userId: assignedToId,
-            createdById: caller.id,
-            briefId: data.briefId || null,
+            workspace: { connect: { id: data.workspaceId } },
+            user: { connect: { id: assignedToId } },
+            createdBy: { connect: { id: caller.id } },
+            brief: data.briefId ? { connect: { id: data.briefId } } : undefined,
             title: data.title.trim(),
             description: data.description?.trim() || null,
             priority: data.priority || 'medium',
             dueDate: data.dueDate ? new Date(data.dueDate) : null,
             date: new Date(),
             status: 'PLANNED',
-        } as Prisma.WorkEntryUncheckedCreateInput,
+        },
         include: INCLUDE,
     });
 
@@ -97,10 +97,9 @@ export async function updateWorkEntryStatus(
     const entry = await prisma.workEntry.findUnique({ where: { id }, select: { userId: true, workspaceId: true } });
     if (!entry) return { success: false, error: 'Entry not found' };
 
-    // Non-admins can only update their own entries
     if (entry.userId !== caller.id) {
         const admin = await isAdminOrOwner(entry.workspaceId, caller.id);
-        if (!admin) return { success: false, error: 'Cannot update another member\'s entry' };
+        if (!admin) return { success: false, error: "Cannot update another member's entry" };
     }
 
     const isTerminal = status === 'COMPLETED' || status === 'SUBMITTED';
@@ -125,7 +124,7 @@ export async function deleteWorkEntry(id: string) {
 
     if (entry.userId !== caller.id) {
         const admin = await isAdminOrOwner(entry.workspaceId, caller.id);
-        if (!admin) return { success: false, error: 'Cannot delete another member\'s entry' };
+        if (!admin) return { success: false, error: "Cannot delete another member's entry" };
     }
 
     await prisma.workEntry.delete({ where: { id } });
@@ -142,15 +141,12 @@ export async function getTodayWorkEntries(workspaceId: string): Promise<WorkEntr
     const endOfDay = new Date();
     endOfDay.setHours(23, 59, 59, 999);
 
-    return prisma.workEntry.findMany({
-        where: {
-            workspaceId,
-            userId: user.id,          // entries ASSIGNED TO me
-            date: { gte: startOfDay, lte: endOfDay },
-        },
+    const rows = await prisma.workEntry.findMany({
+        where: { workspaceId, userId: user.id, date: { gte: startOfDay, lte: endOfDay } },
         include: INCLUDE,
         orderBy: [{ createdAt: 'asc' }],
-    }) as Promise<WorkEntry[]>;
+    });
+    return rows as unknown as WorkEntry[];
 }
 
 /** Today's full firm-wide log — all members, all entries (for Firmwide board). */
@@ -163,14 +159,12 @@ export async function getFirmWorkLog(workspaceId: string, date?: string): Promis
     const endOfDay = new Date(targetDate);
     endOfDay.setHours(23, 59, 59, 999);
 
-    return prisma.workEntry.findMany({
-        where: {
-            workspaceId,
-            date: { gte: startOfDay, lte: endOfDay },
-        },
+    const rows = await prisma.workEntry.findMany({
+        where: { workspaceId, date: { gte: startOfDay, lte: endOfDay } },
         include: INCLUDE,
         orderBy: [{ user: { name: 'asc' } }, { createdAt: 'asc' }],
-    }) as Promise<WorkEntry[]>;
+    });
+    return rows as unknown as WorkEntry[];
 }
 
 /** All team members for the morning briefing form. */
