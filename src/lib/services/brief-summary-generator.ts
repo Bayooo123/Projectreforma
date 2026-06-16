@@ -100,6 +100,78 @@ Rules:
 - Return [] only if the material contains absolutely zero date references.`;
 }
 
+function buildIncrementalTransactionalPrompt(meta: string, previousProse: string, previousChronologyJson: string, textBlock: string, emailBlock: string): string {
+    const emailSection = emailBlock
+        ? `\n\n## New Email Correspondence\n${emailBlock}`
+        : '';
+    return `You are a Legal Analyst specialising in transactional and commercial matters.
+This brief already has a summary from earlier material. New material has since been added — update the summary to incorporate it, without re-deriving facts already captured below.
+
+## Brief Metadata
+${meta}
+
+## Existing Prose Summary
+${previousProse}
+
+## Existing Chronology (JSON)
+${previousChronologyJson}
+
+## New Documents
+${textBlock || 'No new document text available.'}${emailSection}
+
+---
+
+Respond in EXACTLY this format:
+
+PROSE:
+Rewrite the prose summary (2-3 concise paragraphs) as a single coherent narrative that incorporates the existing facts above AND the new material. Do not refer to "new" vs "existing" — write it as one summary, as if generated fresh.
+
+CHRONOLOGY:
+A JSON array containing the FULL chronology: the existing entries above, unchanged, PLUS new entries drawn from the new documents/emails, merged into strict chronological order (earliest first).
+Format: { "date": "YYYY-MM-DD", "dateDisplay": "17 Mar 2026", "narrative": "On 17 March 2026, Catalyst Business Consult executed a Legal Retainership Agreement with Kola Abdulsalam, engaging him as legal counsel for real estate advisory services." }
+
+Rules:
+- Extract every dated event, agreement, notice, payment, correspondence, or strategy discussion from the NEW material only — the existing entries are already complete and must not be re-derived or altered.
+- Name the actual parties — do not say "the client" or "the parties".
+- If the new material contains no date references, return the existing chronology unchanged.`;
+}
+
+function buildIncrementalLitigationPrompt(meta: string, previousProse: string, previousChronologyJson: string, textBlock: string, emailBlock: string): string {
+    const emailSection = emailBlock
+        ? `\n\n## New Email Correspondence\n${emailBlock}`
+        : '';
+    return `You are a Legal Analyst specialising in litigation and dispute matters.
+This brief already has a summary from earlier material. New material has since been added — update the summary to incorporate it, without re-deriving facts already captured below.
+
+## Brief Metadata
+${meta}
+
+## Existing Prose Summary
+${previousProse}
+
+## Existing Chronology (JSON)
+${previousChronologyJson}
+
+## New Documents
+${textBlock || 'No new document text available.'}${emailSection}
+
+---
+
+Respond in EXACTLY this format:
+
+PROSE:
+Rewrite the prose summary (3-4 concise paragraphs) as a single coherent narrative that incorporates the existing facts above AND the new material — updated procedural history, current status, and what is next. Do not refer to "new" vs "existing" — write it as one summary, as if generated fresh.
+
+CHRONOLOGY:
+A JSON array containing the FULL chronology: the existing entries above, unchanged, PLUS new entries drawn from the new documents/emails, merged into strict chronological order (earliest first).
+Format: { "date": "YYYY-MM-DD", "dateDisplay": "17 Mar 2026", "title": "Notice of Distraint received", "summary": "Counsel received and reviewed the Notice of Distraint from opposing party, forwarded to team for response strategy." }
+
+Rules:
+- Every new email or document with a date reference or substantive event should yield at least one new chronology entry — the existing entries are already complete and must not be re-derived or altered.
+- Name actual parties and counsel — not "the client" or "opposing counsel".
+- If the new material contains no date references, return the existing chronology unchanged.`;
+}
+
 // ── Document text extraction ─────────────────────────────────────────────────
 
 async function extractDocxText(url: string): Promise<string | null> {
@@ -190,6 +262,11 @@ export function detectBriefType(isLitigationDerived: boolean, category: string):
     return 'transactional';
 }
 
+export interface PreviousSummary {
+    prose: string;
+    chronology: ChronologyRow[];
+}
+
 export async function generateBriefSummaryFromDocuments(
     briefMeta: {
         name: string;
@@ -204,6 +281,7 @@ export async function generateBriefSummaryFromDocuments(
     },
     documents: DocInput[],
     emails: EmailInput[] = [],
+    previous: PreviousSummary | null = null,
 ): Promise<BriefSummaryResult | null> {
     const apiKey = config.ANTHROPIC_API_KEY;
     if (!apiKey) { console.error('[BriefSummary] ANTHROPIC_API_KEY not set'); return null; }
@@ -259,9 +337,13 @@ export async function generateBriefSummaryFromDocuments(
     });
 
     const systemPrompt = 'You are a specialised Legal Analyst. Respond only in the exact format requested.';
-    const promptText = briefType === 'transactional'
-        ? buildTransactionalPrompt(metaLines, textBlock, emailBlock)
-        : buildLitigationPrompt(metaLines, textBlock, emailBlock);
+    const promptText = previous
+        ? (briefType === 'transactional'
+            ? buildIncrementalTransactionalPrompt(metaLines, previous.prose, JSON.stringify(previous.chronology), textBlock, emailBlock)
+            : buildIncrementalLitigationPrompt(metaLines, previous.prose, JSON.stringify(previous.chronology), textBlock, emailBlock))
+        : (briefType === 'transactional'
+            ? buildTransactionalPrompt(metaLines, textBlock, emailBlock)
+            : buildLitigationPrompt(metaLines, textBlock, emailBlock));
 
     // System prompt embedded in user turn — avoids SDK version conflicts with betas
     const userContent: any[] = [
@@ -269,10 +351,10 @@ export async function generateBriefSummaryFromDocuments(
         { type: 'text', text: `${systemPrompt}\n\n${promptText}` },
     ];
 
-    // Sonnet when PDFs need vision or emails are present (richer reasoning needed)
-    // Haiku only for pure text-only document briefs with no email context
+    // Sonnet when PDFs need vision, emails are present, or merging into a prior
+    // summary (richer reasoning needed). Haiku only for pure text-only, first-pass briefs.
     const usePdfBeta = docBlocks.length > 0;
-    const usesSonnet = usePdfBeta || emails.length > 0;
+    const usesSonnet = usePdfBeta || emails.length > 0 || !!previous;
     const model = usesSonnet ? 'claude-sonnet-4-6' : 'claude-haiku-4-5-20251001';
 
     try {

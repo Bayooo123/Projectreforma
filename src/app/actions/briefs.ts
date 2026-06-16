@@ -702,6 +702,9 @@ export async function generateBriefSummary(briefId: string): Promise<{ success: 
                 dueDate: true,
                 description: true,
                 isLitigationDerived: true,
+                aiSummaryProse: true,
+                aiSummaryChronology: true,
+                aiSummaryGeneratedAt: true,
                 client:         { select: { name: true } },
                 lawyer:         { select: { name: true } },
                 lawyerInCharge: { select: { name: true } },
@@ -711,7 +714,7 @@ export async function generateBriefSummary(briefId: string): Promise<{ success: 
         // Fetch url + type so the generator can read files that have no ocrText yet
         prisma.document.findMany({
             where: { briefId },
-            select: { name: true, url: true, type: true, ocrText: true },
+            select: { name: true, url: true, type: true, ocrText: true, uploadedAt: true },
             orderBy: { uploadedAt: 'asc' },
         }),
         // Fetch linked emails via PulseEvent → InboundEmail
@@ -746,7 +749,42 @@ export async function generateBriefSummary(briefId: string): Promise<{ success: 
             return true;
         });
 
-    const { generateBriefSummaryFromDocuments } = await import('@/lib/services/brief-summary-generator');
+    const { generateBriefSummaryFromDocuments, detectBriefType } = await import('@/lib/services/brief-summary-generator');
+
+    // If a summary already exists, only send material added since that run —
+    // the model extends the existing prose/chronology instead of re-deriving
+    // facts it has already captured, which cuts the tokens sent per regeneration.
+    const since = brief.aiSummaryGeneratedAt;
+    const hasPrevious = !!(brief.aiSummaryProse && since);
+
+    let docsForGeneration = documents;
+    let emailsForGeneration = emails;
+    let previous: { prose: string; chronology: BriefSummaryData['chronology'] } | null = null;
+
+    if (hasPrevious) {
+        const newDocs = documents.filter(d => d.uploadedAt > since!);
+        const newEmails = emails.filter(e => e.receivedAt > since!);
+
+        if (newDocs.length === 0 && newEmails.length === 0) {
+            // Nothing has been added since the last run — return the cached summary, no API call.
+            return {
+                success: true,
+                data: {
+                    briefType: detectBriefType(brief.isLitigationDerived, brief.category),
+                    prose: brief.aiSummaryProse!,
+                    chronology: (brief.aiSummaryChronology as BriefSummaryData['chronology']) ?? [],
+                    generatedAt: since!,
+                },
+            };
+        }
+
+        docsForGeneration = newDocs;
+        emailsForGeneration = newEmails;
+        previous = {
+            prose: brief.aiSummaryProse!,
+            chronology: (brief.aiSummaryChronology as BriefSummaryData['chronology']) ?? [],
+        };
+    }
 
     let result;
     try {
@@ -764,8 +802,9 @@ export async function generateBriefSummary(briefId: string): Promise<{ success: 
                     ? `${brief.matter.name}${brief.matter.caseNumber ? ` (${brief.matter.caseNumber})` : ''}`
                     : null,
             },
-            documents,
-            emails,
+            docsForGeneration,
+            emailsForGeneration,
+            previous,
         );
     } catch (err: any) {
         return { success: false, error: err?.message ?? 'Summary generation failed.' };
