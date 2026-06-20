@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Clock, Tag, User, Building, Calendar, Upload, Loader, FileText, Trash2, Edit, Folder, FolderPlus, FolderInput, CornerUpLeft, Mail, Paperclip } from 'lucide-react';
+import { ArrowLeft, Clock, Tag, User, Building, Calendar, Upload, Loader, FileText, Trash2, Edit, Folder, FolderPlus, FolderInput, CornerUpLeft, Mail, Paperclip, Package } from 'lucide-react';
 import { getBriefDisplayTitle, getBriefDisplayNumber } from '@/lib/brief-display';
 import DocumentUpload from '@/components/briefs/DocumentUpload';
 import DocumentPreview from '@/components/briefs/DocumentPreview';
@@ -237,6 +237,26 @@ export default function BriefDetailClient({ brief }: BriefDetailClientProps) {
 
     const currentFolder = useMemo(() => folders.find(f => f.id === currentFolderId), [folders, currentFolderId]);
 
+    const [isBundling, setIsBundling] = useState(false);
+    const handleDownloadBundle = async () => {
+        setIsBundling(true);
+        try {
+            const resp = await fetch(`/api/v1/briefs/${brief.id}/bundle`);
+            if (!resp.ok) throw new Error('Bundle failed');
+            const blob = await resp.blob();
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${brief.customTitle || brief.name || brief.briefNumber}-bundle.zip`;
+            a.click();
+            URL.revokeObjectURL(url);
+        } catch {
+            alert('Failed to generate bundle. Please try again.');
+        } finally {
+            setIsBundling(false);
+        }
+    };
+
     return (
         <div className={styles.page}>
             <div className={styles.header}>
@@ -246,6 +266,15 @@ export default function BriefDetailClient({ brief }: BriefDetailClientProps) {
                         <span>Back to Briefs</span>
                     </Link>
                     <div className={styles.actions}>
+                        <button
+                            className={styles.draftBtn}
+                            onClick={handleDownloadBundle}
+                            disabled={isBundling}
+                            title="Download brief bundle for playbook preparation"
+                        >
+                            {isBundling ? <Loader size={16} className="animate-spin" /> : <Package size={16} />}
+                            {isBundling ? 'Bundling…' : 'Download Bundle'}
+                        </button>
                         <button className={styles.editBtn} onClick={() => setIsEditModalOpen(true)}>
                             <Edit size={16} />
                             Edit Brief

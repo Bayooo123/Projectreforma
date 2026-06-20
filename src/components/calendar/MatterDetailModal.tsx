@@ -173,6 +173,7 @@ const MatterDetailModal = ({ isOpen, onClose, matter, userId }: MatterDetailModa
         }
     };
 
+
     return (
         <><div className={styles.overlay}>
             <div className={styles.modal}>
