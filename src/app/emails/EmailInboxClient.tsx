@@ -1,9 +1,10 @@
 'use client';
 
 import { useState, useMemo, useTransition, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import {
     Mail, Link2, Plus, Search, X, Check, AlertCircle,
-    ChevronDown, Unlink, FileText, CheckSquare, Square, RefreshCw, Layers, Zap,
+    ChevronDown, Unlink, FileText, CheckSquare, Square, RefreshCw, Layers, Zap, Bot,
 } from 'lucide-react';
 import {
     InboxEmail, InboxBrief, TriageGroup, TriageSuggestion, AutoFileResult,
@@ -513,6 +514,7 @@ function TriagePanel({ groups: initialGroups, briefs, onLink, onClose }: TriageP
 interface Props { emails?: InboxEmail[]; briefs?: InboxBrief[]; }
 
 export default function EmailInboxClient({ emails: initial = [], briefs: initialBriefs = [] }: Props) {
+    const router = useRouter();
     const [emails, setEmails]               = useState<InboxEmail[]>(initial);
     const [briefs, setBriefs]               = useState<InboxBrief[]>(initialBriefs);
     const [filter, setFilter]               = useState<'all' | 'unlinked' | 'linked'>('all');
@@ -669,6 +671,13 @@ export default function EmailInboxClient({ emails: initial = [], briefs: initial
                     </div>
                 </div>
                 <div style={{ display: 'flex', gap: 6 }}>
+                    <button
+                        className={styles.triageBtn}
+                        onClick={() => router.push('/emails/agent')}
+                        title="Run the agentic email-linking assistant"
+                    >
+                        <Bot size={14} /> Link Agent
+                    </button>
                     <button
                         className={styles.autoFileBtn}
                         onClick={handleAutoFile}

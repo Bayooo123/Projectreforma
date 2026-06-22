@@ -632,3 +632,120 @@ export async function triageUnlinkedEmails(): Promise<TriageGroup[]> {
         return b.emailIds.length - a.emailIds.length;
     });
 }
+
+// ── Email Link Agent ──────────────────────────────────────────────────────────
+
+export interface AgentEmailGroup {
+    key: string;
+    label: string;
+    emailIds: string[];
+    emailCount: number;
+    senders: string[];          // display names / emails for the group
+    dateFrom: Date;
+    dateTo: Date;
+    bodyPreview: string;        // first email's preview for context
+    match: {
+        briefId: string;
+        briefName: string;
+        briefNumber: string;
+        clientName: string | null;
+        confidence: number;
+    } | null;
+    suggestedNewName: string;
+}
+
+export async function getAgentEmailGroups(): Promise<AgentEmailGroup[]> {
+    const user = await requireAuth();
+
+    const membership = await prisma.workspaceMember.findFirst({
+        where: { user: { email: user.email! } },
+        select: { workspaceId: true },
+    });
+    if (!membership) return [];
+
+    const { workspaceId } = membership;
+
+    // All emails with no matter link
+    const allEmails = await prisma.inboundEmail.findMany({
+        where: { workspaceId, matterId: null },
+        select: { id: true, fromEmail: true, fromName: true, subject: true, bodyPreview: true, receivedAt: true },
+        orderBy: { receivedAt: 'desc' },
+    });
+
+    // Exclude those already linked via PulseEvent
+    const pulseLinked = await prisma.pulseEvent.findMany({
+        where: { inboundEmailId: { in: allEmails.map(e => e.id) }, briefId: { not: null } },
+        select: { inboundEmailId: true },
+    });
+    const linkedIds = new Set(pulseLinked.map(p => p.inboundEmailId!));
+    const unlinked = allEmails.filter(e => !linkedIds.has(e.id));
+
+    if (unlinked.length === 0) return [];
+
+    // Group by fuzzy subject
+    const groupMap = new Map<string, typeof unlinked>();
+    for (const email of unlinked) {
+        const key = normalizeSubjectKey(email.subject);
+        let matchedKey: string | null = null;
+        for (const existingKey of groupMap.keys()) {
+            if (wordOverlap(key, existingKey) >= 0.5) { matchedKey = existingKey; break; }
+        }
+        const targetKey = matchedKey ?? key;
+        if (!groupMap.has(targetKey)) groupMap.set(targetKey, []);
+        groupMap.get(targetKey)!.push(email);
+    }
+
+    // Fetch briefs for matching
+    const briefs = await prisma.brief.findMany({
+        where: { workspaceId, deletedAt: null },
+        select: { id: true, briefNumber: true, name: true, client: { select: { name: true } } },
+    });
+
+    const groups: AgentEmailGroup[] = [];
+
+    for (const [key, emails] of groupMap.entries()) {
+        const rep = emails[0];
+        const label = rep.subject.replace(/^(fwd?:|re:)\s*/gi, '').split(/\s+[—–-]\s+/)[0].trim();
+
+        const senderSet = new Set<string>();
+        let dateFrom = emails[0].receivedAt;
+        let dateTo   = emails[0].receivedAt;
+        for (const e of emails) {
+            senderSet.add(e.fromName || e.fromEmail);
+            if (e.receivedAt < dateFrom) dateFrom = e.receivedAt;
+            if (e.receivedAt > dateTo)   dateTo   = e.receivedAt;
+        }
+
+        const best = briefs
+            .map(b => ({ b, score: wordOverlap(key, normalizeSubjectKey(b.name)) }))
+            .filter(m => m.score >= 0.35)
+            .sort((a, b) => b.score - a.score)[0];
+
+        groups.push({
+            key,
+            label,
+            emailIds: emails.map(e => e.id),
+            emailCount: emails.length,
+            senders: Array.from(senderSet).slice(0, 6),
+            dateFrom,
+            dateTo,
+            bodyPreview: rep.bodyPreview ?? '',
+            match: best ? {
+                briefId:    best.b.id,
+                briefName:  best.b.name,
+                briefNumber: best.b.briefNumber,
+                clientName: best.b.client?.name ?? null,
+                confidence: best.score,
+            } : null,
+            suggestedNewName: label.slice(0, 80),
+        });
+    }
+
+    // Matched (high confidence first) → unmatched (large groups first)
+    return groups.sort((a, b) => {
+        const aScore = a.match?.confidence ?? -1;
+        const bScore = b.match?.confidence ?? -1;
+        if (aScore !== bScore) return bScore - aScore;
+        return b.emailCount - a.emailCount;
+    });
+}

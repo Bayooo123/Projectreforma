@@ -1,0 +1,577 @@
+/* ── Layout ───────────────────────────────────────────────────────────────── */
+.root {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    background: var(--background);
+}
+
+.header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.1rem 1.5rem 0.85rem;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+}
+
+.headerLeft {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.backBtn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.12s;
+}
+.backBtn:hover { border-color: var(--primary); color: var(--primary); }
+
+.headerIcon { color: var(--primary); flex-shrink: 0; }
+
+.title {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0;
+}
+
+.subtitle {
+    font-size: 0.72rem;
+    color: var(--text-secondary);
+    margin: 0;
+}
+
+.headerRight {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+}
+
+.navIcon { opacity: 0.5; }
+.navLabel { font-weight: 600; }
+
+/* ── Progress bar ─────────────────────────────────────────────────────────── */
+.progressBar {
+    height: 3px;
+    background: var(--border);
+    flex-shrink: 0;
+}
+
+.progressFill {
+    height: 100%;
+    background: var(--primary);
+    transition: width 0.35s ease;
+}
+
+/* ── Body ─────────────────────────────────────────────────────────────────── */
+.body {
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 2rem 1rem;
+}
+
+.cardWrap {
+    width: 100%;
+    max-width: 640px;
+}
+
+/* ── Loading & empty ──────────────────────────────────────────────────────── */
+.loadingState {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 4rem 1rem;
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+}
+
+.spinning {
+    animation: spin 1s linear infinite;
+    color: var(--primary);
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Group card ───────────────────────────────────────────────────────────── */
+.card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    overflow: hidden;
+}
+
+.cardHeader {
+    padding: 1.4rem 1.5rem 1.1rem;
+    border-bottom: 1px solid var(--border);
+}
+
+.cardCount {
+    display: inline-flex;
+    align-items: center;
+    font-size: 0.67rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--primary);
+    background: #eef2ff;
+    border: 1px solid #c7d2fe;
+    border-radius: 999px;
+    padding: 2px 10px;
+    margin-bottom: 0.65rem;
+}
+
+.cardSubject {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0 0 0.6rem;
+    line-height: 1.35;
+}
+
+.cardMeta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.65rem;
+    margin-bottom: 0.65rem;
+}
+
+.metaItem {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.72rem;
+    color: var(--text-secondary);
+}
+
+.cardPreview {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    margin: 0;
+    line-height: 1.5;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+/* ── Suggestion block ─────────────────────────────────────────────────────── */
+.suggestion {
+    padding: 0.85rem 1.5rem;
+    background: #f5f3ff;
+    border-bottom: 1px solid #e0d9f9;
+}
+
+.suggestionTop {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 0.4rem;
+}
+
+.suggIcon { color: #7c3aed; flex-shrink: 0; }
+
+.suggLabel {
+    font-size: 0.67rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #7c3aed;
+    flex: 1;
+}
+
+.confBadge {
+    font-size: 0.65rem;
+    font-weight: 600;
+    border-radius: 999px;
+    padding: 2px 8px;
+}
+.conf_high { background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0; }
+.conf_mid  { background: #fffbeb; color: #d97706; border: 1px solid #fde68a; }
+.conf_low  { background: #fff1f2; color: #dc2626; border: 1px solid #fecaca; }
+
+.suggBrief {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.suggBriefName {
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.suggBriefMeta {
+    font-size: 0.7rem;
+    color: var(--text-secondary);
+}
+
+.suggestionEmpty {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 0.75rem 1.5rem;
+    background: #fafafa;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+}
+
+.suggIconEmpty { color: var(--text-secondary); opacity: 0.6; flex-shrink: 0; }
+
+/* ── Error ────────────────────────────────────────────────────────────────── */
+.errorMsg {
+    padding: 0.5rem 1.5rem;
+    margin: 0;
+    font-size: 0.75rem;
+    color: #dc2626;
+    background: #fef2f2;
+    border-top: 1px solid #fecaca;
+}
+
+/* ── Primary actions ──────────────────────────────────────────────────────── */
+.primaryActions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 1rem 1.25rem;
+    flex-wrap: wrap;
+}
+
+.linkBtn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0.6rem 1.1rem;
+    border-radius: 8px;
+    border: none;
+    background: var(--primary);
+    color: white;
+    font-size: 0.8rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: opacity 0.12s;
+    white-space: nowrap;
+}
+.linkBtn:hover { opacity: 0.88; }
+
+.actionBtn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 0.55rem 0.9rem;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text-secondary);
+    font-size: 0.75rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.12s;
+    white-space: nowrap;
+}
+.actionBtn:hover { border-color: var(--primary); color: var(--primary); }
+.actionBtnActive { border-color: var(--primary); color: var(--primary); background: #eef2ff; }
+
+.skipBtn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    margin-left: auto;
+    padding: 0.55rem 0.9rem;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: none;
+    color: var(--text-secondary);
+    font-size: 0.75rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.12s;
+    white-space: nowrap;
+}
+.skipBtn:hover { background: #f1f5f9; color: var(--text-primary); }
+
+/* ── Sub-panels ───────────────────────────────────────────────────────────── */
+.subPanel {
+    border-top: 1px solid var(--border);
+    background: var(--background);
+}
+
+.subSearch {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0.65rem 1.25rem;
+    border-bottom: 1px solid var(--border);
+}
+
+.subSearchIcon { color: var(--text-secondary); flex-shrink: 0; }
+
+.subSearchInput {
+    flex: 1;
+    border: none;
+    background: none;
+    outline: none;
+    font-size: 0.82rem;
+    color: var(--text-primary);
+}
+
+.subClear {
+    display: flex;
+    align-items: center;
+    padding: 2px;
+    border: none;
+    background: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    border-radius: 4px;
+}
+.subClear:hover { color: var(--text-primary); }
+
+.subList {
+    max-height: 220px;
+    overflow-y: auto;
+}
+
+.subEmpty {
+    text-align: center;
+    font-size: 0.78rem;
+    color: var(--text-secondary);
+    padding: 1.5rem 1rem;
+    margin: 0;
+}
+
+.subRow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 0.6rem 1.25rem;
+    border: none;
+    border-bottom: 1px solid var(--border);
+    background: none;
+    cursor: pointer;
+    text-align: left;
+    gap: 0.5rem;
+    transition: background 0.1s;
+}
+.subRow:last-child { border-bottom: none; }
+.subRow:hover { background: #f5f3ff; }
+
+.subRowName {
+    display: block;
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 340px;
+}
+
+.subRowMeta {
+    display: block;
+    font-size: 0.67rem;
+    color: var(--text-secondary);
+    margin-top: 1px;
+}
+
+.subRowCat {
+    font-size: 0.62rem;
+    font-weight: 600;
+    color: #7c3aed;
+    background: #f5f3ff;
+    border: 1px solid #e0e7ff;
+    border-radius: 999px;
+    padding: 2px 7px;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+/* ── Create brief inline ──────────────────────────────────────────────────── */
+.createRow {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.25rem;
+    flex-wrap: wrap;
+}
+
+.createInput {
+    flex: 1;
+    min-width: 180px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.82rem;
+    color: var(--text-primary);
+    background: var(--surface);
+    outline: none;
+    transition: border-color 0.12s;
+}
+.createInput:focus { border-color: var(--primary); }
+
+.catWrap { position: relative; }
+
+.catSelect {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.78rem;
+    color: var(--text-primary);
+    background: var(--surface);
+    outline: none;
+    cursor: pointer;
+    appearance: none;
+    padding-right: 1.75rem;
+}
+.catSelect:focus { border-color: var(--primary); }
+
+.createConfirm {
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    border: none;
+    background: var(--primary);
+    color: white;
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: opacity 0.12s;
+}
+.createConfirm:hover:not(:disabled) { opacity: 0.88; }
+.createConfirm:disabled { opacity: 0.45; cursor: default; }
+
+/* ── Busy row ─────────────────────────────────────────────────────────────── */
+.busyRow {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 1rem 1.5rem;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    border-top: 1px solid var(--border);
+}
+
+/* ── Done screen ──────────────────────────────────────────────────────────── */
+.doneWrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 3rem 1rem;
+    text-align: center;
+    max-width: 400px;
+    margin: 0 auto;
+}
+
+.doneIcon {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: #ecfdf5;
+    border: 2px solid #a7f3d0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #059669;
+    margin-bottom: 0.5rem;
+}
+
+.doneTitle {
+    font-size: 1.4rem;
+    font-weight: 800;
+    color: var(--text-primary);
+    margin: 0;
+}
+
+.doneSub {
+    font-size: 0.82rem;
+    color: var(--text-secondary);
+    margin: 0 0 1.25rem;
+}
+
+.doneStats {
+    display: flex;
+    gap: 1.5rem;
+    margin: 0.75rem 0 1.5rem;
+}
+
+.doneStat {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+}
+
+.doneStatNum {
+    font-size: 1.6rem;
+    font-weight: 800;
+    color: var(--primary);
+}
+
+.doneStatLabel {
+    font-size: 0.68rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+    text-align: center;
+}
+
+.doneBtns {
+    display: flex;
+    gap: 0.75rem;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.donePrimary {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0.6rem 1.25rem;
+    border-radius: 8px;
+    border: none;
+    background: var(--primary);
+    color: white;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.12s;
+}
+.donePrimary:hover { opacity: 0.88; }
+
+.doneSecondary {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0.6rem 1.25rem;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text-secondary);
+    font-size: 0.82rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.12s;
+}
+.doneSecondary:hover { border-color: var(--primary); color: var(--primary); }
