@@ -57,7 +57,7 @@ function DoneScreen({ linked, created, skipped, total, onRestart }: DoneProps) {
                 <button className={styles.doneSecondary} onClick={onRestart}>
                     <RefreshCw size={14} /> Run again
                 </button>
-                <button className={styles.donePrimary} onClick={() => router.push('/emails')}>
+                <button className={styles.donePrimary} onClick={() => router.push('/management/it')}>
                     <Mail size={14} /> Back to inbox
                 </button>
             </div>
@@ -269,6 +269,7 @@ function GroupCard({ group, briefs, onLinked, onCreated, onSkipped }: GroupCardP
 
 export default function AgentClient() {
     const router = useRouter();
+    const goBack = () => router.back();
     const [groups, setGroups]     = useState<AgentEmailGroup[]>([]);
     const [briefs, setBriefs]     = useState<InboxBrief[]>([]);
     const [loading, setLoading]   = useState(true);
@@ -327,7 +328,7 @@ export default function AgentClient() {
             {/* Header */}
             <div className={styles.header}>
                 <div className={styles.headerLeft}>
-                    <button className={styles.backBtn} onClick={() => router.push('/emails')}>
+                    <button className={styles.backBtn} onClick={goBack}>
                         <ArrowLeft size={15} />
                     </button>
                     <Bot size={18} className={styles.headerIcon} />
