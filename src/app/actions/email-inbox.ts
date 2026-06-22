@@ -125,16 +125,32 @@ export async function linkEmailToBrief(emailId: string, briefId: string): Promis
     if (!email || !brief) return { success: false, error: 'Email or brief not found' };
     if (email.workspaceId !== brief.workspaceId) return { success: false, error: 'Workspace mismatch' };
 
+    const pulseData = { briefId, ...(brief.matterId ? { matterId: brief.matterId } : {}) };
+
+    const existingEvents = await prisma.pulseEvent.findMany({
+        where: { inboundEmailId: emailId },
+        select: { id: true },
+    });
+
     await Promise.all([
         // Link matter on the InboundEmail if the brief has one
         brief.matterId
             ? prisma.inboundEmail.update({ where: { id: emailId }, data: { matterId: brief.matterId } })
             : Promise.resolve(),
-        // Update any existing PulseEvent for this email
-        prisma.pulseEvent.updateMany({
-            where: { inboundEmailId: emailId },
-            data: { briefId, ...(brief.matterId ? { matterId: brief.matterId } : {}) },
-        }),
+        // Update existing PulseEvents, or create one if none exist
+        existingEvents.length > 0
+            ? prisma.pulseEvent.updateMany({ where: { inboundEmailId: emailId }, data: pulseData })
+            : prisma.pulseEvent.create({
+                data: {
+                    workspaceId: email.workspaceId,
+                    inboundEmailId: emailId,
+                    source: 'email',
+                    intent: 'CORRESPONDENCE',
+                    title: email.subject ?? 'Email',
+                    summary: email.subject ?? 'Manually linked email',
+                    ...pulseData,
+                },
+            }),
     ]);
 
     revalidatePath('/emails');
@@ -167,15 +183,43 @@ export async function bulkLinkEmailsToBrief(
     });
     if (!brief) return { success: false, linked: 0, error: 'Brief not found' };
 
-    await Promise.all([
-        brief.matterId
-            ? prisma.inboundEmail.updateMany({ where: { id: { in: emailIds } }, data: { matterId: brief.matterId } })
-            : Promise.resolve(),
-        prisma.pulseEvent.updateMany({
-            where: { inboundEmailId: { in: emailIds } },
-            data: { briefId, ...(brief.matterId ? { matterId: brief.matterId } : {}) },
-        }),
-    ]);
+    const pulseData = { briefId, ...(brief.matterId ? { matterId: brief.matterId } : {}) };
+
+    const existingEvents = await prisma.pulseEvent.findMany({
+        where: { inboundEmailId: { in: emailIds } },
+        select: { inboundEmailId: true },
+    });
+    const hasEvent = new Set(existingEvents.map(p => p.inboundEmailId!));
+    const toUpdate = emailIds.filter(id => hasEvent.has(id));
+    const toCreate = emailIds.filter(id => !hasEvent.has(id));
+
+    const ops: Promise<unknown>[] = [];
+
+    if (brief.matterId) {
+        ops.push(prisma.inboundEmail.updateMany({ where: { id: { in: emailIds } }, data: { matterId: brief.matterId } }));
+    }
+    if (toUpdate.length > 0) {
+        ops.push(prisma.pulseEvent.updateMany({ where: { inboundEmailId: { in: toUpdate } }, data: pulseData }));
+    }
+    if (toCreate.length > 0) {
+        const emails = await prisma.inboundEmail.findMany({
+            where: { id: { in: toCreate } },
+            select: { id: true, subject: true },
+        });
+        ops.push(prisma.pulseEvent.createMany({
+            data: emails.map(e => ({
+                workspaceId: brief.workspaceId,
+                inboundEmailId: e.id,
+                source: 'email',
+                intent: 'CORRESPONDENCE',
+                title: e.subject ?? 'Email',
+                summary: e.subject ?? 'Manually linked email',
+                ...pulseData,
+            })),
+        }));
+    }
+
+    await Promise.all(ops);
 
     revalidatePath('/emails');
     revalidatePath(`/briefs/${briefId}`);
