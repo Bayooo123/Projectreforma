@@ -3,11 +3,12 @@
 import { useState, useEffect, useTransition, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import {
-    Bot, ChevronRight, Check, Plus, Search, X, ArrowLeft,
-    RefreshCw, Mail, Users, Calendar, SkipForward, Link2, Sparkles,
+    Bot, ChevronRight, ChevronDown, ChevronLeft, Check, Plus, Search, X, ArrowLeft,
+    RefreshCw, Mail, Users, Calendar, Link2, Sparkles,
 } from 'lucide-react';
 import {
     AgentEmailGroup,
+    AgentEmailPreview,
     InboxBrief,
     getAgentEmailGroups,
     getInboxBriefs,
@@ -65,24 +66,45 @@ function DoneScreen({ linked, created, skipped, total, onRestart }: DoneProps) {
     );
 }
 
+// ── Email row (inside collapsible) ───────────────────────────────────────────
+
+function EmailRow({ email }: { email: AgentEmailPreview }) {
+    return (
+        <div className={styles.emailRow}>
+            <div className={styles.emailRowLeft}>
+                <span className={styles.emailRowFrom}>{email.fromName || email.fromEmail}</span>
+                <span className={styles.emailRowSubject}>{email.subject}</span>
+                {email.bodyPreview && (
+                    <span className={styles.emailRowPreview}>{email.bodyPreview.slice(0, 100).replace(/\n/g, ' ')}</span>
+                )}
+            </div>
+            <span className={styles.emailRowDate}>{formatDate(email.receivedAt)}</span>
+        </div>
+    );
+}
+
 // ── Group card ────────────────────────────────────────────────────────────────
 
 interface GroupCardProps {
     group: AgentEmailGroup;
     briefs: InboxBrief[];
+    index: number;
+    total: number;
     onLinked:  (count: number) => void;
     onCreated: (count: number) => void;
-    onSkipped: () => void;
+    onPrev: () => void;
+    onNext: () => void;
 }
 
-function GroupCard({ group, briefs, onLinked, onCreated, onSkipped }: GroupCardProps) {
-    const [mode, setMode]       = useState<'idle' | 'search' | 'create'>('idle');
-    const [query, setQuery]     = useState('');
-    const [newName, setNewName] = useState(group.suggestedNewName);
-    const [newCat, setNewCat]   = useState('Litigation');
-    const [busy, setBusy]       = useState(false);
-    const [error, setError]     = useState<string | null>(null);
-    const [, startTransition]   = useTransition();
+function GroupCard({ group, briefs, index, total, onLinked, onCreated, onPrev, onNext }: GroupCardProps) {
+    const [mode, setMode]         = useState<'idle' | 'search' | 'create'>('idle');
+    const [emailsOpen, setEmailsOpen] = useState(false);
+    const [query, setQuery]       = useState('');
+    const [newName, setNewName]   = useState(group.suggestedNewName);
+    const [newCat, setNewCat]     = useState('Litigation');
+    const [busy, setBusy]         = useState(false);
+    const [error, setError]       = useState<string | null>(null);
+    const [, startTransition]     = useTransition();
 
     const filtered = useMemo(() =>
         briefs.filter(b =>
@@ -123,21 +145,46 @@ function GroupCard({ group, briefs, onLinked, onCreated, onSkipped }: GroupCardP
     };
 
     const conf = group.match ? confLabel(group.match.confidence) : null;
+    const remaining = group.emailCount - group.emailPreviews.length;
 
     return (
         <div className={styles.card}>
             {/* ── Subject + meta ── */}
             <div className={styles.cardHeader}>
-                <div className={styles.cardCount}>{group.emailCount} email{group.emailCount !== 1 ? 's' : ''}</div>
+                {/* Collapsible email count toggle */}
+                <button
+                    className={styles.cardCountToggle}
+                    onClick={() => setEmailsOpen(o => !o)}
+                    title={emailsOpen ? 'Hide emails' : 'Show individual emails'}
+                >
+                    <span className={styles.cardCountBadge}>
+                        {group.emailCount} email{group.emailCount !== 1 ? 's' : ''}
+                    </span>
+                    {emailsOpen
+                        ? <ChevronDown size={12} className={styles.toggleIcon} />
+                        : <ChevronRight size={12} className={styles.toggleIcon} />
+                    }
+                </button>
+
                 <h2 className={styles.cardSubject}>{group.label}</h2>
                 <div className={styles.cardMeta}>
                     <span className={styles.metaItem}><Users size={11} /> {group.senders.slice(0, 3).join(', ')}{group.senders.length > 3 ? ` +${group.senders.length - 3}` : ''}</span>
                     <span className={styles.metaItem}><Calendar size={11} /> {formatDate(group.dateFrom)}{group.emailCount > 1 ? ` — ${formatDate(group.dateTo)}` : ''}</span>
                 </div>
-                {group.bodyPreview && (
+                {!emailsOpen && group.bodyPreview && (
                     <p className={styles.cardPreview}>{group.bodyPreview.slice(0, 160).replace(/\n/g, ' ')}</p>
                 )}
             </div>
+
+            {/* ── Collapsible email list ── */}
+            {emailsOpen && (
+                <div className={styles.emailList}>
+                    {group.emailPreviews.map(e => <EmailRow key={e.id} email={e} />)}
+                    {remaining > 0 && (
+                        <div className={styles.emailListMore}>+{remaining} more email{remaining !== 1 ? 's' : ''} not shown</div>
+                    )}
+                </div>
+            )}
 
             {/* ── Agent suggestion ── */}
             {group.match ? (
@@ -187,9 +234,6 @@ function GroupCard({ group, briefs, onLinked, onCreated, onSkipped }: GroupCardP
                             onClick={() => setMode(m => m === 'search' ? 'idle' : 'search')}
                         >
                             <Search size={13} /> Different brief
-                        </button>
-                        <button className={styles.skipBtn} onClick={onSkipped}>
-                            <SkipForward size={13} /> Skip
                         </button>
                     </div>
 
@@ -252,6 +296,25 @@ function GroupCard({ group, briefs, onLinked, onCreated, onSkipped }: GroupCardP
                             </div>
                         </div>
                     )}
+
+                    {/* ── Prev / Next nav ── */}
+                    <div className={styles.navRow}>
+                        <button
+                            className={styles.navBtn}
+                            onClick={onPrev}
+                            disabled={index === 0}
+                        >
+                            <ChevronLeft size={13} /> Prev
+                        </button>
+                        <span className={styles.navPos}>{index + 1} / {total}</span>
+                        <button
+                            className={styles.navBtn}
+                            onClick={onNext}
+                            disabled={index >= total - 1}
+                        >
+                            Next <ChevronRight size={13} />
+                        </button>
+                    </div>
                 </>
             )}
 
@@ -277,7 +340,6 @@ export default function AgentClient() {
     const [index, setIndex]       = useState(0);
     const [linked, setLinked]     = useState(0);
     const [created, setCreated]   = useState(0);
-    const [skipped, setSkipped]   = useState(0);
 
     useEffect(() => {
         Promise.all([getAgentEmailGroups(), getInboxBriefs()])
@@ -296,22 +358,18 @@ export default function AgentClient() {
     const totalEmails = groups.reduce((n, g) => n + g.emailCount, 0);
     const done = !loading && index >= totalGroups;
 
-    const advance = () => setIndex(i => i + 1);
-
     const handleLinked = (count: number) => {
         setLinked(l => l + 1);
-        advance();
+        setIndex(i => i + 1);
     };
 
     const handleCreated = (count: number) => {
         setCreated(c => c + 1);
-        advance();
+        setIndex(i => i + 1);
     };
 
-    const handleSkipped = () => {
-        setSkipped(s => s + 1);
-        advance();
-    };
+    const goNext = () => setIndex(i => Math.min(i + 1, totalGroups));
+    const goPrev = () => setIndex(i => Math.max(i - 1, 0));
 
     const restart = () => {
         setLoading(true);
@@ -319,7 +377,6 @@ export default function AgentClient() {
         setIndex(0);
         setLinked(0);
         setCreated(0);
-        setSkipped(0);
         Promise.all([getAgentEmailGroups(), getInboxBriefs()])
             .then(([g, b]) => { setGroups(g); setBriefs(b); setLoading(false); })
             .catch((err: unknown) => { setLoadError((err as Error)?.message ?? 'Failed to load'); setLoading(false); });
@@ -382,7 +439,7 @@ export default function AgentClient() {
                     <DoneScreen
                         linked={linked}
                         created={created}
-                        skipped={skipped}
+                        skipped={totalGroups - linked - created}
                         total={totalGroups}
                         onRestart={restart}
                     />
@@ -392,9 +449,12 @@ export default function AgentClient() {
                             key={groups[index].key}
                             group={groups[index]}
                             briefs={briefs}
+                            index={index}
+                            total={totalGroups}
                             onLinked={handleLinked}
                             onCreated={handleCreated}
-                            onSkipped={handleSkipped}
+                            onPrev={goPrev}
+                            onNext={goNext}
                         />
                     </div>
                 ) : null}

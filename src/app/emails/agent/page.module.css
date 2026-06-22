@@ -575,3 +575,143 @@
     transition: all 0.12s;
 }
 .doneSecondary:hover { border-color: var(--primary); color: var(--primary); }
+
+/* ── Collapsible email count toggle ──────────────────────────────────────── */
+.cardCountToggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: none;
+    border: none;
+    padding: 0;
+    margin-bottom: 0.65rem;
+    cursor: pointer;
+}
+.cardCountToggle:hover .cardCountBadge {
+    background: #e0e7ff;
+    border-color: #a5b4fc;
+}
+
+.cardCountBadge {
+    display: inline-flex;
+    align-items: center;
+    font-size: 0.67rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--primary);
+    background: #eef2ff;
+    border: 1px solid #c7d2fe;
+    border-radius: 999px;
+    padding: 2px 10px;
+    transition: all 0.12s;
+}
+
+.toggleIcon {
+    color: var(--primary);
+    opacity: 0.7;
+}
+
+/* ── Collapsible email list ───────────────────────────────────────────────── */
+.emailList {
+    border-bottom: 1px solid var(--border);
+    max-height: 280px;
+    overflow-y: auto;
+}
+
+.emailRow {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.6rem 1.5rem;
+    border-bottom: 1px solid var(--border);
+    transition: background 0.1s;
+}
+.emailRow:last-child { border-bottom: none; }
+.emailRow:hover { background: #f8fafc; }
+
+.emailRowLeft {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    min-width: 0;
+    flex: 1;
+}
+
+.emailRowFrom {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.emailRowSubject {
+    font-size: 0.72rem;
+    color: var(--text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.emailRowPreview {
+    font-size: 0.68rem;
+    color: var(--text-secondary);
+    opacity: 0.7;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.emailRowDate {
+    font-size: 0.66rem;
+    color: var(--text-secondary);
+    white-space: nowrap;
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+.emailListMore {
+    padding: 0.45rem 1.5rem;
+    font-size: 0.7rem;
+    color: var(--text-secondary);
+    font-style: italic;
+    background: var(--background);
+}
+
+/* ── Prev / Next navigation row ───────────────────────────────────────────── */
+.navRow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    padding: 0.75rem 1.25rem;
+    border-top: 1px solid var(--border);
+    background: var(--background);
+}
+
+.navBtn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 0.45rem 0.85rem;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text-secondary);
+    font-size: 0.75rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.12s;
+    white-space: nowrap;
+}
+.navBtn:hover:not(:disabled) { border-color: var(--primary); color: var(--primary); }
+.navBtn:disabled { opacity: 0.35; cursor: default; }
+
+.navPos {
+    font-size: 0.72rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+}

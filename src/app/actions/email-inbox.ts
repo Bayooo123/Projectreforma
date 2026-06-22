@@ -635,15 +635,25 @@ export async function triageUnlinkedEmails(): Promise<TriageGroup[]> {
 
 // ── Email Link Agent ──────────────────────────────────────────────────────────
 
+export interface AgentEmailPreview {
+    id: string;
+    fromEmail: string;
+    fromName: string | null;
+    subject: string;
+    bodyPreview: string | null;
+    receivedAt: Date;
+}
+
 export interface AgentEmailGroup {
     key: string;
     label: string;
     emailIds: string[];
     emailCount: number;
-    senders: string[];          // display names / emails for the group
+    senders: string[];
     dateFrom: Date;
     dateTo: Date;
-    bodyPreview: string;        // first email's preview for context
+    bodyPreview: string;
+    emailPreviews: AgentEmailPreview[];
     match: {
         briefId: string;
         briefName: string;
@@ -730,6 +740,14 @@ export async function getAgentEmailGroups(): Promise<AgentEmailGroup[]> {
             dateFrom,
             dateTo,
             bodyPreview: rep.bodyPreview ?? '',
+            emailPreviews: emails.slice(0, 25).map(e => ({
+                id: e.id,
+                fromEmail: e.fromEmail,
+                fromName: e.fromName,
+                subject: e.subject,
+                bodyPreview: e.bodyPreview,
+                receivedAt: e.receivedAt,
+            })),
             match: best ? {
                 briefId:    best.b.id,
                 briefName:  best.b.name,
