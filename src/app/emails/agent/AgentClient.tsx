@@ -273,17 +273,23 @@ export default function AgentClient() {
     const [groups, setGroups]     = useState<AgentEmailGroup[]>([]);
     const [briefs, setBriefs]     = useState<InboxBrief[]>([]);
     const [loading, setLoading]   = useState(true);
+    const [loadError, setLoadError] = useState<string | null>(null);
     const [index, setIndex]       = useState(0);
     const [linked, setLinked]     = useState(0);
     const [created, setCreated]   = useState(0);
     const [skipped, setSkipped]   = useState(0);
 
     useEffect(() => {
-        Promise.all([getAgentEmailGroups(), getInboxBriefs()]).then(([g, b]) => {
-            setGroups(g);
-            setBriefs(b);
-            setLoading(false);
-        });
+        Promise.all([getAgentEmailGroups(), getInboxBriefs()])
+            .then(([g, b]) => {
+                setGroups(g);
+                setBriefs(b);
+                setLoading(false);
+            })
+            .catch((err: unknown) => {
+                setLoadError((err as Error)?.message ?? 'Failed to load emails');
+                setLoading(false);
+            });
     }, []);
 
     const totalGroups = groups.length;
@@ -309,15 +315,14 @@ export default function AgentClient() {
 
     const restart = () => {
         setLoading(true);
+        setLoadError(null);
         setIndex(0);
         setLinked(0);
         setCreated(0);
         setSkipped(0);
-        Promise.all([getAgentEmailGroups(), getInboxBriefs()]).then(([g, b]) => {
-            setGroups(g);
-            setBriefs(b);
-            setLoading(false);
-        });
+        Promise.all([getAgentEmailGroups(), getInboxBriefs()])
+            .then(([g, b]) => { setGroups(g); setBriefs(b); setLoading(false); })
+            .catch((err: unknown) => { setLoadError((err as Error)?.message ?? 'Failed to load'); setLoading(false); });
     };
 
     const progress = totalGroups > 0 ? Math.round((index / totalGroups) * 100) : 0;
@@ -364,6 +369,14 @@ export default function AgentClient() {
                     <div className={styles.loadingState}>
                         <RefreshCw size={28} className={styles.spinning} />
                         <p>Grouping your emails…</p>
+                    </div>
+                ) : loadError ? (
+                    <div className={styles.loadingState}>
+                        <p style={{ color: '#dc2626', fontWeight: 600 }}>Could not load emails</p>
+                        <p style={{ fontSize: '0.75rem', color: '#6b7280', margin: 0 }}>{loadError}</p>
+                        <button className={styles.doneSecondary} onClick={restart} style={{ marginTop: 8 }}>
+                            <RefreshCw size={13} /> Try again
+                        </button>
                     </div>
                 ) : done ? (
                     <DoneScreen
