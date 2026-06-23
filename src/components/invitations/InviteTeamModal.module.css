@@ -32,6 +32,8 @@
     overflow: hidden;
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
     animation: slideUp 0.3s ease;
+    display: flex;
+    flex-direction: column;
 }
 
 :global(.dark) .modal {
@@ -122,9 +124,17 @@
 }
 
 .form {
-    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.scrollBody {
+    flex: 1;
     overflow-y: auto;
-    max-height: calc(90vh - 100px);
+    padding: 24px;
 }
 
 .formGroup {
@@ -270,8 +280,9 @@
     display: flex;
     gap: 12px;
     justify-content: flex-end;
-    padding-top: 16px;
+    padding: 16px 24px;
     border-top: 1px solid #e5e7eb;
+    flex-shrink: 0;
 }
 
 .cancelButton {

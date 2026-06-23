@@ -110,72 +110,74 @@ const InviteTeamModal = ({ workspaceId, workspaceName, onClose }: InviteTeamModa
                 </div>
 
                 <form onSubmit={handleSubmit} className={styles.form}>
-                    <div className={styles.formGroup}>
-                        <label className={styles.label}>Email Addresses</label>
-                        {emails.map((email, index) => (
-                            <div key={index} className={styles.emailInputGroup}>
-                                <div className={styles.inputWrapper}>
-                                    <Mail size={18} className={styles.inputIcon} />
-                                    <input
-                                        type="email"
-                                        value={email}
-                                        onChange={(e) => updateEmail(index, e.target.value)}
-                                        placeholder="colleague@lawfirm.com"
-                                        className={styles.input}
-                                    />
+                    <div className={styles.scrollBody}>
+                        <div className={styles.formGroup}>
+                            <label className={styles.label}>Email Addresses</label>
+                            {emails.map((email, index) => (
+                                <div key={index} className={styles.emailInputGroup}>
+                                    <div className={styles.inputWrapper}>
+                                        <Mail size={18} className={styles.inputIcon} />
+                                        <input
+                                            type="email"
+                                            value={email}
+                                            onChange={(e) => updateEmail(index, e.target.value)}
+                                            placeholder="colleague@lawfirm.com"
+                                            className={styles.input}
+                                        />
+                                    </div>
+                                    {emails.length > 1 && (
+                                        <button
+                                            type="button"
+                                            onClick={() => removeEmailField(index)}
+                                            className={styles.removeButton}
+                                        >
+                                            <X size={16} />
+                                        </button>
+                                    )}
                                 </div>
-                                {emails.length > 1 && (
-                                    <button
-                                        type="button"
-                                        onClick={() => removeEmailField(index)}
-                                        className={styles.removeButton}
-                                    >
-                                        <X size={16} />
-                                    </button>
-                                )}
-                            </div>
-                        ))}
-                        <button
-                            type="button"
-                            onClick={addEmailField}
-                            className={styles.addButton}
-                        >
-                            + Add another email
-                        </button>
-                    </div>
-
-                    <div className={styles.formGroup}>
-                        <label htmlFor="role" className={styles.label}>
-                            Role
-                        </label>
-                        <select
-                            id="role"
-                            value={role}
-                            onChange={(e) => setRole(e.target.value)}
-                            className={styles.select}
-                        >
-                            {ROLES.map((r) => (
-                                <option key={r.value} value={r.value}>
-                                    {r.label}
-                                </option>
                             ))}
-                        </select>
-                        <p className={styles.hint}>
-                            Team members will be assigned this role when they join
-                        </p>
+                            <button
+                                type="button"
+                                onClick={addEmailField}
+                                className={styles.addButton}
+                            >
+                                + Add another email
+                            </button>
+                        </div>
+
+                        <div className={styles.formGroup}>
+                            <label htmlFor="role" className={styles.label}>
+                                Role
+                            </label>
+                            <select
+                                id="role"
+                                value={role}
+                                onChange={(e) => setRole(e.target.value)}
+                                className={styles.select}
+                            >
+                                {ROLES.map((r) => (
+                                    <option key={r.value} value={r.value}>
+                                        {r.label}
+                                    </option>
+                                ))}
+                            </select>
+                            <p className={styles.hint}>
+                                Team members will be assigned this role when they join
+                            </p>
+                        </div>
+
+                        {error && (
+                            <div className={styles.error}>
+                                {error}
+                            </div>
+                        )}
+
+                        {success && (
+                            <div className={styles.success}>
+                                {success}
+                            </div>
+                        )}
                     </div>
-
-                    {error && (
-                        <div className={styles.error}>
-                            {error}
-                        </div>
-                    )}
-
-                    {success && (
-                        <div className={styles.success}>
-                            {success}
-                        </div>
-                    )}
 
                     <div className={styles.footer}>
                         <button
