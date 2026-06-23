@@ -74,7 +74,6 @@ export async function register(
     const password = formData.get('password') as string;
     const phone = formData.get('phone') as string;
     const role = formData.get('role') as string;
-    const isPilot = formData.get('isPilot') === 'true';
 
     // Rate Limiting: 5 attempts per 15 mins per IP
     const h = await headers();
@@ -89,24 +88,7 @@ export async function register(
         return 'Too many registration attempts. Please try again later.';
     }
 
-    if (!isPilot) {
-        // BLOCK NEW SIGNUPS (LOCKED FOR APRIL LAUNCH)
-        console.log('🔒 Public registration is currently disabled. Adding to waitlist instead.');
-        try {
-            await prisma.waitlist.upsert({
-                where: { email },
-                update: { name, firmName },
-                create: { email, name, firmName }
-            });
-            return 'Registration is currently limited. You have been added to our waitlist and we will notify you once your workspace is ready.';
-        } catch (e) {
-            console.error('Waitlist error during registration attempt:', e);
-            return 'Registration is currently closed. Please join the waitlist on the home page.';
-        }
-    }
-
-    // PILOT BYPASS LOGIC
-    console.log('🚀 Pilot registration bypass triggered for:', { email, firmName });
+    console.log('🚀 New firm registration:', { email, firmName });
 
     try {
         if (!name || !email || !password || !firmName || !phone) {
