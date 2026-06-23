@@ -4,7 +4,7 @@ import {
     FileText, Calendar, Users, BarChart3, ArrowRight,
     CheckCircle2, Loader2, TrendingUp, ShieldCheck,
     Scale, ChevronDown, ChevronUp, Sparkles, Brain,
-    Phone, MessageSquare, Clock, Send, Shield
+    Phone, MessageSquare, Clock, Send, Shield, Search, Link2
 } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -143,8 +143,8 @@ function PhoneMock() {
                         <div className={styles.phoneCard}>
                             <div className={styles.phoneCardDot} style={{ background: '#818cf8' }} />
                             <div>
-                                <div className={styles.phoneCardTitle}>Draft ready</div>
-                                <div className={styles.phoneCardSub}>Notice of Appeal · Eureka</div>
+                                <div className={styles.phoneCardTitle}>Eureka insight ready</div>
+                                <div className={styles.phoneCardSub}>Matter summary · BRF-0042</div>
                             </div>
                         </div>
                     </div>
@@ -165,24 +165,22 @@ function EurekaChatMock() {
             </div>
             <div className={styles.eurekaMockBody}>
                 <div className={styles.eurekaUserMsg}>
-                    Draft a Notice of Appeal for Adeyemi v. UBA. We want to challenge the ruling on limitation of action.
+                    What's the current status of Adeyemi v. UBA and are there any outstanding deadlines?
                 </div>
                 <div className={styles.eurekaAiMsg}>
                     <div className={styles.eurekaAiHeader}>
                         <Brain size={12} />
-                        Eureka — drawing from BRF-0042
+                        Eureka — working in BRF-0042
                     </div>
                     <p className={styles.eurekaAiText}>
-                        Based on the case file for <strong>Adeyemi v. UBA (BRF-0042)</strong>, FHC Lagos — Coram: Adeola J — here is a draft Notice of Appeal:
+                        Here's a live summary of <strong>Adeyemi v. UBA (BRF-0042)</strong> — FHC Lagos, Coram: Adeola J:
                     </p>
                     <div className={styles.eurekaDraftBlock}>
-                        <div className={styles.eurekaDraftTitle}>NOTICE OF APPEAL</div>
-                        <p>IN THE COURT OF APPEAL</p>
-                        <p>LAGOS JUDICIAL DIVISION</p>
-                        <p>BETWEEN</p>
-                        <p>SAMUEL ADEYEMI ......... <em>Appellant</em></p>
-                        <p>AND</p>
-                        <p>UNITED BANK FOR AFRICA PLC .. <em>Respondent</em></p>
+                        <div className={styles.eurekaDraftTitle}>MATTER STATUS</div>
+                        <p>📅 Next hearing: <strong>15 Jul 2026</strong> — FHC Lagos</p>
+                        <p>📨 Last filing: Respondent&apos;s brief received 3 Jun</p>
+                        <p>💰 Outstanding: ₦750,000 (Invoice #INV-0084)</p>
+                        <p>👤 Lawyer: A. Odumosu (Senior Associate)</p>
                     </div>
                 </div>
             </div>
@@ -237,14 +235,9 @@ export default function LandingPage() {
             {/* ── Nav ─────────────────────────────────────── */}
             <nav className={`${styles.nav} ${scrolled ? styles.navScrolled : ''}`}>
                 <div className={styles.navInner}>
-                    <Image
-                        src="/images/logo-reforma.png"
-                        alt="Reforma"
-                        width={130}
-                        height={32}
-                        priority
-                        className={scrolled ? '' : styles.navLogoInvert}
-                    />
+                    <span className={`${styles.navWordmark} ${scrolled ? styles.navWordmarkDark : ''}`}>
+                        Reforma
+                    </span>
                     <div className={styles.navRight}>
                         <Link href="/login" className={`${styles.navLogin} ${scrolled ? '' : styles.navLoginLight}`}>
                             Log in
@@ -318,7 +311,7 @@ export default function LandingPage() {
                                 icon: Brain,
                                 title: 'Eureka AI',
                                 tag: 'AI-powered',
-                                desc: 'Ask in plain English. Get answers grounded in your actual files — not generic legal text.',
+                                desc: 'Your resident workspace agent. Ask questions, retrieve case information, and surface insights from across your entire firm.',
                             },
                             {
                                 icon: TrendingUp,
@@ -420,7 +413,7 @@ export default function LandingPage() {
                                         { text: 'Adeyemi v. UBA', sub: 'FHC Lagos · 09:00', accent: '#f59e0b' },
                                         { text: 'Invoice #INV-0084 sent', sub: '₦750,000 · Okonkwo Estate', accent: '#34d399' },
                                         { text: 'SEC filing due in 3 days', sub: 'Pinnacle Capital Ltd', accent: '#ef4444' },
-                                        { text: 'Eureka draft ready', sub: 'Notice of Appeal · BRF-0042', accent: '#818cf8' },
+                                        { text: 'Eureka insight ready', sub: 'Matter summary · BRF-0042', accent: '#818cf8' },
                                     ].map((item, i) => (
                                         <div key={i} className={styles.dashActivityItem}>
                                             <div className={styles.dashActivityDot} style={{ background: item.accent }} />
@@ -453,7 +446,7 @@ export default function LandingPage() {
                             {[
                                 { icon: Clock, text: 'Court reminders — 3 days, 2 days, morning-of' },
                                 { icon: TrendingUp, text: 'Instant payment alerts the moment a client pays' },
-                                { icon: Brain, text: 'Eureka AI in your pocket — ask questions on the move' },
+                                { icon: Brain, text: 'Eureka on the go — get case insights wherever you are' },
                             ].map(m => (
                                 <div key={m.text} className={styles.mobileMoment}>
                                     <div className={styles.mobileMomentIcon}><m.icon size={14} /></div>
@@ -478,14 +471,14 @@ export default function LandingPage() {
                         </h2>
                         <p className={styles.eurekaSub}>
                             Unlike general AI assistants, Eureka knows your cases, your clients,
-                            and your document archive. It drafts, retrieves, and answers — in context.
+                            and your workspace. It retrieves, surfaces, and acts — grounded in your firm&apos;s actual data.
                         </p>
                         <div className={styles.eurekaCaps}>
                             {[
-                                'Draft documents grounded in your case history',
-                                'Retrieve precedents from your own archive',
-                                'Answer questions about any brief in plain English',
-                                'Summarise long documents in seconds',
+                                'Retrieve case status, filings and deadlines instantly',
+                                'Answer questions about any matter in plain English',
+                                'Surface patterns across briefs, clients and correspondence',
+                                'Link emails and documents to the right brief automatically',
                             ].map(cap => (
                                 <div key={cap} className={styles.eurekaCap}>
                                     <Sparkles size={12} className={styles.eurekaCapIcon} />

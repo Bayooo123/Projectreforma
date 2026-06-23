@@ -41,6 +41,19 @@
     filter: brightness(0) invert(1);
 }
 
+.navWordmark {
+    font-size: 1.35rem;
+    font-weight: 800;
+    letter-spacing: -0.04em;
+    color: #ffffff;
+    transition: color 0.3s ease;
+    line-height: 1;
+}
+
+.navWordmarkDark {
+    color: #064e3b;
+}
+
 .navRight {
     display: flex;
     align-items: center;
