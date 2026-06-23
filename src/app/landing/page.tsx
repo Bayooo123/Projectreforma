@@ -32,7 +32,7 @@ const FAQS = [
     },
     {
         q: 'What subscription plans are available?',
-        a: 'Reforma offers tiered plans based on firm size and feature requirements. Pricing is in Naira with no foreign exchange exposure. Contact us or book a demo to receive current pricing details for your firm.',
+        a: 'Reforma offers tiered plans based on firm size and feature requirements. Pricing is in Naira with no foreign exchange exposure. Sign up to explore the platform, or contact us for enterprise pricing details.',
     },
     {
         q: 'Does Reforma work on mobile?',
@@ -190,9 +190,6 @@ function EurekaChatMock() {
 
 export default function LandingPage() {
     const [scrolled, setScrolled] = useState(false);
-    const [isSubmitting, setIsSubmitting] = useState(false);
-    const [submitStatus, setSubmitStatus] = useState<'idle' | 'success' | 'error'>('idle');
-    const [message, setMessage] = useState('');
     const ctaRef = useRef<HTMLElement>(null);
 
     useEffect(() => {
@@ -209,24 +206,6 @@ export default function LandingPage() {
         };
     }, []);
 
-    const scrollToCta = () => ctaRef.current?.scrollIntoView({ behavior: 'smooth' });
-
-    async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
-        event.preventDefault();
-        setIsSubmitting(true);
-        setSubmitStatus('idle');
-        const formData = new FormData(event.currentTarget);
-        const result = await joinWaitlist(formData);
-        setIsSubmitting(false);
-        if (result.success) {
-            setSubmitStatus('success');
-            setMessage(result.message || '');
-            (event.target as HTMLFormElement).reset();
-        } else {
-            setSubmitStatus('error');
-            setMessage('Something went wrong. Please try again.');
-        }
-    }
 
     return (
         <div className={styles.page}>
@@ -242,9 +221,9 @@ export default function LandingPage() {
                         <Link href="/login" className={`${styles.navLogin} ${scrolled ? '' : styles.navLoginLight}`}>
                             Log in
                         </Link>
-                        <button onClick={scrollToCta} className={`${styles.navCta} ${scrolled ? '' : styles.navCtaOutline}`}>
-                            Book a live demo
-                        </button>
+                        <Link href="/register" className={`${styles.navCta} ${scrolled ? '' : styles.navCtaOutline}`}>
+                            Sign up free
+                        </Link>
                     </div>
                 </div>
             </nav>
@@ -265,9 +244,9 @@ export default function LandingPage() {
                             Briefs, court calendars, Naira invoicing, compliance tracking,
                             and an AI assistant — built for the way Nigerian firms actually work.
                         </p>
-                        <button onClick={scrollToCta} className={styles.heroBtn}>
-                            Book a live demo <ArrowRight size={16} />
-                        </button>
+                        <Link href="/register" className={styles.heroBtn}>
+                            Get started — it&apos;s free <ArrowRight size={16} />
+                        </Link>
                         <div className={styles.heroTrust}>
                             <div className={styles.heroTrustItem}>
                                 <Shield size={13} /> NDPR-ready
@@ -378,9 +357,9 @@ export default function LandingPage() {
                                 </li>
                             ))}
                         </ul>
-                        <button onClick={scrollToCta} className={styles.btnPrimary} style={{ marginTop: '2rem' }}>
-                            Book a live demo <ArrowRight size={16} />
-                        </button>
+                        <Link href="/register" className={styles.btnPrimary} style={{ marginTop: '2rem' }}>
+                            Get started <ArrowRight size={16} />
+                        </Link>
                     </div>
                     <div className={styles.whyVisual}>
                         <div className={styles.dashMock}>
@@ -510,10 +489,10 @@ export default function LandingPage() {
                 <div className={styles.ctaInner}>
                     <div className={styles.ctaLeft}>
                         <p className={styles.eyebrowLight}>Get Started</p>
-                        <h2 className={styles.ctaTitle}>Book a live demo.</h2>
+                        <h2 className={styles.ctaTitle}>Your firm, set up<br />in minutes.</h2>
                         <p className={styles.ctaSub}>
-                            We will walk you through the platform and set up a pilot workspace
-                            for your firm — in under 30 minutes.
+                            Create your workspace, invite your team, and start managing
+                            matters — no waiting list, no sales call required.
                         </p>
                         <div className={styles.ctaContacts}>
                             <a href="tel:+2349031812675" className={styles.ctaContactItem}>
@@ -527,44 +506,20 @@ export default function LandingPage() {
                         </div>
                     </div>
                     <div className={styles.ctaRight}>
-                        {submitStatus === 'success' ? (
-                            <div className={styles.successBox}>
-                                <CheckCircle2 size={36} className={styles.successIcon} />
-                                <h3 className={styles.successTitle}>Request Received</h3>
-                                <p className={styles.successMsg}>We&apos;ll be in touch within one business day to schedule your demo.</p>
-                            </div>
-                        ) : (
-                            <form onSubmit={handleSubmit} className={styles.form}>
-                                <input
-                                    name="email"
-                                    type="email"
-                                    placeholder="Professional email address"
-                                    required
-                                    className={styles.input}
-                                />
-                                <input
-                                    name="firmName"
-                                    type="text"
-                                    placeholder="Name of law firm"
-                                    required
-                                    className={styles.input}
-                                />
-                                <select name="market" className={`${styles.input} ${styles.select}`} defaultValue="">
-                                    <option value="" disabled>Select your city</option>
-                                    <option value="Lagos">Lagos</option>
-                                    <option value="Abuja">Abuja</option>
-                                    <option value="Port Harcourt">Port Harcourt</option>
-                                    <option value="Other">Other city</option>
-                                </select>
-                                <button type="submit" disabled={isSubmitting} className={styles.submitBtn}>
-                                    {isSubmitting
-                                        ? <><Loader2 size={15} className={styles.spin} /> Sending…</>
-                                        : <><Send size={14} /> Book your demo</>
-                                    }
-                                </button>
-                                {submitStatus === 'error' && <p className={styles.formError}>{message}</p>}
-                            </form>
-                        )}
+                        <div className={styles.signupBox}>
+                            <CheckCircle2 size={32} className={styles.successIcon} />
+                            <h3 className={styles.signupBoxTitle}>Ready when you are</h3>
+                            <p className={styles.signupBoxSub}>
+                                Set up your firm workspace in under 5 minutes.
+                                No credit card required.
+                            </p>
+                            <Link href="/register" className={styles.signupBoxBtn}>
+                                Create your workspace <ArrowRight size={15} />
+                            </Link>
+                            <p className={styles.signupBoxNote}>
+                                Already have an account? <Link href="/login" className={styles.signupBoxLink}>Sign in</Link>
+                            </p>
+                        </div>
                     </div>
                 </div>
             </section>
@@ -596,7 +551,7 @@ export default function LandingPage() {
                         <Link href="/login" className={styles.footerLink}>Log in</Link>
                         <Link href="/register" className={styles.footerLink}>Register</Link>
                         <Link href="#faq" className={styles.footerLink}>FAQ</Link>
-                        <Link href="#cta" className={styles.footerLink}>Book a demo</Link>
+                        <Link href="/register" className={styles.footerLink}>Sign up</Link>
                     </div>
                     <div className={styles.footerCol}>
                         <h4 className={styles.footerColTitle}>Contact</h4>

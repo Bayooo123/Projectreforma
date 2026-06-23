@@ -94,6 +94,9 @@
     border-radius: 0.5rem;
     cursor: pointer;
     transition: background 0.2s, transform 0.15s;
+    display: inline-flex;
+    align-items: center;
+    text-decoration: none;
 }
 
 .navCta:hover {
@@ -208,6 +211,7 @@
     border-radius: 0.625rem;
     cursor: pointer;
     width: fit-content;
+    text-decoration: none;
     transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
     box-shadow: 0 4px 20px rgba(5, 150, 105, 0.4);
     animation: fadeUp 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.2s both;
@@ -1487,6 +1491,58 @@
     margin: 0;
     line-height: 1.6;
 }
+
+.signupBox {
+    padding: 2.5rem 2rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    text-align: center;
+}
+
+.signupBoxTitle {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #ffffff;
+    margin: 0;
+}
+
+.signupBoxSub {
+    font-size: 0.9375rem;
+    color: rgba(255, 255, 255, 0.55);
+    margin: 0;
+    line-height: 1.6;
+}
+
+.signupBoxBtn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: #ffffff;
+    color: #064e3b;
+    font-size: 0.95rem;
+    font-weight: 700;
+    padding: 0.75rem 1.75rem;
+    border-radius: 0.625rem;
+    text-decoration: none;
+    transition: background 0.2s, transform 0.15s;
+    margin-top: 0.5rem;
+}
+.signupBoxBtn:hover { background: #f0fdf4; transform: translateY(-1px); }
+
+.signupBoxNote {
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.4);
+    margin: 0;
+}
+
+.signupBoxLink {
+    color: rgba(255, 255, 255, 0.7);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+.signupBoxLink:hover { color: #ffffff; }
 
 /* ─── Footer ───────────────────────────────────────────── */
 .footer {
