@@ -16,7 +16,7 @@ export default function AuthLayout({
     children: React.ReactNode;
 }) {
     return (
-        <div className="relative min-h-screen bg-surface-subtle transition-colors duration-300">
+        <div className="relative min-h-screen overflow-hidden bg-surface-subtle transition-colors duration-300">
             {children}
         </div>
     );
