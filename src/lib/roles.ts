@@ -67,7 +67,7 @@ export function canInviteMembers(role: string | undefined, isOwner: boolean = fa
     if (isOwner) return true;
     if (!role) return false;
 
-    const invitePermittedRoles = ['Partner', 'Managing Partner'];
+    const invitePermittedRoles = ['Partner', 'Managing Partner', 'Practice Manager'];
     return invitePermittedRoles.some(r => r.toLowerCase() === role.toLowerCase());
 }
 

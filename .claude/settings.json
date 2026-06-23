@@ -83,11 +83,31 @@
       "Bash(sed -n '578,600p' src/components/management/WorkspaceSettingsModal.tsx)",
       "Bash(sed -n '176,179p' src/components/calendar/MatterDetailModal.tsx)",
       "Bash(sed -n '293,296p' src/app/settings/page.tsx)",
-      "Bash(sed -n '130,133p' src/components/management/WorkspaceSettingsModal.tsx)"
+      "Bash(sed -n '130,133p' src/components/management/WorkspaceSettingsModal.tsx)",
+      "Bash(PowerShell -Command \"Get-ChildItem -Path 'c:\\\\Users\\\\DELL\\\\.gemini\\\\antigravity\\\\scratch\\\\reforma-os\\\\src\\\\app\\\\finance' -File | Select-Object Name\")",
+      "Bash(mkdir -p \"c:\\\\Users\\\\DELL\\\\.gemini\\\\antigravity\\\\scratch\\\\reforma-os\\\\src\\\\app\\\\finance\\\\invoices\\\\new\" && mkdir -p \"c:\\\\Users\\\\DELL\\\\.gemini\\\\antigravity\\\\scratch\\\\reforma-os\\\\src\\\\app\\\\finance\\\\invoices\\\\[id]\")",
+      "Bash(mkdir -p \"c:\\\\Users\\\\DELL\\\\.gemini\\\\antigravity\\\\scratch\\\\reforma-os\\\\src\\\\app\\\\management\\\\clients\\\\[id]\")",
+      "Bash(dir /s /b \"*.html\")",
+      "Bash(findstr -i \"reforma\\\\|landing\")",
+      "Bash(echo \"Exit: $?\")",
+      "WebFetch(domain:www.abiolasanniandco.com)",
+      "Bash(node scripts/promote_admin.js bayo@abiolasanniandco.com)",
+      "Bash(node scripts/check-ascolp-roles.js)",
+      "Bash(python -c \"import json,sys; p=json.load\\(sys.stdin\\); deps={**p.get\\('dependencies',{}\\), **p.get\\('devDependencies',{}\\)}; [print\\(k,v\\) for k in sorted\\(deps\\) if any\\(x in k for x in ['archiver','jszip','adm-zip','zip','stream']\\)]\")",
+      "Bash(python -c \"import json; p=json.load\\(open\\('package.json'\\)\\); print\\(list\\(p.get\\('dependencies',{}\\).keys\\(\\)\\)[:40]\\)\")",
+      "Bash(node -e \"require\\('fflate'\\); console.log\\('fflate OK'\\)\")",
+      "mcp__claude_ai_Supabase__list_projects",
+      "mcp__claude_ai_Supabase__execute_sql",
+      "WebFetch(domain:muhammedadam.com)"
     ],
     "additionalDirectories": [
       "c:\\Users\\DELL\\.gemini\\antigravity\\scratch\\reforma-os\\src\\lib\\services",
-      "c:\\Users\\DELL\\.gemini\\antigravity\\scratch\\reforma-os\\src\\app\\api\\import"
+      "c:\\Users\\DELL\\.gemini\\antigravity\\scratch\\reforma-os\\src\\app\\api\\import",
+      "c:\\Users\\DELL\\.gemini\\antigravity\\scratch\\reforma-os\\src\\app\\finance\\invoices",
+      "c:\\Users\\DELL\\.gemini\\antigravity\\scratch\\reforma-os\\src\\app\\management\\clients",
+      "c:\\Users\\DELL\\.gemini\\antigravity\\scratch\\reforma-os\\src\\app\\api\\v1\\matters\\[id]",
+      "c:\\Users\\DELL\\.gemini\\antigravity\\scratch\\reforma-os\\src\\app\\api\\v1\\matters\\[id]\\bundle",
+      "c:\\Users\\DELL\\.gemini\\antigravity\\scratch\\reforma-os\\src\\app\\api\\v1\\briefs\\[id]"
     ]
   }
 }

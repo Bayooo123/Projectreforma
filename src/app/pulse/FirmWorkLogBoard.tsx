@@ -1,9 +1,29 @@
 "use client";
 
-import { useState } from 'react';
-import { Plus, X, FileText } from 'lucide-react';
+import { useState, useEffect, useMemo, useRef } from 'react';
+import { Plus, X, FileText, ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
 import type { WorkEntry } from '@/app/actions/work-entries';
-import { createWorkEntry } from '@/app/actions/work-entries';
+import { createWorkEntry, getFirmWorkLog } from '@/app/actions/work-entries';
+
+function formatDateKey(date: Date): string {
+    const yyyy = date.getFullYear();
+    const mm = String(date.getMonth() + 1).padStart(2, '0');
+    const dd = String(date.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+}
+
+function shiftDate(dateKey: string, days: number): string {
+    const [year, month, day] = dateKey.split('-').map(Number);
+    const date = new Date(year, month - 1, day);
+    date.setDate(date.getDate() + days);
+    return formatDateKey(date);
+}
+
+function formatDateLabel(dateKey: string): string {
+    const [year, month, day] = dateKey.split('-').map(Number);
+    const date = new Date(year, month - 1, day);
+    return date.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
+}
 
 interface Brief {
     id: string;
@@ -180,6 +200,30 @@ export default function FirmWorkLogBoard({
     const [entries, setEntries] = useState<WorkEntry[]>(initialEntries);
     const [showAssignForm, setShowAssignForm] = useState(false);
 
+    const [dateKey, setDateKey] = useState<string>(() => formatDateKey(new Date()));
+    const todayKey = useMemo(() => formatDateKey(new Date()), []);
+    const isViewingToday = dateKey === todayKey;
+    const isFirstRender = useRef(true);
+
+    useEffect(() => {
+        if (isFirstRender.current) {
+            isFirstRender.current = false;
+            return;
+        }
+        let active = true;
+        async function fetchEntries() {
+            const res = await getFirmWorkLog(workspaceId, dateKey);
+            if (active) setEntries(res);
+        }
+        fetchEntries();
+        return () => { active = false; };
+    }, [dateKey, workspaceId]);
+
+    // Hide assign form when navigating to a past date
+    useEffect(() => {
+        if (!isViewingToday) setShowAssignForm(false);
+    }, [isViewingToday]);
+
     function handleAdded(newEntries: WorkEntry[]) {
         setEntries(prev => [...prev, ...newEntries]);
     }
@@ -191,8 +235,9 @@ export default function FirmWorkLogBoard({
         byMember.get(e.userId)!.push(e);
     }
 
-    // For admin: show all members. For others: only members with entries.
-    const membersToShow = isAdmin
+    // On today: admin sees all members; others see only members with entries.
+    // On past dates: everyone sees only members who have entries that day.
+    const membersToShow = (isViewingToday && isAdmin)
         ? [...teamMembers].sort((a, b) =>
             displayName(a.user.name, a.user.email).localeCompare(displayName(b.user.name, b.user.email))
           )
@@ -205,16 +250,54 @@ export default function FirmWorkLogBoard({
     return (
         <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 10, padding: '12px 14px', marginBottom: 10 }}>
             {/* Header */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-                <div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14, flexWrap: 'wrap', gap: 8 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
                     <span style={{ fontSize: 11, fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                        Today's Work Log
+                        {isViewingToday ? "Today's Work Log" : 'Work Log'}
                     </span>
-                    <span style={{ fontSize: 11, color: '#94a3b8', marginLeft: 8 }}>
-                        {new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}
-                    </span>
+
+                    {/* Date Navigation */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <button
+                            type="button"
+                            onClick={() => setDateKey(prev => shiftDate(prev, -1))}
+                            style={navBtnStyle}
+                            title="Previous day"
+                        >
+                            <ChevronLeft size={12} />
+                        </button>
+
+                        <div style={datePickerWrapperStyle}>
+                            <Calendar size={11} style={{ color: '#475569' }} />
+                            <span style={{ fontSize: 10, fontWeight: 600, color: '#475569' }}>
+                                {isViewingToday ? 'Today' : formatDateLabel(dateKey)}
+                            </span>
+                            <input
+                                type="date"
+                                value={dateKey}
+                                max={todayKey}
+                                onChange={e => setDateKey(e.target.value)}
+                                style={dateInputHiddenStyle}
+                            />
+                        </div>
+
+                        <button
+                            type="button"
+                            onClick={() => setDateKey(prev => shiftDate(prev, 1))}
+                            disabled={isViewingToday}
+                            style={{
+                                ...navBtnStyle,
+                                opacity: isViewingToday ? 0.3 : 1,
+                                cursor: isViewingToday ? 'not-allowed' : 'pointer',
+                            }}
+                            title="Next day"
+                        >
+                            <ChevronRight size={12} />
+                        </button>
+                    </div>
                 </div>
-                {isAdmin && (
+
+                {isAdmin && isViewingToday && (
                     <button
                         onClick={() => setShowAssignForm(v => !v)}
                         style={{
@@ -237,8 +320,8 @@ export default function FirmWorkLogBoard({
                 )}
             </div>
 
-            {/* Batch entry form — admin only */}
-            {isAdmin && showAssignForm && (
+            {/* Batch entry form — admin only, today only */}
+            {isAdmin && isViewingToday && showAssignForm && (
                 <MorningBriefingForm
                     workspaceId={workspaceId}
                     teamMembers={teamMembers}
@@ -248,7 +331,9 @@ export default function FirmWorkLogBoard({
 
             {/* Work list */}
             {membersToShow.length === 0 ? (
-                <p style={{ fontSize: 12, color: '#94a3b8', margin: 0 }}>No work has been logged for today yet.</p>
+                <p style={{ fontSize: 12, color: '#94a3b8', margin: 0 }}>
+                    {isViewingToday ? 'No work has been logged for today yet.' : 'No work was logged for this date.'}
+                </p>
             ) : (
                 <div style={{ display: 'flex', flexDirection: 'column' }}>
                     {membersToShow.map((member, idx) => {
@@ -344,4 +429,42 @@ const cellStyle: React.CSSProperties = {
     border: '1px solid #e2e8f0', borderRadius: 6,
     background: '#fff', outline: 'none',
     boxSizing: 'border-box', fontFamily: 'inherit', color: '#1e293b',
+};
+
+const navBtnStyle: React.CSSProperties = {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: 22,
+    height: 22,
+    borderRadius: 6,
+    border: '1px solid #e2e8f0',
+    background: '#fff',
+    color: '#475569',
+    cursor: 'pointer',
+    padding: 0,
+};
+
+const datePickerWrapperStyle: React.CSSProperties = {
+    position: 'relative',
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 6,
+    background: '#f8fafc',
+    border: '1px solid #e2e8f0',
+    borderRadius: 6,
+    padding: '2px 8px',
+    cursor: 'pointer',
+    height: 22,
+    boxSizing: 'border-box',
+};
+
+const dateInputHiddenStyle: React.CSSProperties = {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: '100%',
+    height: '100%',
+    opacity: 0,
+    cursor: 'pointer',
 };

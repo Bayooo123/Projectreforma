@@ -137,12 +137,13 @@ export async function deleteWorkEntry(id: string) {
 }
 
 /** Today's entries assigned TO the current user (for My Pulse). */
-export async function getTodayWorkEntries(workspaceId: string): Promise<WorkEntry[]> {
+export async function getTodayWorkEntries(workspaceId: string, date?: string): Promise<WorkEntry[]> {
     const user = await requireAuth();
 
-    const startOfDay = new Date();
+    const targetDate = date ? new Date(date) : new Date();
+    const startOfDay = new Date(targetDate);
     startOfDay.setHours(0, 0, 0, 0);
-    const endOfDay = new Date();
+    const endOfDay = new Date(targetDate);
     endOfDay.setHours(23, 59, 59, 999);
 
     const rows = await prisma.workEntry.findMany({

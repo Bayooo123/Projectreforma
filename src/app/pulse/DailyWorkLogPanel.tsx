@@ -1,13 +1,34 @@
 "use client";
 
-import { useState, useTransition, useEffect, useRef } from 'react';
-import { CheckCircle2, Circle, Clock, Plus, Trash2, ChevronDown, FileText, AlertCircle, User } from 'lucide-react';
+import { useState, useTransition, useEffect, useRef, useMemo } from 'react';
+import { CheckCircle2, Circle, Clock, Plus, Trash2, ChevronDown, FileText, AlertCircle, User, ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
 import type { WorkEntry } from '@/app/actions/work-entries';
 import {
     createWorkEntry,
     updateWorkEntryStatus,
     deleteWorkEntry,
+    getTodayWorkEntries,
 } from '@/app/actions/work-entries';
+
+function formatDateKey(date: Date): string {
+    const yyyy = date.getFullYear();
+    const mm = String(date.getMonth() + 1).padStart(2, '0');
+    const dd = String(date.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+}
+
+function shiftDate(dateKey: string, days: number): string {
+    const [year, month, day] = dateKey.split('-').map(Number);
+    const date = new Date(year, month - 1, day);
+    date.setDate(date.getDate() + days);
+    return formatDateKey(date);
+}
+
+function formatDateLabel(dateKey: string): string {
+    const [year, month, day] = dateKey.split('-').map(Number);
+    const date = new Date(year, month - 1, day);
+    return date.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
+}
 
 interface Brief {
     id: string;
@@ -53,6 +74,36 @@ export default function DailyWorkLogPanel({ workspaceId, userId, initialEntries,
     const [showForm, setShowForm] = useState(false);
     const [isPending, startTransition] = useTransition();
     const panelRef = useRef<HTMLDivElement>(null);
+
+    const [dateKey, setDateKey] = useState<string>(() => formatDateKey(new Date()));
+    const todayKey = useMemo(() => formatDateKey(new Date()), []);
+    const isViewingToday = dateKey === todayKey;
+    const isFirstRender = useRef(true);
+
+    useEffect(() => {
+        if (isFirstRender.current) {
+            isFirstRender.current = false;
+            return;
+        }
+
+        let active = true;
+        async function fetchEntries() {
+            const res = await getTodayWorkEntries(workspaceId, dateKey);
+            if (active) {
+                setEntries(res);
+            }
+        }
+        fetchEntries();
+        return () => {
+            active = false;
+        };
+    }, [dateKey, workspaceId]);
+
+    useEffect(() => {
+        if (dateKey !== todayKey) {
+            setShowForm(false);
+        }
+    }, [dateKey, todayKey]);
 
     useEffect(() => {
         if (openForm) {
@@ -115,19 +166,62 @@ export default function DailyWorkLogPanel({ workspaceId, userId, initialEntries,
     return (
         <div ref={panelRef} style={panelStyle}>
             {/* Header */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-                <div>
-                    <span style={titleStyle}>Today's Work Log</span>
-                    {entries.length > 0 && (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, flexWrap: 'wrap', gap: 8 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                    <span style={titleStyle}>{isViewingToday ? "Today's Work Log" : "Work Log"}</span>
+                    
+                    {/* Date Navigation */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <button
+                            type="button"
+                            onClick={() => setDateKey(prev => shiftDate(prev, -1))}
+                            style={navBtnStyle}
+                            title="Previous day"
+                        >
+                            <ChevronLeft size={12} />
+                        </button>
+
+                        <div style={datePickerWrapperStyle}>
+                            <Calendar size={11} style={{ color: '#475569' }} />
+                            <span style={{ fontSize: 10, fontWeight: 600, color: '#475569' }}>
+                                {isViewingToday ? 'Today' : formatDateLabel(dateKey)}
+                            </span>
+                            <input
+                                type="date"
+                                value={dateKey}
+                                max={todayKey}
+                                onChange={e => setDateKey(e.target.value)}
+                                style={dateInputHiddenStyle}
+                            />
+                        </div>
+
+                        <button
+                            type="button"
+                            onClick={() => setDateKey(prev => shiftDate(prev, 1))}
+                            disabled={isViewingToday}
+                            style={{
+                                ...navBtnStyle,
+                                opacity: isViewingToday ? 0.3 : 1,
+                                cursor: isViewingToday ? 'not-allowed' : 'pointer',
+                            }}
+                            title="Next day"
+                        >
+                            <ChevronRight size={12} />
+                        </button>
+                    </div>
+
+                    {isViewingToday && entries.length > 0 && (
                         <span style={subtitleStyle}>
                             {completedCount}/{entries.length} done
                         </span>
                     )}
                 </div>
-                <button onClick={() => setShowForm(v => !v)} style={addBtnStyle}>
-                    <Plus size={13} />
-                    Add task
-                </button>
+                {isViewingToday && (
+                    <button onClick={() => setShowForm(v => !v)} style={addBtnStyle}>
+                        <Plus size={13} />
+                        Add task
+                    </button>
+                )}
             </div>
 
             {/* Progress bar */}
@@ -230,7 +324,9 @@ export default function DailyWorkLogPanel({ workspaceId, userId, initialEntries,
             {/* Entry list */}
             {entries.length === 0 && !showForm && (
                 <p style={{ fontSize: 11, color: '#94a3b8', margin: 0 }}>
-                    No tasks logged for today. Add your first task to start tracking.
+                    {isViewingToday
+                        ? "No tasks logged for today. Add your first task to start tracking."
+                        : "No tasks were logged for this date."}
                 </p>
             )}
 
@@ -373,6 +469,44 @@ const panelStyle: React.CSSProperties = {
     borderRadius: 10,
     padding: '12px 14px',
     marginBottom: 10,
+};
+
+const navBtnStyle: React.CSSProperties = {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: 22,
+    height: 22,
+    borderRadius: 6,
+    border: '1px solid #e2e8f0',
+    background: '#fff',
+    color: '#475569',
+    cursor: 'pointer',
+    padding: 0,
+};
+
+const datePickerWrapperStyle: React.CSSProperties = {
+    position: 'relative',
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 6,
+    background: '#f8fafc',
+    border: '1px solid #e2e8f0',
+    borderRadius: 6,
+    padding: '2px 8px',
+    cursor: 'pointer',
+    height: 22,
+    boxSizing: 'border-box',
+};
+
+const dateInputHiddenStyle: React.CSSProperties = {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: '100%',
+    height: '100%',
+    opacity: 0,
+    cursor: 'pointer',
 };
 
 const titleStyle: React.CSSProperties = {
