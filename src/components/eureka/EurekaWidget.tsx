@@ -17,8 +17,8 @@ interface ChatSession {
     messages: Message[];
 }
 
-interface Position { bottom: number; left: number; }
-const DEFAULT_POS: Position = { bottom: 84, left: 24 };
+interface Position { bottom: number; right: number; }
+const DEFAULT_POS: Position = { bottom: 24, right: 24 };
 const TOGGLE_OFFSET = 60;
 const MAX_SESSIONS = 40;
 
@@ -221,9 +221,9 @@ export default function EurekaWidget() {
         if ((e.target as HTMLElement).closest('button')) return;
         e.preventDefault();
         const startX = e.clientX, startY = e.clientY;
-        const startLeft = pos.left, startBottom = pos.bottom;
+        const startRight = pos.right, startBottom = pos.bottom;
         const handleMove = (ev: PointerEvent) => setPos({
-            left: Math.max(0, startLeft + ev.clientX - startX),
+            right: Math.max(0, startRight - (ev.clientX - startX)),
             bottom: Math.max(0, startBottom - (ev.clientY - startY)),
         });
         const handleUp = () => {
@@ -234,13 +234,13 @@ export default function EurekaWidget() {
         window.addEventListener('pointerup', handleUp);
     };
 
-    const togglePos = { bottom: pos.bottom - TOGGLE_OFFSET, left: pos.left };
+    const togglePos = { bottom: pos.bottom + TOGGLE_OFFSET, right: pos.right };
 
     return (
         <>
             <div
                 className={`${styles.panel} ${open ? styles.panelOpen : styles.panelClosed}`}
-                style={{ bottom: pos.bottom, left: pos.left }}
+                style={{ bottom: pos.bottom, right: pos.right }}
             >
                 {/* Sidebar */}
                 <div className={`${styles.sidebar} ${sidebarOpen ? styles.sidebarVisible : styles.sidebarHidden}`}>
@@ -367,7 +367,7 @@ export default function EurekaWidget() {
                 className={styles.toggle}
                 onClick={() => setOpen(o => !o)}
                 title="Eureka — Reforma Intelligence"
-                style={{ bottom: togglePos.bottom, left: togglePos.left }}
+                style={{ bottom: togglePos.bottom, right: togglePos.right }}
             >
                 {open ? <MinusIcon /> : <img src="/logos/reforma-logo-monogram.png" alt="Eureka" className={styles.toggleLogo} />}
             </button>

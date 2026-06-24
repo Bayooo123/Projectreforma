@@ -2,7 +2,7 @@
 .toggle {
     position: fixed;
     bottom: 24px;
-    left: 24px;
+    right: 24px;
     z-index: 1000;
     width: 48px;
     height: 48px;
@@ -25,7 +25,7 @@
 .panel {
     position: fixed;
     bottom: 84px;
-    left: 24px;
+    right: 24px;
     z-index: 999;
     width: 580px;
     height: 580px;
@@ -36,7 +36,7 @@
     background: #0f172a;
     box-shadow: 0 16px 56px rgba(0, 0, 0, 0.5);
     border: 1px solid rgba(255, 255, 255, 0.08);
-    transform-origin: bottom left;
+    transform-origin: bottom right;
     transition: transform 0.22s cubic-bezier(0.34, 1.4, 0.64, 1), opacity 0.18s ease;
 }
 .panelClosed { transform: scale(0.88) translateY(12px); opacity: 0; pointer-events: none; }
