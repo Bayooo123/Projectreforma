@@ -35,11 +35,11 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: 'Invalid or expired reset link' }, { status: 400 });
         }
 
-        // Update password
+        // Update password and invalidate all existing sessions
         const hashedPassword = await bcrypt.hash(password, 10);
         await prisma.user.update({
             where: { id: resetRequest.userId },
-            data: { password: hashedPassword }
+            data: { password: hashedPassword, sessionVersion: { increment: 1 } }
         });
 
         // Log security event

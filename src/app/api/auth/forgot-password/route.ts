@@ -52,11 +52,16 @@ export async function POST(req: NextRequest) {
         const resetUrl = `${domain}/auth/reset-password?token=${token}`;
 
         // Send Email
-        await mailService.send({
+        const mailResult = await mailService.send({
             to: user.email,
             subject: 'Reset your Reforma password',
             html: getPasswordResetEmail(resetUrl)
         });
+
+        if (!mailResult.success) {
+            console.error('[ForgotPassword] Failed to send reset email to', user.email, mailResult.error);
+            return NextResponse.json({ error: 'Failed to send reset email. Please try again.' }, { status: 500 });
+        }
 
         // Log security event
         await logSecurityEvent({

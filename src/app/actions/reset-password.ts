@@ -120,7 +120,10 @@ export async function updatePassword(state: ResetState, formData: FormData): Pro
 
         await prisma.user.update({
             where: { id: resetRequest.userId },
-            data: { password: hashedPassword }
+            data: {
+                password: hashedPassword,
+                sessionVersion: { increment: 1 },
+            }
         });
 
         // Log security event

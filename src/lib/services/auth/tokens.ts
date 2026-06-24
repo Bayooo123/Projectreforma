@@ -66,7 +66,7 @@ export const validateEmailVerificationToken = async (token: string) => {
 /**
  * PASSWORD RESET TOKENS
  */
-export const createPasswordResetToken = async (userId: string, ttlMs = 15 * 60 * 1000) => {
+export const createPasswordResetToken = async (userId: string, ttlMs = 60 * 60 * 1000) => {
     const token = generateOpaqueToken();
     const tokenHash = hashToken(token);
     const expiresAt = new Date(Date.now() + ttlMs);

@@ -124,7 +124,7 @@ function ResetPasswordForm() {
                                             name="password"
                                             type="password"
                                             required
-                                            minLength={6}
+                                            minLength={8}
                                             className={styles.input}
                                             placeholder="••••••••"
                                             style={{ paddingLeft: '2.5rem' }}
@@ -143,7 +143,7 @@ function ResetPasswordForm() {
                                             name="confirmPassword"
                                             type="password"
                                             required
-                                            minLength={6}
+                                            minLength={8}
                                             className={styles.input}
                                             placeholder="••••••••"
                                             style={{ paddingLeft: '2.5rem' }}
