@@ -2,7 +2,7 @@
 .toggle {
     position: fixed;
     bottom: 24px;
-    right: 24px;
+    right: 84px;
     z-index: 1000;
     width: 48px;
     height: 48px;
@@ -25,7 +25,7 @@
 .panel {
     position: fixed;
     bottom: 84px;
-    right: 24px;
+    right: 84px;
     z-index: 999;
     width: 580px;
     height: 580px;

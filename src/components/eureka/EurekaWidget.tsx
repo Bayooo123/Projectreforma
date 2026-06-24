@@ -18,7 +18,7 @@ interface ChatSession {
 }
 
 interface Position { bottom: number; right: number; }
-const DEFAULT_POS: Position = { bottom: 24, right: 24 };
+const DEFAULT_POS: Position = { bottom: 84, right: 84 };
 const TOGGLE_OFFSET = 60;
 const MAX_SESSIONS = 40;
 
@@ -234,7 +234,7 @@ export default function EurekaWidget() {
         window.addEventListener('pointerup', handleUp);
     };
 
-    const togglePos = { bottom: pos.bottom + TOGGLE_OFFSET, right: pos.right };
+    const togglePos = { bottom: pos.bottom - TOGGLE_OFFSET, right: pos.right };
 
     return (
         <>
