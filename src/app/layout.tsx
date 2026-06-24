@@ -55,10 +55,13 @@ export default async function RootLayout({
   const user = userData?.user;
   const workspaceData = userData?.workspace;
 
+  const sanitizeColor = (c: string | null | undefined, fallback: string) =>
+    c && /^#[0-9a-fA-F]{3,8}$/.test(c) ? c : fallback;
+
   // Resolve theme: personal overrides workspace if user opted in
-  let resolvedAccentColor = (workspaceData as any)?.accentColor || '#3182ce';
-  let resolvedSecondaryColor = (workspaceData as any)?.secondaryColor || '#1e293b';
-  let resolvedBrandColor = (workspaceData as any)?.brandColor || '#121826';
+  let resolvedAccentColor = sanitizeColor((workspaceData as any)?.accentColor, '#3182ce');
+  let resolvedSecondaryColor = sanitizeColor((workspaceData as any)?.secondaryColor, '#1e293b');
+  let resolvedBrandColor = sanitizeColor((workspaceData as any)?.brandColor, '#121826');
 
   if (user?.id) {
     try {
@@ -94,17 +97,27 @@ export default async function RootLayout({
   // Determine if we should render the app shell
   const showShell = !!user && !isPublicRoute && !isChromelessRoute;
 
+  // Inject workspace colors directly into :root so they override globals.css defaults.
+  // Using a <style> tag on :root is more reliable than inline style on <body> because
+  // globals.css defines --primary/--bg-sidebar as var(--accent-color) on :root — if the
+  // source variable is only on <body>, browsers resolve it fine but some edge cases (dark
+  // mode class overrides, ThemeProvider) can interfere. This approach is unambiguous.
+  const workspaceColorStyle = `
+    :root {
+      --accent-color: ${resolvedAccentColor};
+      --secondary-color: ${resolvedSecondaryColor};
+      --brand-color: ${resolvedBrandColor};
+    }
+  `;
+
   return (
     <html lang="en" suppressHydrationWarning>
       <body
         className={`${ibmPlexSans.variable} ${sourceSerif4.variable}`}
-        style={{
-          ['--brand-color' as any]: resolvedBrandColor,
-          ['--secondary-color' as any]: resolvedSecondaryColor,
-          ['--accent-color' as any]: resolvedAccentColor,
-          minHeight: '100vh'
-        }}
+        style={{ minHeight: '100vh' }}
       >
+        {/* Workspace colour overrides — injected per-request from DB, targets :root */}
+        <style dangerouslySetInnerHTML={{ __html: workspaceColorStyle }} />
         <NextTopLoader
           color="#0f766e"
           height={3}

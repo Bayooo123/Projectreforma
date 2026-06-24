@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { User, Building2, Lock, Loader, FileText, AlertCircle, Key, Copy, Trash2, Plus, Eye, EyeOff, Check, HardDrive, CreditCard, CheckCircle, Clock, XCircle, Brain, Palette, RotateCcw } from 'lucide-react';
-import { updateWorkspaceSettings, getWorkspaceSettings, getStorageUsage, getInstitutionalEmail, claimInstitutionalEmail, getUserTheme, updateUserTheme } from '@/app/actions/settings';
+import { updateWorkspaceSettings, getWorkspaceSettings, getStorageUsage, getInstitutionalEmail, claimInstitutionalEmail, getUserTheme, updateUserTheme, updateWorkspaceColors } from '@/app/actions/settings';
 import { getUserProfile, updateUserProfile } from '@/app/actions/members';
 import { getBankAccounts, createBankAccount, deleteBankAccount } from '@/app/actions/bank-accounts';
 import { generateApiKey, listApiKeys, revokeApiKey } from '@/app/actions/api-keys';
@@ -41,6 +41,8 @@ export default function SettingsPage() {
     const [personalBrandColor, setPersonalBrandColor] = useState('#064e3b');
     const [isSavingTheme, setIsSavingTheme] = useState(false);
     const [themeSaved, setThemeSaved] = useState(false);
+    const [isSavingColors, setIsSavingColors] = useState(false);
+    const [colorSaveError, setColorSaveError] = useState<string | null>(null);
 
     // Institutional Memory Email
     const [institutionalEmail, setInstitutionalEmail] = useState<string | null>(null);
@@ -327,6 +329,28 @@ export default function SettingsPage() {
         }
     };
 
+    const handleSaveColors = async () => {
+        if (!session?.user?.workspaceId) return;
+        setIsSavingColors(true);
+        setColorSaveError(null);
+        const result = await updateWorkspaceColors(session.user.workspaceId, {
+            accentColor: editAccentColor,
+            secondaryColor: editSecondaryColor,
+            brandColor: editBrandColor,
+        });
+        setIsSavingColors(false);
+        if (result.success) {
+            setTimeout(() => window.location.reload(), 300);
+        } else {
+            setColorSaveError(result.error || 'Failed to save colours');
+        }
+    };
+
+    // Only Practice Managers (and platform admins) can set workspace-wide colours
+    const canEditWorkspaceColors =
+        session?.user?.role?.toLowerCase() === 'practice manager' ||
+        !!(session?.user as any)?.isPlatformAdmin;
+
     // Check if user can manage API keys (owner/partner only)
     const canManageApiKeys = session?.user?.role === 'owner' || session?.user?.role === 'partner';
 
@@ -475,10 +499,20 @@ export default function SettingsPage() {
                                     )}
                                 </div>
                             </div>
-                            <div className={styles.formGroup} style={{ marginTop: '1rem' }}>
-                                <label style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)' }}>Workspace Theme Colours</label>
-                                <p className={styles.hint} style={{ marginBottom: '1.25rem' }}>
-                                    These colours apply workspace-wide. Each user can optionally override them in Appearance settings.
+                            <div className={styles.actions}>
+                                <button type="submit" className={styles.saveBtn} disabled={isSaving}>Save Configuration</button>
+                            </div>
+                        </form>
+
+                        {/* Workspace Colour Card — Practice Manager only */}
+                        {canEditWorkspaceColors && (
+                            <div className={styles.card}>
+                                <div className={styles.cardHeader}>
+                                    <Palette className={styles.icon} />
+                                    <h2>Workspace Colours</h2>
+                                </div>
+                                <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
+                                    Set the colour scheme for the entire workspace. Changes apply to all team members immediately on reload.
                                 </p>
 
                                 {/* Live preview */}
@@ -510,34 +544,45 @@ export default function SettingsPage() {
                                     </div>
                                 </div>
 
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem' }}>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
                                     <ColorPicker
                                         label="Primary (Buttons & Links)"
                                         hint="Used for buttons, active nav links, and primary actions"
                                         value={editAccentColor}
                                         onChange={setEditAccentColor}
-                                        presets={['#059669','#3182ce','#0057B8','#7c3aed','#dc2626','#d97706','#0891b2','#475569']}
+                                        presets={['#059669','#3182ce','#0057B8','#7c3aed','#dc2626','#d97706','#C8922A','#0891b2']}
                                     />
                                     <ColorPicker
                                         label="Sidebar Background"
                                         hint="Navigation sidebar colour — usually a dark shade"
                                         value={editSecondaryColor}
                                         onChange={setEditSecondaryColor}
-                                        presets={['#022c22','#064e3b','#0f172a','#1e293b','#0A2342','#1a1a2e','#18181b','#3730a3']}
+                                        presets={['#022c22','#064e3b','#0f172a','#1e293b','#1A1208','#1a1a2e','#18181b','#3730a3']}
                                     />
                                     <ColorPicker
                                         label="Brand Text"
                                         hint="Used for headings and brand-coloured text elements"
                                         value={editBrandColor}
                                         onChange={setEditBrandColor}
-                                        presets={['#065f46','#1e40af','#6d28d9','#9a3412','#D4AF37','#0369a1','#374151','#121826']}
+                                        presets={['#065f46','#1e40af','#6d28d9','#9a3412','#7A5610','#0369a1','#374151','#121826']}
                                     />
                                 </div>
+
+                                {colorSaveError && (
+                                    <p style={{ fontSize: '0.85rem', color: '#dc2626', marginBottom: '0.75rem' }}>{colorSaveError}</p>
+                                )}
+                                <div className={styles.actions}>
+                                    <button
+                                        type="button"
+                                        className={styles.saveBtn}
+                                        onClick={handleSaveColors}
+                                        disabled={isSavingColors}
+                                    >
+                                        {isSavingColors ? 'Saving…' : 'Apply Colours'}
+                                    </button>
+                                </div>
                             </div>
-                            <div className={styles.actions}>
-                                <button type="submit" className={styles.saveBtn} disabled={isSaving}>Save Configuration</button>
-                            </div>
-                        </form>
+                        )}
 
                         {/* Institutional Memory Card */}
                         <div className={styles.card}>

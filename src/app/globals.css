@@ -157,9 +157,9 @@
 
 /* Dark Mode Overrides */
 .dark {
-  /* Brand Colors - Dark Mode */
-  --primary: #10B981;
-  --primary-dark: #059669;
+  /* Brand Colors - Dark Mode — honour workspace accent-color if set */
+  --primary: var(--accent-color, #10B981);
+  --primary-dark: var(--accent-color, #059669);
   --primary-light: #34D399;
   --primary-soft: rgba(16, 185, 129, 0.2);
   --primary-glow: 0 0 25px rgba(16, 185, 129, 0.4);

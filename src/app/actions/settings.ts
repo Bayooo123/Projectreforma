@@ -5,6 +5,8 @@ import { revalidatePath } from 'next/cache';
 import { prisma } from '@/lib/prisma';
 import { requireAuth } from '@/lib/auth-utils';
 
+const isValidHexColor = (c: string) => /^#[0-9a-fA-F]{3,8}$/.test(c);
+
 type WorkspaceSettingsUpdate = {
     firmCode?: string | null;
     joinPassword?: string;
@@ -283,5 +285,49 @@ export async function updateUserTheme(data: {
         return { success: true };
     } catch (error: any) {
         return { success: false, error: error?.message };
+    }
+}
+
+export async function updateWorkspaceColors(
+    workspaceId: string,
+    colors: { accentColor: string; secondaryColor: string; brandColor: string }
+) {
+    try {
+        const user = await requireAuth();
+
+        const membership = await prisma.workspaceMember.findFirst({
+            where: { workspaceId, user: { email: user.email! } },
+            select: { role: true },
+        });
+
+        if (!membership) return { success: false, error: 'Not a member of this workspace' };
+
+        const isPracticeManager = membership.role?.toLowerCase() === 'practice manager';
+        const isAdmin = !!(user as any).isPlatformAdmin;
+        const isOwner = await prisma.workspace.findUnique({ where: { id: workspaceId }, select: { ownerId: true } })
+            .then(w => w?.ownerId === user.id);
+
+        if (!isPracticeManager && !isAdmin && !isOwner) {
+            return { success: false, error: 'Only Practice Managers can update workspace colours' };
+        }
+
+        if (!isValidHexColor(colors.accentColor) || !isValidHexColor(colors.secondaryColor) || !isValidHexColor(colors.brandColor)) {
+            return { success: false, error: 'Invalid colour value' };
+        }
+
+        await prisma.workspace.update({
+            where: { id: workspaceId },
+            data: {
+                accentColor: colors.accentColor,
+                secondaryColor: colors.secondaryColor,
+                brandColor: colors.brandColor,
+            },
+        });
+
+        revalidatePath('/');
+        revalidatePath('/settings');
+        return { success: true };
+    } catch (error: any) {
+        return { success: false, error: error?.message || 'Failed to update workspace colours' };
     }
 }
