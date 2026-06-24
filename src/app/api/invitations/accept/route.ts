@@ -28,12 +28,35 @@ export async function POST(request: NextRequest) {
         });
 
         if (user) {
-            // User exists - they should login to accept
+            // Add to workspace if not already a member, then mark invitation accepted
+            const existing = await prisma.workspaceMember.findUnique({
+                where: { userId_workspaceId: { userId: user.id, workspaceId: invitation.workspaceId } },
+            });
+
+            if (!existing) {
+                await prisma.workspaceMember.create({
+                    data: { userId: user.id, workspaceId: invitation.workspaceId, role: invitation.role },
+                });
+            }
+
+            await prisma.invitation.update({
+                where: { id: invitation.id },
+                data: { status: 'accepted', acceptedAt: new Date() },
+            });
+
+            await logSecurityEvent({
+                userId: user.id,
+                event: SecurityEvent.INVITATION_ACCEPTED,
+                description: `Existing user accepted invitation to workspace ${invitation.workspaceId}`,
+                req: request,
+                metadata: { workspaceId: invitation.workspaceId },
+            });
+
             return NextResponse.json({
                 success: true,
-                message: 'Account already exists. Please log in to accept this invitation.',
                 requiresLogin: true,
-                email: user.email
+                email: user.email,
+                message: 'You have been added to the workspace. Sign in to access it.',
             });
         }
 

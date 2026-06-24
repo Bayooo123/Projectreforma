@@ -57,11 +57,16 @@ export async function POST(req: NextRequest) {
         const inviteUrl = `${domain}/invite/${token}`;
 
         // Send Email
-        await mailService.send({
+        const mailResult = await mailService.send({
             to: email,
             subject: `Invite to join ${workspace.name}`,
             html: getWorkspaceInviteEmail(workspace.name, session.user.name || 'Your admin', role, inviteUrl)
         });
+
+        if (!mailResult.success) {
+            console.error('[InviteWorkspace] Failed to send invite email to', email, mailResult.error);
+            return NextResponse.json({ error: 'Failed to send invitation email. Please try again.' }, { status: 500 });
+        }
 
         // Log security event
         await logSecurityEvent({

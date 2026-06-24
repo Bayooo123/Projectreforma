@@ -168,7 +168,7 @@ export const getPasswordResetEmail = (url: string) => {
         previewTextText: 'Securely reset your Reforma password',
         content: `
       <p>We received a request to reset your password for your Reforma account.</p>
-      <p>Click the button below to set a new password. This link will expire in 15 minutes and can only be used once.</p>
+      <p>Click the button below to set a new password. This link will expire in 1 hour and can only be used once.</p>
       <p>If you did not request this, you can safely ignore this email.</p>
     `,
         ctaText: 'Reset Password',
