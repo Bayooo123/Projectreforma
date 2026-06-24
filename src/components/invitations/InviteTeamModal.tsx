@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Mail, UserPlus, Loader2 } from 'lucide-react';
 import styles from './InviteTeamModal.module.css';
 import { ROLES } from '@/lib/roles';
@@ -89,7 +90,7 @@ const InviteTeamModal = ({ workspaceId, workspaceName, onClose }: InviteTeamModa
         }
     };
 
-    return (
+    return createPortal(
         <div className={styles.overlay} onClick={onClose}>
             <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
                 <div className={styles.header}>
@@ -208,7 +209,8 @@ const InviteTeamModal = ({ workspaceId, workspaceName, onClose }: InviteTeamModa
                     </div>
                 </form>
             </div>
-        </div>
+        </div>,
+        document.body
     );
 };
 
