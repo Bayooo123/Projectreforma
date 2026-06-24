@@ -241,12 +241,13 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
                 if (now - lastCheck > 60_000) {
                     const dbUser = await prisma.user.findUnique({
                         where: { id: token.sub },
-                        select: { sessionVersion: true },
+                        select: { sessionVersion: true, name: true },
                     });
 
                     if (!dbUser || (dbUser.sessionVersion as number) > (token.sessionVersion as number ?? 0)) {
                         return null;
                     }
+                    if (dbUser.name) token.name = dbUser.name;
                     token.lastVersionCheck = now;
                 }
             }
