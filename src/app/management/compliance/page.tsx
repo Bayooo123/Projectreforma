@@ -41,6 +41,7 @@ export default async function ComplianceManagementPage() {
                     <PinProtection
                         workspaceId={workspace.id}
                         featureId="compliance"
+                        module="compliance"
                         variant="compliance"
                     >
                         <ComplianceDashboard

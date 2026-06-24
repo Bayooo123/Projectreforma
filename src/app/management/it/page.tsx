@@ -2,6 +2,7 @@ import { auth } from '@/auth';
 import { redirect } from 'next/navigation';
 import { prisma } from '@/lib/prisma';
 import ITManagementClient from './ITManagementClient';
+import { PinProtection } from '@/components/auth/PinProtection';
 
 export const dynamic = 'force-dynamic';
 
@@ -25,5 +26,16 @@ export default async function ITManagementPage() {
 
     if (!member) redirect('/briefs');
 
-    return <ITManagementClient workspaceId={member.workspaceId} isAdmin={isAdmin} />;
+    return (
+        <div className="p-8">
+            <PinProtection
+                workspaceId={member.workspaceId}
+                featureId="it"
+                module="it"
+                variant="it"
+            >
+                <ITManagementClient workspaceId={member.workspaceId} isAdmin={isAdmin} />
+            </PinProtection>
+        </div>
+    );
 }

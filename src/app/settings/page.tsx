@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { User, Building2, Lock, Loader, FileText, AlertCircle, Key, Copy, Trash2, Plus, Eye, EyeOff, Check, HardDrive, CreditCard, CheckCircle, Clock, XCircle, Brain, Palette, RotateCcw } from 'lucide-react';
 import { updateWorkspaceSettings, getWorkspaceSettings, getStorageUsage, getInstitutionalEmail, claimInstitutionalEmail, getUserTheme, updateUserTheme, updateWorkspaceColors } from '@/app/actions/settings';
+import { setModulePin, clearModulePin, getModulePinStatuses, consumeModulePinReset, type ProtectedModule } from '@/app/actions/module-pins';
 import { getUserProfile, updateUserProfile } from '@/app/actions/members';
 import { getBankAccounts, createBankAccount, deleteBankAccount } from '@/app/actions/bank-accounts';
 import { generateApiKey, listApiKeys, revokeApiKey } from '@/app/actions/api-keys';
@@ -64,6 +65,18 @@ export default function SettingsPage() {
     const [showKey, setShowKey] = useState(false);
     const [isSendingReset, setIsSendingReset] = useState(false);
     const [resetFeedback, setResetFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+
+    // Module PIN State
+    const [modulePinStatuses, setModulePinStatuses] = useState<{ office: boolean; it: boolean; compliance: boolean } | null>(null);
+    const [modulePinInputs, setModulePinInputs] = useState<Record<string, string>>({ office: '', it: '', compliance: '' });
+    const [modulePinSaving, setModulePinSaving] = useState<Record<string, boolean>>({});
+    const [modulePinFeedback, setModulePinFeedback] = useState<Record<string, { type: 'success' | 'error'; msg: string }>>({});
+    // Reset link flow (from email)
+    const [pinResetToken, setPinResetToken] = useState<string | null>(null);
+    const [pinResetModule, setPinResetModule] = useState<ProtectedModule | null>(null);
+    const [pinResetNewPin, setPinResetNewPin] = useState('');
+    const [pinResetResult, setPinResetResult] = useState<{ type: 'success' | 'error'; msg: string } | null>(null);
+    const [isConsumingReset, setIsConsumingReset] = useState(false);
 
     // Storage State
     const [storageData, setStorageData] = useState<any>(null);
@@ -181,8 +194,22 @@ export default function SettingsPage() {
             if (activeTab === 'subscription') {
                 loadSubscription(session.user.workspaceId);
             }
+            // Load module PIN statuses for PM
+            const isPM = session.user.role?.toLowerCase() === 'practice manager' || !!(session.user as any).isPlatformAdmin;
+            if (isPM && !modulePinStatuses) {
+                getModulePinStatuses(session.user.workspaceId).then(setModulePinStatuses);
+            }
         }
         loadProfile();
+        // Detect pin reset token in URL
+        const params = new URLSearchParams(window.location.search);
+        const token = params.get('pinReset');
+        const mod = params.get('module') as ProtectedModule | null;
+        if (token && mod) {
+            setPinResetToken(token);
+            setPinResetModule(mod);
+            setActiveTab('security');
+        }
     }, [session, activeTab]);
 
     const handleSaveJobTitle = async () => {
@@ -326,6 +353,56 @@ export default function SettingsPage() {
             alert('Upload failed');
         } finally {
             setIsUploading(false);
+        }
+    };
+
+    const handleSaveModulePin = async (module: ProtectedModule) => {
+        const wid = session?.user?.workspaceId;
+        if (!wid) return;
+        const pin = modulePinInputs[module];
+        if (!/^\d{4}$/.test(pin)) {
+            setModulePinFeedback(prev => ({ ...prev, [module]: { type: 'error', msg: 'PIN must be exactly 4 digits' } }));
+            return;
+        }
+        setModulePinSaving(prev => ({ ...prev, [module]: true }));
+        const result = await setModulePin(wid, module, pin);
+        setModulePinSaving(prev => ({ ...prev, [module]: false }));
+        if (result.success) {
+            setModulePinStatuses(prev => prev ? { ...prev, [module]: true } : null);
+            setModulePinInputs(prev => ({ ...prev, [module]: '' }));
+            setModulePinFeedback(prev => ({ ...prev, [module]: { type: 'success', msg: 'PIN set successfully' } }));
+        } else {
+            setModulePinFeedback(prev => ({ ...prev, [module]: { type: 'error', msg: result.error || 'Failed' } }));
+        }
+    };
+
+    const handleClearModulePin = async (module: ProtectedModule) => {
+        const wid = session?.user?.workspaceId;
+        if (!wid) return;
+        const result = await clearModulePin(wid, module);
+        if (result.success) {
+            setModulePinStatuses(prev => prev ? { ...prev, [module]: false } : null);
+            setModulePinFeedback(prev => ({ ...prev, [module]: { type: 'success', msg: 'PIN removed — module now open' } }));
+        }
+    };
+
+    const handleConsumeReset = async () => {
+        if (!pinResetToken || !pinResetModule) return;
+        if (!/^\d{4}$/.test(pinResetNewPin)) {
+            setPinResetResult({ type: 'error', msg: 'PIN must be exactly 4 digits' });
+            return;
+        }
+        setIsConsumingReset(true);
+        const result = await consumeModulePinReset(pinResetToken, pinResetNewPin);
+        setIsConsumingReset(false);
+        if (result.success) {
+            setPinResetResult({ type: 'success', msg: 'PIN has been reset successfully.' });
+            setPinResetToken(null);
+            setPinResetModule(null);
+            // Clear URL params
+            window.history.replaceState({}, '', '/settings?tab=security');
+        } else {
+            setPinResetResult({ type: 'error', msg: result.error || 'Reset failed' });
         }
     };
 
@@ -961,6 +1038,111 @@ export default function SettingsPage() {
                             )}
                         </div>
                     </div>
+                )}
+                {activeTab === 'security' && (pinResetToken && pinResetModule) && (
+                    <div className={styles.card} style={{ marginTop: '1.5rem' }}>
+                        <div className={styles.cardHeader}>
+                            <Key className={styles.icon} />
+                            <h2>Set New {pinResetModule === 'office' ? 'Office Manager' : pinResetModule === 'it' ? 'IT Management' : 'Compliance'} PIN</h2>
+                        </div>
+                        <div className={styles.resetSection}>
+                            <p className={styles.resetText}>Enter a new 4-digit PIN for this module.</p>
+                            <input
+                                type="password"
+                                inputMode="numeric"
+                                maxLength={4}
+                                value={pinResetNewPin}
+                                onChange={e => setPinResetNewPin(e.target.value.replace(/\D/g, ''))}
+                                placeholder="New 4-digit PIN"
+                                className={styles.input}
+                                style={{ maxWidth: 160, letterSpacing: '0.3em', textAlign: 'center', fontSize: '1.2rem', marginTop: '1rem' }}
+                            />
+                            {pinResetResult && (
+                                <div className={pinResetResult.type === 'error' ? styles.error : styles.success} style={{ marginTop: '0.75rem' }}>
+                                    {pinResetResult.type === 'error' ? <AlertCircle size={16} /> : <Check size={16} />}
+                                    {pinResetResult.msg}
+                                </div>
+                            )}
+                            {pinResetResult?.type !== 'success' && (
+                                <button onClick={handleConsumeReset} disabled={isConsumingReset} className={styles.saveBtn} style={{ marginTop: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                    {isConsumingReset ? <><Loader className="spin" size={16} /> Saving…</> : 'Save New PIN'}
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                )}
+                {activeTab === 'security' && (
+                    (() => {
+                        const isPM = session?.user?.role?.toLowerCase() === 'practice manager' || !!(session?.user as any)?.isPlatformAdmin;
+                        if (!isPM) return null;
+                        const modules: { key: ProtectedModule; label: string }[] = [
+                            { key: 'office', label: 'Office Manager' },
+                            { key: 'it', label: 'IT Management' },
+                            { key: 'compliance', label: 'Compliance' },
+                        ];
+                        return (
+                            <div className={styles.card} style={{ marginTop: '1.5rem' }}>
+                                <div className={styles.cardHeader}>
+                                    <Key className={styles.icon} />
+                                    <h2>Module Access PINs</h2>
+                                </div>
+                                <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '1.5rem' }}>
+                                    Set a 4-digit PIN for each protected module. Users will be prompted to enter the PIN before gaining access. Leave a module without a PIN to keep it open.
+                                </p>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                                    {modules.map(({ key, label }) => (
+                                        <div key={key} style={{ padding: '1.25rem', border: '1px solid var(--border)', borderRadius: 12, display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                                <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{label}</span>
+                                                <span style={{
+                                                    fontSize: 12, fontWeight: 600, padding: '2px 10px', borderRadius: 20,
+                                                    background: modulePinStatuses?.[key] ? '#dcfce7' : '#f1f5f9',
+                                                    color: modulePinStatuses?.[key] ? '#16a34a' : 'var(--text-secondary)',
+                                                }}>
+                                                    {modulePinStatuses?.[key] ? 'PIN Active' : 'No PIN'}
+                                                </span>
+                                            </div>
+                                            <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+                                                <input
+                                                    type="password"
+                                                    inputMode="numeric"
+                                                    maxLength={4}
+                                                    value={modulePinInputs[key]}
+                                                    onChange={e => setModulePinInputs(prev => ({ ...prev, [key]: e.target.value.replace(/\D/g, '') }))}
+                                                    placeholder={modulePinStatuses?.[key] ? 'New PIN' : 'Set PIN'}
+                                                    className={styles.input}
+                                                    style={{ maxWidth: 120, letterSpacing: '0.3em', textAlign: 'center' }}
+                                                />
+                                                <button
+                                                    onClick={() => handleSaveModulePin(key)}
+                                                    disabled={modulePinSaving[key]}
+                                                    className={styles.saveBtn}
+                                                    style={{ padding: '0.5rem 1rem', fontSize: 13 }}
+                                                >
+                                                    {modulePinSaving[key] ? <Loader className="spin" size={14} /> : modulePinStatuses?.[key] ? 'Change PIN' : 'Set PIN'}
+                                                </button>
+                                                {modulePinStatuses?.[key] && (
+                                                    <button
+                                                        onClick={() => handleClearModulePin(key)}
+                                                        className={styles.secondaryBtn}
+                                                        style={{ padding: '0.5rem 1rem', fontSize: 13, color: 'var(--danger)' }}
+                                                    >
+                                                        Remove PIN
+                                                    </button>
+                                                )}
+                                            </div>
+                                            {modulePinFeedback[key] && (
+                                                <div className={modulePinFeedback[key].type === 'error' ? styles.error : styles.success} style={{ fontSize: 13 }}>
+                                                    {modulePinFeedback[key].type === 'error' ? <AlertCircle size={14} /> : <Check size={14} />}
+                                                    {modulePinFeedback[key].msg}
+                                                </div>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        );
+                    })()
                 )}
                 {activeTab === 'storage' && (
                     <div className={styles.card}>

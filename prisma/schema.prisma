@@ -28,6 +28,9 @@ model Workspace {
   inviteLinkToken   String?               @unique
   litigationPin     String?
   adminCode         String?
+  officeManagerPin  String?
+  itManagementPin   String?
+  compliancePin     String?
   accentColor       String?               @default("#3182ce")
   brandColor        String?               @default("#121826")
   brandingCompleted Boolean               @default(false)
@@ -64,6 +67,7 @@ model Workspace {
   subscriptionPayments  SubscriptionPayment[]
   firmContacts          FirmContact[]
   pulseEvents           PulseEvent[]
+  modulePinResets       ModulePinReset[]
 
   @@index([slug])
   @@index([firmCode])
@@ -1399,4 +1403,18 @@ model PulseEvent {
   @@index([workspaceId, createdAt])
   @@index([briefId])
   @@index([assignedToId])
+}
+
+model ModulePinReset {
+  id          String    @id @default(cuid())
+  workspaceId String
+  module      String
+  token       String    @unique @default(cuid())
+  expiresAt   DateTime
+  used        Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
+  @@index([token])
 }

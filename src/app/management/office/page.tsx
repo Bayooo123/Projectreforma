@@ -72,6 +72,7 @@ export default async function OfficeManagementPage() {
             <PinProtection
                 workspaceId={workspaceId}
                 featureId="office"
+                module="office"
                 variant="office"
             >
                 <OfficeManagerClient
