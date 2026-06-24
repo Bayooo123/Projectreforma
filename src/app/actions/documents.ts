@@ -147,6 +147,43 @@ export async function getEmailDocumentsForBrief(briefId: string) {
     }
 }
 
+export async function getLinkedEmailsForBrief(briefId: string) {
+    try {
+        const pulseEvents = await prisma.pulseEvent.findMany({
+            where: { briefId, inboundEmailId: { not: null } },
+            select: {
+                id: true,
+                title: true,
+                inboundEmail: {
+                    select: {
+                        id: true,
+                        subject: true,
+                        fromEmail: true,
+                        fromName: true,
+                        bodyPreview: true,
+                        body: true,
+                        receivedAt: true,
+                        attachmentCount: true,
+                        attachments: { select: { id: true, name: true, url: true, contentType: true, size: true } },
+                    },
+                },
+            },
+            orderBy: { createdAt: 'desc' },
+        });
+
+        return pulseEvents
+            .filter(pe => pe.inboundEmail)
+            .map(pe => ({
+                pulseId: pe.id,
+                pulseTitle: pe.title,
+                ...pe.inboundEmail!,
+            }));
+    } catch (error) {
+        console.error('Error fetching linked emails for brief:', error);
+        return [];
+    }
+}
+
 export async function getDocumentVersions(documentId: string) {
     try {
         // Fetch without explicit select so all scalar fields (including versionOfId) are returned

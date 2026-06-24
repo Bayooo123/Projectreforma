@@ -78,7 +78,7 @@ interface Brief {
     inboundEmailId: string;
 }
 
-import { getDocuments, getEmailDocumentsForBrief } from '@/app/actions/documents';
+import { getDocuments, getEmailDocumentsForBrief, getLinkedEmailsForBrief } from '@/app/actions/documents';
 import { getFolders, deleteFolder } from '@/app/actions/folders';
 import { logBriefViewed, getBriefTimeline, getBriefSummary, TimelineEvent, BriefSummaryData } from '@/app/actions/briefs';
 import BriefTimeline from '@/components/briefs/BriefTimeline';
@@ -101,9 +101,14 @@ export default function BriefDetailClient({ brief }: BriefDetailClientProps) {
     const [deletingFolder, setDeletingFolder] = useState<{ id: string; name: string } | null>(null);
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [docsLoaded, setDocsLoaded] = useState(false);
-    const [activeTab, setActiveTab] = useState<'timeline' | 'documents'>(
-        searchParams.get('tab') === 'documents' ? 'documents' : 'timeline'
+    const [activeTab, setActiveTab] = useState<'timeline' | 'documents' | 'emails'>(
+        searchParams.get('tab') === 'documents' ? 'documents' :
+        searchParams.get('tab') === 'emails' ? 'emails' : 'timeline'
     );
+    const [linkedEmails, setLinkedEmails] = useState<Awaited<ReturnType<typeof getLinkedEmailsForBrief>>>([]);
+    const [emailsLoaded, setEmailsLoaded] = useState(false);
+    const [emailsLoading, setEmailsLoading] = useState(false);
+    const [expandedEmail, setExpandedEmail] = useState<string | null>(null);
 
     // Timeline + summary — loaded client-side so SSR only serves the page shell
     const [initialTimeline, setInitialTimeline] = useState<TimelineEvent[]>([]);
@@ -123,11 +128,18 @@ export default function BriefDetailClient({ brief }: BriefDetailClientProps) {
     }, [brief.id]);
 
     // Fetch documents/folders lazily — only when the Documents tab is first opened
-    const handleTabChange = (tab: 'timeline' | 'documents') => {
+    const handleTabChange = (tab: 'timeline' | 'documents' | 'emails') => {
         setActiveTab(tab);
         if (tab === 'documents' && !docsLoaded) {
             setDocsLoaded(true);
             refreshData(true);
+        }
+        if (tab === 'emails' && !emailsLoaded) {
+            setEmailsLoaded(true);
+            setEmailsLoading(true);
+            getLinkedEmailsForBrief(brief.id)
+                .then(setLinkedEmails)
+                .finally(() => setEmailsLoading(false));
         }
     };
 
@@ -339,7 +351,7 @@ export default function BriefDetailClient({ brief }: BriefDetailClientProps) {
             <div className={styles.content}>
                 {/* Tabs */}
                 <div style={{ display: 'flex', gap: '0', borderBottom: '1px solid var(--border)', marginBottom: '1.5rem' }}>
-                    {(['timeline', 'documents'] as const).map(tab => (
+                    {(['timeline', 'documents', 'emails'] as const).map(tab => (
                         <button
                             key={tab}
                             onClick={() => handleTabChange(tab)}
@@ -519,6 +531,104 @@ export default function BriefDetailClient({ brief }: BriefDetailClientProps) {
                     </div>
                 )}
                 </div>}
+
+                {activeTab === 'emails' && (
+                    <div style={{ paddingBottom: '80px' }}>
+                        {emailsLoading ? (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '3rem 0', color: 'var(--text-secondary)', fontSize: '0.82rem' }}>
+                                <Loader size={16} className="animate-spin" /> Loading emails…
+                            </div>
+                        ) : linkedEmails.length === 0 ? (
+                            <div style={{ textAlign: 'center', padding: '4rem 0', color: 'var(--text-secondary)' }}>
+                                <Mail size={40} style={{ margin: '0 auto 1rem', opacity: 0.3 }} />
+                                <p style={{ fontWeight: 500 }}>No emails linked to this brief</p>
+                            </div>
+                        ) : (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                                <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>
+                                    {linkedEmails.length} email{linkedEmails.length !== 1 ? 's' : ''} linked to this brief
+                                </p>
+                                {linkedEmails.map(email => (
+                                    <div
+                                        key={email.id}
+                                        style={{
+                                            border: '1px solid var(--border)',
+                                            borderRadius: 10,
+                                            overflow: 'hidden',
+                                            background: 'var(--surface)',
+                                        }}
+                                    >
+                                        {/* Email header — always visible, click to expand */}
+                                        <div
+                                            onClick={() => setExpandedEmail(expandedEmail === email.id ? null : email.id)}
+                                            style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', padding: '0.9rem 1rem', cursor: 'pointer', userSelect: 'none' }}
+                                        >
+                                            <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'var(--primary)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 14, flexShrink: 0 }}>
+                                                {(email.fromName || email.fromEmail || '?')[0].toUpperCase()}
+                                            </div>
+                                            <div style={{ flex: 1, minWidth: 0 }}>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: '0.5rem' }}>
+                                                    <span style={{ fontWeight: 600, fontSize: '0.9rem', color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                        {email.subject || '(No subject)'}
+                                                    </span>
+                                                    <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', flexShrink: 0 }}>
+                                                        {new Date(email.receivedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                                    </span>
+                                                </div>
+                                                <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: 2 }}>
+                                                    {email.fromName ? `${email.fromName} <${email.fromEmail}>` : email.fromEmail}
+                                                </div>
+                                                {expandedEmail !== email.id && email.bodyPreview && (
+                                                    <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                        {email.bodyPreview}
+                                                    </div>
+                                                )}
+                                            </div>
+                                            {email.attachmentCount > 0 && (
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.75rem', color: 'var(--text-secondary)', flexShrink: 0 }}>
+                                                    <Paperclip size={13} />
+                                                    {email.attachmentCount}
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* Expanded body */}
+                                        {expandedEmail === email.id && (
+                                            <div style={{ borderTop: '1px solid var(--border)', padding: '1rem', background: 'var(--background)' }}>
+                                                {email.body ? (
+                                                    <div style={{ fontSize: '0.85rem', color: 'var(--text-primary)', lineHeight: 1.7, whiteSpace: 'pre-wrap', maxHeight: 400, overflowY: 'auto' }}>
+                                                        {email.body}
+                                                    </div>
+                                                ) : email.bodyPreview ? (
+                                                    <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.7 }}>{email.bodyPreview}</div>
+                                                ) : (
+                                                    <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>No body content available.</p>
+                                                )}
+                                                {email.attachments.length > 0 && (
+                                                    <div style={{ marginTop: '1rem', display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                                                        <p style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Attachments</p>
+                                                        {email.attachments.map(att => (
+                                                            <a
+                                                                key={att.id}
+                                                                href={att.url}
+                                                                target="_blank"
+                                                                rel="noopener noreferrer"
+                                                                style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.82rem', color: 'var(--primary)', textDecoration: 'none', padding: '0.35rem 0.5rem', borderRadius: 6, background: 'var(--hover-bg)' }}
+                                                            >
+                                                                <Paperclip size={13} />
+                                                                {att.name}
+                                                            </a>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                )}
             </div>
 
             <EditBriefModal
