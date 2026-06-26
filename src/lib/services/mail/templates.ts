@@ -204,3 +204,94 @@ export const getWorkspaceInviteEmail = (workspaceName: string, inviterName: stri
         ctaUrl: url
     });
 };
+
+export const getFirmOwnerWelcomeEmail = (name: string, firmName: string, firmCode: string, verifyUrl: string) => {
+    const appUrl = config.NEXT_PUBLIC_APP_URL;
+    return sharedLayout({
+        title: `Welcome to Reforma, ${name.split(' ')[0]}`,
+        previewTextText: `${firmName} is now live on Reforma — here's how to get started`,
+        content: `
+      <p>Hi ${name.split(' ')[0]},</p>
+      <p>Your firm <strong>${firmName}</strong> is now set up on Reforma. You're one of the first to bring your practice onto a platform built specifically for how Nigerian legal professionals work.</p>
+
+      <table width="100%" cellpadding="0" cellspacing="0" style="margin: 24px 0;">
+        <tr>
+          <td style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px 20px;">
+            <p style="margin: 0 0 4px; font-size: 12px; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.06em;">Your Firm Code</p>
+            <p style="margin: 0; font-size: 28px; font-weight: 800; color: #0f172a; letter-spacing: 0.15em;">${firmCode}</p>
+            <p style="margin: 6px 0 0; font-size: 13px; color: #64748b;">Share this with your team so they can join your workspace.</p>
+          </td>
+        </tr>
+      </table>
+
+      <p style="font-weight: 600; color: #0f172a; margin-bottom: 8px;">Get started in three steps:</p>
+      <table width="100%" cellpadding="0" cellspacing="0">
+        <tr>
+          <td style="padding: 6px 0;">
+            <span style="display: inline-block; width: 22px; height: 22px; background: #0d9488; border-radius: 50%; color: #fff; font-size: 12px; font-weight: 700; text-align: center; line-height: 22px; margin-right: 10px; vertical-align: middle;">1</span>
+            <span style="color: #475569; vertical-align: middle;">Verify your email address using the button below</span>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding: 6px 0;">
+            <span style="display: inline-block; width: 22px; height: 22px; background: #0d9488; border-radius: 50%; color: #fff; font-size: 12px; font-weight: 700; text-align: center; line-height: 22px; margin-right: 10px; vertical-align: middle;">2</span>
+            <span style="color: #475569; vertical-align: middle;">Invite your team from the Settings page</span>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding: 6px 0;">
+            <span style="display: inline-block; width: 22px; height: 22px; background: #0d9488; border-radius: 50%; color: #fff; font-size: 12px; font-weight: 700; text-align: center; line-height: 22px; margin-right: 10px; vertical-align: middle;">3</span>
+            <span style="color: #475569; vertical-align: middle;">Create your first brief and start managing matters</span>
+          </td>
+        </tr>
+      </table>
+
+      <p style="margin-top: 20px; font-size: 13px; color: #94a3b8;">
+        Need help getting started? Reply to this email — we read every message.
+      </p>
+    `,
+        ctaText: 'Verify Email & Sign In',
+        ctaUrl: verifyUrl,
+    });
+};
+
+export const getMemberWelcomeEmail = (
+    name: string,
+    workspaceName: string,
+    role: string,
+    loginUrl: string,
+    verifyUrl?: string,
+) => {
+    return sharedLayout({
+        title: `You're in — Welcome to ${workspaceName}`,
+        previewTextText: `You've joined ${workspaceName} on Reforma as ${role}`,
+        content: `
+      <p>Hi ${name.split(' ')[0]},</p>
+      <p>You've officially joined <strong>${workspaceName}</strong> on Reforma as a <strong>${role}</strong>.</p>
+
+      <p style="font-weight: 600; color: #0f172a; margin-bottom: 8px;">What you can do on Reforma:</p>
+      <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: 16px;">
+        <tr><td style="padding: 5px 0; color: #475569;">
+          <span style="color: #0d9488; margin-right: 8px;">&#10003;</span> View and collaborate on briefs and case matters
+        </td></tr>
+        <tr><td style="padding: 5px 0; color: #475569;">
+          <span style="color: #0d9488; margin-right: 8px;">&#10003;</span> Track timelines, correspondence, and documents
+        </td></tr>
+        <tr><td style="padding: 5px 0; color: #475569;">
+          <span style="color: #0d9488; margin-right: 8px;">&#10003;</span> Use the AI assistant to search across your firm's matters
+        </td></tr>
+        <tr><td style="padding: 5px 0; color: #475569;">
+          <span style="color: #0d9488; margin-right: 8px;">&#10003;</span> Manage client communications from a single workspace
+        </td></tr>
+      </table>
+
+      ${verifyUrl ? `
+      <p style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; padding: 12px 16px; font-size: 14px; color: #92400e; margin-bottom: 0;">
+        <strong>One more step:</strong> Please verify your email address by clicking the button below before signing in.
+      </p>
+      ` : ''}
+    `,
+        ctaText: verifyUrl ? 'Verify Email & Get Started' : 'Sign In to Reforma',
+        ctaUrl: verifyUrl ?? loginUrl,
+    });
+};

@@ -9,7 +9,7 @@ import { redirect } from 'next/navigation';
 import { generateUniqueLawyerToken } from '@/lib/lawyer-tokens';
 import { createEmailVerificationToken } from '@/lib/services/auth/tokens';
 import { mailService } from '@/lib/services/mail/mail';
-import { getVerificationEmail } from '@/lib/services/mail/templates';
+import { getVerificationEmail, getFirmOwnerWelcomeEmail } from '@/lib/services/mail/templates';
 import { logSecurityEvent, SecurityEvent } from '@/lib/services/auth/audit';
 import { headers } from 'next/headers';
 import { checkRateLimit, getClientIp } from '@/lib/services/auth/ratelimit';
@@ -102,7 +102,7 @@ export async function register(
         const slugBase = firmName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
         const slug = `${slugBase}-${nanoid(5).toLowerCase()}`;
 
-        const { user } = await prisma.$transaction(async (tx) => {
+        const { user, workspace } = await prisma.$transaction(async (tx) => {
             // 1. Create User
             const user = await tx.user.create({
                 data: {
@@ -143,19 +143,19 @@ export async function register(
         const domain = config.NEXT_PUBLIC_APP_URL;
         const verificationUrl = `${domain}/api/auth/verify-email?token=${verificationToken}`;
 
-        // 5. Send Verification Email
+        // 5. Send firm owner welcome email (includes verify CTA)
         await mailService.send({
             to: email,
-            subject: 'Verify your Reforma account',
-            html: getVerificationEmail(name, verificationUrl)
+            subject: `Welcome to Reforma — ${firmName} is live`,
+            html: getFirmOwnerWelcomeEmail(name, firmName, firmCode, verificationUrl)
         });
 
         // 6. Log Security Event
         await logSecurityEvent({
             userId: user.id,
             event: SecurityEvent.EMAIL_VERIFICATION_REQUEST,
-            description: `Verification email sent to ${email}`,
-            metadata: { email }
+            description: `Welcome + verification email sent to ${email} for firm ${firmName}`,
+            metadata: { email, firmName, workspaceId: workspace.id }
         });
 
         return 'Registration successful! Please check your email to verify your account before logging in.';

@@ -4,7 +4,7 @@ import { config } from '@/lib/config';
 import bcrypt from 'bcryptjs';
 import { validateInvitationToken, createEmailVerificationToken } from '@/lib/services/auth/tokens';
 import { mailService } from '@/lib/services/mail/mail';
-import { getVerificationEmail } from '@/lib/services/mail/templates';
+import { getMemberWelcomeEmail } from '@/lib/services/mail/templates';
 import { logSecurityEvent, SecurityEvent } from '@/lib/services/auth/audit';
 
 export async function POST(request: NextRequest) {
@@ -51,6 +51,15 @@ export async function POST(request: NextRequest) {
                 req: request,
                 metadata: { workspaceId: invitation.workspaceId },
             });
+
+            // Send welcome email — existing user, no verify step needed
+            const loginUrl = `${config.NEXT_PUBLIC_APP_URL}/login`;
+            const workspaceName = invitation.workspace?.name ?? 'your workspace';
+            mailService.send({
+                to: user.email,
+                subject: `You're in — Welcome to ${workspaceName} on Reforma`,
+                html: getMemberWelcomeEmail(user.name ?? user.email, workspaceName, invitation.role, loginUrl),
+            }).catch(err => console.error('[AcceptInvite] Welcome email failed:', err));
 
             return NextResponse.json({
                 success: true,
@@ -99,15 +108,17 @@ export async function POST(request: NextRequest) {
             return u;
         });
 
-        // Verification Email
+        // Welcome + verification email
         const vToken = await createEmailVerificationToken(newUser.id, newUser.email);
         const domain = config.NEXT_PUBLIC_APP_URL;
         const vUrl = `${domain}/api/auth/verify-email?token=${vToken}`;
+        const loginUrl = `${domain}/login`;
+        const workspaceName = invitation.workspace?.name ?? 'your workspace';
 
         await mailService.send({
             to: newUser.email,
-            subject: 'Verify your Reforma account',
-            html: getVerificationEmail(name, vUrl)
+            subject: `You're in — Welcome to ${workspaceName} on Reforma`,
+            html: getMemberWelcomeEmail(name, workspaceName, invitation.role, loginUrl, vUrl),
         });
 
         await logSecurityEvent({
