@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
         if (user) {
             // Add to workspace if not already a member, then mark invitation accepted
             const existing = await prisma.workspaceMember.findUnique({
-                where: { userId_workspaceId: { userId: user.id, workspaceId: invitation.workspaceId } },
+                where: { workspaceId_userId: { workspaceId: invitation.workspaceId, userId: user.id } },
             });
 
             if (!existing) {
