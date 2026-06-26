@@ -605,9 +605,8 @@ html {
     user-select: none;
     /* Remove blue tap highlight on mobile */
     -webkit-tap-highlight-color: transparent;
-    /* Add padding for iOS Safe Areas (notches and home bars) */
-    padding-bottom: env(safe-area-inset-bottom);
-    padding-top: env(safe-area-inset-top);
+    /* Safe areas are handled by the app shell, not body — body padding
+       shifts the grid container down and creates a background bleed gap */
   }
 
   /* Specific elements that SHOULD be selectable (inputs, textareas) */

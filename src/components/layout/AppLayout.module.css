@@ -1,7 +1,9 @@
 .gridContainer {
     display: flex;
     height: 100vh;
+    height: 100dvh; /* dynamic viewport height — tracks mobile browser toolbar */
     max-height: 100vh;
+    max-height: 100dvh;
     overflow: hidden;
     background-color: var(--background);
     /* NOTE: contain:layout paint removed — it traps position:fixed children
@@ -27,7 +29,9 @@
     flex: 1;
     margin-left: 240px;
     height: 100vh;
+    height: 100dvh;
     max-height: 100vh;
+    max-height: 100dvh;
     display: flex;
     flex-direction: column;
     min-width: 0;
@@ -48,6 +52,13 @@
     /* Hide the desktop header on mobile — bottom nav handles navigation */
     .headerWrapper {
         display: none !important;
+    }
+
+    .gridContainer {
+        /* Safe area for notched devices in PWA standalone mode.
+           Applied here (not on body) so it doesn't push the container
+           below the viewport and expose the body background as a black strip. */
+        padding-top: env(safe-area-inset-top);
     }
 
     .mainContent {
