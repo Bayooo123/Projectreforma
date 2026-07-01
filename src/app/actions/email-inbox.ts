@@ -248,22 +248,32 @@ export async function quickCreateBriefAndLink(
 
         const { workspaceId } = membership;
 
-        // Auto-generate brief number using a transaction to avoid race conditions
-        const brief = await prisma.$transaction(async (tx) => {
-            const count = await tx.brief.count({ where: { workspaceId } });
-            const briefNumber = `BRF-${String(count + 1).padStart(4, '0')}`;
-            return tx.brief.create({
-                data: {
-                    briefNumber,
-                    name: briefName.trim(),
-                    category,
-                    status: 'active',
-                    workspaceId,
-                    lawyerId: user.id!,
-                    isLitigationDerived: false,
-                },
-            });
-        });
+        // Retry up to 5 times on briefNumber collision. A transaction with
+        // READ COMMITTED isolation still allows two concurrent reads to see the
+        // same count, so the only safe approach is optimistic retry on P2002.
+        let brief: Awaited<ReturnType<typeof prisma.brief.create>> | null = null;
+        for (let attempt = 0; attempt < 5; attempt++) {
+            try {
+                const count = await prisma.brief.count({ where: { workspaceId } });
+                const briefNumber = `BRF-${String(count + 1).padStart(4, '0')}`;
+                brief = await prisma.brief.create({
+                    data: {
+                        briefNumber,
+                        name: briefName.trim(),
+                        category,
+                        status: 'active',
+                        workspaceId,
+                        lawyerId: user.id!,
+                        isLitigationDerived: false,
+                    },
+                });
+                break;
+            } catch (err: any) {
+                if (err?.code === 'P2002') continue; // duplicate briefNumber — recount and retry
+                throw err;
+            }
+        }
+        if (!brief) return { success: false, error: 'Could not generate a unique brief number. Please try again.' };
 
         const linkResult = await bulkLinkEmailsToBrief(ids, brief.id);
         if (!linkResult.success) return { success: false, error: linkResult.error };
