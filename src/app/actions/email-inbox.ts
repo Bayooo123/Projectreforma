@@ -174,56 +174,61 @@ export async function bulkLinkEmailsToBrief(
     emailIds: string[],
     briefId: string,
 ): Promise<{ success: boolean; linked: number; error?: string }> {
-    await requireAuth();
-    if (emailIds.length === 0) return { success: true, linked: 0 };
+    try {
+        await requireAuth();
+        if (emailIds.length === 0) return { success: true, linked: 0 };
 
-    const brief = await prisma.brief.findUnique({
-        where: { id: briefId },
-        select: { matterId: true, workspaceId: true, name: true },
-    });
-    if (!brief) return { success: false, linked: 0, error: 'Brief not found' };
-
-    const pulseData = { briefId, ...(brief.matterId ? { matterId: brief.matterId } : {}) };
-
-    const existingEvents = await prisma.pulseEvent.findMany({
-        where: { inboundEmailId: { in: emailIds } },
-        select: { inboundEmailId: true },
-    });
-    const hasEvent = new Set(existingEvents.map(p => p.inboundEmailId!));
-    const toUpdate = emailIds.filter(id => hasEvent.has(id));
-    const toCreate = emailIds.filter(id => !hasEvent.has(id));
-
-    const ops: Promise<unknown>[] = [];
-
-    if (brief.matterId) {
-        ops.push(prisma.inboundEmail.updateMany({ where: { id: { in: emailIds } }, data: { matterId: brief.matterId } }));
-    }
-    if (toUpdate.length > 0) {
-        ops.push(prisma.pulseEvent.updateMany({ where: { inboundEmailId: { in: toUpdate } }, data: pulseData }));
-    }
-    if (toCreate.length > 0) {
-        const emails = await prisma.inboundEmail.findMany({
-            where: { id: { in: toCreate } },
-            select: { id: true, subject: true },
+        const brief = await prisma.brief.findUnique({
+            where: { id: briefId },
+            select: { matterId: true, workspaceId: true, name: true },
         });
-        ops.push(prisma.pulseEvent.createMany({
-            data: emails.map(e => ({
-                workspaceId: brief.workspaceId,
-                inboundEmailId: e.id,
-                source: 'email',
-                intent: 'CORRESPONDENCE',
-                title: e.subject ?? 'Email',
-                summary: e.subject ?? 'Manually linked email',
-                ...pulseData,
-            })),
-        }));
+        if (!brief) return { success: false, linked: 0, error: 'Brief not found' };
+
+        const pulseData = { briefId, ...(brief.matterId ? { matterId: brief.matterId } : {}) };
+
+        const existingEvents = await prisma.pulseEvent.findMany({
+            where: { inboundEmailId: { in: emailIds } },
+            select: { inboundEmailId: true },
+        });
+        const hasEvent = new Set(existingEvents.map(p => p.inboundEmailId!));
+        const toUpdate = emailIds.filter(id => hasEvent.has(id));
+        const toCreate = emailIds.filter(id => !hasEvent.has(id));
+
+        const ops: Promise<unknown>[] = [];
+
+        if (brief.matterId) {
+            ops.push(prisma.inboundEmail.updateMany({ where: { id: { in: emailIds } }, data: { matterId: brief.matterId } }));
+        }
+        if (toUpdate.length > 0) {
+            ops.push(prisma.pulseEvent.updateMany({ where: { inboundEmailId: { in: toUpdate } }, data: pulseData }));
+        }
+        if (toCreate.length > 0) {
+            const emails = await prisma.inboundEmail.findMany({
+                where: { id: { in: toCreate } },
+                select: { id: true, subject: true },
+            });
+            ops.push(prisma.pulseEvent.createMany({
+                data: emails.map(e => ({
+                    workspaceId: brief.workspaceId,
+                    inboundEmailId: e.id,
+                    source: 'email',
+                    intent: 'CORRESPONDENCE',
+                    title: e.subject ?? 'Email',
+                    summary: e.subject ?? 'Manually linked email',
+                    ...pulseData,
+                })),
+            }));
+        }
+
+        await Promise.all(ops);
+
+        revalidatePath('/emails');
+        revalidatePath(`/briefs/${briefId}`);
+        return { success: true, linked: emailIds.length };
+    } catch (err: any) {
+        console.error('[bulkLinkEmailsToBrief]', err);
+        return { success: false, linked: 0, error: err?.message ?? 'Failed to link emails' };
     }
-
-    await Promise.all(ops);
-
-    revalidatePath('/emails');
-    revalidatePath(`/briefs/${briefId}`);
-    return { success: true, linked: emailIds.length };
 }
 
 export async function quickCreateBriefAndLink(
@@ -231,38 +236,44 @@ export async function quickCreateBriefAndLink(
     briefName: string,
     category: string,
 ): Promise<{ success: boolean; briefId?: string; error?: string }> {
-    const ids = Array.isArray(emailIds) ? emailIds : [emailIds];
-    const user = await requireAuth();
+    try {
+        const ids = Array.isArray(emailIds) ? emailIds : [emailIds];
+        const user = await requireAuth();
 
-    const membership = await prisma.workspaceMember.findFirst({
-        where: { user: { email: user.email! } },
-        select: { workspaceId: true },
-    });
-    if (!membership) return { success: false, error: 'No workspace' };
+        const membership = await prisma.workspaceMember.findFirst({
+            where: { user: { email: user.email! } },
+            select: { workspaceId: true },
+        });
+        if (!membership) return { success: false, error: 'No workspace' };
 
-    const { workspaceId } = membership;
+        const { workspaceId } = membership;
 
-    // Auto-generate brief number
-    const count = await prisma.brief.count({ where: { workspaceId } });
-    const briefNumber = `BRF-${String(count + 1).padStart(4, '0')}`;
+        // Auto-generate brief number using a transaction to avoid race conditions
+        const brief = await prisma.$transaction(async (tx) => {
+            const count = await tx.brief.count({ where: { workspaceId } });
+            const briefNumber = `BRF-${String(count + 1).padStart(4, '0')}`;
+            return tx.brief.create({
+                data: {
+                    briefNumber,
+                    name: briefName.trim(),
+                    category,
+                    status: 'active',
+                    workspaceId,
+                    lawyerId: user.id!,
+                    isLitigationDerived: false,
+                },
+            });
+        });
 
-    const brief = await prisma.brief.create({
-        data: {
-            briefNumber,
-            name: briefName.trim(),
-            category,
-            status: 'active',
-            workspaceId,
-            lawyerId: user.id!,
-            isLitigationDerived: false,
-        },
-    });
+        const linkResult = await bulkLinkEmailsToBrief(ids, brief.id);
+        if (!linkResult.success) return { success: false, error: linkResult.error };
 
-    const linkResult = await bulkLinkEmailsToBrief(ids, brief.id);
-    if (!linkResult.success) return { success: false, error: linkResult.error };
-
-    revalidatePath('/briefs');
-    return { success: true, briefId: brief.id };
+        revalidatePath('/briefs');
+        return { success: true, briefId: brief.id };
+    } catch (err: any) {
+        console.error('[quickCreateBriefAndLink]', err);
+        return { success: false, error: err?.message ?? 'Failed to create brief' };
+    }
 }
 
 // ── Email Triage ──────────────────────────────────────────────────────────────
