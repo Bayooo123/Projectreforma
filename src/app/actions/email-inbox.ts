@@ -248,14 +248,21 @@ export async function quickCreateBriefAndLink(
 
         const { workspaceId } = membership;
 
-        // Retry up to 5 times on briefNumber collision. A transaction with
-        // READ COMMITTED isolation still allows two concurrent reads to see the
-        // same count, so the only safe approach is optimistic retry on P2002.
+        // Derive the next BRF-NNNN by finding the global max — briefNumber is
+        // globally unique so count-per-workspace collides with other workspaces
+        // and with soft-deleted rows that still hold the unique slot.
         let brief: Awaited<ReturnType<typeof prisma.brief.create>> | null = null;
         for (let attempt = 0; attempt < 5; attempt++) {
             try {
-                const count = await prisma.brief.count({ where: { workspaceId } });
-                const briefNumber = `BRF-${String(count + 1).padStart(4, '0')}`;
+                const existing = await prisma.brief.findMany({
+                    where: { briefNumber: { startsWith: 'BRF-' } },
+                    select: { briefNumber: true },
+                });
+                const maxNum = existing.reduce((max, b) => {
+                    const m = b.briefNumber.match(/^BRF-(\d{4})$/);
+                    return m ? Math.max(max, parseInt(m[1], 10)) : max;
+                }, 0);
+                const briefNumber = `BRF-${String(maxNum + 1).padStart(4, '0')}`;
                 brief = await prisma.brief.create({
                     data: {
                         briefNumber,
@@ -269,7 +276,7 @@ export async function quickCreateBriefAndLink(
                 });
                 break;
             } catch (err: any) {
-                if (err?.code === 'P2002') continue; // duplicate briefNumber — recount and retry
+                if (err?.code === 'P2002') continue; // concurrent create — refetch max and retry
                 throw err;
             }
         }
