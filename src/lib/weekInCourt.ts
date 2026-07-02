@@ -366,15 +366,7 @@ export async function sendWeekInCourtForWorkspace(
     }
 }
 
-export async function sendWeekInCourtAllWorkspaces() {
-    const allowedIds = config.DIGEST_WORKSPACE_IDS
-        ? config.DIGEST_WORKSPACE_IDS.split(',').map(s => s.trim()).filter(Boolean)
-        : null;
-
-    const workspaces = await prisma.workspace.findMany({
-        where: allowedIds ? { id: { in: allowedIds } } : undefined,
-        select: { id: true },
-    });
-
-    return Promise.allSettled(workspaces.map(w => sendWeekInCourtForWorkspace(w.id)));
+export async function sendWeekInCourtAllWorkspaces(): Promise<PromiseSettledResult<{ sent: number; skipped: boolean; error?: string }>[]> {
+    console.log('[Week in Court] Emailing functionality is deactivated');
+    return [];
 }

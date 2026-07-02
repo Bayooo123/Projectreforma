@@ -251,16 +251,7 @@ export async function sendWeeklyDigestForWorkspace(workspaceId: string): Promise
     }
 }
 
-export async function sendWeeklyDigestAllWorkspaces() {
-    const allowedIds = config.DIGEST_WORKSPACE_IDS
-        ? config.DIGEST_WORKSPACE_IDS.split(',').map(s => s.trim()).filter(Boolean)
-        : null;
-
-    const workspaces = await prisma.workspace.findMany({
-        where: allowedIds ? { id: { in: allowedIds } } : undefined,
-        select: { id: true },
-    });
-
-    const results = await Promise.allSettled(workspaces.map(w => sendWeeklyDigestForWorkspace(w.id)));
-    return results;
+export async function sendWeeklyDigestAllWorkspaces(): Promise<PromiseSettledResult<{ sent: number; skipped: boolean; error?: string }>[]> {
+    console.log('[Weekly Digest] Emailing functionality is deactivated');
+    return [];
 }
