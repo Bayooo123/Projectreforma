@@ -278,6 +278,9 @@ body {
   overflow-y: hidden;
   font-size: 14px;
   /* Reverted to 14px per user feedback */
+  /* Full-height chain: required for 100dvh/100% to propagate correctly
+     on all mobile browsers (iOS Safari, Chrome Android, Samsung Internet) */
+  height: 100%;
 }
 
 body {
@@ -607,6 +610,9 @@ html {
     -webkit-tap-highlight-color: transparent;
     /* Safe areas are handled by the app shell, not body — body padding
        shifts the grid container down and creates a background bleed gap */
+    /* Ensure full height chain on mobile — critical for 100dvh layouts */
+    height: 100%;
+    min-height: 100%;
   }
 
   /* Specific elements that SHOULD be selectable (inputs, textareas) */

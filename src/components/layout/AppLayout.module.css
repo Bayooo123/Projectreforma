@@ -55,15 +55,31 @@
     }
 
     .gridContainer {
-        /* Safe area for notched devices in PWA standalone mode.
-           Applied here (not on body) so it doesn't push the container
-           below the viewport and expose the body background as a black strip. */
-        padding-top: env(safe-area-inset-top);
+        /* Pin the app shell to exact viewport bounds on every mobile browser.
+           position:fixed eliminates the dark gaps caused by browser chrome
+           (address bar, toolbar) shifting 100dvh calculations. This is the
+           most reliable cross-device full-screen strategy for PWAs/webapps.
+           Safe area insets for notched devices are handled via padding-top
+           on the first scrollable child, not here, to avoid height shrinkage. */
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        /* Reset height — position:fixed + inset:0 covers the full screen */
+        height: auto;
+        max-height: none;
     }
 
     .mainContent {
         margin-left: 0;
-        padding-bottom: calc(65px + env(safe-area-inset-bottom));
+        /* Account for bottom nav (65px) + safe area */
+        padding-bottom: calc(65px + env(safe-area-inset-bottom, 0px));
+        padding-left: env(safe-area-inset-left, 0px);
+        padding-right: env(safe-area-inset-right, 0px);
+        /* Ensure mainContent fills remaining vertical space */
+        height: 100%;
+        max-height: none;
     }
 
     .contentContainer {

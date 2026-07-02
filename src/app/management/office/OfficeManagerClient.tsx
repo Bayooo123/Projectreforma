@@ -3,6 +3,8 @@
 import { useState } from 'react';
 import FinancialLog from "@/components/management/FinancialLog";
 import { ChevronDown, ChevronUp, TrendingDown } from 'lucide-react';
+import { useIsMobile } from '@/hooks/useIsMobile';
+import '@/components/mobile/mobile.css';
 
 interface OfficeManagerClientProps {
     workspaceId: string;
@@ -20,7 +22,80 @@ export default function OfficeManagerClient({
     isOwner
 }: OfficeManagerClientProps) {
     const [expenseOpen, setExpenseOpen] = useState(true);
+    const isMobile = useIsMobile();
 
+    // ── Mobile layout ────────────────────────────────────────────────────
+    if (isMobile) {
+        return (
+            <div className="rm-screen">
+                {/* Mobile header */}
+                <div className="rm-hdr">
+                    <div className="rm-hdr-row">
+                        <div>
+                            <p className="rm-eyebrow">Workspace</p>
+                            <h1 className="rm-h1">Office Manager</h1>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Scrollable content */}
+                <div className="rm-scroll">
+                    {/* Expense log card */}
+                    <div style={{
+                        margin: '8px 16px 0',
+                        border: '1px solid #e2e8f0',
+                        borderRadius: 18,
+                        overflow: 'hidden',
+                        background: '#fff',
+                        boxShadow: '0 1px 3px rgba(15,23,42,.05)',
+                    }}>
+                        <button
+                            onClick={() => setExpenseOpen(o => !o)}
+                            style={{
+                                width: '100%',
+                                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                                padding: '14px 16px',
+                                background: expenseOpen ? '#fff' : '#f8fafc',
+                                border: 'none', cursor: 'pointer',
+                                borderBottom: expenseOpen ? '1px solid #f1f5f9' : 'none',
+                            }}
+                        >
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                <div style={{ width: 34, height: 34, borderRadius: 10, background: '#F5F3FF', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                    <TrendingDown size={16} color="#7c3aed" />
+                                </div>
+                                <div style={{ textAlign: 'left' }}>
+                                    <span style={{ fontWeight: 700, fontSize: '0.9rem', color: '#0f172a', display: 'block' }}>
+                                        Petty Cash &amp; Expense Log
+                                    </span>
+                                    {!expenseOpen && initialSummaries.length > 0 && (
+                                        <span style={{ fontSize: '0.72rem', color: '#94a3b8', fontWeight: 500 }}>
+                                            {initialSummaries.length} day{initialSummaries.length !== 1 ? 's' : ''} recorded this month
+                                        </span>
+                                    )}
+                                </div>
+                            </div>
+                            {expenseOpen ? <ChevronUp size={16} color="#94a3b8" /> : <ChevronDown size={16} color="#94a3b8" />}
+                        </button>
+
+                        {expenseOpen && (
+                            <div style={{ padding: '4px 0' }}>
+                                <FinancialLog
+                                    workspaceId={workspaceId}
+                                    initialExpenses={initialExpenses}
+                                    initialSummaries={initialSummaries}
+                                    userRole={userRole}
+                                    isOwner={isOwner}
+                                />
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    // ── Desktop layout (unchanged) ───────────────────────────────────────
     return (
         <div className="max-w-[1400px] mx-auto">
             <div className="mb-8">
@@ -71,7 +146,6 @@ export default function OfficeManagerClient({
                         </div>
                     )}
                 </div>
-
             </div>
         </div>
     );

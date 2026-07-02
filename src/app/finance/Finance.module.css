@@ -286,3 +286,26 @@
         display: none;
     }
 }
+
+/* ── Mobile safeguards ── */
+@media (max-width: 400px) {
+    .title {
+        font-size: 26px;
+    }
+
+    .heroValue {
+        font-size: 24px;
+    }
+
+    .heroValueSm {
+        font-size: 17px;
+    }
+
+    .hero {
+        border-radius: 16px;
+    }
+
+    .card {
+        border-radius: 12px;
+    }
+}

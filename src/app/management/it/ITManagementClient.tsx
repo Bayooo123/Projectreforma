@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useTransition } from 'react';
+import { useIsMobile } from '@/hooks/useIsMobile';
 import {
     Users, ShieldCheck, ClipboardList, Monitor, Activity,
     Plus, Trash2, Edit2, Check, X, ChevronDown,
@@ -36,6 +37,7 @@ const ROLE_DESCRIPTIONS: Record<string, string> = {
 
 export default function ITManagementClient({ workspaceId, isAdmin = false }: { workspaceId: string; isAdmin?: boolean }) {
     const [activeTab, setActiveTab] = useState<Tab>('inbox');
+    const isMobile = useIsMobile();
 
     const allTabs: { id: Tab; label: string; icon: React.ElementType; adminOnly?: boolean }[] = [
         { id: 'inbox', label: 'Email Inbox', icon: Inbox },
@@ -50,6 +52,15 @@ export default function ITManagementClient({ workspaceId, isAdmin = false }: { w
     ];
 
     const tabs = allTabs.filter(t => !t.adminOnly || isAdmin);
+
+    // ── Mobile gate (F-03) ────────────────────────────────────────────────
+    // IT Management is built around wide data tables that are unusable at
+    // 375px. On mobile we surface the two actions admins most need on the
+    // go — Invite Guest and Force Logout — and link to the desktop for
+    // everything else. The full UI is untouched on desktop.
+    if (isMobile) {
+        return <ITManagementMobile workspaceId={workspaceId} isAdmin={isAdmin} />;
+    }
 
     return (
         <div style={{ maxWidth: 1100, margin: '0 auto' }}>
@@ -96,6 +107,284 @@ export default function ITManagementClient({ workspaceId, isAdmin = false }: { w
             {activeTab === 'deleted' && <DeletedRecordsTab />}
             {activeTab === 'attribution' && <BriefAttributionTab />}
             {activeTab === 'worklogs' && <WorkLogsTab workspaceId={workspaceId} />}
+        </div>
+    );
+}
+
+// ── Mobile gate component ──────────────────────────────────────────────────────
+// Surfaces the two most-needed mobile admin actions; defers everything else
+// to desktop with a clear, non-broken message.
+
+function ITManagementMobile({ workspaceId, isAdmin }: { workspaceId: string; isAdmin: boolean }) {
+    const [mobileView, setMobileView] = useState<'home' | 'invite' | 'sessions'>('home');
+
+    if (mobileView === 'invite') {
+        return <MobileGuestInvite workspaceId={workspaceId} onBack={() => setMobileView('home')} />;
+    }
+    if (mobileView === 'sessions') {
+        return <MobileSessionControl onBack={() => setMobileView('home')} />;
+    }
+
+    return (
+        <div style={{ padding: '20px 16px', fontFamily: 'var(--font-ui, system-ui, sans-serif)' }}>
+            {/* Header */}
+            <div style={{ marginBottom: 24 }}>
+                <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#059669', marginBottom: 4, fontFamily: 'IBM Plex Mono, monospace' }}>Workspace</p>
+                <h1 style={{ fontSize: 28, fontWeight: 600, color: '#0F172A', letterSpacing: '-0.015em', fontFamily: 'Georgia, serif', lineHeight: 1.1, margin: 0 }}>IT Management</h1>
+            </div>
+
+            {/* Desktop notice */}
+            <div style={{
+                background: '#FFFBEB',
+                border: '1px solid #FDE68A',
+                borderRadius: 14,
+                padding: '14px 16px',
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: 10,
+                marginBottom: 24,
+            }}>
+                <Monitor size={18} color="#D97706" style={{ flexShrink: 0, marginTop: 1 }} />
+                <div>
+                    <p style={{ fontSize: 13.5, fontWeight: 600, color: '#92400E', margin: '0 0 3px' }}>Best experienced on desktop</p>
+                    <p style={{ fontSize: 12.5, color: '#B45309', margin: 0, lineHeight: 1.4 }}>
+                        Audit logs, role matrices, and activity tables are optimised for larger screens.
+                        The most-used admin actions are available below.
+                    </p>
+                </div>
+            </div>
+
+            {/* Mobile-available actions */}
+            {isAdmin && (
+                <>
+                    <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#94A3B8', marginBottom: 10 }}>Quick Actions</p>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 24 }}>
+                        <button
+                            onClick={() => setMobileView('invite')}
+                            style={{
+                                display: 'flex', alignItems: 'center', gap: 14,
+                                padding: '15px 16px',
+                                background: '#fff', border: '1px solid #E2E8F0',
+                                borderRadius: 16, cursor: 'pointer',
+                                boxShadow: '0 1px 3px rgba(15,23,42,.05)',
+                                textAlign: 'left',
+                            }}
+                        >
+                            <div style={{ width: 42, height: 42, borderRadius: 13, background: '#ECFDF5', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                <Users size={20} color="#059669" />
+                            </div>
+                            <div>
+                                <p style={{ fontSize: 15, fontWeight: 600, color: '#0F172A', margin: '0 0 2px' }}>Invite Guest</p>
+                                <p style={{ fontSize: 12.5, color: '#94A3B8', margin: 0 }}>Add a temporary access account</p>
+                            </div>
+                        </button>
+
+                        <button
+                            onClick={() => setMobileView('sessions')}
+                            style={{
+                                display: 'flex', alignItems: 'center', gap: 14,
+                                padding: '15px 16px',
+                                background: '#fff', border: '1px solid #E2E8F0',
+                                borderRadius: 16, cursor: 'pointer',
+                                boxShadow: '0 1px 3px rgba(15,23,42,.05)',
+                                textAlign: 'left',
+                            }}
+                        >
+                            <div style={{ width: 42, height: 42, borderRadius: 13, background: '#FEF2F2', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                <LogOut size={20} color="#DC2626" />
+                            </div>
+                            <div>
+                                <p style={{ fontSize: 15, fontWeight: 600, color: '#0F172A', margin: '0 0 2px' }}>Force Logout</p>
+                                <p style={{ fontSize: 12.5, color: '#94A3B8', margin: 0 }}>End active sessions for a member</p>
+                            </div>
+                        </button>
+                    </div>
+                </>
+            )}
+
+            {/* Email inbox is already mobile-fit — link directly */}
+            <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#94A3B8', marginBottom: 10 }}>Also Available</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <button
+                    onClick={() => window.location.href = '/emails'}
+                    style={{
+                        display: 'flex', alignItems: 'center', gap: 14,
+                        padding: '15px 16px',
+                        background: '#fff', border: '1px solid #E2E8F0',
+                        borderRadius: 16, cursor: 'pointer',
+                        boxShadow: '0 1px 3px rgba(15,23,42,.05)',
+                        textAlign: 'left',
+                    }}
+                >
+                    <div style={{ width: 42, height: 42, borderRadius: 13, background: '#EFF6FF', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        <Inbox size={20} color="#2563EB" />
+                    </div>
+                    <div>
+                        <p style={{ fontSize: 15, fontWeight: 600, color: '#0F172A', margin: '0 0 2px' }}>Email Inbox</p>
+                        <p style={{ fontSize: 12.5, color: '#94A3B8', margin: 0 }}>Link emails to briefs on mobile</p>
+                    </div>
+                </button>
+            </div>
+        </div>
+    );
+}
+
+// ── Mobile Invite Guest ────────────────────────────────────────────────────────
+function MobileGuestInvite({ workspaceId, onBack }: { workspaceId: string; onBack: () => void }) {
+    const [form, setForm] = useState({ email: '', name: '', designation: '', expiresAt: '', canDownload: false });
+    const [isPending, startTransition] = useTransition();
+    const [error, setError] = useState('');
+    const [success, setSuccess] = useState(false);
+
+    function handleInvite() {
+        if (!form.email || !form.name) { setError('Email and name are required'); return; }
+        setError('');
+        startTransition(async () => {
+            try {
+                await inviteGuestMember({
+                    email: form.email, name: form.name,
+                    designation: form.designation,
+                    expiresAt: form.expiresAt || undefined,
+                    canDownload: form.canDownload,
+                });
+                setSuccess(true);
+            } catch (e: any) {
+                setError(e.message);
+            }
+        });
+    }
+
+    const inputStyle: React.CSSProperties = {
+        width: '100%', padding: '12px 14px',
+        border: '1px solid #E2E8F0', borderRadius: 12,
+        fontSize: 15, fontFamily: 'inherit',
+        background: '#fff', color: '#0F172A', outline: 'none',
+        boxSizing: 'border-box',
+    };
+
+    return (
+        <div style={{ padding: '16px', fontFamily: 'var(--font-ui, system-ui, sans-serif)' }}>
+            <button onClick={onBack} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, color: '#059669', fontSize: 14, fontWeight: 600, marginBottom: 20, padding: 0 }}>
+                ← Back
+            </button>
+            <h2 style={{ fontSize: 22, fontWeight: 600, color: '#0F172A', margin: '0 0 20px', fontFamily: 'Georgia, serif' }}>Invite Guest</h2>
+
+            {success ? (
+                <div style={{ background: '#ECFDF5', border: '1px solid #A7F3D0', borderRadius: 14, padding: 20, textAlign: 'center' }}>
+                    <Check size={32} color="#059669" style={{ marginBottom: 10 }} />
+                    <p style={{ fontSize: 15, fontWeight: 600, color: '#065F46', margin: '0 0 8px' }}>Guest invited!</p>
+                    <p style={{ fontSize: 13, color: '#6EE7B7', margin: '0 0 16px' }}>They'll receive an invite email.</p>
+                    <button onClick={onBack} style={{ background: '#059669', color: '#fff', border: 'none', borderRadius: 10, padding: '10px 20px', fontWeight: 600, fontSize: 14, cursor: 'pointer' }}>Done</button>
+                </div>
+            ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                    {error && <p style={{ color: '#DC2626', fontSize: 13, background: '#FEF2F2', padding: '10px 14px', borderRadius: 10, margin: 0 }}>{error}</p>}
+                    <div>
+                        <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>Email *</label>
+                        <input style={inputStyle} type="email" placeholder="guest@example.com" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} />
+                    </div>
+                    <div>
+                        <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>Full Name *</label>
+                        <input style={inputStyle} placeholder="John Doe" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
+                    </div>
+                    <div>
+                        <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>Designation</label>
+                        <input style={inputStyle} placeholder="e.g. Intern, NYSC" value={form.designation} onChange={e => setForm(f => ({ ...f, designation: e.target.value }))} />
+                    </div>
+                    <div>
+                        <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>Expiry Date (optional)</label>
+                        <input style={inputStyle} type="date" value={form.expiresAt} onChange={e => setForm(f => ({ ...f, expiresAt: e.target.value }))} />
+                    </div>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 14, cursor: 'pointer' }}>
+                        <input type="checkbox" checked={form.canDownload} onChange={e => setForm(f => ({ ...f, canDownload: e.target.checked }))} />
+                        Allow document downloads
+                    </label>
+                    <button
+                        onClick={handleInvite}
+                        disabled={isPending}
+                        style={{ width: '100%', height: 52, background: 'linear-gradient(160deg,#10B981,#059669)', color: '#fff', border: 'none', borderRadius: 14, fontSize: 16, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 4 }}
+                    >
+                        {isPending ? <Loader2 size={18} className="animate-spin" /> : <Check size={18} />}
+                        {isPending ? 'Sending…' : 'Send Invite'}
+                    </button>
+                </div>
+            )}
+        </div>
+    );
+}
+
+// ── Mobile Session Control ─────────────────────────────────────────────────────
+function MobileSessionControl({ onBack }: { onBack: () => void }) {
+    const [sessions, setSessions] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [isPending, startTransition] = useTransition();
+    const [forceLogoutTarget, setForceLogoutTarget] = useState<{ id: string; name: string } | null>(null);
+
+    useEffect(() => {
+        setLoading(true);
+        getActiveSessions().then(data => { setSessions(data); setLoading(false); });
+    }, []);
+
+    // Group by user
+    const byUser: Record<string, any> = sessions.reduce((acc: any, s: any) => {
+        if (!acc[s.userId]) acc[s.userId] = { user: s.user, sessions: [] };
+        acc[s.userId].sessions.push(s);
+        return acc;
+    }, {});
+
+    function handleForceLogout(userId: string) {
+        startTransition(async () => {
+            await forceLogoutUser(userId);
+            const data = await getActiveSessions();
+            setSessions(data);
+            setForceLogoutTarget(null);
+        });
+    }
+
+    return (
+        <div style={{ padding: '16px', fontFamily: 'var(--font-ui, system-ui, sans-serif)' }}>
+            <button onClick={onBack} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, color: '#059669', fontSize: 14, fontWeight: 600, marginBottom: 20, padding: 0 }}>
+                ← Back
+            </button>
+            <h2 style={{ fontSize: 22, fontWeight: 600, color: '#0F172A', margin: '0 0 6px', fontFamily: 'Georgia, serif' }}>Active Sessions</h2>
+            <p style={{ fontSize: 13, color: '#94A3B8', margin: '0 0 20px' }}>Force-logout a member to end all their active sessions immediately.</p>
+
+            {loading ? (
+                <div style={{ textAlign: 'center', padding: 40 }}><Loader2 size={24} color="#94A3B8" className="animate-spin" /></div>
+            ) : Object.keys(byUser).length === 0 ? (
+                <div style={{ textAlign: 'center', padding: 40, color: '#94A3B8', fontSize: 14 }}>No active sessions recorded.</div>
+            ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    {Object.values(byUser).map((entry: any) => (
+                        <div key={entry.user.id} style={{ background: '#fff', border: '1px solid #E2E8F0', borderRadius: 16, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12, boxShadow: '0 1px 3px rgba(15,23,42,.04)' }}>
+                            <div style={{ width: 40, height: 40, borderRadius: '50%', background: '#064e3b', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 15, flexShrink: 0 }}>
+                                {entry.user.name?.[0]?.toUpperCase() || 'U'}
+                            </div>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                                <p style={{ fontSize: 14.5, fontWeight: 600, color: '#0F172A', margin: '0 0 2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{entry.user.name}</p>
+                                <p style={{ fontSize: 12, color: '#94A3B8', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{entry.sessions.length} session{entry.sessions.length !== 1 ? 's' : ''}</p>
+                            </div>
+                            <button
+                                onClick={() => setForceLogoutTarget({ id: entry.user.id, name: entry.user.name })}
+                                disabled={isPending}
+                                style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 12px', background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 10, color: '#DC2626', fontSize: 12.5, fontWeight: 600, cursor: 'pointer', flexShrink: 0 }}
+                            >
+                                <LogOut size={13} /> Logout
+                            </button>
+                        </div>
+                    ))}
+                </div>
+            )}
+
+            <ConfirmDialog
+                open={!!forceLogoutTarget}
+                title="Force logout"
+                message={`Sign out all sessions for ${forceLogoutTarget?.name}? They will be redirected to login.`}
+                confirmLabel="Force Logout"
+                danger
+                onConfirm={() => { if (forceLogoutTarget) handleForceLogout(forceLogoutTarget.id); }}
+                onCancel={() => setForceLogoutTarget(null)}
+            />
         </div>
     );
 }

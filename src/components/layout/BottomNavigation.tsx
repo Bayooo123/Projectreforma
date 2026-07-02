@@ -1,7 +1,7 @@
 "use client";
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import {
   Activity,
   FileText,
@@ -17,9 +17,16 @@ import {
   DollarSign,
   Bell,
   Settings,
+  Search,
+  X,
+  Receipt,
+  TrendingDown,
+  UserPlus,
+  CalendarPlus,
+  ChevronRight,
 } from 'lucide-react';
 import styles from './BottomNavigation.module.css';
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 
 interface BottomNavigationProps {
   user?: {
@@ -30,11 +37,15 @@ interface BottomNavigationProps {
 
 const BottomNavigation = ({ user, unreadNotifications = 0 }: BottomNavigationProps) => {
   const pathname = usePathname();
-  const [showFabMenu, setShowFabMenu] = useState(false);
-  const [showMoreDrawer, setShowMoreDrawer] = useState(false);
+  const router = useRouter();
+  const [showFabSheet, setShowFabSheet] = useState(false);
+  const [showHub, setShowHub] = useState(false);
+  const [hubSearch, setHubSearch] = useState('');
+  const searchRef = useRef<HTMLInputElement>(null);
 
   const isAdminOrOwner = user?.role === 'admin' || user?.role === 'owner';
 
+  // Primary tab bar — daily-driver screens
   const primaryNav = [
     { name: 'Today', href: '/pulse', icon: Activity },
     { name: 'Briefs', href: '/briefs', icon: FileText },
@@ -44,15 +55,81 @@ const BottomNavigation = ({ user, unreadNotifications = 0 }: BottomNavigationPro
     { name: 'Court', href: '/calendar', icon: Gavel },
   ];
 
-  const moreNav = [
-    { name: 'Finance', href: '/finance', icon: DollarSign },
-    { name: 'Clients', href: '/management/clients', icon: Users },
-    { name: 'Email Inbox', href: '/emails', icon: Inbox },
-    { name: 'Compliance', href: '/management/compliance', icon: ShieldCheck },
-    { name: 'Analytics', href: '/analytics', icon: BarChart2 },
-    { name: 'Notifications', href: '/notifications', icon: Bell },
-    { name: 'Settings', href: '/settings', icon: Settings },
-    ...(isAdminOrOwner ? [{ name: 'IT Mgmt', href: '/management/it', icon: Terminal }] : []),
+  // Hub groups — single canonical list of every module (F-01, F-05, F-08)
+  const hubGroups = [
+    {
+      label: 'Practice',
+      color: '#059669',
+      items: [
+        { name: 'Clients', href: '/management/clients', icon: Users },
+        { name: 'Compliance', href: '/management/compliance', icon: ShieldCheck },
+        { name: 'Analytics', href: '/analytics', icon: BarChart2 },
+      ],
+    },
+    {
+      label: 'Money',
+      color: '#7c3aed',
+      items: [
+        { name: 'Finance', href: '/finance', icon: DollarSign },
+        { name: 'Email Inbox', href: '/emails', icon: Inbox },
+        { name: 'Notifications', href: '/notifications', icon: Bell },
+      ],
+    },
+    {
+      label: 'Workspace',
+      color: '#0369a1',
+      items: [
+        { name: 'Office Manager', href: '/management/office', icon: Briefcase }, // F-01 fixed
+        { name: 'Settings', href: '/settings', icon: Settings },
+        ...(isAdminOrOwner
+          ? [{ name: 'IT Management', href: '/management/it', icon: Terminal }]
+          : []),
+      ],
+    },
+  ];
+
+  // FAB Quick Create actions — all navigate, none are decoys (F-04 fixed)
+  const createActions = [
+    {
+      name: 'New Brief',
+      href: '/briefs',
+      icon: FileText,
+      color: '#059669',
+      bg: '#ECFDF5',
+      description: 'Open a new matter',
+    },
+    {
+      name: 'New Court Date',
+      href: '/calendar',
+      icon: CalendarPlus,
+      color: '#0369a1',
+      bg: '#EFF6FF',
+      description: 'Schedule a hearing',
+    },
+    {
+      name: 'New Invoice',
+      href: '/finance/invoices/new',
+      icon: Receipt,
+      color: '#7c3aed',
+      bg: '#F5F3FF',
+      description: 'Bill a client',
+    },
+    {
+      name: 'Log Expense',
+      href: '/management/office',
+      icon: TrendingDown,
+      color: '#dc2626',
+      bg: '#FEF2F2',
+      description: 'Record petty cash',
+    },
+    {
+      name: 'Add Client',
+      href: '/management/clients',
+      icon: UserPlus,
+      color: '#0891b2',
+      bg: '#F0F9FF',
+      description: 'Register a client',
+    },
   ];
 
   const isActive = (path: string) => {
@@ -60,45 +137,75 @@ const BottomNavigation = ({ user, unreadNotifications = 0 }: BottomNavigationPro
     return pathname === path || pathname.startsWith(path + '/');
   };
 
-  const isMoreActive = moreNav.some(item => isActive(item.href));
+  const allHubItems = hubGroups.flatMap(g => g.items);
+  const isHubActive = allHubItems.some(item => isActive(item.href));
 
   const closeBoth = () => {
-    setShowFabMenu(false);
-    setShowMoreDrawer(false);
+    setShowFabSheet(false);
+    setShowHub(false);
+    setHubSearch('');
+  };
+
+  // Search filter across all hub items (F-02 — restores global search on mobile)
+  const filteredItems = hubSearch.trim()
+    ? allHubItems.filter(item =>
+        item.name.toLowerCase().includes(hubSearch.toLowerCase())
+      )
+    : null;
+
+  // Auto-focus search when Hub opens
+  useEffect(() => {
+    if (showHub && searchRef.current) {
+      setTimeout(() => searchRef.current?.focus(), 100);
+    }
+  }, [showHub]);
+
+  const handleSearchKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && filteredItems && filteredItems.length > 0) {
+      router.push(filteredItems[0].href);
+      closeBoth();
+    }
+    if (e.key === 'Escape') {
+      if (hubSearch) {
+        setHubSearch('');
+      } else {
+        closeBoth();
+      }
+    }
   };
 
   return (
     <>
-      {/* FAB quick-action menu */}
-      {showFabMenu && (
-        <div className={styles.fabMenuOverlay} onClick={closeBoth}>
-          <div className={styles.fabMenuItems} onClick={e => e.stopPropagation()}>
-            <Link href="/briefs" onClick={closeBoth} className={styles.fabMenuItem}>
-              <FileText size={18} /> New Brief
-            </Link>
-            <Link href="/calendar" onClick={closeBoth} className={styles.fabMenuItem}>
-              <Gavel size={18} /> New Meeting
-            </Link>
-          </div>
-        </div>
-      )}
-
-      {/* More modules drawer */}
-      {showMoreDrawer && (
-        <div className={styles.drawerOverlay} onClick={closeBoth}>
-          <div className={styles.drawer} onClick={e => e.stopPropagation()}>
-            <div className={styles.drawerHandle} />
-            <p className={styles.drawerTitle}>More modules</p>
-            <div className={styles.drawerGrid}>
-              {moreNav.map(item => (
+      {/* ── Quick Create Sheet (F-04 fixed) ───────────────────────────── */}
+      {showFabSheet && (
+        <div className={styles.sheetScrim} onClick={closeBoth}>
+          <div className={styles.createSheet} onClick={e => e.stopPropagation()}>
+            <div className={styles.sheetHandle} />
+            <div className={styles.sheetHeader}>
+              <span className={styles.sheetTitle}>Quick Create</span>
+              <button className={styles.sheetClose} onClick={closeBoth}>
+                <X size={18} />
+              </button>
+            </div>
+            <div className={styles.createList}>
+              {createActions.map(action => (
                 <Link
-                  key={item.href}
-                  href={item.href}
-                  className={`${styles.drawerItem} ${isActive(item.href) ? styles.drawerItemActive : ''}`}
+                  key={action.href}
+                  href={action.href}
+                  className={styles.createItem}
                   onClick={closeBoth}
                 >
-                  <item.icon size={24} />
-                  <span>{item.name}</span>
+                  <div
+                    className={styles.createIcon}
+                    style={{ background: action.bg }}
+                  >
+                    <action.icon size={20} color={action.color} />
+                  </div>
+                  <div className={styles.createInfo}>
+                    <span className={styles.createName}>{action.name}</span>
+                    <span className={styles.createDesc}>{action.description}</span>
+                  </div>
+                  <ChevronRight size={16} color="#94A3B8" />
                 </Link>
               ))}
             </div>
@@ -106,9 +213,99 @@ const BottomNavigation = ({ user, unreadNotifications = 0 }: BottomNavigationPro
         </div>
       )}
 
+      {/* ── Hub Full-Screen Overlay (F-01 + F-02 + F-05) ─────────────── */}
+      {showHub && (
+        <div className={styles.hubOverlay}>
+          {/* Search bar — restores global search (F-02) */}
+          <div className={styles.hubHeader}>
+            <div className={styles.hubSearchWrap}>
+              <Search size={15} className={styles.hubSearchIcon} />
+              <input
+                ref={searchRef}
+                type="text"
+                className={styles.hubSearchInput}
+                placeholder="Search all modules…"
+                value={hubSearch}
+                onChange={e => setHubSearch(e.target.value)}
+                onKeyDown={handleSearchKeyDown}
+              />
+              {hubSearch && (
+                <button
+                  className={styles.hubSearchClear}
+                  onClick={() => setHubSearch('')}
+                >
+                  <X size={13} />
+                </button>
+              )}
+            </div>
+            <button className={styles.hubCloseBtn} onClick={closeBoth}>
+              <X size={20} />
+            </button>
+          </div>
+
+          <div className={styles.hubContent}>
+            {filteredItems ? (
+              /* Search results */
+              <div className={styles.hubGroup}>
+                <p className={styles.hubGroupLabel}>
+                  {filteredItems.length === 0
+                    ? 'No results'
+                    : `${filteredItems.length} module${filteredItems.length !== 1 ? 's' : ''} found`}
+                </p>
+                {filteredItems.length === 0 ? (
+                  <p className={styles.hubEmpty}>
+                    No modules match &ldquo;{hubSearch}&rdquo;
+                  </p>
+                ) : (
+                  <div className={styles.hubGrid}>
+                    {filteredItems.map(item => (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        className={`${styles.hubItem} ${isActive(item.href) ? styles.hubItemActive : ''}`}
+                        onClick={closeBoth}
+                      >
+                        <item.icon size={22} />
+                        <span>{item.name}</span>
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : (
+              /* Grouped view */
+              hubGroups.map(group => (
+                <div key={group.label} className={styles.hubGroup}>
+                  <p
+                    className={styles.hubGroupLabel}
+                    style={{ color: group.color }}
+                  >
+                    {group.label}
+                  </p>
+                  <div className={styles.hubGrid}>
+                    {group.items.map(item => (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        className={`${styles.hubItem} ${isActive(item.href) ? styles.hubItemActive : ''}`}
+                        onClick={closeBoth}
+                      >
+                        <item.icon size={22} />
+                        <span>{item.name}</span>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ── Bottom Tab Bar ─────────────────────────────────────────────── */}
       <div className={styles.bottomNav}>
         <div className={styles.navItemsContainer}>
-          {primaryNav.map((item) => (
+          {primaryNav.map(item => (
             <Link
               key={item.href}
               href={item.href}
@@ -119,17 +316,21 @@ const BottomNavigation = ({ user, unreadNotifications = 0 }: BottomNavigationPro
             </Link>
           ))}
 
-          {/* Center FAB */}
+          {/* Centre FAB — Quick Create */}
           <div className={styles.fabContainer}>
             <button
-              className={`${styles.fabButton} ${showFabMenu ? styles.fabActive : ''}`}
-              onClick={() => { setShowFabMenu(v => !v); setShowMoreDrawer(false); }}
+              className={`${styles.fabButton} ${showFabSheet ? styles.fabActive : ''}`}
+              onClick={() => {
+                setShowFabSheet(v => !v);
+                setShowHub(false);
+                setHubSearch('');
+              }}
             >
               <Plus size={24} />
             </button>
           </div>
 
-          {secondaryNav.map((item) => (
+          {secondaryNav.map(item => (
             <Link
               key={item.href}
               href={item.href}
@@ -141,11 +342,16 @@ const BottomNavigation = ({ user, unreadNotifications = 0 }: BottomNavigationPro
           ))}
 
           <button
-            className={`${styles.navItem} ${styles.moreButton} ${isMoreActive ? styles.active : ''}`}
-            onClick={() => { setShowMoreDrawer(v => !v); setShowFabMenu(false); }}
+            className={`${styles.navItem} ${styles.moreButton} ${
+              isHubActive || showHub ? styles.active : ''
+            }`}
+            onClick={() => {
+              setShowHub(v => !v);
+              setShowFabSheet(false);
+            }}
           >
             <LayoutGrid size={22} className={styles.icon} />
-            <span className={styles.label}>More</span>
+            <span className={styles.label}>Hub</span>
           </button>
         </div>
       </div>

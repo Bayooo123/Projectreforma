@@ -471,21 +471,86 @@
 
 /* Responsive Design */
 @media (max-width: 768px) {
+    .container {
+        padding: 0;
+        max-width: 100%;
+    }
+
+    .header {
+        padding: 20px 16px 0;
+        text-align: left;
+        margin-bottom: 1rem;
+    }
+
+    .header h1 {
+        font-size: 1.5rem;
+    }
+
+    .tabsContainer {
+        justify-content: flex-start;
+        margin-bottom: 1rem;
+        padding: 0 16px;
+        /* Contain the scrollable pill strip */
+        overflow: hidden;
+    }
+
+    .tabs {
+        /* Horizontal scroll instead of wrapping — keeps all tabs reachable */
+        display: flex;
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scroll-snap-type: x proximity;
+        gap: 4px;
+        padding: 4px;
+        /* Hide scrollbar — navigation only, no UI chrome */
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+        width: 100%;
+        border-radius: var(--radius-lg);
+    }
+
+    .tabs::-webkit-scrollbar {
+        display: none;
+    }
+
+    .tab {
+        flex-shrink: 0;
+        scroll-snap-align: start;
+        padding: 0.6rem 1rem;
+        font-size: 0.8rem;
+        white-space: nowrap;
+    }
+
+    .card {
+        border-radius: var(--radius-md);
+        margin: 0 16px 16px;
+        padding: 1.25rem;
+    }
+
     .storageStats {
         grid-template-columns: 1fr;
         gap: 1rem;
     }
 
-    .tabs {
-        flex-wrap: wrap;
-    }
-
-    .tab {
-        padding: 0.5rem 1rem;
-        font-size: 0.875rem;
-    }
-
     .gridRow {
         grid-template-columns: 1fr;
+    }
+
+    /* Colour picker 3-col → 1-col on mobile */
+    .card > div[style*="grid-template-columns: 1fr 1fr 1fr"],
+    .card > div[style*="gridTemplateColumns: '1fr 1fr 1fr'"] {
+        grid-template-columns: 1fr !important;
+    }
+
+    .actions {
+        justify-content: stretch;
+    }
+
+    .saveBtn,
+    .secondaryBtn {
+        width: 100%;
+        text-align: center;
+        justify-content: center;
     }
 }

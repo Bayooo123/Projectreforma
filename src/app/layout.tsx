@@ -40,6 +40,7 @@ export const viewport = {
   maximumScale: 1,
   userScalable: false,
   themeColor: "#0f766e",
+  viewportFit: "cover",
 };
 
 export default async function RootLayout({
@@ -114,7 +115,7 @@ export default async function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body
         className={`${ibmPlexSans.variable} ${sourceSerif4.variable}`}
-        style={{ minHeight: '100vh' }}
+        style={{ minHeight: '100%' }}
       >
         {/* Workspace colour overrides — injected per-request from DB, targets :root */}
         <style dangerouslySetInnerHTML={{ __html: workspaceColorStyle }} />

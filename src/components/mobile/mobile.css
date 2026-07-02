@@ -57,11 +57,16 @@
 .rm-screen {
   display: flex;
   flex-direction: column;
+  /* Fill the full scroll container — covers all mobile browsers */
   min-height: 100%;
+  width: 100%;
   background: var(--rm-bg);
   font-family: var(--rm-ui);
   color: var(--rm-t1);
   -webkit-font-smoothing: antialiased;
+  /* Prevent any sub-pixel gaps at top/bottom on high-DPI screens */
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
 }
 
 .rm-scroll {
