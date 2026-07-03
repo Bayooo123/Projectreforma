@@ -1,10 +1,12 @@
 .container {
     min-height: 100vh;
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     justify-content: center;
     background: linear-gradient(135deg, var(--primary) 0%, var(--bg-sidebar) 100%);
     padding: 20px;
+    /* scroll so keyboard doesn't trap content on mobile */
+    overflow-y: auto;
 }
 
 .card,
@@ -216,4 +218,73 @@
 
 .link:hover {
     text-decoration: underline;
+}
+
+/* ── Password field with show/hide toggle ── */
+.passwordWrapper {
+    position: relative;
+}
+
+.passwordWrapper .input {
+    padding-right: 44px;
+}
+
+.eyeBtn {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #9ca3af;
+    display: flex;
+    align-items: center;
+    padding: 4px;
+    border-radius: 4px;
+}
+
+.eyeBtn:hover {
+    color: #374151;
+}
+
+/* ── Real-time match feedback ── */
+.inputValid {
+    border-color: #16a34a !important;
+    box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.1) !important;
+}
+
+.inputError {
+    border-color: var(--danger) !important;
+    box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.08) !important;
+}
+
+.matchHint {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 13px;
+    color: #16a34a;
+    margin: 6px 0 0 0;
+}
+
+.mismatchHint {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 13px;
+    color: var(--danger);
+    margin: 6px 0 0 0;
+}
+
+/* ── Centre card vertically only on tall screens ── */
+@media (min-height: 700px) {
+    .container {
+        align-items: center;
+    }
+}
+
+.warningIcon {
+    color: #d97706;
+    margin: 0 auto 20px;
 }

@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { Scale, Loader2, CheckCircle, XCircle, Building2, AlertCircle, Clock } from 'lucide-react';
+import { Scale, Loader2, CheckCircle, XCircle, Building2, AlertCircle, Clock, Eye, EyeOff } from 'lucide-react';
 import styles from './invite.module.css';
 
 interface InvitationPageProps {
@@ -25,12 +25,15 @@ export default function InvitationPage({ params }: InvitationPageProps) {
     const [error, setError] = useState('');
     const [submitting, setSubmitting] = useState(false);
     const [success, setSuccess] = useState(false);
-    // State for when the invited email already has an account
     const [existingUserEmail, setExistingUserEmail] = useState<string | null>(null);
 
     const [name, setName] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
+    const [showConfirm, setShowConfirm] = useState(false);
+
+    const errorRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         params.then(p => {
@@ -38,6 +41,13 @@ export default function InvitationPage({ params }: InvitationPageProps) {
             fetchInvitation(p.token);
         });
     }, [params]);
+
+    // Scroll error into view when it appears (critical on mobile w/ keyboard open)
+    useEffect(() => {
+        if (error && errorRef.current) {
+            errorRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+    }, [error]);
 
     const fetchInvitation = async (inviteToken: string) => {
         try {
@@ -64,12 +74,15 @@ export default function InvitationPage({ params }: InvitationPageProps) {
         return `Expires in ${days} day${days > 1 ? 's' : ''}`;
     };
 
+    const passwordsMatch = confirmPassword.length > 0 && password === confirmPassword;
+    const passwordsMismatch = confirmPassword.length > 0 && password !== confirmPassword;
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
 
-        if (!name || !password || !confirmPassword) {
-            setError('Please fill in all fields');
+        if (!name.trim()) {
+            setError('Please enter your full name');
             return;
         }
         if (password.length < 8) {
@@ -77,7 +90,7 @@ export default function InvitationPage({ params }: InvitationPageProps) {
             return;
         }
         if (password !== confirmPassword) {
-            setError('Passwords do not match');
+            setError('Passwords do not match — please re-enter them carefully');
             return;
         }
 
@@ -86,7 +99,7 @@ export default function InvitationPage({ params }: InvitationPageProps) {
             const response = await fetch('/api/invitations/accept', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ token, name, password }),
+                body: JSON.stringify({ token, name: name.trim(), password }),
             });
 
             const data = await response.json();
@@ -95,7 +108,6 @@ export default function InvitationPage({ params }: InvitationPageProps) {
                 throw new Error(data.error || 'Failed to accept invitation');
             }
 
-            // Existing user path — API returns requiresLogin: true
             if (data.requiresLogin) {
                 setExistingUserEmail(data.email);
                 return;
@@ -230,42 +242,75 @@ export default function InvitationPage({ params }: InvitationPageProps) {
                             onChange={(e) => setName(e.target.value)}
                             placeholder="John Doe"
                             required
+                            autoComplete="name"
                             className={styles.input}
                         />
                     </div>
 
                     <div className={styles.formGroup}>
                         <label htmlFor="password" className={styles.label}>Create Password</label>
-                        <input
-                            id="password"
-                            type="password"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            placeholder="••••••••"
-                            required
-                            minLength={8}
-                            className={styles.input}
-                        />
+                        <div className={styles.passwordWrapper}>
+                            <input
+                                id="password"
+                                type={showPassword ? 'text' : 'password'}
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                placeholder="••••••••"
+                                required
+                                autoComplete="new-password"
+                                className={styles.input}
+                            />
+                            <button
+                                type="button"
+                                onClick={() => setShowPassword(v => !v)}
+                                className={styles.eyeBtn}
+                                aria-label={showPassword ? 'Hide password' : 'Show password'}
+                            >
+                                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                            </button>
+                        </div>
                         <p className={styles.hint}>Minimum 8 characters</p>
                     </div>
 
                     <div className={styles.formGroup}>
                         <label htmlFor="confirmPassword" className={styles.label}>Confirm Password</label>
-                        <input
-                            id="confirmPassword"
-                            type="password"
-                            value={confirmPassword}
-                            onChange={(e) => setConfirmPassword(e.target.value)}
-                            placeholder="••••••••"
-                            required
-                            minLength={8}
-                            className={styles.input}
-                        />
+                        <div className={styles.passwordWrapper}>
+                            <input
+                                id="confirmPassword"
+                                type={showConfirm ? 'text' : 'password'}
+                                value={confirmPassword}
+                                onChange={(e) => setConfirmPassword(e.target.value)}
+                                placeholder="••••••••"
+                                required
+                                autoComplete="new-password"
+                                className={`${styles.input} ${passwordsMatch ? styles.inputValid : ''} ${passwordsMismatch ? styles.inputError : ''}`}
+                            />
+                            <button
+                                type="button"
+                                onClick={() => setShowConfirm(v => !v)}
+                                className={styles.eyeBtn}
+                                aria-label={showConfirm ? 'Hide password' : 'Show password'}
+                            >
+                                {showConfirm ? <EyeOff size={18} /> : <Eye size={18} />}
+                            </button>
+                        </div>
+                        {passwordsMatch && (
+                            <p className={styles.matchHint}><CheckCircle size={13} /> Passwords match</p>
+                        )}
+                        {passwordsMismatch && (
+                            <p className={styles.mismatchHint}><XCircle size={13} /> Passwords do not match</p>
+                        )}
                     </div>
 
-                    {error && <div className={styles.error}>{error}</div>}
+                    {error && (
+                        <div ref={errorRef} className={styles.error}>{error}</div>
+                    )}
 
-                    <button type="submit" disabled={submitting} className={styles.submitButton}>
+                    <button
+                        type="submit"
+                        disabled={submitting || passwordsMismatch}
+                        className={styles.submitButton}
+                    >
                         {submitting ? (
                             <><Loader2 className={styles.spinner} size={20} />Joining workspace...</>
                         ) : (
