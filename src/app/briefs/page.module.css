@@ -8,6 +8,14 @@
     padding: 2rem;
 }
 
+@media (max-width: 768px) {
+    .page {
+        padding: 0;
+        gap: 0;
+        max-width: 100%;
+    }
+}
+
 .header {
     display: flex;
     justify-content: space-between;
