@@ -10,7 +10,7 @@ const envSchema = z.object({
     // Authentication
     NEXTAUTH_SECRET: z.string().min(32),
     NEXTAUTH_URL: z.string().optional(),
-    NEXT_PUBLIC_APP_URL: z.string().default('http://localhost:3000'),
+    NEXT_PUBLIC_APP_URL: z.string().default('http://localhost:3000').transform(url => url.replace(/\/$/, '')),
 
     // External Services
     ANTHROPIC_API_KEY: z.string().optional(),
