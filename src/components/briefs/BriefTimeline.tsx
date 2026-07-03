@@ -1,8 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { Loader, Sparkles, ChevronDown, ChevronUp, RefreshCw } from 'lucide-react';
+import { Loader, Sparkles, ChevronDown, ChevronUp, RefreshCw, Mail, Paperclip } from 'lucide-react';
 import { generateBriefSummary, TimelineEvent, BriefSummaryData } from '@/app/actions/briefs';
+import { getLinkedEmailsForBrief } from '@/app/actions/documents';
 import styles from './BriefTimeline.module.css';
 
 function formatRelative(date: Date): string {
@@ -15,6 +16,8 @@ function formatRelative(date: Date): string {
     if (days < 7) return `${days}d ago`;
     return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
 }
+
+type LinkedEmail = Awaited<ReturnType<typeof getLinkedEmailsForBrief>>[number];
 
 // ── AI Summary panel ─────────────────────────────────────────────────────────
 
@@ -151,18 +154,84 @@ function SummaryPanel({ briefId, initial }: SummaryPanelProps) {
     );
 }
 
+// ── Correspondence History ────────────────────────────────────────────────────
+
+function CorrespondenceHistory({ emails }: { emails: LinkedEmail[] }) {
+    if (emails.length === 0) return null;
+
+    const sorted = [...emails].sort(
+        (a, b) => new Date(a.receivedAt).getTime() - new Date(b.receivedAt).getTime()
+    );
+
+    return (
+        <div className={styles.correspondenceSection}>
+            <div className={styles.correspondenceHeader}>
+                <Mail size={13} />
+                Correspondence History
+                <span className={styles.correspondenceCount}>{emails.length}</span>
+            </div>
+            <div className={styles.correspondenceList}>
+                {sorted.map(email => {
+                    const date = new Date(email.receivedAt);
+                    return (
+                        <div key={email.id} className={styles.correspondenceItem}>
+                            <div className={styles.correspondenceDateCol}>
+                                <div className={styles.correspondenceDateDay}>
+                                    {date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+                                </div>
+                                <div className={styles.correspondenceDateYear}>
+                                    {date.getFullYear()}
+                                </div>
+                            </div>
+                            <div className={styles.correspondenceCard}>
+                                <div className={styles.correspondenceSubject}>
+                                    {email.subject || '(No subject)'}
+                                </div>
+                                <div className={styles.correspondenceFrom}>
+                                    {email.fromName ? `${email.fromName} <${email.fromEmail}>` : email.fromEmail}
+                                </div>
+                                {email.bodyPreview && (
+                                    <div className={styles.correspondencePreview}>{email.bodyPreview}</div>
+                                )}
+                                {email.attachments.length > 0 && (
+                                    <div className={styles.emailAttachments}>
+                                        {email.attachments.map(att => (
+                                            <a
+                                                key={att.id}
+                                                href={att.url}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className={styles.emailAttachment}
+                                            >
+                                                <Paperclip size={10} />
+                                                {att.name}
+                                            </a>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    );
+                })}
+            </div>
+        </div>
+    );
+}
+
 // ── Main component ────────────────────────────────────────────────────────────
 
 interface BriefTimelineProps {
     briefId: string;
     initialEvents: TimelineEvent[];
     initialSummary: BriefSummaryData | null;
+    linkedEmails?: LinkedEmail[];
 }
 
-export default function BriefTimeline({ briefId, initialSummary }: BriefTimelineProps) {
+export default function BriefTimeline({ briefId, initialSummary, linkedEmails = [] }: BriefTimelineProps) {
     return (
         <div className={styles.root}>
             <SummaryPanel briefId={briefId} initial={initialSummary} />
+            <CorrespondenceHistory emails={linkedEmails} />
         </div>
     );
 }
