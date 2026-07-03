@@ -73,6 +73,7 @@
 
     .mainContent {
         margin-left: 0;
+        width: 100%;
         /* Account for bottom nav (65px) + safe area */
         padding-bottom: calc(65px + env(safe-area-inset-bottom, 0px));
         padding-left: env(safe-area-inset-left, 0px);
@@ -82,10 +83,18 @@
         max-height: none;
     }
 
+    .contentArea {
+        width: 100%;
+    }
+
     .contentContainer {
         padding: 0;
         padding-bottom: 0;
         animation: none;
+        /* Reset desktop centering so container fills the full mobile viewport */
+        width: 100%;
+        max-width: 100%;
+        margin: 0;
     }
 }
 
