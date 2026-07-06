@@ -39,7 +39,10 @@ export default function PWAInstallPrompt() {
         return () => window.removeEventListener('beforeinstallprompt', handler);
     }, []);
 
+    // Push notification subscription — only request once the app is running in standalone mode
+    // (i.e. after it's been installed), so it doesn't clash with the install prompt UI
     useEffect(() => {
+        if (!isStandalone()) return;
         if ('serviceWorker' in navigator && 'PushManager' in window && !localStorage.getItem('push_requested')) {
             const requestPush = async () => {
                 const permission = await Notification.requestPermission();
