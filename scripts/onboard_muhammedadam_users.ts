@@ -55,6 +55,7 @@ async function main() {
                 where: { id: user.id },
                 data: {
                     name: u.name,
+                    password: hashedPassword,
                     lawyerToken: user.lawyerToken || `LT-${nanoid(10)}`
                 }
             });
