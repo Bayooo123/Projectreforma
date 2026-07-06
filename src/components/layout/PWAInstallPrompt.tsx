@@ -24,19 +24,11 @@ export default function PWAInstallPrompt() {
         if (isStandalone()) return;
         if (localStorage.getItem('pwa_prompt_dismissed')) return;
 
+        // Only show custom prompt on iOS — Chrome/Edge handle their own install UI natively
         if (isIOSDevice()) {
             setIos(true);
             setShowPrompt(true);
-            return;
         }
-
-        const handler = (e: Event) => {
-            e.preventDefault();
-            setDeferredPrompt(e);
-            setShowPrompt(true);
-        };
-        window.addEventListener('beforeinstallprompt', handler);
-        return () => window.removeEventListener('beforeinstallprompt', handler);
     }, []);
 
     // Push notification subscription — only request once the app is running in standalone mode
@@ -85,7 +77,9 @@ export default function PWAInstallPrompt() {
                 <div className="flex items-start justify-between mb-2">
                     <h4 className="font-semibold text-gray-900 dark:text-white">Install Reforma</h4>
                     <button
+                        type="button"
                         onClick={handleDismiss}
+                        aria-label="Dismiss install prompt"
                         className="ml-2 flex-shrink-0 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
                     >
                         <X size={16} />
@@ -129,6 +123,7 @@ export default function PWAInstallPrompt() {
                     </p>
                 </div>
                 <button
+                    type="button"
                     onClick={handleDismiss}
                     aria-label="Dismiss install prompt"
                     className="flex-shrink-0 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
@@ -138,6 +133,7 @@ export default function PWAInstallPrompt() {
             </div>
             <div className="flex gap-2">
                 <button
+                    type="button"
                     onClick={handleInstall}
                     className="flex-1 bg-brand text-white text-sm font-medium py-2 px-4 rounded-lg flex items-center justify-center gap-2 hover:bg-opacity-90"
                 >
@@ -145,6 +141,7 @@ export default function PWAInstallPrompt() {
                     Install App
                 </button>
                 <button
+                    type="button"
                     onClick={handleDismiss}
                     className="px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
                 >
