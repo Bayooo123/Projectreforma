@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { Download, Share2, X } from 'lucide-react';
+import Image from 'next/image';
 
 function isIOSDevice() {
     return /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
@@ -110,13 +111,27 @@ export default function PWAInstallPrompt() {
 
     return (
         <div className="fixed bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-80 bg-white dark:bg-gray-800 p-4 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 z-50 flex flex-col gap-3">
-            <div className="flex items-start justify-between">
-                <div>
+            <div className="flex items-start gap-3">
+                <Image
+                    src="/logos/reforma-logo-monogram.png"
+                    alt="Reforma"
+                    width={44}
+                    height={44}
+                    className="rounded-xl flex-shrink-0"
+                />
+                <div className="flex-1 min-w-0">
                     <h4 className="font-semibold text-gray-900 dark:text-white">Install Reforma</h4>
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                        Install Reforma as an app on your device for offline support and faster access.
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+                        Install as an app for offline support and faster access.
                     </p>
                 </div>
+                <button
+                    onClick={handleDismiss}
+                    aria-label="Dismiss install prompt"
+                    className="flex-shrink-0 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                >
+                    <X size={16} />
+                </button>
             </div>
             <div className="flex gap-2">
                 <button
