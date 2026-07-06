@@ -6,15 +6,15 @@ import { nanoid } from 'nanoid';
 const prisma = new PrismaClient();
 
 // Emails verified against muhammedadam.com domain
-// password = first name of each user
+// password = FirstName@123 (min 8 chars required by login validation)
 const USERS = [
-    { name: 'Mr Muhammed Adam',       email: 'adam@muhammedadam.com',        role: 'Principal Partner',  designation: 'Principal',             password: 'Muhammed'   },
-    { name: 'Mr Ojeh Godwin',         email: 'ojeh@muhammedadam.com',        role: 'Senior Associate',   designation: 'Senior Associate',      password: 'Ojeh'       },
-    { name: 'Mr Shuaib Muhammed',     email: 'shuaib@muhammedadam.com',      role: 'Head of Chamber',    designation: 'Senior Associate & HOC', password: 'Shuaib'    },
-    { name: 'Ms Bashirat Yahaya',     email: 'bashirat@muhammedadam.com',    role: 'Associate',          designation: 'Associate',             password: 'Bashirat'   },
-    { name: 'Mr Lawal-Tunji Lawal',   email: 'lawal@muhammedadam.com',       role: 'Associate',          designation: 'Associate',             password: 'Lawal-Tunji'},
-    { name: 'Ms Jane Ugbala',         email: 'jane@muhammedadam.com',        role: 'Associate',          designation: 'Associate',             password: 'Jane'       },
-    { name: 'Mr Mojeed Olatunji',     email: 'litigation@muhammedadam.com',  role: 'Associate',          designation: 'Litigation Officer',    password: 'Mojeed'     },
+    { name: 'Mr Muhammed Adam',       email: 'adam@muhammedadam.com',        role: 'Principal Partner',  designation: 'Principal',              password: 'Muhammed@123'   },
+    { name: 'Mr Ojeh Godwin',         email: 'ojeh@muhammedadam.com',        role: 'Senior Associate',   designation: 'Senior Associate',       password: 'Ojeh@123'       },
+    { name: 'Mr Shuaib Muhammed',     email: 'shuaib@muhammedadam.com',      role: 'Head of Chamber',    designation: 'Senior Associate & HOC', password: 'Shuaib@123'     },
+    { name: 'Ms Bashirat Yahaya',     email: 'bashirat@muhammedadam.com',    role: 'Associate',          designation: 'Associate',              password: 'Bashirat@123'   },
+    { name: 'Mr Lawal-Tunji Lawal',   email: 'lawal@muhammedadam.com',       role: 'Associate',          designation: 'Associate',              password: 'Lawal-Tunji@123'},
+    { name: 'Ms Jane Ugbala',         email: 'jane@muhammedadam.com',        role: 'Associate',          designation: 'Associate',              password: 'Jane@123'       },
+    { name: 'Mr Mojeed Olatunji',     email: 'litigation@muhammedadam.com',  role: 'Associate',          designation: 'Litigation Officer',     password: 'Mojeed@123'     },
 ];
 
 const PEACE_BASSEY_NEW_EMAIL = 'accounts@muhammedadam.com';
@@ -78,12 +78,12 @@ async function main() {
     if (!peaceBasseyByName) {
         console.warn('  ⚠️  Peace Bassey not found by name. Skipping email update.');
     } else {
-        const peaceHashedPassword = await bcrypt.hash('Peace', 10);
+        const peaceHashedPassword = await bcrypt.hash('Peace@123', 10);
         await prisma.user.update({
             where: { id: peaceBasseyByName.id },
             data: { email: PEACE_BASSEY_NEW_EMAIL, password: peaceHashedPassword }
         });
-        console.log(`  ✓ Updated Peace Bassey (${peaceBasseyByName.email} → ${PEACE_BASSEY_NEW_EMAIL}) | password: Peace`);
+        console.log(`  ✓ Updated Peace Bassey (${peaceBasseyByName.email} → ${PEACE_BASSEY_NEW_EMAIL}) | password: Peace@123`);
 
         // Also ensure she is a member of this workspace
         await prisma.workspaceMember.upsert({
@@ -95,7 +95,7 @@ async function main() {
     }
 
     console.log('\n✅ Onboarding complete.');
-    console.log('   Each account password = their first name (e.g. Muhammed, Ojeh, Shuaib…)');
+    console.log('   Each account password = FirstName@123 (e.g. Muhammed@123, Ojeh@123…)');
 }
 
 main()
