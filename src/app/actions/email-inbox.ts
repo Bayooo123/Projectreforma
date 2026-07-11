@@ -114,6 +114,68 @@ export async function getInboxBriefs(): Promise<InboxBrief[]> {
     }));
 }
 
+// ── Attachment ingestion helper ──────────────────────────────────────────────
+// Fetches all EmailAttachment rows for the given emailIds that are NOT already
+// saved as Document rows in the brief vault, then runs the full ingestion
+// pipeline (OCR, timeline extraction, versioning) for each one.
+// Fire-and-forget: we don't await this in the linking actions so the HTTP
+// response isn't held up, but errors are logged.
+async function ingestEmailAttachmentsToBrief(
+    emailIds: string[],
+    briefId: string,
+): Promise<void> {
+    try {
+        const { DocumentIngestionService } = await import('@/lib/services/ingestion');
+
+        // Existing document URLs in this brief — used to skip already-ingested attachments
+        const existingDocs = await prisma.document.findMany({
+            where: { briefId },
+            select: { url: true },
+        });
+        const existingUrls = new Set(existingDocs.map(d => d.url));
+
+        // All EmailAttachment rows for these emails
+        const emailAttachments = await prisma.emailAttachment.findMany({
+            where: { inboundEmailId: { in: emailIds } },
+            select: { id: true, name: true, url: true, contentType: true, size: true, inboundEmailId: true },
+        });
+
+        if (emailAttachments.length === 0) return;
+
+        const folder = await DocumentIngestionService.getOrCreateCorrespondenceFolder(briefId);
+
+        for (const att of emailAttachments) {
+            // Skip if this attachment URL is already a document in the brief
+            if (existingUrls.has(att.url)) continue;
+
+            try {
+                // Fetch the file content from blob storage so we can run OCR / timeline
+                const res = await fetch(att.url);
+                if (!res.ok) {
+                    console.error(`[ingestEmailAttachments] Failed to fetch ${att.url}: ${res.status}`);
+                    continue;
+                }
+                const buffer = Buffer.from(await res.arrayBuffer());
+
+                await DocumentIngestionService.ingest({
+                    name: att.name,
+                    buffer,
+                    contentType: att.contentType,
+                    size: att.size || buffer.byteLength,
+                    briefId,
+                    folderId: folder.id,
+                    url: att.url,
+                });
+                console.log(`[ingestEmailAttachments] Ingested "${att.name}" into brief ${briefId}`);
+            } catch (err) {
+                console.error(`[ingestEmailAttachments] Failed for "${att.name}":`, err);
+            }
+        }
+    } catch (err) {
+        console.error('[ingestEmailAttachments] Helper failed:', err);
+    }
+}
+
 export async function linkEmailToBrief(emailId: string, briefId: string): Promise<{ success: boolean; error?: string }> {
     await requireAuth();
 
@@ -155,6 +217,11 @@ export async function linkEmailToBrief(emailId: string, briefId: string): Promis
 
     revalidatePath('/emails');
     revalidatePath(`/briefs/${briefId}`);
+
+    // Ingest any EmailAttachment rows into the brief Documents vault (non-blocking)
+    ingestEmailAttachmentsToBrief([emailId], briefId)
+        .catch(err => console.error('[linkEmailToBrief] Attachment ingestion failed:', err));
+
     return { success: true };
 }
 
@@ -224,6 +291,11 @@ export async function bulkLinkEmailsToBrief(
 
         revalidatePath('/emails');
         revalidatePath(`/briefs/${briefId}`);
+
+        // Ingest attachments for all linked emails into the brief Documents vault (non-blocking)
+        ingestEmailAttachmentsToBrief(emailIds, briefId)
+            .catch(err => console.error('[bulkLinkEmailsToBrief] Attachment ingestion failed:', err));
+
         return { success: true, linked: emailIds.length };
     } catch (err: any) {
         console.error('[bulkLinkEmailsToBrief]', err);
