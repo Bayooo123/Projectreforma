@@ -2,7 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
-import { User, Building2, Lock, Loader, FileText, AlertCircle, Key, Copy, Trash2, Plus, Eye, EyeOff, Check, HardDrive, CreditCard, CheckCircle, Clock, XCircle, Brain, Palette, RotateCcw } from 'lucide-react';
+import {
+  User, Building2, Lock, Loader, FileText, AlertCircle, Key, Copy, Trash2, Plus, Eye, EyeOff, Check, HardDrive, CreditCard, CheckCircle, Clock, XCircle, Brain, Palette, RotateCcw,
+  ChevronRight, ChevronLeft
+} from 'lucide-react';
 import { updateWorkspaceSettings, getWorkspaceSettings, getStorageUsage, getInstitutionalEmail, claimInstitutionalEmail, getUserTheme, updateUserTheme, updateWorkspaceColors } from '@/app/actions/settings';
 import { setModulePin, clearModulePin, getModulePinStatuses, consumeModulePinReset, type ProtectedModule } from '@/app/actions/module-pins';
 import { getUserProfile, updateUserProfile } from '@/app/actions/members';
@@ -13,12 +16,16 @@ import { getSubscriptionStatus, initiateSubscriptionPayment, checkPaymentStatus,
 import { BAND_LABELS, TIER_LABELS, SUBSCRIPTION_PRICES, formatNaira, type SubscriptionBand, type SubscriptionTier } from '@/lib/subscriptionPricing';
 import styles from './page.module.css';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
+import { useIsMobile } from '@/hooks/useIsMobile';
 
 export default function SettingsPage() {
     const { data: session } = useSession();
     const [activeTab, setActiveTab] = useState<'profile' | 'firm' | 'appearance' | 'apikeys' | 'security' | 'storage' | 'subscription'>('profile');
+    const [mobileSubView, setMobileSubView] = useState<string | null>(null);
     const [deletingAccountId, setDeletingAccountId] = useState<string | null>(null);
     const [revokingKeyId, setRevokingKeyId] = useState<string | null>(null);
+
+    const isMobile = useIsMobile();
 
     // Config State
     const [isLoading, setIsLoading] = useState(true);
@@ -209,6 +216,7 @@ export default function SettingsPage() {
             setPinResetToken(token);
             setPinResetModule(mod);
             setActiveTab('security');
+            setMobileSubView('security');
         }
     }, [session, activeTab]);
 
@@ -433,42 +441,150 @@ export default function SettingsPage() {
 
     if (isLoading && !session) return <div className={styles.loading}><Loader className="spin" /> Loading...</div>;
 
-    return (
-        <><div className={styles.container}>
-            <header className={styles.header}>
-                <h1>Settings</h1>
-                <p>Manage your personal profile, firm preferences, and integrations.</p>
-            </header>
+    const categories = [
+        { id: 'profile', name: 'Profile Information', desc: 'Job title, name, and personal details', icon: User, bg: '#EFF6FF', color: '#2563EB' },
+        { id: 'firm', name: 'Firm Configuration', desc: 'Branding, join password, and bank accounts', icon: Building2, bg: '#ECFDF5', color: '#059669' },
+        { id: 'appearance', name: 'Appearance Override', desc: 'Customize accents and theme settings', icon: Palette, bg: '#F5F3FF', color: '#7C3AED' },
+        ...(canManageApiKeys ? [{ id: 'apikeys', name: 'API Integrations', desc: 'Generate keys for external developer access', icon: Key, bg: '#FEF3C7', color: '#D97706' }] : []),
+        { id: 'security', name: 'Security & PIN Gates', desc: 'Password reset and screen locks', icon: Lock, bg: '#FEF2F2', color: '#EF4444' },
+        { id: 'storage', name: 'Disk Storage', desc: 'Breakdown of workspace documents size', icon: HardDrive, bg: '#F0F9FF', color: '#0891b2' },
+        { id: 'subscription', name: 'Workspace Plan', desc: 'Manage invoices, tier levels, and billing info', icon: CreditCard, bg: '#FFFBEB', color: '#B45309' }
+    ];
 
-            <div className={styles.tabsContainer}>
-                <div className={styles.tabs}>
-                    <button className={`${styles.tab} ${activeTab === 'profile' ? styles.activeTab : ''}`} onClick={() => setActiveTab('profile')}>
-                        <User size={18} /> Profile
-                    </button>
-                    <button className={`${styles.tab} ${activeTab === 'firm' ? styles.activeTab : ''}`} onClick={() => setActiveTab('firm')}>
-                        <Building2 size={18} /> Firm
-                    </button>
-                    <button className={`${styles.tab} ${activeTab === 'appearance' ? styles.activeTab : ''}`} onClick={() => setActiveTab('appearance')}>
-                        <Palette size={18} /> Appearance
-                    </button>
-                    {canManageApiKeys && (
-                        <button className={`${styles.tab} ${activeTab === 'apikeys' ? styles.activeTab : ''}`} onClick={() => setActiveTab('apikeys')}>
-                            <Key size={18} /> API Keys
-                        </button>
-                    )}
-                    <button className={`${styles.tab} ${activeTab === 'security' ? styles.activeTab : ''}`} onClick={() => setActiveTab('security')}>
-                        <Lock size={18} /> Security
-                    </button>
-                    <button className={`${styles.tab} ${activeTab === 'storage' ? styles.activeTab : ''}`} onClick={() => setActiveTab('storage')}>
-                        <HardDrive size={18} /> Storage
-                    </button>
-                    <button className={`${styles.tab} ${activeTab === 'subscription' ? styles.activeTab : ''}`} onClick={() => setActiveTab('subscription')}>
-                        <CreditCard size={18} /> Subscription
-                    </button>
+    if (isMobile && !mobileSubView) {
+        return (
+            <div className="rm-screen" style={{ background: '#F1F5F9', minHeight: '100vh' }}>
+                <div className="rm-hdr" style={{ borderBottom: '1px solid #E2E8F0', background: '#F1F5F9' }}>
+                    <p className="rm-eyebrow">Workspace</p>
+                    <h1 className="rm-h1">Settings</h1>
+                </div>
+                <div className="rm-scroll" style={{ padding: '16px' }}>
+                    <p style={{ fontSize: '13px', color: '#64748b', margin: '0 0 20px', lineHeight: 1.5 }}>
+                        Manage your personal profile, firm preferences, and integrations.
+                    </p>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                        {categories.map(cat => (
+                            <button
+                                key={cat.id}
+                                onClick={() => {
+                                    setActiveTab(cat.id as any);
+                                    setMobileSubView(cat.id);
+                                }}
+                                style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '14px',
+                                    padding: '16px',
+                                    background: '#fff',
+                                    border: '1px solid #E2E8F0',
+                                    borderRadius: '16px',
+                                    cursor: 'pointer',
+                                    boxShadow: '0 1px 3px rgba(15,23,42,.04)',
+                                    textAlign: 'left',
+                                    width: '100%',
+                                }}
+                            >
+                                <div style={{
+                                    width: 40,
+                                    height: 40,
+                                    borderRadius: '12px',
+                                    background: cat.bg,
+                                    color: cat.color,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    flexShrink: 0
+                                }}>
+                                    <cat.icon size={20} />
+                                </div>
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                    <p style={{ fontSize: '14.5px', fontWeight: 600, color: '#0F172A', margin: '0 0 2px' }}>{cat.name}</p>
+                                    <p style={{ fontSize: '12px', color: '#94A3B8', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{cat.desc}</p>
+                                </div>
+                                <ChevronRight size={16} color="#94A3B8" style={{ flexShrink: 0 }} />
+                            </button>
+                        ))}
+                    </div>
                 </div>
             </div>
+        );
+    }
 
-            <div className={styles.content}>
+    return (
+        <><div className={isMobile ? "rm-screen" : styles.container} style={isMobile ? { background: '#F1F5F9', minHeight: '100vh' } : undefined}>
+            {isMobile ? (
+                <div style={{
+                    padding: '14px 16px',
+                    background: '#F1F5F9',
+                    borderBottom: '1px solid #E2E8F0',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    position: 'sticky',
+                    top: 0,
+                    zIndex: 20,
+                    width: '100%',
+                    boxSizing: 'border-box',
+                }}>
+                    <button
+                        onClick={() => setMobileSubView(null)}
+                        style={{
+                            background: 'none',
+                            border: 'none',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            color: 'var(--accent-color, #059669)',
+                            fontSize: '14px',
+                            fontWeight: 600,
+                            padding: '4px 0',
+                        }}
+                    >
+                        <ChevronLeft size={16} /> Back
+                    </button>
+                    <span style={{ fontSize: '15px', fontWeight: 700, color: '#0F172A' }}>
+                        {categories.find(c => c.id === mobileSubView)?.name || 'Settings'}
+                    </span>
+                </div>
+            ) : (
+                <header className={styles.header}>
+                    <h1>Settings</h1>
+                    <p>Manage your personal profile, firm preferences, and integrations.</p>
+                </header>
+            )}
+
+            {!isMobile && (
+                <div className={styles.tabsContainer}>
+                    <div className={styles.tabs}>
+                        <button className={`${styles.tab} ${activeTab === 'profile' ? styles.activeTab : ''}`} onClick={() => setActiveTab('profile')}>
+                            <User size={18} /> Profile
+                        </button>
+                        <button className={`${styles.tab} ${activeTab === 'firm' ? styles.activeTab : ''}`} onClick={() => setActiveTab('firm')}>
+                            <Building2 size={18} /> Firm
+                        </button>
+                        <button className={`${styles.tab} ${activeTab === 'appearance' ? styles.activeTab : ''}`} onClick={() => setActiveTab('appearance')}>
+                            <Palette size={18} /> Appearance
+                        </button>
+                        {canManageApiKeys && (
+                            <button className={`${styles.tab} ${activeTab === 'apikeys' ? styles.activeTab : ''}`} onClick={() => setActiveTab('apikeys')}>
+                                <Key size={18} /> API Keys
+                            </button>
+                        )}
+                        <button className={`${styles.tab} ${activeTab === 'security' ? styles.activeTab : ''}`} onClick={() => setActiveTab('security')}>
+                            <Lock size={18} /> Security
+                        </button>
+                        <button className={`${styles.tab} ${activeTab === 'storage' ? styles.activeTab : ''}`} onClick={() => setActiveTab('storage')}>
+                            <HardDrive size={18} /> Storage
+                        </button>
+                        <button className={`${styles.tab} ${activeTab === 'subscription' ? styles.activeTab : ''}`} onClick={() => setActiveTab('subscription')}>
+                            <CreditCard size={18} /> Subscription
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            <div className={isMobile ? "rm-scroll" : styles.content} style={isMobile ? { padding: '16px 0 32px' } : undefined}>
                 {activeTab === 'profile' && (
                     <div className={styles.card}>
                         <div className={styles.cardHeader}>
@@ -668,7 +784,7 @@ export default function SettingsPage() {
                                 <h2>Institutional Memory</h2>
                             </div>
                             <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
-                                BCC this address on client emails to automatically capture them into your firm's institutional memory.
+                                BCC this address on client emails to automatically capture them into your firm&apos;s institutional memory.
                                 Every email you BCC will be routed into the correct brief.
                             </p>
 
@@ -772,7 +888,7 @@ export default function SettingsPage() {
                             <h2>Personal Appearance</h2>
                         </div>
                         <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
-                            Override your firm's workspace theme with personal colours. Only you will see these changes.
+                            Override your firm&apos;s workspace theme with personal colours. Only you will see these changes.
                         </p>
 
                         {/* Theme source toggle */}
@@ -905,7 +1021,7 @@ export default function SettingsPage() {
                                     onClick={() => setGeneratedKey(null)}
                                     style={{ marginTop: '1rem', padding: '0.5rem 1rem', background: 'transparent', border: '1px solid var(--border)', borderRadius: '6px', cursor: 'pointer', color: 'var(--text-secondary)' }}
                                 >
-                                    I've saved the key
+                                    I&apos;ve saved the key
                                 </button>
                             </div>
                         )}
@@ -997,7 +1113,7 @@ export default function SettingsPage() {
                             <div className={styles.resetDescription}>
                                 <h3 className={styles.resetTitle}>Change Password</h3>
                                 <p className={styles.resetText}>
-                                    We'll send a secure password reset link to your account email address.
+                                    We&apos;ll send a secure password reset link to your account email address.
                                     Click the link in the email to set a new password — no old password required.
                                 </p>
                                 <div className={styles.resetEmailRow}>
@@ -1348,7 +1464,7 @@ export default function SettingsPage() {
                                         }
                                     </button>
                                     <p style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)', marginTop: '0.75rem' }}>
-                                        You will be redirected to Monnify's secure checkout. Payment by card or bank transfer.
+                                        You will be redirected to Monnify&apos;s secure checkout. Payment by card or bank transfer.
                                     </p>
                                 </div>
 

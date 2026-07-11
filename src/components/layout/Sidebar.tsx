@@ -3,21 +3,14 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
-  Activity,
-  FileText,
-  Gavel,
-  Users,
-  Briefcase,
-  BarChart2,
-  ShieldCheck,
   LogOut,
   ShieldAlert,
-  Terminal,
 } from 'lucide-react';
 import styles from './Sidebar.module.css';
 import { signOut } from 'next-auth/react'; // Use client-side signOut
 import { useEffect } from 'react';
 import { checkOverdueInvoices } from '@/app/actions/notifications';
+import { navigationGroups, todayItem } from '@/config/navigation';
 
 interface SidebarProps {
   user?: {
@@ -51,22 +44,13 @@ const Sidebar = ({ user, workspace }: SidebarProps) => {
 
   const isAdminOrOwner = user?.role === 'admin' || user?.role === 'owner';
 
-  const navItems = [
-    { name: 'The Pulse', href: '/pulse', icon: Activity },
-    { name: 'Briefs Manager', href: '/briefs', icon: FileText },
-    { name: 'Calendar and meetings', href: '/calendar', icon: Gavel },
-    { name: 'Client Management', href: '/management/clients', icon: Users },
-    { name: 'Office Manager', href: '/management/office', icon: Briefcase },
-    { name: 'Compliance', href: '/management/compliance', icon: ShieldCheck },
-    { name: 'Analytics', href: '/analytics', icon: BarChart2 },
-    { name: 'IT Management', href: '/management/it', icon: Terminal },
-  ];
-
   const isActive = (path: string) => {
-    if (path === '/management') {
-      return pathname === path;
+    // Exact or starting with (to handle query params/subroutes)
+    const cleanPath = path.split('?')[0];
+    if (cleanPath === '/management') {
+      return pathname === cleanPath;
     }
-    return pathname === path || pathname.startsWith(path + '/');
+    return pathname === cleanPath || pathname.startsWith(cleanPath + '/');
   };
 
   return (
@@ -86,18 +70,47 @@ const Sidebar = ({ user, workspace }: SidebarProps) => {
 
       <nav className={styles.nav}>
         <ul className={styles.navList}>
-          {navItems.map((item) => (
-            <li key={item.name}>
-              <Link
-                href={item.href}
-                prefetch={true}
-                className={`${styles.navLink} ${isActive(item.href) ? styles.active : ''}`}
-              >
-                <item.icon size={20} className={styles.navIcon} />
-                <span className={styles.navText}>{item.name}</span>
-              </Link>
-            </li>
-          ))}
+          <li key={todayItem.name}>
+            <Link
+              href={todayItem.href}
+              prefetch={true}
+              className={`${styles.navLink} ${isActive(todayItem.href) ? styles.active : ''}`}
+            >
+              <todayItem.icon size={20} className={styles.navIcon} />
+              <span className={styles.navText}>{todayItem.name}</span>
+            </Link>
+          </li>
+
+          {navigationGroups.map((group) => {
+            const visibleItems = group.items.filter((item) => {
+              if (item.adminOnly) {
+                return isAdminOrOwner || user?.isPlatformAdmin;
+              }
+              return true;
+            });
+
+            if (visibleItems.length === 0) return null;
+
+            return (
+              <li key={group.label} className={styles.navGroupSection}>
+                <div className={styles.sectionHeader}>{group.label}</div>
+                <ul className={styles.navList} style={{ gap: '2px' }}>
+                  {visibleItems.map((item) => (
+                    <li key={item.name}>
+                      <Link
+                        href={item.href}
+                        prefetch={true}
+                        className={`${styles.navLink} ${isActive(item.href) ? styles.active : ''}`}
+                      >
+                        <item.icon size={20} className={styles.navIcon} />
+                        <span className={styles.navText}>{item.name}</span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </li>
+            );
+          })}
         </ul>
       </nav>
 

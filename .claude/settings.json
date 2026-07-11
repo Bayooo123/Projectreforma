@@ -98,7 +98,19 @@
       "Bash(node -e \"require\\('fflate'\\); console.log\\('fflate OK'\\)\")",
       "mcp__claude_ai_Supabase__list_projects",
       "mcp__claude_ai_Supabase__execute_sql",
-      "WebFetch(domain:muhammedadam.com)"
+      "WebFetch(domain:muhammedadam.com)",
+      "mcp__claude_ai_Supabase__get_logs",
+      "Bash(gh run *)",
+      "Bash(grep -rn \"accentColor\\\\|brandColor\\\\|secondaryColor\\\\|workspace.*color\\\\|color.*workspace\" src/app/settings --include=\"*.tsx\" --include=\"*.ts\" -l)",
+      "Bash(grep -rn \"accentColor\\\\|BrandingWizard\\\\|workspace.*color\" src/components --include=\"*.tsx\" --include=\"*.ts\" -l)",
+      "Bash(ls src/app/*.png)",
+      "Bash(ls public/*.png)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)",
+      "Bash(xargs grep -l \"overlay\\\\|CourtEvent\")",
+      "Bash(grep -v \"//\")",
+      "Bash(grep -v \"#\\\\|0px\\\\|var\\\\|:hover\\\\|//\\\\|@media\")"
     ],
     "additionalDirectories": [
       "c:\\Users\\DELL\\.gemini\\antigravity\\scratch\\reforma-os\\src\\lib\\services",

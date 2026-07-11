@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { DollarSign, Receipt, CreditCard, TrendingDown, Plus } from 'lucide-react';
 import styles from './Finance.module.css';
 
@@ -38,7 +39,15 @@ interface Props {
 }
 
 export default function FinanceClient({ invoices, payments, expenses, outstanding, collectedMTD, expensesMTD }: Props) {
+    const searchParams = useSearchParams();
     const [tab, setTab] = useState<Tab>('invoices');
+
+    useEffect(() => {
+        const queryTab = searchParams.get('tab');
+        if (queryTab === 'invoices' || queryTab === 'payments' || queryTab === 'expenses') {
+            setTab(queryTab as Tab);
+        }
+    }, [searchParams]);
 
     return (
         <div className={styles.page}>

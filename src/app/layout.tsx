@@ -89,7 +89,7 @@ export default async function RootLayout({
     pathname.startsWith('/join/');
 
   // Routes that are authenticated but intentionally chrome-free (no sidebar/header shell)
-  const CHROMELESS_ROUTES = ['/chat'];
+  const CHROMELESS_ROUTES: string[] = [];
   const isChromelessRoute =
     CHROMELESS_ROUTES.includes(pathname) ||
     CHROMELESS_ROUTES.some(r => pathname.startsWith(r + '/')) ||

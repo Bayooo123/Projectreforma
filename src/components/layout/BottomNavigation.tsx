@@ -6,17 +6,8 @@ import {
   Activity,
   FileText,
   Gavel,
-  Users,
-  Briefcase,
-  BarChart2,
-  ShieldCheck,
-  Terminal,
-  Inbox,
   Plus,
   LayoutGrid,
-  DollarSign,
-  Bell,
-  Settings,
   Search,
   X,
   Receipt,
@@ -27,6 +18,7 @@ import {
 } from 'lucide-react';
 import styles from './BottomNavigation.module.css';
 import { useState, useRef, useEffect } from 'react';
+import { navigationGroups } from '@/config/navigation';
 
 interface BottomNavigationProps {
   user?: {
@@ -35,7 +27,7 @@ interface BottomNavigationProps {
   unreadNotifications?: number;
 }
 
-const BottomNavigation = ({ user, unreadNotifications = 0 }: BottomNavigationProps) => {
+const BottomNavigation = ({ user }: BottomNavigationProps) => {
   const pathname = usePathname();
   const router = useRouter();
   const [showFabSheet, setShowFabSheet] = useState(false);
@@ -55,38 +47,17 @@ const BottomNavigation = ({ user, unreadNotifications = 0 }: BottomNavigationPro
     { name: 'Court', href: '/calendar', icon: Gavel },
   ];
 
-  // Hub groups — single canonical list of every module (F-01, F-05, F-08)
-  const hubGroups = [
-    {
-      label: 'Practice',
-      color: '#059669',
-      items: [
-        { name: 'Clients', href: '/management/clients', icon: Users },
-        { name: 'Compliance', href: '/management/compliance', icon: ShieldCheck },
-        { name: 'Analytics', href: '/analytics', icon: BarChart2 },
-      ],
-    },
-    {
-      label: 'Money',
-      color: '#7c3aed',
-      items: [
-        { name: 'Finance', href: '/finance', icon: DollarSign },
-        { name: 'Email Inbox', href: '/emails', icon: Inbox },
-        { name: 'Notifications', href: '/notifications', icon: Bell },
-      ],
-    },
-    {
-      label: 'Workspace',
-      color: '#0369a1',
-      items: [
-        { name: 'Office Manager', href: '/management/office', icon: Briefcase }, // F-01 fixed
-        { name: 'Settings', href: '/settings', icon: Settings },
-        ...(isAdminOrOwner
-          ? [{ name: 'IT Management', href: '/management/it', icon: Terminal }]
-          : []),
-      ],
-    },
-  ];
+  // Dynamic hubGroups built from shared navigation config (F-01, F-05, F-08)
+  const hubGroups = navigationGroups.map(group => ({
+    label: group.label,
+    color: group.color,
+    items: group.items.filter(item => {
+      if (item.adminOnly) {
+        return isAdminOrOwner;
+      }
+      return true;
+    }),
+  }));
 
   // FAB Quick Create actions — all navigate, none are decoys (F-04 fixed)
   const createActions = [
