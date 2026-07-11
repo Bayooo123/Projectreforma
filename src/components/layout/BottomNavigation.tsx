@@ -19,6 +19,7 @@ import {
 import styles from './BottomNavigation.module.css';
 import { useState, useRef, useEffect } from 'react';
 import { navigationGroups } from '@/config/navigation';
+import { ThemeToggle } from '@/components/ui/ThemeToggle';
 
 interface BottomNavigationProps {
   user?: {
@@ -209,9 +210,12 @@ const BottomNavigation = ({ user }: BottomNavigationProps) => {
                 </button>
               )}
             </div>
-            <button className={styles.hubCloseBtn} onClick={closeBoth}>
-              <X size={20} />
-            </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <ThemeToggle compact />
+              <button className={styles.hubCloseBtn} onClick={closeBoth}>
+                <X size={20} />
+              </button>
+            </div>
           </div>
 
           <div className={styles.hubContent}>

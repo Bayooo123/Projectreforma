@@ -76,6 +76,12 @@
     flex-shrink: 0;
 }
 
+:global(.dark) .todayBadge {
+    color: #a5b4fc;
+    background: rgba(99, 102, 241, 0.15);
+    border-color: rgba(99, 102, 241, 0.35);
+}
+
 /* ── Event row ───────────────────────────────────────────────────────────── */
 .event {
     display: grid;
@@ -194,6 +200,11 @@
     margin-left: 2px;
 }
 
+:global(.dark) .upcomingTag {
+    background: rgba(59, 130, 246, 0.2);
+    color: #93c5fd;
+}
+
 .title {
     font-size: 0.78rem;
     font-weight: 600;
@@ -236,6 +247,11 @@
     overflow: hidden;
 }
 
+:global(.dark) .summaryPanel {
+    border-color: rgba(99, 102, 241, 0.25);
+    background: linear-gradient(135deg, #1e1b2e 0%, #1a1626 100%);
+}
+
 .summaryHeader {
     display: flex;
     align-items: center;
@@ -244,6 +260,10 @@
     border-bottom: 1px solid #e0e7ff;
     gap: 0.75rem;
     flex-wrap: wrap;
+}
+
+:global(.dark) .summaryHeader {
+    border-bottom-color: rgba(99, 102, 241, 0.2);
 }
 
 .summaryTitle {
@@ -256,10 +276,18 @@
     letter-spacing: 0.01em;
 }
 
+:global(.dark) .summaryTitle {
+    color: #a78bfa;
+}
+
 .summaryMeta {
     font-weight: 400;
     color: #8b5cf6;
     font-size: 0.68rem;
+}
+
+:global(.dark) .summaryMeta {
+    color: #c4b5fd;
 }
 
 .summaryActions {
@@ -301,6 +329,13 @@
 }
 .collapseBtn:hover { background: #ede9fe; }
 
+:global(.dark) .collapseBtn {
+    background: #2d1f5e;
+    border-color: #6d28d9;
+    color: #c4b5fd;
+}
+:global(.dark) .collapseBtn:hover { background: #3b2a72; }
+
 .summaryHint {
     font-size: 0.75rem;
     color: var(--text-secondary);
@@ -327,6 +362,10 @@
     color: #7c3aed;
 }
 
+:global(.dark) .summaryLoading {
+    color: #a78bfa;
+}
+
 .summaryBody {
     padding: 0.9rem;
 }
@@ -349,6 +388,10 @@
     border-top: 1px solid #e0e7ff;
 }
 
+:global(.dark) .chronoSection {
+    border-top-color: rgba(99, 102, 241, 0.2);
+}
+
 .chronoTitle {
     font-size: 0.7rem;
     font-weight: 700;
@@ -358,10 +401,18 @@
     margin: 0 0 0.6rem;
 }
 
+:global(.dark) .chronoTitle {
+    color: #a78bfa;
+}
+
 .chronoTableWrap {
     overflow-x: auto;
     border-radius: 6px;
     border: 1px solid #e0e7ff;
+}
+
+:global(.dark) .chronoTableWrap {
+    border-color: rgba(99, 102, 241, 0.2);
 }
 
 .chronoTable {
@@ -380,6 +431,12 @@
     text-align: left;
     white-space: nowrap;
 }
+
+:global(.dark) .chronoTable th {
+    background: rgba(91, 33, 182, 0.25);
+    color: #c4b5fd;
+}
+
 .chronoTable td {
     padding: 0.45rem 0.65rem;
     border-top: 1px solid #e0e7ff;
@@ -387,14 +444,27 @@
     vertical-align: top;
     line-height: 1.45;
 }
+
+:global(.dark) .chronoTable td {
+    border-top-color: rgba(99, 102, 241, 0.15);
+}
+
 .chronoTable tr:hover td {
     background: #f5f3ff;
+}
+
+:global(.dark) .chronoTable tr:hover td {
+    background: rgba(99, 102, 241, 0.1);
 }
 .chronoDate {
     white-space: nowrap;
     font-weight: 600;
     color: #5b21b6;
     min-width: 90px;
+}
+
+:global(.dark) .chronoDate {
+    color: #a78bfa;
 }
 .chronoTitle2 {
     font-weight: 500;
@@ -432,6 +502,13 @@
     border-radius: 50%;
     background: #7c3aed;
     flex-shrink: 0;
+}
+
+:global(.dark) .chronoBulletItem {
+    border-bottom-color: rgba(99, 102, 241, 0.15);
+}
+:global(.dark) .chronoBulletItem::before {
+    background: #a78bfa;
 }
 
 /* ── Email card ──────────────────────────────────────────────────────────── */

@@ -4,36 +4,79 @@ import * as React from "react"
 import { Moon, Sun } from "lucide-react"
 import { useTheme } from "next-themes"
 
-export function ThemeToggle() {
-    const { theme, setTheme } = useTheme()
-    const [mounted, setMounted] = React.useState(false)
+interface ThemeToggleProps {
+  /** If true renders a compact icon-only circle button — use in nav bars */
+  compact?: boolean;
+}
 
-    React.useEffect(() => {
-        setMounted(true)
-    }, [])
+export function ThemeToggle({ compact = false }: ThemeToggleProps) {
+  const { setTheme, resolvedTheme } = useTheme()
+  const [mounted, setMounted] = React.useState(false)
 
-    if (!mounted) {
-        return (
-            <button
-                className="p-2 rounded-md hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
-                aria-label="Toggle theme"
-            >
-                <div className="w-5 h-5" />
-            </button>
-        )
-    }
+  React.useEffect(() => { setMounted(true) }, [])
 
+  // Avoid hydration mismatch — render nothing until mounted
+  if (!mounted) {
     return (
-        <button
-            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-            className="p-2 rounded-md hover:bg-black/5 dark:hover:bg-white/5 text-foreground transition-colors"
-            aria-label="Toggle theme"
-        >
-            {theme === "dark" ? (
-                <Moon className="h-5 w-5" />
-            ) : (
-                <Sun className="h-5 w-5" />
-            )}
-        </button>
+      <div
+        style={{ width: compact ? 36 : 90, height: 36, borderRadius: compact ? '50%' : 8, background: 'var(--surface)', border: '1px solid var(--border)' }}
+        aria-hidden="true"
+      />
     )
+  }
+
+  const isDark = resolvedTheme === "dark"
+  const toggle = () => setTheme(isDark ? "light" : "dark")
+
+  if (compact) {
+    return (
+      <button
+        onClick={toggle}
+        aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
+        title={isDark ? "Switch to light mode" : "Switch to dark mode"}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          width: 36,
+          height: 36,
+          borderRadius: '50%',
+          border: '1px solid var(--border)',
+          background: 'var(--surface)',
+          color: 'var(--text-secondary)',
+          cursor: 'pointer',
+          transition: 'background 0.15s, color 0.15s',
+          flexShrink: 0,
+        }}
+      >
+        {isDark ? <Sun size={16} /> : <Moon size={16} />}
+      </button>
+    )
+  }
+
+  return (
+    <button
+      onClick={toggle}
+      aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
+      title={isDark ? "Switch to light mode" : "Switch to dark mode"}
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 6,
+        padding: '6px 12px',
+        borderRadius: 8,
+        border: '1px solid var(--border)',
+        background: 'var(--surface)',
+        color: 'var(--text-secondary)',
+        fontSize: '0.8rem',
+        fontWeight: 500,
+        cursor: 'pointer',
+        transition: 'background 0.15s, color 0.15s',
+        whiteSpace: 'nowrap',
+      }}
+    >
+      {isDark ? <Sun size={14} /> : <Moon size={14} />}
+      {isDark ? 'Light' : 'Dark'}
+    </button>
+  )
 }
