@@ -68,6 +68,7 @@ model Workspace {
   firmContacts          FirmContact[]
   pulseEvents           PulseEvent[]
   modulePinResets       ModulePinReset[]
+  whatsappSessions      WhatsappSession[]
 
   @@index([slug])
   @@index([firmCode])
@@ -1417,4 +1418,19 @@ model ModulePinReset {
 
   @@index([workspaceId])
   @@index([token])
+}
+
+model WhatsappSession {
+  id          String   @id @default(cuid())
+  fromNumber  String
+  workspaceId String
+  userId      String?
+  messages    Json     @default("[]")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([fromNumber, workspaceId])
+  @@index([fromNumber])
 }

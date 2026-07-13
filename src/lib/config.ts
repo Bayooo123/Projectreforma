@@ -31,6 +31,11 @@ const envSchema = z.object({
     MONNIFY_CONTRACT_CODE: z.string().optional(),
     MONNIFY_BASE_URL: z.string().default('https://sandbox.monnify.com'),
 
+    // WhatsApp Cloud API
+    WHATSAPP_VERIFY_TOKEN: z.string().optional(),
+    WHATSAPP_TOKEN: z.string().optional(),
+    WHATSAPP_PHONE_NUMBER_ID: z.string().optional(),
+
     // BICA Integration
     BICA_PLATFORM_ID: z.string().default('reforma_os'),
     BICA_SHARED_SECRET: z.string().default('dev_secret_keys'),

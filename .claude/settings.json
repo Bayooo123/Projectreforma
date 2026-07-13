@@ -110,7 +110,20 @@
       "Bash(git push *)",
       "Bash(xargs grep -l \"overlay\\\\|CourtEvent\")",
       "Bash(grep -v \"//\")",
-      "Bash(grep -v \"#\\\\|0px\\\\|var\\\\|:hover\\\\|//\\\\|@media\")"
+      "Bash(grep -v \"#\\\\|0px\\\\|var\\\\|:hover\\\\|//\\\\|@media\")",
+      "Skill(claude-api)",
+      "Skill(claude-api:*)",
+      "Bash(git -C \"c:\\\\Users\\\\DELL\\\\.gemini\\\\antigravity\\\\scratch\\\\reforma-os\" status)",
+      "Bash(git -C \"c:\\\\Users\\\\DELL\\\\.gemini\\\\antigravity\\\\scratch\\\\reforma-os\" diff src/lib/services/brief-summary-generator.ts src/lib/services/doc-timeline-extractor.ts src/app/actions/email-inbox.ts src/app/briefs/[id]/BriefDetailClient.tsx --stat)",
+      "Bash(git -C \"c:\\\\Users\\\\DELL\\\\.gemini\\\\antigravity\\\\scratch\\\\reforma-os\" diff --stat)",
+      "Bash(git -C \"c:\\\\Users\\\\DELL\\\\.gemini\\\\antigravity\\\\scratch\\\\reforma-os\" add src/app/actions/email-inbox.ts src/app/briefs/[id]/BriefDetailClient.tsx src/lib/services/brief-summary-generator.ts src/lib/services/doc-timeline-extractor.ts scripts/cleanup-orphaned-email-docs.js)",
+      "Bash(git -C 'c:\\\\Users\\\\DELL\\\\.gemini\\\\antigravity\\\\scratch\\\\reforma-os' commit -m ' *)",
+      "Bash(git -C \"c:\\\\Users\\\\DELL\\\\.gemini\\\\antigravity\\\\scratch\\\\reforma-os\" push origin main)",
+      "Bash(npx tsc *)",
+      "Bash(git -C \"c:\\\\Users\\\\DELL\\\\.gemini\\\\antigravity\\\\scratch\\\\reforma-os\" add src/components/briefs/BriefTimeline.tsx)",
+      "Bash(git -C \"c:\\\\Users\\\\DELL\\\\.gemini\\\\antigravity\\\\scratch\\\\reforma-os\" add src/app/actions/briefs.ts src/app/briefs/[id]/BriefDetailClient.tsx src/components/briefs/BriefTimeline.tsx src/components/briefs/BriefTimeline.module.css)",
+      "Bash(npx prisma *)",
+      "Bash(git -C \"c:\\\\Users\\\\DELL\\\\.gemini\\\\antigravity\\\\scratch\\\\reforma-os\" add -A)"
     ],
     "additionalDirectories": [
       "c:\\Users\\DELL\\.gemini\\antigravity\\scratch\\reforma-os\\src\\lib\\services",
