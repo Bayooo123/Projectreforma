@@ -6,7 +6,7 @@ import {
     Paperclip, BookOpen, Scale, RefreshCcw,
 } from 'lucide-react';
 import {
-    generateBriefSummary, getCaseChronology,
+    generateBriefSummary, getCaseChronology, backfillBriefTimeline,
     CaseChronologyEvent, BriefSummaryData,
 } from '@/app/actions/briefs';
 import styles from './BriefTimeline.module.css';
@@ -158,8 +158,10 @@ function SummaryPanel({ briefId, initial }: SummaryPanelProps) {
 // ── Case Chronology ───────────────────────────────────────────────────────────
 
 function CaseChronology({ briefId, initialEvents }: { briefId: string; initialEvents: CaseChronologyEvent[] }) {
-    const [events, setEvents]         = useState<CaseChronologyEvent[]>(initialEvents);
-    const [refreshing, setRefreshing] = useState(false);
+    const [events, setEvents]           = useState<CaseChronologyEvent[]>(initialEvents);
+    const [refreshing, setRefreshing]   = useState(false);
+    const [analysing, setAnalysing]     = useState(false);
+    const [analyseResult, setAnalyseResult] = useState<string | null>(null);
     const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
     const eventsRef = useRef(events);
     eventsRef.current = events;
@@ -168,7 +170,6 @@ function CaseChronology({ briefId, initialEvents }: { briefId: string; initialEv
         if (manual) setRefreshing(true);
         try {
             const fresh = await getCaseChronology(briefId);
-            // Update whenever count or content changes
             const currentIds = new Set(eventsRef.current.map(e => e.id));
             const hasNew = fresh.some(e => !currentIds.has(e.id));
             if (fresh.length !== eventsRef.current.length || hasNew) {
@@ -178,6 +179,20 @@ function CaseChronology({ briefId, initialEvents }: { briefId: string; initialEv
         } catch { /* silent */ }
         finally { if (manual) setRefreshing(false); }
     }, [briefId]);
+
+    const analyse = useCallback(async () => {
+        setAnalysing(true);
+        setAnalyseResult(null);
+        try {
+            const result = await backfillBriefTimeline(briefId);
+            setAnalyseResult(`Extracted ${result.found} event${result.found !== 1 ? 's' : ''} from ${result.processed} document${result.processed !== 1 ? 's' : ''}.`);
+            await refresh(false);
+        } catch {
+            setAnalyseResult('Analysis failed. Please try again.');
+        } finally {
+            setAnalysing(false);
+        }
+    }, [briefId, refresh]);
 
     // Poll every 30 s to catch fire-and-forget extractions finishing after upload
     useEffect(() => {
@@ -194,9 +209,23 @@ function CaseChronology({ briefId, initialEvents }: { briefId: string; initialEv
                 <div className={styles.empty}>
                     <Scale size={26} className={styles.emptyIcon} />
                     <span>No case events extracted yet.</span>
-                    <span style={{ fontSize: '0.72rem', opacity: 0.7 }}>
-                        Upload documents — dates and facts are extracted automatically.
-                    </span>
+                    {analyseResult
+                        ? <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>{analyseResult}</span>
+                        : <span style={{ fontSize: '0.72rem', opacity: 0.7 }}>
+                            Click <strong>Analyse Documents</strong> to extract dates and facts from uploaded files.
+                          </span>
+                    }
+                    <button
+                        className={styles.generateBtn}
+                        onClick={analyse}
+                        disabled={analysing}
+                        style={{ marginTop: '0.5rem' }}
+                    >
+                        {analysing
+                            ? <><Loader size={12} className={styles.spinner} /> Analysing documents…</>
+                            : <><Sparkles size={12} /> Analyse Documents</>
+                        }
+                    </button>
                 </div>
             </div>
         );
@@ -227,14 +256,26 @@ function CaseChronology({ briefId, initialEvents }: { briefId: string; initialEv
                             Updated {formatRelative(lastUpdated)}
                         </span>
                     )}
+                    {analyseResult && (
+                        <span className={styles.chronoRefreshMeta}>{analyseResult}</span>
+                    )}
+                    <button
+                        className={styles.chronoRefreshBtn}
+                        onClick={analyse}
+                        disabled={analysing || refreshing}
+                        title="Re-analyse all documents in this brief"
+                    >
+                        <Sparkles size={11} className={analysing ? styles.spinner : undefined} />
+                        {analysing ? 'Analysing…' : 'Analyse'}
+                    </button>
                     <button
                         className={styles.chronoRefreshBtn}
                         onClick={() => refresh(true)}
-                        disabled={refreshing}
-                        title="Refresh chronology from newly uploaded documents"
+                        disabled={refreshing || analysing}
+                        title="Refresh from database"
                     >
                         <RefreshCcw size={11} className={refreshing ? styles.spinner : undefined} />
-                        {refreshing ? 'Refreshing…' : 'Refresh'}
+                        {refreshing ? '…' : 'Refresh'}
                     </button>
                 </div>
             </div>
