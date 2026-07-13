@@ -114,6 +114,30 @@ export async function getInboxBriefs(): Promise<InboxBrief[]> {
     }));
 }
 
+// ── Attachment cleanup helper ────────────────────────────────────────────────
+// Removes Document records that were ingested from the given emails into briefs
+// the email is no longer linked to. Called when an email is re-linked so stale
+// copies don't bleed across briefs.
+async function removeIngestedAttachmentsFromBriefs(
+    emailIds: string[],
+    briefIds: string[],
+): Promise<void> {
+    try {
+        const attachments = await prisma.emailAttachment.findMany({
+            where: { inboundEmailId: { in: emailIds } },
+            select: { url: true },
+        });
+        const urls = attachments.map(a => a.url);
+        if (urls.length === 0) return;
+
+        await prisma.document.deleteMany({
+            where: { briefId: { in: briefIds }, url: { in: urls } },
+        });
+    } catch (err) {
+        console.error('[removeIngestedAttachments] Failed:', err);
+    }
+}
+
 // ── Attachment ingestion helper ──────────────────────────────────────────────
 // Fetches all EmailAttachment rows for the given emailIds that are NOT already
 // saved as Document rows in the brief vault, then runs the full ingestion
@@ -191,8 +215,13 @@ export async function linkEmailToBrief(emailId: string, briefId: string): Promis
 
     const existingEvents = await prisma.pulseEvent.findMany({
         where: { inboundEmailId: emailId },
-        select: { id: true },
+        select: { id: true, briefId: true },
     });
+
+    // Briefs this email is being moved away from — their ingested docs must be removed
+    const vacatedBriefIds = [...new Set(
+        existingEvents.map(pe => pe.briefId).filter((id): id is string => !!id && id !== briefId)
+    )];
 
     await Promise.all([
         // Link matter on the InboundEmail if the brief has one
@@ -214,6 +243,12 @@ export async function linkEmailToBrief(emailId: string, briefId: string): Promis
                 },
             }),
     ]);
+
+    // Remove documents previously ingested from this email into the old brief(s)
+    if (vacatedBriefIds.length > 0) {
+        removeIngestedAttachmentsFromBriefs([emailId], vacatedBriefIds)
+            .catch(err => console.error('[linkEmailToBrief] Old-brief cleanup failed:', err));
+    }
 
     revalidatePath('/emails');
     revalidatePath(`/briefs/${briefId}`);
@@ -255,11 +290,16 @@ export async function bulkLinkEmailsToBrief(
 
         const existingEvents = await prisma.pulseEvent.findMany({
             where: { inboundEmailId: { in: emailIds } },
-            select: { inboundEmailId: true },
+            select: { inboundEmailId: true, briefId: true },
         });
         const hasEvent = new Set(existingEvents.map(p => p.inboundEmailId!));
         const toUpdate = emailIds.filter(id => hasEvent.has(id));
         const toCreate = emailIds.filter(id => !hasEvent.has(id));
+
+        // Briefs being vacated by the re-link — their ingested docs must be removed
+        const vacatedBriefIds = [...new Set(
+            existingEvents.map(pe => pe.briefId).filter((id): id is string => !!id && id !== briefId)
+        )];
 
         const ops: Promise<unknown>[] = [];
 
@@ -288,6 +328,12 @@ export async function bulkLinkEmailsToBrief(
         }
 
         await Promise.all(ops);
+
+        // Remove documents previously ingested into the vacated briefs
+        if (vacatedBriefIds.length > 0) {
+            removeIngestedAttachmentsFromBriefs(emailIds, vacatedBriefIds)
+                .catch(err => console.error('[bulkLinkEmailsToBrief] Old-brief cleanup failed:', err));
+        }
 
         revalidatePath('/emails');
         revalidatePath(`/briefs/${briefId}`);

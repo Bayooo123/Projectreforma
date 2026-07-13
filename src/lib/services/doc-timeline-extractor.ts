@@ -144,7 +144,6 @@ async function callClaudeAndSave(
         const response = await (client.messages.create as any)({
             model: 'claude-sonnet-4-6',
             max_tokens: 2048,
-            betas: ['pdfs-2024-09-25'],
             messages: [{ role: 'user', content }],
         });
 

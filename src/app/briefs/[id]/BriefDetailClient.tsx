@@ -105,7 +105,6 @@ export default function BriefDetailClient({ brief }: BriefDetailClientProps) {
         searchParams.get('tab') === 'documents' ? 'documents' : 'timeline'
     );
     const [linkedEmails, setLinkedEmails] = useState<Awaited<ReturnType<typeof getLinkedEmailsForBrief>>>([]);
-    const [expandedEmail, setExpandedEmail] = useState<string | null>(null);
 
     // Timeline + summary — loaded client-side so SSR only serves the page shell
     const [initialTimeline, setInitialTimeline] = useState<TimelineEvent[]>([]);
@@ -140,16 +139,14 @@ export default function BriefDetailClient({ brief }: BriefDetailClientProps) {
     const refreshData = async (silent = false) => {
         if (!silent) setIsRefreshing(true);
         try {
-            const [newDocs, newFolders, newEmailDocs, newLinkedEmails] = await Promise.all([
+            const [newDocs, newFolders, newEmailDocs] = await Promise.all([
                 getDocuments(brief.id),
                 getFolders(brief.id),
                 getEmailDocumentsForBrief(brief.id),
-                getLinkedEmailsForBrief(brief.id),
             ]);
             setDocuments(newDocs as any);
             setFolders(newFolders as any);
             setEmailDocs(newEmailDocs);
-            setLinkedEmails(newLinkedEmails);
         } catch (error) {
             console.error('Error refreshing data:', error);
         } finally {
@@ -527,78 +524,6 @@ export default function BriefDetailClient({ brief }: BriefDetailClientProps) {
                     </div>
                 )}
 
-                {/* ── Linked Correspondence ──────────────────────────────── */}
-                {currentFolderId === null && linkedEmails.length > 0 && (
-                    <div style={{ marginTop: '2rem' }}>
-                        <h3 style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                            <Mail size={14} />
-                            Linked Correspondence ({linkedEmails.length})
-                        </h3>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                            {linkedEmails.map(email => (
-                                <div
-                                    key={email.id}
-                                    style={{ border: '1px solid var(--border)', borderRadius: 10, overflow: 'hidden', background: 'var(--surface)' }}
-                                >
-                                    <div
-                                        onClick={() => setExpandedEmail(expandedEmail === email.id ? null : email.id)}
-                                        style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', padding: '0.9rem 1rem', cursor: 'pointer', userSelect: 'none' }}
-                                    >
-                                        <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'var(--primary)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 14, flexShrink: 0 }}>
-                                            {(email.fromName || email.fromEmail || '?')[0].toUpperCase()}
-                                        </div>
-                                        <div style={{ flex: 1, minWidth: 0 }}>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: '0.5rem' }}>
-                                                <span style={{ fontWeight: 600, fontSize: '0.9rem', color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                                    {email.subject || '(No subject)'}
-                                                </span>
-                                                <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', flexShrink: 0 }}>
-                                                    {new Date(email.receivedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
-                                                </span>
-                                            </div>
-                                            <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: 2 }}>
-                                                {email.fromName ? `${email.fromName} <${email.fromEmail}>` : email.fromEmail}
-                                            </div>
-                                            {/* Attachments always visible — no expand required */}
-                                            {email.attachments.length > 0 && (
-                                                <div
-                                                    style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem', marginTop: '0.5rem' }}
-                                                    onClick={e => e.stopPropagation()}
-                                                >
-                                                    {email.attachments.map(att => (
-                                                        <a
-                                                            key={att.id}
-                                                            href={att.url}
-                                                            target="_blank"
-                                                            rel="noopener noreferrer"
-                                                            style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: '0.7rem', color: '#0d9488', background: '#f0fdfa', border: '1px solid #99f6e4', borderRadius: 999, padding: '2px 8px', textDecoration: 'none', whiteSpace: 'nowrap' }}
-                                                        >
-                                                            <Paperclip size={10} />
-                                                            {att.name}
-                                                        </a>
-                                                    ))}
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-                                    {expandedEmail === email.id && (
-                                        <div style={{ borderTop: '1px solid var(--border)', padding: '1rem', background: 'var(--background)' }}>
-                                            {email.body ? (
-                                                <div style={{ fontSize: '0.85rem', color: 'var(--text-primary)', lineHeight: 1.7, whiteSpace: 'pre-wrap', maxHeight: 400, overflowY: 'auto' }}>
-                                                    {email.body}
-                                                </div>
-                                            ) : email.bodyPreview ? (
-                                                <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.7 }}>{email.bodyPreview}</div>
-                                            ) : (
-                                                <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>No body content available.</p>
-                                            )}
-                                        </div>
-                                    )}
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                )}
                 </div>}
             </div>
 

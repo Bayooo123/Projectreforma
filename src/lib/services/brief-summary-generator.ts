@@ -353,8 +353,7 @@ export async function generateBriefSummaryFromDocuments(
 
     // Sonnet when PDFs need vision, emails are present, or merging into a prior
     // summary (richer reasoning needed). Haiku only for pure text-only, first-pass briefs.
-    const usePdfBeta = docBlocks.length > 0;
-    const usesSonnet = usePdfBeta || emails.length > 0 || !!previous;
+    const usesSonnet = docBlocks.length > 0 || emails.length > 0 || !!previous;
     const model = usesSonnet ? 'claude-sonnet-4-6' : 'claude-haiku-4-5-20251001';
 
     try {
@@ -363,7 +362,6 @@ export async function generateBriefSummaryFromDocuments(
             max_tokens: 2048,
             messages: [{ role: 'user', content: userContent }],
         };
-        if (usePdfBeta) callParams.betas = ['pdfs-2024-09-25'];
 
         const response = await (anthropic.messages.create as any)(callParams);
         const text = response.content[0]?.type === 'text' ? response.content[0].text.trim() : '';
