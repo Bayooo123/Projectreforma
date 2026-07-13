@@ -1,8 +1,11 @@
 'use client';
 
 import { useState } from 'react';
-import { Loader, Sparkles, ChevronDown, ChevronUp, RefreshCw, Mail, Paperclip } from 'lucide-react';
-import { generateBriefSummary, TimelineEvent, BriefSummaryData } from '@/app/actions/briefs';
+import {
+    Loader, Sparkles, ChevronDown, ChevronUp, RefreshCw,
+    Paperclip, Clock, BookOpen,
+} from 'lucide-react';
+import { generateBriefSummary, TimelineEvent, TimelineEventType, BriefSummaryData } from '@/app/actions/briefs';
 import { getLinkedEmailsForBrief } from '@/app/actions/documents';
 import styles from './BriefTimeline.module.css';
 
@@ -19,7 +22,24 @@ function formatRelative(date: Date): string {
 
 type LinkedEmail = Awaited<ReturnType<typeof getLinkedEmailsForBrief>>[number];
 
-// ── AI Summary panel ─────────────────────────────────────────────────────────
+// ── Event meta ────────────────────────────────────────────────────────────────
+
+const EVENT_META: Record<TimelineEventType, { color: string; label: string }> = {
+    brief_created:     { color: '#64748b', label: 'Brief' },
+    brief_due:         { color: '#f59e0b', label: 'Deadline' },
+    court_hearing:     { color: '#ef4444', label: 'Hearing' },
+    court_adjourned:   { color: '#f97316', label: 'Adjourned' },
+    meeting:           { color: '#3b82f6', label: 'Meeting' },
+    task_created:      { color: '#64748b', label: 'Task' },
+    task_completed:    { color: '#10b981', label: 'Completed' },
+    task_due:          { color: '#f59e0b', label: 'Deadline' },
+    document_uploaded: { color: '#6366f1', label: 'Document' },
+    activity:          { color: '#94a3b8', label: 'Activity' },
+    doc_event:         { color: '#7c3aed', label: 'Extracted' },
+    email:             { color: '#0d9488', label: 'Email' },
+};
+
+// ── AI Summary panel ──────────────────────────────────────────────────────────
 
 interface SummaryPanelProps {
     briefId: string;
@@ -27,10 +47,10 @@ interface SummaryPanelProps {
 }
 
 function SummaryPanel({ briefId, initial }: SummaryPanelProps) {
-    const [summary, setSummary]     = useState<BriefSummaryData | null>(initial);
+    const [summary, setSummary]       = useState<BriefSummaryData | null>(initial);
     const [generating, setGenerating] = useState(false);
-    const [error, setError]         = useState<string | null>(null);
-    const [collapsed, setCollapsed] = useState(false);
+    const [error, setError]           = useState<string | null>(null);
+    const [collapsed, setCollapsed]   = useState(false);
 
     const handleGenerate = async () => {
         setGenerating(true);
@@ -104,14 +124,12 @@ function SummaryPanel({ briefId, initial }: SummaryPanelProps) {
 
             {summary && !collapsed && (
                 <div className={styles.summaryBody}>
-                    {/* Prose */}
                     <div className={styles.summaryProse}>
                         {summary.prose.split('\n').filter(Boolean).map((para, i) => (
                             <p key={i}>{para}</p>
                         ))}
                     </div>
 
-                    {/* Chronology — narrative bullets for transactional, table for litigation */}
                     {summary.chronology.length > 0 && (
                         <div className={styles.chronoSection}>
                             <h4 className={styles.chronoTitle}>Chronology</h4>
@@ -154,66 +172,160 @@ function SummaryPanel({ briefId, initial }: SummaryPanelProps) {
     );
 }
 
-// ── Correspondence History ────────────────────────────────────────────────────
+// ── Expandable email card ─────────────────────────────────────────────────────
 
-function CorrespondenceHistory({ emails }: { emails: LinkedEmail[] }) {
-    if (emails.length === 0) return null;
-
-    const sorted = [...emails].sort(
-        (a, b) => new Date(a.receivedAt).getTime() - new Date(b.receivedAt).getTime()
-    );
+function EmailCard({ event }: { event: TimelineEvent }) {
+    const [open, setOpen] = useState(false);
+    const em = event.email!;
+    const sender = em.fromName ? `${em.fromName} <${em.fromEmail}>` : em.fromEmail;
 
     return (
-        <div className={styles.correspondenceSection}>
-            <div className={styles.correspondenceHeader}>
-                <Mail size={13} />
-                Correspondence History
-                <span className={styles.correspondenceCount}>{emails.length}</span>
+        <div className={styles.emailCard}>
+            <button className={styles.emailCardHeader} onClick={() => setOpen(v => !v)}>
+                <span className={styles.emailSender}>{sender}</span>
+                {open ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+            </button>
+            {open && (
+                <div className={styles.emailBody}>
+                    {em.body || em.bodyPreview
+                        ? <pre className={styles.emailBodyText}>{em.body || em.bodyPreview}</pre>
+                        : <p className={styles.emailBodyEmpty}>No message body</p>
+                    }
+                    {em.attachments.length > 0 && (
+                        <div className={styles.emailAttachments}>
+                            {em.attachments.map(att => (
+                                <a
+                                    key={att.id}
+                                    href={att.url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className={styles.emailAttachment}
+                                >
+                                    <Paperclip size={10} />
+                                    {att.name}
+                                </a>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            )}
+        </div>
+    );
+}
+
+// ── Single event row ──────────────────────────────────────────────────────────
+
+function EventRow({ event }: { event: TimelineEvent }) {
+    const d = new Date(event.date);
+    const meta = EVENT_META[event.type];
+    const stateClass = event.isFuture ? styles.future : event.isToday ? styles.today : styles.past;
+
+    return (
+        <div className={`${styles.event} ${stateClass}`}>
+            <div className={styles.dateCol}>
+                <span className={styles.dateDay}>
+                    {d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+                </span>
+                <span className={styles.dateMonth}>{d.getFullYear()}</span>
             </div>
-            <div className={styles.correspondenceList}>
-                {sorted.map(email => {
-                    const date = new Date(email.receivedAt);
+
+            <div
+                className={styles.dot}
+                style={event.isFuture || event.isToday
+                    ? { background: meta.color, boxShadow: `0 0 0 1.5px ${meta.color}` }
+                    : undefined
+                }
+            />
+
+            <div className={styles.card}>
+                {meta.label && (
+                    <div
+                        className={styles.badge}
+                        style={{ background: `${meta.color}1a`, color: meta.color }}
+                    >
+                        {meta.label}
+                        {event.isFuture && <span className={styles.upcomingTag}>upcoming</span>}
+                    </div>
+                )}
+                <p className={styles.title}>{event.title}</p>
+                {event.description && <p className={styles.desc}>{event.description}</p>}
+                {event.actor && <p className={styles.actor}>{event.actor}</p>}
+                {event.source && (
+                    <p className={styles.source}>
+                        <BookOpen size={10} />
+                        {event.source}
+                    </p>
+                )}
+                {event.type === 'email' && event.email && <EmailCard event={event} />}
+            </div>
+        </div>
+    );
+}
+
+// ── Event feed ────────────────────────────────────────────────────────────────
+
+type RenderItem =
+    | { kind: 'month'; label: string; key: string }
+    | { kind: 'today'; key: string }
+    | { kind: 'event'; event: TimelineEvent };
+
+function buildRenderList(events: TimelineEvent[]): RenderItem[] {
+    const items: RenderItem[] = [];
+    let currentMonth = '';
+    let todayInserted = false;
+
+    for (const e of events) {
+        const d = new Date(e.date);
+        const monthKey = `${d.getFullYear()}-${d.getMonth()}`;
+        const label = d.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+
+        // TODAY divider appears before first today/future event
+        if ((e.isToday || e.isFuture) && !todayInserted) {
+            items.push({ kind: 'today', key: 'today-divider' });
+            todayInserted = true;
+        }
+
+        // Month header — placed after the today divider so the divider sits above the month label
+        if (monthKey !== currentMonth) {
+            currentMonth = monthKey;
+            items.push({ kind: 'month', label, key: monthKey });
+        }
+
+        items.push({ kind: 'event', event: e });
+    }
+
+    return items;
+}
+
+function EventFeed({ events }: { events: TimelineEvent[] }) {
+    if (events.length === 0) {
+        return (
+            <div className={styles.empty}>
+                <Clock size={28} className={styles.emptyIcon} />
+                <span>No timeline events yet</span>
+            </div>
+        );
+    }
+
+    const items = buildRenderList(events);
+
+    return (
+        <div>
+            {items.map(item => {
+                if (item.kind === 'month') {
+                    return <div key={item.key} className={styles.monthLabel}>{item.label}</div>;
+                }
+                if (item.kind === 'today') {
                     return (
-                        <div key={email.id} className={styles.correspondenceItem}>
-                            <div className={styles.correspondenceDateCol}>
-                                <div className={styles.correspondenceDateDay}>
-                                    {date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
-                                </div>
-                                <div className={styles.correspondenceDateYear}>
-                                    {date.getFullYear()}
-                                </div>
-                            </div>
-                            <div className={styles.correspondenceCard}>
-                                <div className={styles.correspondenceSubject}>
-                                    {email.subject || '(No subject)'}
-                                </div>
-                                <div className={styles.correspondenceFrom}>
-                                    {email.fromName ? `${email.fromName} <${email.fromEmail}>` : email.fromEmail}
-                                </div>
-                                {email.bodyPreview && (
-                                    <div className={styles.correspondencePreview}>{email.bodyPreview}</div>
-                                )}
-                                {email.attachments.length > 0 && (
-                                    <div className={styles.emailAttachments}>
-                                        {email.attachments.map(att => (
-                                            <a
-                                                key={att.id}
-                                                href={att.url}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className={styles.emailAttachment}
-                                            >
-                                                <Paperclip size={10} />
-                                                {att.name}
-                                            </a>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
+                        <div key={item.key} className={styles.todayDivider}>
+                            <span className={styles.todayLine} />
+                            <span className={styles.todayBadge}>Today</span>
+                            <span className={styles.todayLine} />
                         </div>
                     );
-                })}
-            </div>
+                }
+                return <EventRow key={item.event.id} event={item.event} />;
+            })}
         </div>
     );
 }
@@ -227,11 +339,11 @@ interface BriefTimelineProps {
     linkedEmails?: LinkedEmail[];
 }
 
-export default function BriefTimeline({ briefId, initialSummary, linkedEmails = [] }: BriefTimelineProps) {
+export default function BriefTimeline({ briefId, initialSummary, initialEvents }: BriefTimelineProps) {
     return (
         <div className={styles.root}>
             <SummaryPanel briefId={briefId} initial={initialSummary} />
-            <CorrespondenceHistory emails={linkedEmails} />
+            <EventFeed events={initialEvents} />
         </div>
     );
 }
