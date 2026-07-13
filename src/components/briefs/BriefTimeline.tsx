@@ -1,12 +1,14 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
     Loader, Sparkles, ChevronDown, ChevronUp, RefreshCw,
-    Paperclip, Clock, BookOpen,
+    Paperclip, BookOpen, Scale, RefreshCcw,
 } from 'lucide-react';
-import { generateBriefSummary, TimelineEvent, TimelineEventType, BriefSummaryData } from '@/app/actions/briefs';
-import { getLinkedEmailsForBrief } from '@/app/actions/documents';
+import {
+    generateBriefSummary, getCaseChronology,
+    CaseChronologyEvent, BriefSummaryData,
+} from '@/app/actions/briefs';
 import styles from './BriefTimeline.module.css';
 
 function formatRelative(date: Date): string {
@@ -19,25 +21,6 @@ function formatRelative(date: Date): string {
     if (days < 7) return `${days}d ago`;
     return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
 }
-
-type LinkedEmail = Awaited<ReturnType<typeof getLinkedEmailsForBrief>>[number];
-
-// ── Event meta ────────────────────────────────────────────────────────────────
-
-const EVENT_META: Record<TimelineEventType, { color: string; label: string }> = {
-    brief_created:     { color: '#64748b', label: 'Brief' },
-    brief_due:         { color: '#f59e0b', label: 'Deadline' },
-    court_hearing:     { color: '#ef4444', label: 'Hearing' },
-    court_adjourned:   { color: '#f97316', label: 'Adjourned' },
-    meeting:           { color: '#3b82f6', label: 'Meeting' },
-    task_created:      { color: '#64748b', label: 'Task' },
-    task_completed:    { color: '#10b981', label: 'Completed' },
-    task_due:          { color: '#f59e0b', label: 'Deadline' },
-    document_uploaded: { color: '#6366f1', label: 'Document' },
-    activity:          { color: '#94a3b8', label: 'Activity' },
-    doc_event:         { color: '#7c3aed', label: 'Extracted' },
-    email:             { color: '#0d9488', label: 'Email' },
-};
 
 // ── AI Summary panel ──────────────────────────────────────────────────────────
 
@@ -172,160 +155,134 @@ function SummaryPanel({ briefId, initial }: SummaryPanelProps) {
     );
 }
 
-// ── Expandable email card ─────────────────────────────────────────────────────
+// ── Case Chronology ───────────────────────────────────────────────────────────
 
-function EmailCard({ event }: { event: TimelineEvent }) {
-    const [open, setOpen] = useState(false);
-    const em = event.email!;
-    const sender = em.fromName ? `${em.fromName} <${em.fromEmail}>` : em.fromEmail;
+function CaseChronology({ briefId, initialEvents }: { briefId: string; initialEvents: CaseChronologyEvent[] }) {
+    const [events, setEvents]         = useState<CaseChronologyEvent[]>(initialEvents);
+    const [refreshing, setRefreshing] = useState(false);
+    const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+    const eventsRef = useRef(events);
+    eventsRef.current = events;
 
-    return (
-        <div className={styles.emailCard}>
-            <button className={styles.emailCardHeader} onClick={() => setOpen(v => !v)}>
-                <span className={styles.emailSender}>{sender}</span>
-                {open ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
-            </button>
-            {open && (
-                <div className={styles.emailBody}>
-                    {em.body || em.bodyPreview
-                        ? <pre className={styles.emailBodyText}>{em.body || em.bodyPreview}</pre>
-                        : <p className={styles.emailBodyEmpty}>No message body</p>
-                    }
-                    {em.attachments.length > 0 && (
-                        <div className={styles.emailAttachments}>
-                            {em.attachments.map(att => (
-                                <a
-                                    key={att.id}
-                                    href={att.url}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className={styles.emailAttachment}
-                                >
-                                    <Paperclip size={10} />
-                                    {att.name}
-                                </a>
-                            ))}
-                        </div>
-                    )}
-                </div>
-            )}
-        </div>
-    );
-}
+    const refresh = useCallback(async (manual = false) => {
+        if (manual) setRefreshing(true);
+        try {
+            const fresh = await getCaseChronology(briefId);
+            // Update whenever count or content changes
+            const currentIds = new Set(eventsRef.current.map(e => e.id));
+            const hasNew = fresh.some(e => !currentIds.has(e.id));
+            if (fresh.length !== eventsRef.current.length || hasNew) {
+                setEvents(fresh);
+                setLastUpdated(new Date());
+            }
+        } catch { /* silent */ }
+        finally { if (manual) setRefreshing(false); }
+    }, [briefId]);
 
-// ── Single event row ──────────────────────────────────────────────────────────
+    // Poll every 30 s to catch fire-and-forget extractions finishing after upload
+    useEffect(() => {
+        const id = setInterval(() => refresh(false), 30_000);
+        return () => clearInterval(id);
+    }, [refresh]);
 
-function EventRow({ event }: { event: TimelineEvent }) {
-    const d = new Date(event.date);
-    const meta = EVENT_META[event.type];
-    const stateClass = event.isFuture ? styles.future : event.isToday ? styles.today : styles.past;
-
-    return (
-        <div className={`${styles.event} ${stateClass}`}>
-            <div className={styles.dateCol}>
-                <span className={styles.dateDay}>
-                    {d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
-                </span>
-                <span className={styles.dateMonth}>{d.getFullYear()}</span>
-            </div>
-
-            <div
-                className={styles.dot}
-                style={event.isFuture || event.isToday
-                    ? { background: meta.color, boxShadow: `0 0 0 1.5px ${meta.color}` }
-                    : undefined
-                }
-            />
-
-            <div className={styles.card}>
-                {meta.label && (
-                    <div
-                        className={styles.badge}
-                        style={{ background: `${meta.color}1a`, color: meta.color }}
-                    >
-                        {meta.label}
-                        {event.isFuture && <span className={styles.upcomingTag}>upcoming</span>}
-                    </div>
-                )}
-                <p className={styles.title}>{event.title}</p>
-                {event.description && <p className={styles.desc}>{event.description}</p>}
-                {event.actor && <p className={styles.actor}>{event.actor}</p>}
-                {event.source && (
-                    <p className={styles.source}>
-                        <BookOpen size={10} />
-                        {event.source}
-                    </p>
-                )}
-                {event.type === 'email' && event.email && <EmailCard event={event} />}
-            </div>
-        </div>
-    );
-}
-
-// ── Event feed ────────────────────────────────────────────────────────────────
-
-type RenderItem =
-    | { kind: 'month'; label: string; key: string }
-    | { kind: 'today'; key: string }
-    | { kind: 'event'; event: TimelineEvent };
-
-function buildRenderList(events: TimelineEvent[]): RenderItem[] {
-    const items: RenderItem[] = [];
-    let currentMonth = '';
-    let todayInserted = false;
-
-    for (const e of events) {
-        const d = new Date(e.date);
-        const monthKey = `${d.getFullYear()}-${d.getMonth()}`;
-        const label = d.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
-
-        // TODAY divider appears before first today/future event
-        if ((e.isToday || e.isFuture) && !todayInserted) {
-            items.push({ kind: 'today', key: 'today-divider' });
-            todayInserted = true;
-        }
-
-        // Month header — placed after the today divider so the divider sits above the month label
-        if (monthKey !== currentMonth) {
-            currentMonth = monthKey;
-            items.push({ kind: 'month', label, key: monthKey });
-        }
-
-        items.push({ kind: 'event', event: e });
-    }
-
-    return items;
-}
-
-function EventFeed({ events }: { events: TimelineEvent[] }) {
     if (events.length === 0) {
         return (
-            <div className={styles.empty}>
-                <Clock size={28} className={styles.emptyIcon} />
-                <span>No timeline events yet</span>
+            <div className={styles.chronoFeedSection}>
+                <div className={styles.chronoFeedHeader}>
+                    <span className={styles.chronoFeedTitle}><Scale size={13} /> Case Chronology</span>
+                </div>
+                <div className={styles.empty}>
+                    <Scale size={26} className={styles.emptyIcon} />
+                    <span>No case events extracted yet.</span>
+                    <span style={{ fontSize: '0.72rem', opacity: 0.7 }}>
+                        Upload documents — dates and facts are extracted automatically.
+                    </span>
+                </div>
             </div>
         );
     }
 
-    const items = buildRenderList(events);
+    // Group by year; undated events go last
+    const grouped = new Map<string, CaseChronologyEvent[]>();
+    for (const e of events) {
+        const year = e.eventDate
+            ? new Date(e.eventDate).getFullYear().toString()
+            : 'Undated';
+        if (!grouped.has(year)) grouped.set(year, []);
+        grouped.get(year)!.push(e);
+    }
+    const yearKeys = [...grouped.keys()].sort((a, b) => {
+        if (a === 'Undated') return 1;
+        if (b === 'Undated') return -1;
+        return Number(a) - Number(b);
+    });
 
     return (
-        <div>
-            {items.map(item => {
-                if (item.kind === 'month') {
-                    return <div key={item.key} className={styles.monthLabel}>{item.label}</div>;
-                }
-                if (item.kind === 'today') {
-                    return (
-                        <div key={item.key} className={styles.todayDivider}>
-                            <span className={styles.todayLine} />
-                            <span className={styles.todayBadge}>Today</span>
-                            <span className={styles.todayLine} />
-                        </div>
-                    );
-                }
-                return <EventRow key={item.event.id} event={item.event} />;
-            })}
+        <div className={styles.chronoFeedSection}>
+            <div className={styles.chronoFeedHeader}>
+                <span className={styles.chronoFeedTitle}><Scale size={13} /> Case Chronology</span>
+                <div className={styles.chronoFeedMeta}>
+                    {lastUpdated && (
+                        <span className={styles.chronoRefreshMeta}>
+                            Updated {formatRelative(lastUpdated)}
+                        </span>
+                    )}
+                    <button
+                        className={styles.chronoRefreshBtn}
+                        onClick={() => refresh(true)}
+                        disabled={refreshing}
+                        title="Refresh chronology from newly uploaded documents"
+                    >
+                        <RefreshCcw size={11} className={refreshing ? styles.spinner : undefined} />
+                        {refreshing ? 'Refreshing…' : 'Refresh'}
+                    </button>
+                </div>
+            </div>
+
+            {yearKeys.map(year => (
+                <div key={year} className={styles.group}>
+                    <div className={styles.yearLabel}>{year}</div>
+                    {grouped.get(year)!.map(e => {
+                        const d = e.eventDate ? new Date(e.eventDate) : null;
+                        const dayMonth = d
+                            ? d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
+                            : '—';
+
+                        return (
+                            <div key={e.id} className={styles.event}>
+                                <div className={styles.dateCol}>
+                                    <span className={styles.dateDay}>{dayMonth}</span>
+                                    {!d && (
+                                        <span className={styles.dateMonth} title={e.eventDateRaw}>
+                                            {e.eventDateRaw.length > 10
+                                                ? e.eventDateRaw.slice(0, 10) + '…'
+                                                : e.eventDateRaw}
+                                        </span>
+                                    )}
+                                </div>
+
+                                <div
+                                    className={styles.dot}
+                                    style={{ background: '#7c3aed', boxShadow: '0 0 0 1.5px #7c3aed' }}
+                                />
+
+                                <div className={styles.card}>
+                                    <p className={styles.title}>{e.description}</p>
+                                    <p className={styles.source}>
+                                        <BookOpen size={9} />
+                                        {e.documentName}
+                                    </p>
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+            ))}
+
+            <p className={styles.chronoAutoNote}>
+                <RefreshCcw size={10} />
+                Auto-refreshes every 30 s — new documents are analysed automatically on upload.
+            </p>
         </div>
     );
 }
@@ -334,16 +291,16 @@ function EventFeed({ events }: { events: TimelineEvent[] }) {
 
 interface BriefTimelineProps {
     briefId: string;
-    initialEvents: TimelineEvent[];
+    initialChronology: CaseChronologyEvent[];
     initialSummary: BriefSummaryData | null;
-    linkedEmails?: LinkedEmail[];
+    linkedEmails?: never[]; // kept so callers don't need updating
 }
 
-export default function BriefTimeline({ briefId, initialSummary, initialEvents }: BriefTimelineProps) {
+export default function BriefTimeline({ briefId, initialSummary, initialChronology }: BriefTimelineProps) {
     return (
         <div className={styles.root}>
             <SummaryPanel briefId={briefId} initial={initialSummary} />
-            <EventFeed events={initialEvents} />
+            <CaseChronology briefId={briefId} initialEvents={initialChronology} />
         </div>
     );
 }

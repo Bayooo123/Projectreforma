@@ -657,6 +657,39 @@ export async function getBriefTimeline(briefId: string): Promise<TimelineEvent[]
     return events.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 }
 
+// ── Case Chronology ──────────────────────────────────────────────────────────
+
+export interface CaseChronologyEvent {
+    id: string;
+    eventDate: Date | null;
+    eventDateRaw: string;
+    description: string;
+    documentName: string;
+    documentId: string;
+}
+
+export async function getCaseChronology(briefId: string): Promise<CaseChronologyEvent[]> {
+    await requireAuth();
+    const events = await prisma.documentTimelineEvent.findMany({
+        where: { briefId },
+        select: {
+            id: true,
+            eventDate: true,
+            eventDateRaw: true,
+            description: true,
+            documentName: true,
+            documentId: true,
+        },
+    });
+    // Parsed dates ascending, undated at end
+    return events.sort((a, b) => {
+        if (!a.eventDate && !b.eventDate) return 0;
+        if (!a.eventDate) return 1;
+        if (!b.eventDate) return -1;
+        return a.eventDate.getTime() - b.eventDate.getTime();
+    });
+}
+
 // ── AI Brief Summary ─────────────────────────────────────────────────────────
 
 export interface BriefSummaryData {

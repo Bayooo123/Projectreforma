@@ -80,7 +80,7 @@ interface Brief {
 
 import { getDocuments, getEmailDocumentsForBrief, getLinkedEmailsForBrief } from '@/app/actions/documents';
 import { getFolders, deleteFolder } from '@/app/actions/folders';
-import { logBriefViewed, getBriefTimeline, getBriefSummary, TimelineEvent, BriefSummaryData } from '@/app/actions/briefs';
+import { logBriefViewed, getCaseChronology, getBriefSummary, CaseChronologyEvent, BriefSummaryData } from '@/app/actions/briefs';
 import BriefTimeline from '@/components/briefs/BriefTimeline';
 
 interface BriefDetailClientProps {
@@ -107,21 +107,18 @@ export default function BriefDetailClient({ brief }: BriefDetailClientProps) {
     const [linkedEmails, setLinkedEmails] = useState<Awaited<ReturnType<typeof getLinkedEmailsForBrief>>>([]);
 
     // Timeline + summary — loaded client-side so SSR only serves the page shell
-    const [initialTimeline, setInitialTimeline] = useState<TimelineEvent[]>([]);
+    const [initialChronology, setInitialChronology] = useState<CaseChronologyEvent[]>([]);
     const [initialSummary, setInitialSummary] = useState<BriefSummaryData | null>(null);
     const [timelineLoading, setTimelineLoading] = useState(true);
 
     useEffect(() => {
         logBriefViewed(brief.id).catch(() => {});
-        // Fetch timeline, summary, and linked emails in parallel after mount
-        // Linked emails are needed on the Timeline tab (correspondence history),
-        // so we load them here alongside the summary, not lazily on tab switch.
         Promise.all([
-            getBriefTimeline(brief.id),
+            getCaseChronology(brief.id),
             getBriefSummary(brief.id),
             getLinkedEmailsForBrief(brief.id),
-        ]).then(([timeline, summary, emails]) => {
-            setInitialTimeline(timeline);
+        ]).then(([chronology, summary, emails]) => {
+            setInitialChronology(chronology);
             setInitialSummary(summary);
             setLinkedEmails(emails);
         }).finally(() => setTimelineLoading(false));
@@ -372,7 +369,7 @@ export default function BriefDetailClient({ brief }: BriefDetailClientProps) {
                         ? <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '3rem 0', color: 'var(--text-secondary)', fontSize: '0.82rem' }}>
                             <Loader size={16} className="animate-spin" /> Loading timeline…
                           </div>
-                        : <BriefTimeline briefId={brief.id} initialEvents={initialTimeline} initialSummary={initialSummary} linkedEmails={linkedEmails} />
+                        : <BriefTimeline briefId={brief.id} initialChronology={initialChronology} initialSummary={initialSummary} />
                 )}
 
                 {activeTab === 'documents' && <div style={{ paddingBottom: '80px' }}>
