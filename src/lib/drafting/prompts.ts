@@ -31,6 +31,24 @@ Your role is to draft high-fidelity legal documents based on specific facts and 
 - Use 1. 2. 3. for paragraphs.
 `,
 
+    CLIENT_UPDATE_INSTRUCTION: `
+**Task:** Draft a short, client-facing status update email based on the Brief below. It must be something a lawyer can read once and send with light editing — not a legal document.
+
+**Context (The Brief):**
+{{CONTEXT}}
+
+**Additional instruction from the lawyer (optional):**
+{{INSTRUCTION}}
+
+**Output Format:**
+- Plain prose email, no markdown headers.
+- Open with a brief greeting to the client (use their name if known, otherwise "Dear Client").
+- One short paragraph on what has happened most recently.
+- One short paragraph on what happens next and, if applicable, whether the firm or the other side needs to act next.
+- Close with a professional sign-off.
+- Do not invent facts not present in the Brief — if something is uncertain, phrase it generally rather than fabricating specifics.
+`,
+
     REVIEW_CRITIQUE: `
 **Task:** Review the following legal text and provide a critique based on the Brief.
 

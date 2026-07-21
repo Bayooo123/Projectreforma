@@ -14,6 +14,10 @@
             "schedule": "0 9 * * *"
         },
         {
+            "path": "/api/cron/brief-manager-scan",
+            "schedule": "0 6 * * *"
+        },
+        {
             "path": "/api/cron/week-in-court",
             "schedule": "0 18 * * 5"
         },

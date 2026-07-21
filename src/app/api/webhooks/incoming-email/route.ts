@@ -356,6 +356,7 @@ export async function POST(request: NextRequest) {
                 summary:        intentResult.summary,
                 senderName:     firmContact.name || senderEmail,
                 senderEmail,
+                senderType:     intentResult.senderType,
                 briefId:        brief?.id || null,
                 contactId:      firmContact.id,
                 assignedToId,

@@ -25,6 +25,7 @@ import type {
 } from '@/app/actions/pulse';
 import PendingQuestionsPanel from './PendingQuestionsPanel';
 import AnomalyPanel from './AnomalyPanel';
+import BriefAgentPanel from '@/components/pulse/BriefAgentPanel';
 import MyBriefsGrid from './MyBriefsGrid';
 import DailyWorkLogPanel from './DailyWorkLogPanel';
 import FirmWorkLogBoard from './FirmWorkLogBoard';
@@ -97,6 +98,7 @@ interface PulseClientProps {
     attentionCount: number;
     pendingQuestions: PendingQuestion[];
     anomalies: any[];
+    agentInsights: any[];
     myBriefs: MyBrief[];
     todayEntries: WorkEntry[];
     firmWorkLog: WorkEntry[];
@@ -115,6 +117,7 @@ export default function PulseClient({
     attentionCount,
     pendingQuestions,
     anomalies,
+    agentInsights,
     myBriefs,
     todayEntries,
     firmWorkLog,
@@ -396,6 +399,9 @@ export default function PulseClient({
                     <MyBriefsGrid briefs={myBriefs} />
                 )}
 
+                {agentInsights.length > 0 && (
+                    <BriefAgentPanel insights={agentInsights} />
+                )}
                 {anomalies.length > 0 && (
                     <AnomalyPanel anomalies={anomalies} />
                 )}

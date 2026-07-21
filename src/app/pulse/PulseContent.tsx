@@ -5,6 +5,7 @@ import {
 } from '@/app/actions/pulse';
 import { getPendingMatterQuestions } from '@/app/actions/matterQuestions';
 import { getOpenAnomalies } from '@/app/actions/anomalies';
+import { getOpenAgentInsights } from '@/app/actions/agent-insights';
 import { getTodayWorkEntries, getFirmWorkLog } from '@/app/actions/work-entries';
 import { PulseService } from '@/lib/services/pulse/pulse-service';
 import { prisma } from '@/lib/prisma';
@@ -22,7 +23,7 @@ const empty: any[] = [];
 export default async function PulseContent({ workspaceId, userId, userName }: PulseContentProps) {
     const [
         firmStats, userStats, firmFeed, userFeed,
-        pendingQuestions, anomalies, myBriefs,
+        pendingQuestions, anomalies, agentInsights, myBriefs,
         todayEntries, firmWorkLog, teamMembers, briefs, memberRecord, userRecord,
     ] = await Promise.all([
         PulseService.getFirmStats(workspaceId).catch(() => ({ activeBriefs: 0, activeBriefsDelta: '—', unbilledMatters: 0, unbilledAmount: '₦0', hearingsThisWeek: 0, nextHearingLabel: '—', openEscalations: 0 })),
@@ -31,6 +32,7 @@ export default async function PulseContent({ workspaceId, userId, userName }: Pu
         getPulseFeedUser(workspaceId).catch(() => empty),
         getPendingMatterQuestions(workspaceId).catch(() => empty),
         getOpenAnomalies(workspaceId).catch(() => empty),
+        getOpenAgentInsights(workspaceId).catch(() => empty),
         getMyBriefs(workspaceId).catch(() => empty),
         (() => {
             const today = new Date();
@@ -101,6 +103,7 @@ export default async function PulseContent({ workspaceId, userId, userName }: Pu
             attentionCount={attentionCount}
             pendingQuestions={pendingQuestions}
             anomalies={anomalies}
+            agentInsights={agentInsights}
             myBriefs={myBriefs}
             todayEntries={todayEntries}
             firmWorkLog={firmWorkLog}

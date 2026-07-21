@@ -3,12 +3,13 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import {
     Loader, Sparkles, ChevronDown, ChevronUp, RefreshCw,
-    Paperclip, BookOpen, Scale, RefreshCcw,
+    Paperclip, BookOpen, Scale, RefreshCcw, Bot,
 } from 'lucide-react';
 import {
     generateBriefSummary, getCaseChronology, backfillBriefTimeline,
     CaseChronologyEvent, BriefSummaryData,
 } from '@/app/actions/briefs';
+import { runBriefManagerNow } from '@/app/actions/agent-insights';
 import styles from './BriefTimeline.module.css';
 
 function formatRelative(date: Date): string {
@@ -34,6 +35,22 @@ function SummaryPanel({ briefId, initial }: SummaryPanelProps) {
     const [generating, setGenerating] = useState(false);
     const [error, setError]           = useState<string | null>(null);
     const [collapsed, setCollapsed]   = useState(false);
+    const [asking, setAsking]         = useState(false);
+    const [asked, setAsked]           = useState(false);
+
+    const handleAskBriefManager = async () => {
+        setAsking(true);
+        setAsked(false);
+        try {
+            const res = await runBriefManagerNow(briefId);
+            if (res.success) setAsked(true);
+            else setError(res.error ?? 'Could not reach Brief Manager');
+        } catch {
+            setError('Could not reach Brief Manager. Please try again.');
+        } finally {
+            setAsking(false);
+        }
+    };
 
     const handleGenerate = async () => {
         setGenerating(true);
@@ -66,6 +83,19 @@ function SummaryPanel({ briefId, initial }: SummaryPanelProps) {
                     )}
                 </div>
                 <div className={styles.summaryActions}>
+                    <button
+                        className={styles.generateBtn}
+                        onClick={handleAskBriefManager}
+                        disabled={asking}
+                        title="Ask Brief Manager what happened last, what's next, and whether this brief needs your input — result appears in Firm Pulse"
+                    >
+                        {asking
+                            ? <><Loader size={12} className={styles.spinner} /> Asking…</>
+                            : asked
+                                ? <><Bot size={12} /> Added to Firm Pulse ✓</>
+                                : <><Bot size={12} /> Ask Brief Manager</>
+                        }
+                    </button>
                     <button
                         className={styles.generateBtn}
                         onClick={handleGenerate}

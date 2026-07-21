@@ -69,6 +69,7 @@ model Workspace {
   pulseEvents           PulseEvent[]
   modulePinResets       ModulePinReset[]
   whatsappSessions      WhatsappSession[]
+  agentInsights         AgentInsight[]
 
   @@index([slug])
   @@index([firmCode])
@@ -559,6 +560,7 @@ model Brief {
   briefLawyers        BriefLawyer[]
   timelineEvents      DocumentTimelineEvent[]
   pulseEvents         PulseEvent[]
+  agentInsights       AgentInsight[]
 
   @@index([lawyerId])
   @@index([lawyerInChargeId])
@@ -1382,6 +1384,8 @@ model PulseEvent {
   summary         String
   senderName      String?
   senderEmail     String?
+  // client | court | counsel | other — who sent the most recent correspondence
+  senderType      String?
   briefId         String?
   matterId        String?
   contactId       String?
@@ -1404,6 +1408,33 @@ model PulseEvent {
   @@index([workspaceId, createdAt])
   @@index([briefId])
   @@index([assignedToId])
+}
+
+model AgentInsight {
+  id            String    @id @default(cuid())
+  workspaceId   String
+  // 'brief_manager' today; future: meetings | office_manager | client_manager | compliance | analytics
+  agentType     String    @default("brief_manager")
+  briefId       String?
+  // new | viewed | dismissed | resolved
+  status        String    @default("new")
+  title         String
+  summary       String
+  // { lastActivity, nextSteps[], ballInCourt: {status, rationale}, questions[], needsDocuments, docRequestReason }
+  data          Json
+  // capped resolution-chat transcript
+  messages      Json?
+  // timestamp of the underlying activity this insight is based on — used to detect staleness
+  lastSignalAt  DateTime
+  createdAt     DateTime  @default(now())
+  resolvedAt    DateTime?
+  dismissedAt   DateTime?
+
+  workspace     Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  brief         Brief?    @relation(fields: [briefId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, status, agentType])
+  @@index([briefId])
 }
 
 model ModulePinReset {
