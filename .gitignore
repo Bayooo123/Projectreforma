@@ -30,6 +30,13 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
+# local debug/analysis output (do not commit ad-hoc scratch artifacts)
+/*.log
+/*_output*.txt
+/*_errors*.txt
+/scratch/
+/tmp/
+
 # env files (can opt-in for committing if needed)
 .env*
 !.env.example

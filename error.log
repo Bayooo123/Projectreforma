@@ -1,9 +1,0 @@
-﻿scripts/reset-ascolp-user.ts(21,31): error TS2339: Property 'workspaceId' does not exist on type '{ id: string; name: string | null; createdAt: Date; updatedAt: Date; email: string; emailVerified: Date | null; image: string | null; password: string | null; phone: string | null; jobTitle: string | null; }'.
-scripts/reset-test-user-password.ts(22,31): error TS2339: Property 'workspaceId' does not exist on type '{ id: string; name: string | null; createdAt: Date; updatedAt: Date; email: string; emailVerified: Date | null; image: string | null; password: string | null; phone: string | null; jobTitle: string | null; }'.
-src/app/calendar/CalendarClient.tsx(181,17): error TS2719: Type '(matter: Matter) => void' is not assignable to type '(matter: Matter) => void'. Two different types with this name exist, but they are unrelated.
-  Types of parameters 'matter' and 'matter' are incompatible.
-    Property 'briefs' is missing in type 'Matter' but required in type 'Matter'.
-src/components/management/PaymentModal.tsx(141,17): error TS2322: Type 'string | undefined' is not assignable to type 'string'.
-  Type 'undefined' is not assignable to type 'string'.
-src/components/management/PaymentModal.tsx(145,17): error TS2322: Type 'Date | undefined' is not assignable to type 'Date'.
-  Type 'undefined' is not assignable to type 'Date'.
