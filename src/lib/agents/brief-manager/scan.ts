@@ -4,14 +4,18 @@ import { prisma } from '@/lib/prisma';
 import { config } from '@/lib/config';
 
 export type BallInCourtStatus = 'us' | 'opposing_counsel' | 'court' | 'unclear';
+export type RepresentationConfidence = 'confirmed' | 'inferred' | 'unclear';
 
 export interface BriefManagerInsightData {
     lastActivity: string;
     nextSteps: string[];
     ballInCourt: { status: BallInCourtStatus; rationale: string };
+    representing: { party: string; confidence: RepresentationConfidence };
     questions: string[];
     needsDocuments: boolean;
     docRequestReason?: string;
+    needsClientUpdate: boolean;
+    daysSinceClientContact: number;
 }
 
 interface GeneratedInsight {
@@ -25,6 +29,10 @@ const MAX_CHRONOLOGY_ROWS = 30;
 const MAX_PULSE_EVENTS = 5;
 const MAX_TASKS = 10;
 const MAX_MEMORY_ENTRIES = 15;
+const MAX_RECENT_DOCS = 3;
+const MAX_DOC_CHARS = 2000;
+const CLIENT_UPDATE_THRESHOLD_DAYS = 14;
+const DORMANT_RECHECK_COOLDOWN_DAYS = 7;
 
 function getClient(): Anthropic | null {
     if (!config.ANTHROPIC_API_KEY) return null;
@@ -63,6 +71,28 @@ async function computeLastSignalAt(briefId: string, briefCreatedAt: Date): Promi
     return new Date(Math.max(...dates.map(d => d.getTime())));
 }
 
+// The client hearing from us — distinct from computeLastSignalAt, which tracks
+// ANY activity. A brief can be internally very active while the client hears
+// nothing, which is exactly the gap this exists to catch.
+async function computeDaysSinceClientContact(briefId: string, briefCreatedAt: Date): Promise<number> {
+    const [lastClientPulse, lastUpdateSent] = await Promise.all([
+        prisma.pulseEvent.findFirst({
+            where: { briefId, senderType: 'client' },
+            orderBy: { createdAt: 'desc' },
+            select: { createdAt: true },
+        }),
+        prisma.briefActivityLog.findFirst({
+            where: { briefId, activityType: 'agent_memory', metadata: { path: ['clientUpdateSent'], equals: true } },
+            orderBy: { timestamp: 'desc' },
+            select: { timestamp: true },
+        }),
+    ]);
+
+    const dates = [briefCreatedAt, lastClientPulse?.createdAt, lastUpdateSent?.timestamp].filter((d): d is Date => !!d);
+    const mostRecent = new Date(Math.max(...dates.map(d => d.getTime())));
+    return Math.floor((Date.now() - mostRecent.getTime()) / 86_400_000);
+}
+
 function buildPrompt(input: {
     brief: {
         name: string; briefNumber: string; category: string; status: string; dueDate: string | null;
@@ -75,6 +105,8 @@ function buildPrompt(input: {
     tasks: string;
     nextHearing: string;
     recordedByLawyers: string;
+    recentDocuments: string;
+    daysSinceClientContact: number;
 }): string {
     return `You are a Legal Case Manager assistant for a Nigerian law firm, reviewing one brief (case file) to brief a partner on its status.
 
@@ -95,6 +127,9 @@ ${input.brief.aiSummaryProse ?? 'No summary generated yet.'}
 ## Document-derived chronology (most recent first)
 ${input.chronology || 'No dated events extracted yet.'}
 
+## Recent document contents (most recently uploaded first — read these for concrete next steps, not just the chronology)
+${input.recentDocuments || 'No document text available.'}
+
 ## Recent correspondence (most recent first)
 ${input.pulseEvents || 'No correspondence logged.'}
 
@@ -107,17 +142,24 @@ ${input.nextHearing || 'None scheduled.'}
 ## Recorded by lawyers (told directly to Brief Manager, most recent first)
 ${input.recordedByLawyers || 'Nothing recorded yet.'}
 
+## Days since the client last heard from us
+${input.daysSinceClientContact} (flag as needing a courtesy update past ${CLIENT_UPDATE_THRESHOLD_DAYS} days)
+
 ---
 
 Based ONLY on the material above, respond with EXACTLY this JSON (no markdown fences, no commentary):
 {
   "lastActivity": "<1-2 sentence plain-English statement of what happened most recently on this case>",
-  "nextSteps": ["<specific, actionable next step>", "..."],
+  "nextSteps": ["<specific, actionable next step — ground this in the recent document contents where possible, not just the chronology summary>", "..."],
   "ballInCourt": {
     "status": "<us|opposing_counsel|court|unclear>",
     "rationale": "<one sentence explaining why, based on who sent the most recent correspondence and open tasks/hearings>"
   },
-  "questions": ["<a specific clarifying question you would ask the responsible lawyer, phrased naturally, e.g. 'Where are we at with this case?' or 'Is the ball in our court or are we waiting from opposing counsel?'>"],
+  "representing": {
+    "party": "<which party the firm acts for, e.g. 'Claimant', 'Defendant', 'Applicant', named specifically if known — infer from client name, document content, and correspondence direction>",
+    "confidence": "<confirmed|inferred|unclear>"
+  },
+  "questions": ["<a specific clarifying question you would ask the responsible lawyer, phrased naturally, e.g. 'Where are we at with this case?' or 'Is the ball in our court or are we waiting from opposing counsel?' — include a question about which party we represent if representing.confidence is 'unclear'>"],
   "needsDocuments": <true|false>,
   "docRequestReason": "<if needsDocuments is true, what specifically is missing and why you need it before you can say more — omit if false>"
 }
@@ -126,6 +168,8 @@ Rules:
 - Ground every statement in the material above — never invent facts, dates, or names not present.
 - If the material is too thin to say anything useful, set needsDocuments: true and explain what's missing in docRequestReason.
 - "ballInCourt" must be your best inference from who sent the most recent correspondence (client/court/opposing counsel) and whether there are open tasks or upcoming hearings requiring firm action — use "unclear" if genuinely ambiguous, do not guess wildly.
+- "representing" must not be guessed wildly either — set confidence "unclear" and ask about it in questions rather than assume, if the material doesn't make it reasonably clear.
+- Waiting on the other side or the court ("ballInCourt" not "us") is NOT a reason to skip a client update — if days since client contact exceeds ${CLIENT_UPDATE_THRESHOLD_DAYS}, include a next step to send the client a courtesy update on where things stand, even if there's nothing else for the firm to do right now.
 - questions should be 1-3 items, phrased as a case manager would ask a partner, not generic.`;
 }
 
@@ -151,7 +195,7 @@ export async function generateBriefManagerInsight(briefId: string): Promise<Gene
     });
     if (!brief || brief.status !== 'active') return null;
 
-    const [chronologyRows, pulseEvents, openTasks, nextHearing, memoryEntries] = await Promise.all([
+    const [chronologyRows, pulseEvents, openTasks, nextHearing, memoryEntries, recentDocs] = await Promise.all([
         prisma.documentTimelineEvent.findMany({
             where: { briefId },
             orderBy: { eventDate: 'desc' },
@@ -181,9 +225,16 @@ export async function generateBriefManagerInsight(briefId: string): Promise<Gene
             take: MAX_MEMORY_ENTRIES,
             select: { timestamp: true, description: true },
         }),
+        prisma.document.findMany({
+            where: { briefId, ocrText: { not: null } },
+            orderBy: { uploadedAt: 'desc' },
+            take: MAX_RECENT_DOCS,
+            select: { name: true, ocrText: true },
+        }),
     ]);
 
     const lastSignalAt = await computeLastSignalAt(briefId, brief.createdAt);
+    const daysSinceClientContact = await computeDaysSinceClientContact(briefId, brief.createdAt);
 
     const prompt = buildPrompt({
         brief: {
@@ -211,6 +262,8 @@ export async function generateBriefManagerInsight(briefId: string): Promise<Gene
             ? `${nextHearing.date.toISOString().slice(0, 10)}${nextHearing.court ? ` at ${nextHearing.court}` : ''}${nextHearing.adjournedFor ? ` — ${nextHearing.adjournedFor}` : ''}`
             : '',
         recordedByLawyers: memoryEntries.map(m => `- ${m.timestamp.toISOString().slice(0, 10)}: ${m.description}`).join('\n'),
+        recentDocuments: recentDocs.map(d => `--- ${d.name} ---\n${(d.ocrText ?? '').slice(0, MAX_DOC_CHARS)}`).join('\n\n'),
+        daysSinceClientContact,
     });
 
     let data: BriefManagerInsightData | null = null;
@@ -229,9 +282,16 @@ export async function generateBriefManagerInsight(briefId: string): Promise<Gene
     }
     if (!data) return null;
 
+    // Deterministic, not left to the model's own arithmetic — these two fields
+    // are always computed here, overwriting whatever (if anything) the LLM guessed.
+    data.daysSinceClientContact = daysSinceClientContact;
+    data.needsClientUpdate = daysSinceClientContact > CLIENT_UPDATE_THRESHOLD_DAYS;
+
     const summary = data.needsDocuments
         ? `Needs more documents — ${data.docRequestReason ?? 'insufficient information'}`
-        : `${BALL_IN_COURT_LABEL[data.ballInCourt.status]}. ${data.nextSteps[0] ?? data.lastActivity}`;
+        : data.needsClientUpdate
+            ? `Client update overdue — ${daysSinceClientContact} days. ${data.nextSteps[0] ?? data.lastActivity}`
+            : `${BALL_IN_COURT_LABEL[data.ballInCourt.status]}. ${data.nextSteps[0] ?? data.lastActivity}`;
 
     return {
         title: brief.name,
@@ -283,22 +343,39 @@ export async function scanBriefsForWorkspace(workspaceId: string): Promise<{ cre
         }),
         prisma.agentInsight.findMany({
             where: { workspaceId, agentType: 'brief_manager', status: { in: ['new', 'viewed'] } },
-            select: { briefId: true, lastSignalAt: true },
+            select: { briefId: true, lastSignalAt: true, createdAt: true, data: true },
         }),
     ]);
 
-    const priorSignalByBrief = new Map(
-        existingInsights.filter((i): i is typeof i & { briefId: string } => !!i.briefId).map(i => [i.briefId, i.lastSignalAt])
+    const priorByBrief = new Map(
+        existingInsights.filter((i): i is typeof i & { briefId: string } => !!i.briefId).map(i => [i.briefId, i])
     );
 
     let created = 0, updated = 0, skipped = 0;
 
     for (const brief of briefs) {
+        const prior = priorByBrief.get(brief.id);
         const currentSignal = await computeLastSignalAt(brief.id, brief.createdAt);
-        const priorSignal = priorSignalByBrief.get(brief.id);
-        if (priorSignal && currentSignal.getTime() <= priorSignal.getTime()) {
-            skipped++;
-            continue;
+        const hasNewSignal = !prior || currentSignal.getTime() > prior.lastSignalAt.getTime();
+
+        if (!hasNewSignal) {
+            // No new activity — this is exactly the dormant case, so it needs its
+            // own check rather than being skipped outright like a "nothing changed" brief.
+            const daysSinceClientContact = await computeDaysSinceClientContact(brief.id, brief.createdAt);
+            const isDormant = daysSinceClientContact > CLIENT_UPDATE_THRESHOLD_DAYS;
+
+            if (!isDormant) {
+                skipped++;
+                continue;
+            }
+
+            const alreadyFlagged = !!(prior?.data as unknown as BriefManagerInsightData | undefined)?.needsClientUpdate;
+            const insightAgeDays = prior ? (Date.now() - prior.createdAt.getTime()) / 86_400_000 : Infinity;
+            if (alreadyFlagged && insightAgeDays < DORMANT_RECHECK_COOLDOWN_DAYS) {
+                // Already flagged recently — don't re-run the LLM every night while dormant.
+                skipped++;
+                continue;
+            }
         }
 
         const generated = await generateBriefManagerInsight(brief.id);

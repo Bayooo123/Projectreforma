@@ -16,9 +16,12 @@ interface AgentInsightData {
     lastActivity?: string;
     nextSteps?: string[];
     ballInCourt?: { status: string; rationale: string };
+    representing?: { party: string; confidence: string };
     questions?: string[];
     needsDocuments?: boolean;
     docRequestReason?: string;
+    needsClientUpdate?: boolean;
+    daysSinceClientContact?: number;
     prompt?: string;
 }
 
@@ -48,6 +51,7 @@ const AGENT_LABELS: Record<string, string> = {
 
 function BoardRowCard({ row, onChecked }: { row: BoardRow; onChecked: () => void }) {
     const [open, setOpen] = useState(false);
+    const [showSteps, setShowSteps] = useState(false);
     const [messages, setMessages] = useState<ChatMessage[]>(row.messages);
     const [data, setData] = useState(row.data);
     const [input, setInput] = useState('');
@@ -92,7 +96,7 @@ function BoardRowCard({ row, onChecked }: { row: BoardRow; onChecked: () => void
         <div style={{ border: '1px solid #e5e7eb', borderRadius: 10, background: '#fff', overflow: 'hidden', marginBottom: '0.6rem' }}>
             <div style={{ padding: '0.75rem 1rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem' }}>
                 <div style={{ minWidth: 0, flex: 1 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem', flexWrap: 'wrap' }}>
                         <span style={{
                             fontSize: '0.62rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em',
                             padding: '2px 8px', borderRadius: '999px',
@@ -100,6 +104,15 @@ function BoardRowCard({ row, onChecked }: { row: BoardRow; onChecked: () => void
                         }}>
                             {ballStyle?.label ?? (row.insightId ? 'Checked' : 'Not yet checked')}
                         </span>
+                        {data.needsClientUpdate && (
+                            <span style={{
+                                fontSize: '0.62rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em',
+                                padding: '2px 8px', borderRadius: '999px',
+                                background: '#fef2f2', color: '#b91c1c', flexShrink: 0,
+                            }}>
+                                Client update overdue{typeof data.daysSinceClientContact === 'number' ? ` — ${data.daysSinceClientContact}d` : ''}
+                            </span>
+                        )}
                         <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#111827' }}>{row.briefName}</span>
                         {row.client && <span style={{ fontSize: '0.72rem', color: '#9ca3af' }}>· {row.client}</span>}
                     </div>
@@ -107,31 +120,55 @@ function BoardRowCard({ row, onChecked }: { row: BoardRow; onChecked: () => void
                         {data.lastActivity ?? row.summary ?? (row.insightId ? '' : 'No status yet — click Check now to have Brief Manager review this brief.')}
                     </p>
                 </div>
-                {row.insightId ? (
-                    <button
-                        onClick={() => setOpen(o => !o)}
-                        style={{
-                            display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0,
-                            padding: '0.35rem 0.85rem', borderRadius: 6, border: 'none',
-                            background: '#0d9488', color: '#fff', fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer',
-                        }}
-                    >
-                        Discuss {open ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
-                    </button>
-                ) : (
-                    <button
-                        onClick={checkNow}
-                        disabled={checking}
-                        style={{
-                            display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0,
-                            padding: '0.35rem 0.85rem', borderRadius: 6, border: '1px solid #e5e7eb',
-                            background: checking ? '#f3f4f6' : '#fff', color: '#374151', fontSize: '0.72rem', fontWeight: 600, cursor: checking ? 'default' : 'pointer',
-                        }}
-                    >
-                        <RefreshCw size={12} className={checking ? 'rm-spin' : ''} /> {checking ? 'Checking…' : 'Check now'}
-                    </button>
-                )}
+                <div style={{ display: 'flex', gap: '0.4rem', flexShrink: 0 }}>
+                    {row.insightId && data.nextSteps && data.nextSteps.length > 0 && (
+                        <button
+                            onClick={() => setShowSteps(s => !s)}
+                            style={{
+                                display: 'flex', alignItems: 'center', gap: '4px',
+                                padding: '0.35rem 0.85rem', borderRadius: 6, border: '1px solid #e5e7eb',
+                                background: '#fff', color: '#374151', fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer',
+                            }}
+                        >
+                            Next steps {showSteps ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                        </button>
+                    )}
+                    {row.insightId ? (
+                        <button
+                            onClick={() => setOpen(o => !o)}
+                            style={{
+                                display: 'flex', alignItems: 'center', gap: '4px',
+                                padding: '0.35rem 0.85rem', borderRadius: 6, border: 'none',
+                                background: '#0d9488', color: '#fff', fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer',
+                            }}
+                        >
+                            Discuss {open ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                        </button>
+                    ) : (
+                        <button
+                            onClick={checkNow}
+                            disabled={checking}
+                            style={{
+                                display: 'flex', alignItems: 'center', gap: '4px',
+                                padding: '0.35rem 0.85rem', borderRadius: 6, border: '1px solid #e5e7eb',
+                                background: checking ? '#f3f4f6' : '#fff', color: '#374151', fontSize: '0.72rem', fontWeight: 600, cursor: checking ? 'default' : 'pointer',
+                            }}
+                        >
+                            <RefreshCw size={12} className={checking ? 'rm-spin' : ''} /> {checking ? 'Checking…' : 'Check now'}
+                        </button>
+                    )}
+                </div>
             </div>
+
+            {showSteps && data.nextSteps && data.nextSteps.length > 0 && (
+                <div style={{ borderTop: '1px solid #f3f4f6', background: '#fafafa', padding: '0.6rem 1rem' }}>
+                    <ul style={{ margin: 0, paddingLeft: '1.1rem' }}>
+                        {data.nextSteps.map((step, i) => (
+                            <li key={i} style={{ fontSize: '0.75rem', color: '#374151', lineHeight: 1.6 }}>{step}</li>
+                        ))}
+                    </ul>
+                </div>
+            )}
 
             {open && row.insightId && (
                 <div style={{ borderTop: '1px solid #f3f4f6', background: '#f8fafc', padding: '0.75rem 1rem' }}>

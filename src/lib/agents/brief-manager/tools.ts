@@ -18,8 +18,12 @@ function tool(name: string, description: string, properties: Record<string, unkn
 
 export const BRIEF_MANAGER_TOOLS = [
     tool('answer_from_brief_data', 'Fetch fresh data about the brief to answer a follow-up question — use this rather than guessing when the user asks about something not already covered in the insight.', {
-        aspect: { type: 'string', description: 'Which aspect to fetch', enum: ['timeline', 'tasks', 'hearings', 'correspondence'] },
+        aspect: { type: 'string', description: 'Which aspect to fetch', enum: ['timeline', 'tasks', 'hearings', 'correspondence', 'documents'] },
     }, ['aspect']),
+
+    tool('read_document', 'Read the full text of one specific document in this brief\'s vault — use this when a document needs closer reading than the short snippet already in context, or the lawyer references a specific document by name.', {
+        name: { type: 'string', description: 'The document name, or a distinctive part of it — matched case-insensitively' },
+    }, ['name']),
 
     tool('draft_client_update', 'Draft a short client-facing status update email grounded in this brief\'s known facts. Only call this after the user agrees they want a draft.', {
         instruction: { type: 'string', description: 'Any specific tone/content instruction from the lawyer for this update (optional)' },
@@ -32,6 +36,10 @@ export const BRIEF_MANAGER_TOOLS = [
     tool('record_brief_update', 'Record something the lawyer just told you about this brief as permanent case history. Call this IMMEDIATELY whenever the lawyer states any fact or update — do not wait for confirmation, and never let asking a follow-up question delay this.', {
         statement: { type: 'string', description: 'The fact/update as the lawyer stated it, rewritten as one clear standalone sentence' },
     }, ['statement']),
+
+    tool('mark_client_updated', 'Record that the client has just been sent an update on this brief — resets the "client update overdue" flag. Call this when the lawyer confirms they sent the client update (e.g. after using draft_client_update and sending it).', {
+        note: { type: 'string', description: 'Optional short note on what was sent' },
+    }, []),
 
     tool('mark_resolved', 'Mark this brief check-in as resolved — the user has addressed what was raised.', {
         note: { type: 'string', description: 'Short note on the resolution' },
@@ -72,9 +80,32 @@ async function fetchAspect(briefId: string, aspect: string) {
                 take: 10,
                 select: { createdAt: true, senderType: true, senderName: true, intent: true, summary: true },
             });
+        case 'documents':
+            return (await prisma.document.findMany({
+                where: { briefId },
+                orderBy: { uploadedAt: 'desc' },
+                take: 30,
+                select: { name: true, type: true, uploadedAt: true, ocrStatus: true, ocrText: true },
+            })).map(d => ({
+                name: d.name, type: d.type, uploadedAt: d.uploadedAt, ocrStatus: d.ocrStatus,
+                snippet: d.ocrText ? d.ocrText.slice(0, 300) : null,
+            }));
         default:
             return { error: `Unknown aspect: ${aspect}` };
     }
+}
+
+const MAX_READ_DOCUMENT_CHARS = 6000;
+
+async function readDocument(briefId: string, name: string) {
+    const document = await prisma.document.findFirst({
+        where: { briefId, name: { contains: name, mode: 'insensitive' } },
+        orderBy: { uploadedAt: 'desc' },
+        select: { name: true, ocrStatus: true, ocrText: true },
+    });
+    if (!document) return { error: `No document matching "${name}" found in this brief's vault.` };
+    if (!document.ocrText) return { name: document.name, error: `"${document.name}" has no extracted text yet (OCR status: ${document.ocrStatus}).` };
+    return { name: document.name, text: document.ocrText.slice(0, MAX_READ_DOCUMENT_CHARS) };
 }
 
 async function draftClientUpdate(briefId: string, insightData: BriefManagerInsightData, instruction?: string): Promise<{ draft: string } | { error: string }> {
@@ -141,6 +172,16 @@ async function recordBriefUpdate(briefId: string, insightId: string, userId: str
     };
 }
 
+async function markClientUpdated(briefId: string, insightId: string, userId: string | undefined, insightData: BriefManagerInsightData, note?: string) {
+    const statement = note ? `Client updated: ${note}` : 'Client sent a status update.';
+    await addBriefActivity(briefId, 'agent_memory', statement, { source: 'brief_manager_chat', insightId, clientUpdateSent: true }, userId);
+
+    const updatedData: BriefManagerInsightData = { ...insightData, needsClientUpdate: false, daysSinceClientContact: 0 };
+    await prisma.agentInsight.update({ where: { id: insightId }, data: { data: updatedData as unknown as Prisma.InputJsonValue } });
+
+    return { success: true, message: 'Recorded — client update flag cleared.' };
+}
+
 export async function executeBriefManagerTool(
     name: string,
     input: Record<string, unknown>,
@@ -150,11 +191,17 @@ export async function executeBriefManagerTool(
         case 'answer_from_brief_data':
             return { data: await fetchAspect(ctx.briefId, String(input.aspect ?? '')) };
 
+        case 'read_document':
+            return readDocument(ctx.briefId, String(input.name ?? ''));
+
         case 'draft_client_update':
             return draftClientUpdate(ctx.briefId, ctx.insightData, typeof input.instruction === 'string' ? input.instruction : undefined);
 
         case 'record_brief_update':
             return recordBriefUpdate(ctx.briefId, ctx.insightId, ctx.userId, String(input.statement ?? ''));
+
+        case 'mark_client_updated':
+            return markClientUpdated(ctx.briefId, ctx.insightId, ctx.userId, ctx.insightData, typeof input.note === 'string' ? input.note : undefined);
 
         case 'request_documents': {
             const updatedData: BriefManagerInsightData = { ...ctx.insightData, needsDocuments: true, docRequestReason: String(input.reason ?? '') };
