@@ -340,7 +340,7 @@ function CaseChronology({ briefId, initialEvents }: { briefId: string; initialEv
                                 <div className={styles.card}>
                                     <p className={styles.title}>{e.description}</p>
                                     <p className={styles.source}>
-                                        <BookOpen size={9} />
+                                        {e.sourceType === 'agent' ? <Bot size={9} /> : <BookOpen size={9} />}
                                         {e.documentName}
                                     </p>
                                 </div>

@@ -56,7 +56,7 @@ export function getClaudeTools() {
             brief_id: { type: 'string', description: 'The brief ID' },
             brief_title: { type: 'string', description: 'Search by brief title or number if ID unknown' },
         }),
-        tool('get_brief_timeline', 'Get a full chronological timeline for a brief — court hearings, adjournments, tasks created/completed, documents uploaded, with document OCR content included. Covers past (what happened), present (active items), and future (upcoming). Use this to narrate the history and trajectory of a matter.', {
+        tool('get_brief_timeline', 'Get a full chronological timeline for a brief — court hearings, adjournments, tasks created/completed, documents uploaded (with OCR content), and facts a lawyer has told the Brief Manager or Meetings agent directly (agent_note events). Covers past (what happened), present (active items), and future (upcoming). Use this to narrate the history and trajectory of a matter.', {
             brief_id: { type: 'string', description: 'The brief ID' },
             brief_title: { type: 'string', description: 'Search by brief title or number if ID unknown' },
             matter_title: { type: 'string', description: 'Search by linked matter title' },
@@ -296,7 +296,7 @@ export async function executeTool(
             });
             if (!brief) return { error: 'Brief not found. Try get_matter_detail first to get the brief ID.' };
 
-            const [calendarEntries, tasks, documents] = await Promise.all([
+            const [calendarEntries, tasks, documents, agentNotes] = await Promise.all([
                 prisma.calendarEntry.findMany({
                     where: { OR: [{ briefId: brief.id }, ...(brief.matterId ? [{ matterId: brief.matterId }] : [])] },
                     select: {
@@ -315,6 +315,13 @@ export async function executeTool(
                     where: { briefId: brief.id },
                     select: { id: true, name: true, uploadedAt: true, ocrStatus: true, ocrText: true },
                     orderBy: { uploadedAt: 'asc' },
+                }),
+                // Facts a lawyer told Brief Manager/Meetings directly, outside any document —
+                // same institutional memory those agents read back on their own next check-in.
+                prisma.briefActivityLog.findMany({
+                    where: { briefId: brief.id, activityType: 'agent_memory' },
+                    select: { id: true, timestamp: true, description: true, metadata: true },
+                    orderBy: { timestamp: 'asc' },
                 }),
             ]);
 
@@ -371,6 +378,15 @@ export async function executeTool(
                 });
             }
 
+            for (const n of agentNotes) {
+                const source = (n.metadata as { source?: string } | null)?.source;
+                events.push({
+                    date: n.timestamp, when: classify(n.timestamp), type: 'agent_note',
+                    title: n.description,
+                    details: { recordedVia: source === 'meetings_agent' ? 'Meetings agent' : 'Brief Manager' },
+                });
+            }
+
             events.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
             return {
@@ -383,6 +399,7 @@ export async function executeTool(
                     documents_with_ocr: documents.filter(d => d.ocrStatus === 'completed').length,
                     pending_tasks: tasks.filter(t => t.status !== 'completed').length,
                     completed_tasks: tasks.filter(t => t.status === 'completed').length,
+                    agent_recorded_notes: agentNotes.length,
                 },
                 timeline: events,
             };

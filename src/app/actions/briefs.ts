@@ -668,21 +668,53 @@ export interface CaseChronologyEvent {
     description: string;
     documentName: string;
     documentId: string;
+    sourceType?: 'document' | 'agent';
 }
 
+const AGENT_SOURCE_LABELS: Record<string, string> = {
+    brief_manager_chat: 'Brief Manager',
+    meetings_agent: 'Meetings',
+};
+
+// Unifies document-derived dates (DocumentTimelineEvent) with facts a lawyer
+// told an agent directly (BriefActivityLog, activityType 'agent_memory') into
+// one chronological feed — previously these lived in two disconnected places.
 export async function getCaseChronology(briefId: string): Promise<CaseChronologyEvent[]> {
     await requireAuth();
-    const events = await prisma.documentTimelineEvent.findMany({
-        where: { briefId },
-        select: {
-            id: true,
-            eventDate: true,
-            eventDateRaw: true,
-            description: true,
-            documentName: true,
-            documentId: true,
-        },
-    });
+    const [docEvents, agentEvents] = await Promise.all([
+        prisma.documentTimelineEvent.findMany({
+            where: { briefId },
+            select: {
+                id: true,
+                eventDate: true,
+                eventDateRaw: true,
+                description: true,
+                documentName: true,
+                documentId: true,
+            },
+        }),
+        prisma.briefActivityLog.findMany({
+            where: { briefId, activityType: 'agent_memory' },
+            select: { id: true, timestamp: true, description: true, metadata: true },
+        }),
+    ]);
+
+    const events: CaseChronologyEvent[] = [
+        ...docEvents.map(e => ({ ...e, sourceType: 'document' as const })),
+        ...agentEvents.map(e => {
+            const source = (e.metadata as { source?: string } | null)?.source;
+            return {
+                id: e.id,
+                eventDate: e.timestamp,
+                eventDateRaw: e.timestamp.toLocaleDateString('en-NG', { day: 'numeric', month: 'long', year: 'numeric' }),
+                description: e.description,
+                documentName: (source && AGENT_SOURCE_LABELS[source]) || 'Agent',
+                documentId: '',
+                sourceType: 'agent' as const,
+            };
+        }),
+    ];
+
     // Parsed dates ascending, undated at end
     return events.sort((a, b) => {
         if (!a.eventDate && !b.eventDate) return 0;
