@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>ReformaOS — 60 Second Demo</title>
+<style>
+  :root{
+    --bg:#0b1210; --bg2:#0f1a17; --fg:#f4f7f5; --muted:#9db3ac;
+    --accent:#10B981; --accent2:#34D399;
+    --serif: Georgia, 'Times New Roman', serif;
+    --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0;background:var(--bg);overflow:hidden}
+  body{font-family:var(--sans);color:var(--fg)}
+  .deck{position:relative;height:100vh;width:100vw}
+  .bar-track{position:absolute;top:0;left:0;height:4px;width:100%;background:rgba(255,255,255,.08);z-index:5}
+  .bar{height:100%;width:0%;background:linear-gradient(90deg,var(--accent),var(--accent2))}
+  .slide{
+    position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    text-align:center;padding:6vw;opacity:0;transform:translateY(16px) scale(.985);
+    transition:opacity .5s ease, transform .6s ease;pointer-events:none;
+    background:radial-gradient(circle at 50% 30%, var(--bg2), var(--bg) 70%);
+  }
+  .slide.active{opacity:1;transform:translateY(0) scale(1);pointer-events:auto}
+  .tag{font-size:clamp(.75rem,1.4vw,1rem);letter-spacing:.3em;text-transform:uppercase;color:var(--accent2);margin-bottom:1.2em;font-weight:600}
+  h1{font-family:var(--serif);font-size:clamp(2.2rem,5.5vw,4.2rem);line-height:1.15;margin:0 0 .4em;font-weight:600}
+  p.sub{font-size:clamp(1rem,2vw,1.35rem);color:var(--muted);max-width:42em;margin:0;line-height:1.5}
+  .mark{font-family:var(--serif);font-size:clamp(2.6rem,6vw,5rem);font-weight:700;letter-spacing:.02em;margin-bottom:.3em}
+  .mark span{color:var(--accent2)}
+  .closing p.sub{margin-top:.6em}
+  .closing .line{width:64px;height:2px;background:var(--accent);margin:1.4em 0}
+  .counter{position:absolute;bottom:22px;right:26px;font-size:.8rem;color:var(--muted);letter-spacing:.1em;z-index:5}
+</style>
+</head>
+<body>
+<div class="deck" id="deck">
+  <div class="bar-track"><div class="bar" id="bar"></div></div>
+  <div class="counter" id="counter"></div>
+
+  <section class="slide active" data-duration="5000">
+    <div class="mark">Reforma<span>OS</span></div>
+    <p class="sub">The digital workspace where law firms remember.</p>
+  </section>
+
+  <section class="slide" data-duration="6500">
+    <div class="tag">Brief Manager</div>
+    <h1>Every brief, every deadline,<br>tracked automatically.</h1>
+    <p class="sub">Documents, court dates, and case history — organized the moment a brief opens.</p>
+  </section>
+
+  <section class="slide" data-duration="6500">
+    <div class="tag">Court &amp; Calendar</div>
+    <h1>Meetings and court dates<br>that schedule themselves.</h1>
+    <p class="sub">Adjournments and instructions from emails and meeting recordings become calendar entries — no one types them in.</p>
+  </section>
+
+  <section class="slide" data-duration="6500">
+    <div class="tag">Office Manager</div>
+    <h1>One workspace for<br>the whole firm.</h1>
+    <p class="sub">Admin and internal operations sit alongside case work, not in a separate system.</p>
+  </section>
+
+  <section class="slide" data-duration="6500">
+    <div class="tag">Client Management</div>
+    <h1>A single record of truth<br>for every client.</h1>
+    <p class="sub">Instructions, correspondence, and history — always current, never scattered across inboxes.</p>
+  </section>
+
+  <section class="slide" data-duration="6500">
+    <div class="tag">Compliance</div>
+    <h1>Compliance that<br>watches itself.</h1>
+    <p class="sub">Regulatory deadlines are tracked and flagged before they become risk.</p>
+  </section>
+
+  <section class="slide" data-duration="6500">
+    <div class="tag">Analytics</div>
+    <h1>The firm's performance,<br>at a glance.</h1>
+    <p class="sub">An executive dashboard for billing, workload, and growth — decisions backed by real data.</p>
+  </section>
+
+  <section class="slide" data-duration="7000">
+    <div class="tag">Agentic AI</div>
+    <h1>An AI that doesn't just<br>store information — it acts on it.</h1>
+    <p class="sub">Reforma reads emails and meetings, understands intent, and creates the tasks, entries, and follow-ups itself.</p>
+  </section>
+
+  <section class="slide closing" data-duration="6000">
+    <div class="mark">Reforma<span>OS</span></div>
+    <div class="line"></div>
+    <p class="sub">Institutional memory, built in.<br>Law firms that remember.</p>
+  </section>
+</div>
+
+<script>
+  const slides = document.querySelectorAll('.slide');
+  const bar = document.getElementById('bar');
+  const counter = document.getElementById('counter');
+  let i = 0, timer;
+
+  function show(n){
+    slides.forEach((s, idx) => s.classList.toggle('active', idx === n));
+    counter.textContent = (n + 1) + ' / ' + slides.length;
+    bar.style.transition = 'none';
+    bar.style.width = '0%';
+    void bar.offsetWidth;
+    const dur = +slides[n].dataset.duration;
+    bar.style.transition = 'width ' + dur + 'ms linear';
+    bar.style.width = '100%';
+    clearTimeout(timer);
+    timer = setTimeout(next, dur);
+  }
+  function next(){ i = (i + 1) % slides.length; show(i); }
+  function prev(){ i = (i - 1 + slides.length) % slides.length; show(i); }
+
+  document.addEventListener('click', next);
+  document.addEventListener('keydown', e => {
+    if (e.code === 'ArrowRight' || e.code === 'Space') { e.preventDefault(); next(); }
+    if (e.code === 'ArrowLeft') { e.preventDefault(); prev(); }
+  });
+
+  show(0);
+</script>
+</body>
+</html>
