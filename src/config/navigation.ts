@@ -12,6 +12,8 @@ import {
   Bell,
   Settings,
   Receipt,
+  Bot,
+  CalendarClock,
 } from 'lucide-react';
 import { ComponentType } from 'react';
 
@@ -33,6 +35,14 @@ export const todayItem: NavItem = {
   href: '/pulse',
   icon: Activity,
 };
+
+// Pinned agent entry points — each opens a focused board on the Pulse page
+// (via ?agent=) rather than a separate route, per the registry in
+// src/lib/agents/registry.ts. Add a new item here when a new agent ships.
+export const agentItems: NavItem[] = [
+  { name: 'Brief Manager', href: '/pulse?agent=brief_manager', icon: Bot },
+  { name: 'Meetings', href: '/pulse?agent=meetings', icon: CalendarClock },
+];
 
 export const navigationGroups: NavGroup[] = [
   {

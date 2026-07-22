@@ -5,9 +5,11 @@ import { runAnomalyScan } from '@/lib/anomaly/detector';
 import PulseContent from './PulseContent';
 import PulseSkeleton from './PulseSkeleton';
 
-export default async function PulsePage() {
+export default async function PulsePage({ searchParams }: { searchParams: Promise<{ agent?: string }> }) {
     const session = await auth();
     if (!session?.user?.id) redirect('/login');
+
+    const { agent } = await searchParams;
 
     const workspaceId = session.user.workspaceId;
     if (!workspaceId) {
@@ -27,6 +29,7 @@ export default async function PulsePage() {
                 workspaceId={workspaceId}
                 userId={session.user.id}
                 userName={session.user.name || ''}
+                agent={agent}
             />
         </Suspense>
     );

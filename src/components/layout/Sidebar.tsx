@@ -1,7 +1,7 @@
 "use client";
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import {
   LogOut,
   ShieldAlert,
@@ -10,7 +10,7 @@ import styles from './Sidebar.module.css';
 import { signOut } from 'next-auth/react'; // Use client-side signOut
 import { useEffect } from 'react';
 import { checkOverdueInvoices } from '@/app/actions/notifications';
-import { navigationGroups, todayItem } from '@/config/navigation';
+import { navigationGroups, todayItem, agentItems } from '@/config/navigation';
 
 interface SidebarProps {
   user?: {
@@ -29,6 +29,8 @@ interface SidebarProps {
 
 const Sidebar = ({ user, workspace }: SidebarProps) => {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const currentAgent = searchParams.get('agent');
 
   useEffect(() => {
     const timer = setTimeout(async () => {
@@ -74,12 +76,29 @@ const Sidebar = ({ user, workspace }: SidebarProps) => {
             <Link
               href={todayItem.href}
               prefetch={true}
-              className={`${styles.navLink} ${isActive(todayItem.href) ? styles.active : ''}`}
+              className={`${styles.navLink} ${isActive(todayItem.href) && !currentAgent ? styles.active : ''}`}
             >
               <todayItem.icon size={20} className={styles.navIcon} />
               <span className={styles.navText}>{todayItem.name}</span>
             </Link>
           </li>
+
+          {agentItems.map((item) => {
+            const itemAgent = new URLSearchParams(item.href.split('?')[1]).get('agent');
+            const active = isActive(item.href) && currentAgent === itemAgent;
+            return (
+              <li key={item.name}>
+                <Link
+                  href={item.href}
+                  prefetch={true}
+                  className={`${styles.navLink} ${active ? styles.active : ''}`}
+                >
+                  <item.icon size={20} className={styles.navIcon} />
+                  <span className={styles.navText}>{item.name}</span>
+                </Link>
+              </li>
+            );
+          })}
 
           {navigationGroups.map((group) => {
             const visibleItems = group.items.filter((item) => {

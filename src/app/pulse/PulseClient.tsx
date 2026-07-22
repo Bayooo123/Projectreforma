@@ -26,6 +26,7 @@ import type {
 import PendingQuestionsPanel from './PendingQuestionsPanel';
 import AnomalyPanel from './AnomalyPanel';
 import BriefAgentPanel from '@/components/pulse/BriefAgentPanel';
+import AgentBoard from '@/components/pulse/AgentBoard';
 import MyBriefsGrid from './MyBriefsGrid';
 import DailyWorkLogPanel from './DailyWorkLogPanel';
 import FirmWorkLogBoard from './FirmWorkLogBoard';
@@ -107,7 +108,10 @@ interface PulseClientProps {
     userId: string;
     workspaceId: string;
     isAdmin: boolean;
+    agent?: string;
 }
+
+const VALID_AGENT_TYPES = new Set(['brief_manager', 'meetings']);
 
 export default function PulseClient({
     firmStats,
@@ -127,6 +131,7 @@ export default function PulseClient({
     userId,
     workspaceId,
     isAdmin,
+    agent,
 }: PulseClientProps) {
     const [view, setView] = useState<'firm' | 'user'>('firm');
     const [filter, setFilter] = useState<FilterType>('all');
@@ -156,6 +161,14 @@ export default function PulseClient({
 
     const isMobile = useIsMobile();
     const dateLabel = new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+
+    if (agent && VALID_AGENT_TYPES.has(agent)) {
+        return (
+            <div style={{ padding: isMobile ? '1rem' : '1.5rem 2rem', maxWidth: 900, margin: '0 auto' }}>
+                <AgentBoard workspaceId={workspaceId} agentType={agent} />
+            </div>
+        );
+    }
 
     if (isMobile) {
         const nextHearing = feed.find(i => i.categories.includes('calendar'));

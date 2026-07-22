@@ -18,7 +18,7 @@ import {
 } from 'lucide-react';
 import styles from './BottomNavigation.module.css';
 import { useState, useRef, useEffect } from 'react';
-import { navigationGroups } from '@/config/navigation';
+import { navigationGroups, agentItems } from '@/config/navigation';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
 
 interface BottomNavigationProps {
@@ -49,16 +49,19 @@ const BottomNavigation = ({ user }: BottomNavigationProps) => {
   ];
 
   // Dynamic hubGroups built from shared navigation config (F-01, F-05, F-08)
-  const hubGroups = navigationGroups.map(group => ({
-    label: group.label,
-    color: group.color,
-    items: group.items.filter(item => {
-      if (item.adminOnly) {
-        return isAdminOrOwner;
-      }
-      return true;
-    }),
-  }));
+  const hubGroups = [
+    { label: 'Agents', color: '#0d9488', items: agentItems },
+    ...navigationGroups.map(group => ({
+      label: group.label,
+      color: group.color,
+      items: group.items.filter(item => {
+        if (item.adminOnly) {
+          return isAdminOrOwner;
+        }
+        return true;
+      }),
+    })),
+  ];
 
   // FAB Quick Create actions — all navigate, none are decoys (F-04 fixed)
   const createActions = [

@@ -1,0 +1,272 @@
+'use client';
+
+import { useEffect, useState, useCallback } from 'react';
+import { Bot, ChevronDown, ChevronUp, Send, RefreshCw } from 'lucide-react';
+import { getBriefManagerBoard, getOpenAgentInsights, runBriefManagerNow, type BriefBoardRow } from '@/app/actions/agent-insights';
+import DocumentUpload from '@/components/briefs/DocumentUpload';
+
+interface ChatMessage {
+    role: 'user' | 'assistant';
+    content: string;
+}
+
+// Loose union of every agent's data shape — each agentType only populates the
+// fields relevant to it (see BriefManagerInsightData / MeetingAgentInsightData).
+interface AgentInsightData {
+    lastActivity?: string;
+    nextSteps?: string[];
+    ballInCourt?: { status: string; rationale: string };
+    questions?: string[];
+    needsDocuments?: boolean;
+    docRequestReason?: string;
+    prompt?: string;
+}
+
+interface BoardRow {
+    briefId: string | null;
+    briefName: string;
+    client: string | null;
+    lawyerInCharge: string | null;
+    insightId: string | null;
+    summary: string | null;
+    data: AgentInsightData;
+    messages: ChatMessage[];
+    checking: boolean;
+}
+
+const BALL_IN_COURT_STYLE: Record<string, { bg: string; text: string; label: string }> = {
+    us:                { bg: '#fef2f2', text: '#dc2626', label: 'Waiting on you' },
+    opposing_counsel:  { bg: '#fff7ed', text: '#ea580c', label: 'Waiting on opposing counsel' },
+    court:             { bg: '#eff6ff', text: '#2563eb', label: 'Waiting on the court' },
+    unclear:           { bg: '#f9fafb', text: '#6b7280', label: 'Status unclear' },
+};
+
+const AGENT_LABELS: Record<string, string> = {
+    brief_manager: 'Brief Manager',
+    meetings: 'Meetings & Calendar',
+};
+
+function BoardRowCard({ row, onChecked }: { row: BoardRow; onChecked: () => void }) {
+    const [open, setOpen] = useState(false);
+    const [messages, setMessages] = useState<ChatMessage[]>(row.messages);
+    const [data, setData] = useState(row.data);
+    const [input, setInput] = useState('');
+    const [sending, setSending] = useState(false);
+    const [checking, setChecking] = useState(false);
+
+    const ballStyle = data.ballInCourt ? (BALL_IN_COURT_STYLE[data.ballInCourt.status] ?? BALL_IN_COURT_STYLE.unclear) : null;
+    const questionLine = data.questions?.[0] ?? data.prompt;
+
+    const send = async () => {
+        const text = input.trim();
+        if (!text || sending || !row.insightId) return;
+        setInput('');
+        setSending(true);
+        const next = [...messages, { role: 'user' as const, content: text }];
+        setMessages(next);
+        try {
+            const res = await fetch(`/api/agents/insight/${row.insightId}/chat`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message: text }),
+            });
+            const result = await res.json();
+            setMessages([...next, { role: 'assistant', content: result.message ?? 'Done.' }]);
+            if (result.data) setData(result.data);
+        } catch {
+            setMessages([...next, { role: 'assistant', content: 'Something went wrong — please try again.' }]);
+        } finally {
+            setSending(false);
+        }
+    };
+
+    const checkNow = async () => {
+        if (!row.briefId) return;
+        setChecking(true);
+        await runBriefManagerNow(row.briefId);
+        setChecking(false);
+        onChecked();
+    };
+
+    return (
+        <div style={{ border: '1px solid #e5e7eb', borderRadius: 10, background: '#fff', overflow: 'hidden', marginBottom: '0.6rem' }}>
+            <div style={{ padding: '0.75rem 1rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem' }}>
+                <div style={{ minWidth: 0, flex: 1 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
+                        <span style={{
+                            fontSize: '0.62rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em',
+                            padding: '2px 8px', borderRadius: '999px',
+                            background: ballStyle?.bg ?? '#f3f4f6', color: ballStyle?.text ?? '#6b7280', flexShrink: 0,
+                        }}>
+                            {ballStyle?.label ?? (row.insightId ? 'Checked' : 'Not yet checked')}
+                        </span>
+                        <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#111827' }}>{row.briefName}</span>
+                        {row.client && <span style={{ fontSize: '0.72rem', color: '#9ca3af' }}>· {row.client}</span>}
+                    </div>
+                    <p style={{ fontSize: '0.78rem', color: '#4b5563', margin: 0, lineHeight: 1.5 }}>
+                        {data.lastActivity ?? row.summary ?? (row.insightId ? '' : 'No status yet — click Check now to have Brief Manager review this brief.')}
+                    </p>
+                </div>
+                {row.insightId ? (
+                    <button
+                        onClick={() => setOpen(o => !o)}
+                        style={{
+                            display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0,
+                            padding: '0.35rem 0.85rem', borderRadius: 6, border: 'none',
+                            background: '#0d9488', color: '#fff', fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer',
+                        }}
+                    >
+                        Discuss {open ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                    </button>
+                ) : (
+                    <button
+                        onClick={checkNow}
+                        disabled={checking}
+                        style={{
+                            display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0,
+                            padding: '0.35rem 0.85rem', borderRadius: 6, border: '1px solid #e5e7eb',
+                            background: checking ? '#f3f4f6' : '#fff', color: '#374151', fontSize: '0.72rem', fontWeight: 600, cursor: checking ? 'default' : 'pointer',
+                        }}
+                    >
+                        <RefreshCw size={12} className={checking ? 'rm-spin' : ''} /> {checking ? 'Checking…' : 'Check now'}
+                    </button>
+                )}
+            </div>
+
+            {open && row.insightId && (
+                <div style={{ borderTop: '1px solid #f3f4f6', background: '#f8fafc', padding: '0.75rem 1rem' }}>
+                    {data.nextSteps && data.nextSteps.length > 0 && (
+                        <p style={{ fontSize: '0.75rem', color: '#374151', margin: '0 0 0.5rem' }}>
+                            <strong>Next:</strong> {data.nextSteps.join('; ')}
+                        </p>
+                    )}
+                    {questionLine && (
+                        <p style={{ fontSize: '0.75rem', color: '#4b5563', fontStyle: 'italic', margin: '0 0 0.6rem' }}>&ldquo;{questionLine}&rdquo;</p>
+                    )}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', marginBottom: '0.6rem', maxHeight: 220, overflowY: 'auto' }}>
+                        {messages.map((m, i) => (
+                            <div key={i} style={{
+                                alignSelf: m.role === 'user' ? 'flex-end' : 'flex-start', maxWidth: '85%',
+                                background: m.role === 'user' ? '#0d9488' : '#fff',
+                                color: m.role === 'user' ? '#fff' : '#1e293b',
+                                border: m.role === 'user' ? 'none' : '1px solid #e5e7eb',
+                                borderRadius: 8, padding: '0.5rem 0.7rem', fontSize: '0.75rem', lineHeight: 1.5, whiteSpace: 'pre-wrap',
+                            }}>
+                                {m.content}
+                            </div>
+                        ))}
+                    </div>
+                    {data.needsDocuments && row.briefId && (
+                        <div style={{ marginBottom: '0.6rem', border: '1px dashed #cbd5e1', borderRadius: 8, padding: '0.6rem', background: '#fff' }}>
+                            <p style={{ fontSize: '0.7rem', color: '#6b7280', margin: '0 0 0.4rem' }}>
+                                {data.docRequestReason ?? 'More documents are needed.'}
+                            </p>
+                            <DocumentUpload briefId={row.briefId} onUploadComplete={() => setData((d: AgentInsightData) => ({ ...d, needsDocuments: false }))} />
+                        </div>
+                    )}
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        <input
+                            value={input}
+                            onChange={e => setInput(e.target.value)}
+                            onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } }}
+                            placeholder="Tell it what happened, or ask a question…"
+                            disabled={sending}
+                            style={{ flex: 1, fontSize: '0.75rem', padding: '0.45rem 0.7rem', border: '1px solid #e5e7eb', borderRadius: 6, outline: 'none' }}
+                        />
+                        <button
+                            onClick={send}
+                            disabled={sending || !input.trim()}
+                            style={{
+                                display: 'flex', alignItems: 'center', justifyContent: 'center', width: 32, height: 32, borderRadius: 6, border: 'none',
+                                background: sending || !input.trim() ? '#e5e7eb' : '#0d9488', color: '#fff', cursor: 'pointer', flexShrink: 0,
+                            }}
+                        >
+                            <Send size={14} />
+                        </button>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}
+
+export default function AgentBoard({ workspaceId, agentType }: { workspaceId: string; agentType: string }) {
+    const [scope, setScope] = useState<'firm' | 'mine'>('firm');
+    const [rows, setRows] = useState<BoardRow[] | null>(null);
+    const [loading, setLoading] = useState(true);
+
+    const load = useCallback(async () => {
+        setLoading(true);
+        if (agentType === 'brief_manager') {
+            const board: BriefBoardRow[] = await getBriefManagerBoard(workspaceId, scope);
+            setRows(board.map(b => ({
+                briefId: b.id,
+                briefName: b.name,
+                client: b.client,
+                lawyerInCharge: b.lawyerInCharge,
+                insightId: b.insight?.id ?? null,
+                summary: b.insight?.summary ?? null,
+                data: (b.insight?.data as AgentInsightData) ?? {},
+                messages: (b.insight?.messages as unknown as ChatMessage[]) ?? [],
+                checking: false,
+            })));
+        } else {
+            const insights = await getOpenAgentInsights(workspaceId, agentType);
+            setRows(insights.map(i => ({
+                briefId: i.briefId,
+                briefName: i.brief?.name ?? i.title,
+                client: null,
+                lawyerInCharge: null,
+                insightId: i.id,
+                summary: i.summary,
+                data: (i.data as AgentInsightData) ?? {},
+                messages: (i.messages as unknown as ChatMessage[]) ?? [],
+                checking: false,
+            })));
+        }
+        setLoading(false);
+    }, [workspaceId, agentType, scope]);
+
+    // Standard fetch-on-mount/on-scope-change pattern; setState inside load() is intentional.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    useEffect(() => { load(); }, [load]);
+
+    return (
+        <div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <Bot size={18} color="#0d9488" />
+                    <h2 style={{ fontSize: '1rem', fontWeight: 700, color: '#111827', margin: 0 }}>
+                        {AGENT_LABELS[agentType] ?? agentType}
+                    </h2>
+                </div>
+                {agentType === 'brief_manager' && (
+                    <div style={{ display: 'flex', border: '1px solid #e5e7eb', borderRadius: 8, overflow: 'hidden' }}>
+                        {(['firm', 'mine'] as const).map(s => (
+                            <button
+                                key={s}
+                                onClick={() => setScope(s)}
+                                style={{
+                                    padding: '0.35rem 0.9rem', fontSize: '0.75rem', fontWeight: 600, border: 'none', cursor: 'pointer',
+                                    background: scope === s ? '#0d9488' : '#fff', color: scope === s ? '#fff' : '#374151',
+                                }}
+                            >
+                                {s === 'firm' ? 'Firmwide' : 'My Briefs'}
+                            </button>
+                        ))}
+                    </div>
+                )}
+            </div>
+
+            {loading && <p style={{ fontSize: '0.8rem', color: '#9ca3af' }}>Loading…</p>}
+            {!loading && rows?.length === 0 && (
+                <p style={{ fontSize: '0.8rem', color: '#9ca3af' }}>
+                    {agentType === 'brief_manager' ? 'No active briefs in scope.' : 'Nothing needs attention right now.'}
+                </p>
+            )}
+            {!loading && rows?.map(row => (
+                <BoardRowCard key={row.insightId ?? row.briefId} row={row} onChecked={load} />
+            ))}
+        </div>
+    );
+}

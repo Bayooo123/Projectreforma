@@ -16,11 +16,12 @@ interface PulseContentProps {
     workspaceId: string;
     userId: string;
     userName: string;
+    agent?: string;
 }
 
 const empty: any[] = [];
 
-export default async function PulseContent({ workspaceId, userId, userName }: PulseContentProps) {
+export default async function PulseContent({ workspaceId, userId, userName, agent }: PulseContentProps) {
     const [
         firmStats, userStats, firmFeed, userFeed,
         pendingQuestions, anomalies, agentInsights, myBriefs,
@@ -112,6 +113,7 @@ export default async function PulseContent({ workspaceId, userId, userName }: Pu
             userId={userId}
             workspaceId={workspaceId}
             isAdmin={isAdmin}
+            agent={agent}
         />
     );
 }

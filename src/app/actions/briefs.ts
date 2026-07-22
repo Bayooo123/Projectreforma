@@ -29,7 +29,9 @@ export async function getUserBriefs() {
 export async function getBriefs(workspaceId: string) {
     await requireAuth();
     try {
-        const { briefs } = await BriefService.list(workspaceId);
+        // No pagination UI exists on the briefs list yet, so fetch everything
+        // rather than silently truncating at BriefService.list's default cap.
+        const { briefs } = await BriefService.list(workspaceId, { limit: 10_000 });
         return briefs;
     } catch (error) {
         console.error('[getBriefs] Error fetching briefs:', error);
