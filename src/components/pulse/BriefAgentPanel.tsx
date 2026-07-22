@@ -4,24 +4,41 @@ import { useState } from 'react';
 import { Bot, ChevronDown, ChevronUp, X, CheckCheck, Send } from 'lucide-react';
 import { dismissAgentInsight, resolveAgentInsight, viewAgentInsight } from '@/app/actions/agent-insights';
 import DocumentUpload from '@/components/briefs/DocumentUpload';
-import type { BriefManagerInsightData } from '@/lib/agents/brief-manager/scan';
 
 interface ChatMessage {
     role: 'user' | 'assistant';
     content: string;
 }
 
+// Covers every agent's data shape loosely — each agentType only populates the
+// fields relevant to it (see BriefManagerInsightData / MeetingAgentInsightData).
+interface AgentInsightData {
+    lastActivity?: string;
+    nextSteps?: string[];
+    ballInCourt?: { status: string; rationale: string };
+    questions?: string[];
+    needsDocuments?: boolean;
+    docRequestReason?: string;
+    prompt?: string;
+}
+
 interface AgentInsightRow {
     id: string;
+    agentType: string;
     briefId: string | null;
     brief: { id: string; name: string; briefNumber: string } | null;
     title: string;
     summary: string;
-    data: BriefManagerInsightData;
+    data: AgentInsightData;
     messages: ChatMessage[] | null;
     status: string;
     createdAt: Date;
 }
+
+const AGENT_LABELS: Record<string, string> = {
+    brief_manager: 'Brief Manager',
+    meetings: 'Meetings & Calendar',
+};
 
 const BALL_IN_COURT_STYLE: Record<string, { bg: string; text: string; label: string }> = {
     us:                { bg: '#fef2f2', text: '#dc2626', label: 'Waiting on you' },
@@ -39,7 +56,9 @@ function InsightCard({ insight, onRemove }: { insight: AgentInsightRow; onRemove
     const [acting, setActing] = useState(false);
     const [resolvedNow, setResolvedNow] = useState(false);
 
-    const ballStyle = BALL_IN_COURT_STYLE[data.ballInCourt?.status] ?? BALL_IN_COURT_STYLE.unclear;
+    const ballStyle = data.ballInCourt ? (BALL_IN_COURT_STYLE[data.ballInCourt.status] ?? BALL_IN_COURT_STYLE.unclear) : null;
+    const agentLabel = AGENT_LABELS[insight.agentType] ?? insight.agentType;
+    const questionLine = data.questions?.[0] ?? data.prompt;
 
     const handleOpen = () => {
         if (!open) viewAgentInsight(insight.id);
@@ -90,9 +109,10 @@ function InsightCard({ insight, onRemove }: { insight: AgentInsightRow; onRemove
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', minWidth: 0 }}>
                         <span style={{
                             fontSize: '0.62rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em',
-                            padding: '2px 8px', borderRadius: '999px', background: ballStyle.bg, color: ballStyle.text, flexShrink: 0,
+                            padding: '2px 8px', borderRadius: '999px',
+                            background: ballStyle?.bg ?? '#f0fdfa', color: ballStyle?.text ?? '#0d9488', flexShrink: 0,
                         }}>
-                            {ballStyle.label}
+                            {ballStyle?.label ?? agentLabel}
                         </span>
                         <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#111827', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                             {insight.brief?.name ?? insight.title}
@@ -105,11 +125,11 @@ function InsightCard({ insight, onRemove }: { insight: AgentInsightRow; onRemove
                     )}
                 </div>
                 <p style={{ fontSize: '0.75rem', color: '#374151', lineHeight: 1.5, margin: '0 0 0.6rem' }}>
-                    {data.lastActivity}
+                    {data.lastActivity ?? insight.summary}
                 </p>
-                {data.questions?.length > 0 && (
+                {questionLine && (
                     <p style={{ fontSize: '0.75rem', color: '#4b5563', lineHeight: 1.5, margin: '0 0 0.6rem', fontStyle: 'italic' }}>
-                        &ldquo;{data.questions[0]}&rdquo;
+                        &ldquo;{questionLine}&rdquo;
                     </p>
                 )}
 
@@ -237,7 +257,7 @@ export default function BriefAgentPanel({ insights: initial }: { insights: Agent
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
                     <Bot size={16} color="#0d9488" />
                     <span style={{ fontWeight: 700, fontSize: '0.82rem', color: '#0d9488' }}>
-                        Brief Manager — {insights.length} case{insights.length !== 1 ? 's' : ''} to review
+                        Agents — {insights.length} item{insights.length !== 1 ? 's' : ''} to review
                     </span>
                 </div>
                 {collapsed ? <ChevronDown size={16} color="#0d9488" /> : <ChevronUp size={16} color="#0d9488" />}

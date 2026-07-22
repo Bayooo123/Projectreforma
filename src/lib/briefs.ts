@@ -161,7 +161,7 @@ export async function createClientQuick(workspaceId: string, name: string, email
  */
 export async function addBriefActivity(
     briefId: string,
-    type: 'note_added' | 'email_received' | 'status_changed' | 'document_uploaded',
+    type: 'note_added' | 'email_received' | 'status_changed' | 'document_uploaded' | 'agent_memory',
     description: string,
     metadata?: any,
     performedBy?: string

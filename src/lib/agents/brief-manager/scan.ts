@@ -24,6 +24,7 @@ interface GeneratedInsight {
 const MAX_CHRONOLOGY_ROWS = 30;
 const MAX_PULSE_EVENTS = 5;
 const MAX_TASKS = 10;
+const MAX_MEMORY_ENTRIES = 15;
 
 function getClient(): Anthropic | null {
     if (!config.ANTHROPIC_API_KEY) return null;
@@ -49,14 +50,15 @@ const BALL_IN_COURT_LABEL: Record<BallInCourtStatus, string> = {
 // The most recent activity timestamp across everything that could change our
 // assessment of a brief — used to decide whether a fresh scan is warranted.
 async function computeLastSignalAt(briefId: string, briefCreatedAt: Date): Promise<Date> {
-    const [lastPulse, lastTimeline, lastCalendar, lastTask] = await Promise.all([
+    const [lastPulse, lastTimeline, lastCalendar, lastTask, lastMemory] = await Promise.all([
         prisma.pulseEvent.findFirst({ where: { briefId }, orderBy: { createdAt: 'desc' }, select: { createdAt: true } }),
         prisma.documentTimelineEvent.findFirst({ where: { briefId }, orderBy: { createdAt: 'desc' }, select: { createdAt: true } }),
         prisma.calendarEntry.findFirst({ where: { briefId }, orderBy: { updatedAt: 'desc' }, select: { updatedAt: true } }),
         prisma.task.findFirst({ where: { briefId }, orderBy: { updatedAt: 'desc' }, select: { updatedAt: true } }),
+        prisma.briefActivityLog.findFirst({ where: { briefId, activityType: 'agent_memory' }, orderBy: { timestamp: 'desc' }, select: { timestamp: true } }),
     ]);
 
-    const dates = [briefCreatedAt, lastPulse?.createdAt, lastTimeline?.createdAt, lastCalendar?.updatedAt, lastTask?.updatedAt]
+    const dates = [briefCreatedAt, lastPulse?.createdAt, lastTimeline?.createdAt, lastCalendar?.updatedAt, lastTask?.updatedAt, lastMemory?.timestamp]
         .filter((d): d is Date => !!d);
     return new Date(Math.max(...dates.map(d => d.getTime())));
 }
@@ -72,6 +74,7 @@ function buildPrompt(input: {
     pulseEvents: string;
     tasks: string;
     nextHearing: string;
+    recordedByLawyers: string;
 }): string {
     return `You are a Legal Case Manager assistant for a Nigerian law firm, reviewing one brief (case file) to brief a partner on its status.
 
@@ -100,6 +103,9 @@ ${input.tasks || 'None.'}
 
 ## Next hearing
 ${input.nextHearing || 'None scheduled.'}
+
+## Recorded by lawyers (told directly to Brief Manager, most recent first)
+${input.recordedByLawyers || 'Nothing recorded yet.'}
 
 ---
 
@@ -145,7 +151,7 @@ export async function generateBriefManagerInsight(briefId: string): Promise<Gene
     });
     if (!brief || brief.status !== 'active') return null;
 
-    const [chronologyRows, pulseEvents, openTasks, nextHearing] = await Promise.all([
+    const [chronologyRows, pulseEvents, openTasks, nextHearing, memoryEntries] = await Promise.all([
         prisma.documentTimelineEvent.findMany({
             where: { briefId },
             orderBy: { eventDate: 'desc' },
@@ -168,6 +174,12 @@ export async function generateBriefManagerInsight(briefId: string): Promise<Gene
             where: { briefId, date: { gte: new Date() } },
             orderBy: { date: 'asc' },
             select: { date: true, adjournedFor: true, court: true },
+        }),
+        prisma.briefActivityLog.findMany({
+            where: { briefId, activityType: 'agent_memory' },
+            orderBy: { timestamp: 'desc' },
+            take: MAX_MEMORY_ENTRIES,
+            select: { timestamp: true, description: true },
         }),
     ]);
 
@@ -198,6 +210,7 @@ export async function generateBriefManagerInsight(briefId: string): Promise<Gene
         nextHearing: nextHearing
             ? `${nextHearing.date.toISOString().slice(0, 10)}${nextHearing.court ? ` at ${nextHearing.court}` : ''}${nextHearing.adjournedFor ? ` — ${nextHearing.adjournedFor}` : ''}`
             : '',
+        recordedByLawyers: memoryEntries.map(m => `- ${m.timestamp.toISOString().slice(0, 10)}: ${m.description}`).join('\n'),
     });
 
     let data: BriefManagerInsightData | null = null;

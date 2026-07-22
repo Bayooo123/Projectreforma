@@ -3,7 +3,14 @@ import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { config } from '@/lib/config';
 import { SYSTEM_PROMPTS } from '@/lib/drafting/prompts';
+import { addBriefActivity } from '@/lib/briefs';
+import { calculateTextSimilarity } from '@/lib/services/ocr-versioning';
 import type { BriefManagerInsightData } from './scan';
+
+// Below this, a lawyer's statement is treated as unrelated to any existing
+// record rather than a restatement of it — lower than ocr-versioning's 0.85
+// document-version threshold since these are short sentences, not whole documents.
+const SIMILAR_FACT_THRESHOLD = 0.5;
 
 function tool(name: string, description: string, properties: Record<string, unknown>, required?: string[]) {
     return { name, description, input_schema: { type: 'object' as const, properties, ...(required && { required }) } };
@@ -21,6 +28,10 @@ export const BRIEF_MANAGER_TOOLS = [
     tool('request_documents', 'Flag that more documents are needed before you can say anything further useful about this brief, and show the user an inline upload prompt.', {
         reason: { type: 'string', description: 'Specifically what is missing and why it is needed' },
     }, ['reason']),
+
+    tool('record_brief_update', 'Record something the lawyer just told you about this brief as permanent case history. Call this IMMEDIATELY whenever the lawyer states any fact or update — do not wait for confirmation, and never let asking a follow-up question delay this.', {
+        statement: { type: 'string', description: 'The fact/update as the lawyer stated it, rewritten as one clear standalone sentence' },
+    }, ['statement']),
 
     tool('mark_resolved', 'Mark this brief check-in as resolved — the user has addressed what was raised.', {
         note: { type: 'string', description: 'Short note on the resolution' },
@@ -105,10 +116,35 @@ async function draftClientUpdate(briefId: string, insightData: BriefManagerInsig
     }
 }
 
+async function recordBriefUpdate(briefId: string, insightId: string, userId: string | undefined, statement: string) {
+    const [recentActivity, brief] = await Promise.all([
+        prisma.briefActivityLog.findMany({
+            where: { briefId },
+            orderBy: { timestamp: 'desc' },
+            take: 20,
+            select: { description: true },
+        }),
+        prisma.brief.findUnique({ where: { id: briefId }, select: { aiSummaryProse: true } }),
+    ]);
+
+    const knownTexts = [...recentActivity.map(a => a.description), brief?.aiSummaryProse ?? ''].filter(Boolean);
+    const likelyNew = !knownTexts.some(known => calculateTextSimilarity(known, statement) > SIMILAR_FACT_THRESHOLD);
+
+    await addBriefActivity(briefId, 'agent_memory', statement, { source: 'brief_manager_chat', insightId, likelyNew }, userId);
+
+    return {
+        recorded: true,
+        likelyNew,
+        message: likelyNew
+            ? 'Recorded. This looks like new information — you may ask ONE short optional clarifying question about it, but it is already saved either way.'
+            : 'Recorded — this matches what was already known, no need to ask further.',
+    };
+}
+
 export async function executeBriefManagerTool(
     name: string,
     input: Record<string, unknown>,
-    ctx: { insightId: string; briefId: string; insightData: BriefManagerInsightData },
+    ctx: { insightId: string; briefId: string; insightData: BriefManagerInsightData; userId?: string },
 ) {
     switch (name) {
         case 'answer_from_brief_data':
@@ -116,6 +152,9 @@ export async function executeBriefManagerTool(
 
         case 'draft_client_update':
             return draftClientUpdate(ctx.briefId, ctx.insightData, typeof input.instruction === 'string' ? input.instruction : undefined);
+
+        case 'record_brief_update':
+            return recordBriefUpdate(ctx.briefId, ctx.insightId, ctx.userId, String(input.statement ?? ''));
 
         case 'request_documents': {
             const updatedData: BriefManagerInsightData = { ...ctx.insightData, needsDocuments: true, docRequestReason: String(input.reason ?? '') };

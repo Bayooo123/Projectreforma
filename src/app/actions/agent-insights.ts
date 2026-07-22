@@ -16,7 +16,7 @@ export async function getOpenAgentInsights(workspaceId: string) {
     if (session.user.workspaceId !== workspaceId) return [];
 
     return prisma.agentInsight.findMany({
-        where: { workspaceId, agentType: 'brief_manager', status: { in: ['new', 'viewed'] } },
+        where: { workspaceId, status: { in: ['new', 'viewed'] } },
         orderBy: { createdAt: 'desc' },
         take: 50,
         include: { brief: { select: { id: true, name: true, briefNumber: true } } },

@@ -18,6 +18,10 @@
             "schedule": "0 6 * * *"
         },
         {
+            "path": "/api/cron/meetings-scan",
+            "schedule": "0 7 * * *"
+        },
+        {
             "path": "/api/cron/week-in-court",
             "schedule": "0 18 * * 5"
         },
