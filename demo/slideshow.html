@@ -5,8 +5,8 @@
 <title>ReformaOS — 60 Second Demo</title>
 <style>
   :root{
-    --bg:#0b1210; --bg2:#0f1a17; --fg:#f4f7f5; --muted:#9db3ac;
-    --accent:#10B981; --accent2:#34D399; --line:rgba(255,255,255,.1);
+    --bg:#ffffff; --bg2:#f2faf6; --fg:#0f1b17; --muted:#5b6b66;
+    --accent:#059669; --accent2:#047857; --line:rgba(15,27,23,.12);
     --serif: Georgia, 'Times New Roman', serif;
     --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, sans-serif;
   }
@@ -15,7 +15,7 @@
   body{font-family:var(--sans);color:var(--fg)}
   svg{color:var(--accent2)}
   .deck{position:relative;height:100vh;width:100vw}
-  .bar-track{position:absolute;top:0;left:0;height:4px;width:100%;background:rgba(255,255,255,.08);z-index:5}
+  .bar-track{position:absolute;top:0;left:0;height:4px;width:100%;background:rgba(15,27,23,.08);z-index:5}
   .bar{height:100%;width:0%;background:linear-gradient(90deg,var(--accent),var(--accent2))}
   .slide{
     position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
@@ -32,9 +32,9 @@
   .line{width:64px;height:2px;background:var(--accent);margin:1em 0}
   .counter{position:absolute;bottom:22px;right:26px;font-size:.8rem;color:var(--muted);letter-spacing:.1em;z-index:5}
 
-  .frame{width:min(600px,82vw);background:var(--bg2);border:1px solid var(--line);border-radius:14px;overflow:hidden;box-shadow:0 24px 70px rgba(0,0,0,.5)}
-  .frame-bar{display:flex;gap:6px;padding:9px 13px;background:rgba(255,255,255,.03);border-bottom:1px solid var(--line)}
-  .frame-bar span{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.15)}
+  .frame{width:min(600px,82vw);background:var(--bg2);border:1px solid var(--line);border-radius:14px;overflow:hidden;box-shadow:0 24px 60px rgba(15,27,23,.1)}
+  .frame-bar{display:flex;gap:6px;padding:9px 13px;background:rgba(15,27,23,.03);border-bottom:1px solid var(--line)}
+  .frame-bar span{width:8px;height:8px;border-radius:50%;background:rgba(15,27,23,.15)}
   .frame-body{padding:24px 30px;min-height:180px;display:flex;flex-direction:column;justify-content:center;gap:10px}
 
   .icon{width:22px;height:22px;flex:none}
@@ -45,14 +45,14 @@
   .pill{font-size:.72rem;padding:3px 10px;border-radius:20px;background:rgba(16,185,129,.15);color:var(--accent2);border:1px solid rgba(16,185,129,.3);flex:none}
 
   .grid4{display:grid;grid-template-columns:1fr 1fr;gap:14px}
-  .tile{display:flex;flex-direction:column;align-items:center;gap:8px;padding:16px 8px;border:1px solid var(--line);border-radius:10px;opacity:0;animation:popIn .5s ease forwards;background:rgba(255,255,255,.02)}
+  .tile{display:flex;flex-direction:column;align-items:center;gap:8px;padding:16px 8px;border:1px solid var(--line);border-radius:10px;opacity:0;animation:popIn .5s ease forwards;background:rgba(15,27,23,.02)}
   .tile span{font-size:.78rem;color:var(--muted)}
 
   .cal{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;width:100%}
   .cal div{aspect-ratio:1;border:1px solid var(--line);border-radius:4px}
   .cal div.hit{background:var(--accent);border-color:var(--accent);opacity:0;animation:popIn .4s ease forwards}
   .flowrow{display:flex;align-items:center;gap:10px;justify-content:center}
-  .chip{opacity:0;animation:riseIn .5s ease forwards;display:flex;align-items:center;gap:8px;padding:8px 14px;border:1px solid var(--line);border-radius:8px;font-size:.85rem;background:rgba(255,255,255,.02)}
+  .chip{opacity:0;animation:riseIn .5s ease forwards;display:flex;align-items:center;gap:8px;padding:8px 14px;border:1px solid var(--line);border-radius:8px;font-size:.85rem;background:rgba(15,27,23,.02)}
   .arrow{width:34px;height:2px;background:var(--line);position:relative;opacity:0;animation:riseIn .4s ease forwards}
   .event{margin-top:14px;opacity:0;animation:riseIn .5s ease forwards;font-size:.85rem;color:var(--accent2)}
 
@@ -64,7 +64,7 @@
   .shieldwrap{display:flex;align-items:center;gap:22px;justify-content:center}
   .badge{opacity:0;animation:riseIn .5s ease forwards .9s;font-size:.85rem;text-align:left}
   .badge b{color:var(--fg);display:block;font-size:.95rem}
-  .badge .amber{color:#F59E0B}
+  .badge .amber{color:#B45309}
 
   .bars{display:flex;align-items:flex-end;gap:14px;height:110px;width:100%;justify-content:center}
   .bars div{width:26px;background:linear-gradient(180deg,var(--accent2),var(--accent));border-radius:4px 4px 0 0;height:0;animation:grow .8s ease forwards}
@@ -72,7 +72,7 @@
 
   .net{position:relative}
   .node{opacity:0;animation:popIn .45s ease forwards;display:flex;flex-direction:column;align-items:center;gap:6px}
-  .node .dotc{width:44px;height:44px;border-radius:50%;border:1.5px solid var(--line);display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.02)}
+  .node .dotc{width:44px;height:44px;border-radius:50%;border:1.5px solid var(--line);display:flex;align-items:center;justify-content:center;background:rgba(15,27,23,.02)}
   .node.core .dotc{width:64px;height:64px;border-color:var(--accent2);background:rgba(16,185,129,.12);animation:pulseGlow 1.8s ease-in-out infinite 1.4s}
   .node span{font-size:.72rem;color:var(--muted)}
   .netgrid{display:grid;grid-template-columns:1fr 1fr 1fr;align-items:center;gap:10px;width:100%}
@@ -84,6 +84,8 @@
   @keyframes grow{from{height:0}to{height:var(--h)}}
   @keyframes draw{to{stroke-dashoffset:0}}
   @keyframes pulseGlow{0%,100%{box-shadow:0 0 0 rgba(16,185,129,0)}50%{box-shadow:0 0 22px rgba(16,185,129,.55)}}
+  @keyframes pulseDot{0%,100%{opacity:1}50%{opacity:.25}}
+  .dotlive{width:7px;height:7px;border-radius:50%;background:var(--accent);display:inline-block;animation:pulseDot 1.4s ease-in-out infinite}
 
   .row:nth-child(1){animation-delay:.2s} .row:nth-child(2){animation-delay:.55s} .row:nth-child(3){animation-delay:.9s}
   .tile:nth-child(1){animation-delay:.2s} .tile:nth-child(2){animation-delay:.4s} .tile:nth-child(3){animation-delay:.6s} .tile:nth-child(4){animation-delay:.8s}
@@ -103,6 +105,7 @@
   <symbol id="i-bell" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" d="M6 10a6 6 0 0112 0c0 5 2 6 2 6H4s2-1 2-6z" fill="none"/><path stroke="currentColor" stroke-width="2" d="M10 20a2 2 0 004 0"/></symbol>
   <symbol id="i-check" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2.5" d="M4 12l6 6L20 6" fill="none"/></symbol>
   <symbol id="i-spark" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" d="M12 2v6M12 16v6M2 12h6M16 12h6M5 5l4 4M15 15l4 4M19 5l-4 4M9 15l-4 4" /></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2" stroke="currentColor" stroke-width="2" fill="none"/><path stroke="currentColor" stroke-width="2" d="M8 11V8a4 4 0 018 0v3" fill="none"/></symbol>
 </svg>
 
 <div class="deck" id="deck">
@@ -129,29 +132,29 @@
         <div class="row"><svg class="icon acc"><use href="#i-doc"/></svg><div class="name">Adeyemi v. FirstBank</div><span class="pill">Active</span></div>
         <div class="row"><svg class="icon acc"><use href="#i-doc"/></svg><div class="name">Okafor Estate</div><span class="pill">Filed</span></div>
         <div class="row"><svg class="icon acc"><use href="#i-doc"/></svg><div class="name">Trust Merger</div><span class="pill">Review</span></div>
+        <div class="row" style="margin-top:10px;gap:8px;animation-delay:1.3s"><svg class="icon acc" style="width:16px;height:16px"><use href="#i-lock"/></svg><div class="name" style="font-size:.82rem;color:var(--muted)">Permissioned access — A. Bello viewed Exhibit C · 2m ago</div></div>
       </div>
     </div>
-    <h1>Every brief, every deadline,<br>tracked automatically.</h1>
-    <p class="sub">Documents, court dates, and case history — organized the moment a brief opens.</p>
+    <h1>A secure workspace —<br>not just storage.</h1>
+    <p class="sub">Control exactly who can see each document, with a full activity log of every view and edit.</p>
   </section>
 
-  <section class="slide" data-duration="7000">
-    <div class="tag">Court &amp; Calendar</div>
+  <section class="slide" data-duration="7500">
+    <div class="tag">Meetings &amp; Calendar</div>
     <div class="frame"><div class="frame-bar"><span></span><span></span><span></span></div>
-      <div class="frame-body">
-        <div class="flowrow">
-          <div class="chip" style="animation-delay:.1s"><svg class="icon acc"><use href="#i-mail"/></svg>Adjournment email</div>
-          <div class="arrow" style="animation-delay:.5s"></div>
-          <div class="chip" style="animation-delay:.9s"><svg class="icon acc"><use href="#i-cal"/></svg>Calendar</div>
+      <div class="frame-body" style="align-items:center;gap:8px">
+        <div class="flowrow" style="gap:12px">
+          <div class="chip" style="animation-delay:.1s"><svg class="icon acc" style="width:16px;height:16px"><use href="#i-chat"/></svg>Virtual call</div>
+          <div class="chip" style="animation-delay:.3s"><svg class="icon acc" style="width:16px;height:16px"><use href="#i-user"/></svg>In-person meeting</div>
         </div>
-        <div class="cal" style="margin-top:16px">
-          <div></div><div></div><div class="hit" style="animation-delay:1.3s"></div><div></div><div></div><div></div><div></div>
-        </div>
-        <div class="event" style="animation-delay:1.6s">Adjourned to Aug 14 — entry created automatically</div>
+        <div style="opacity:0;animation:riseIn .4s ease forwards .6s;color:var(--muted)">↓ recorded &amp; transcribed</div>
+        <div class="chip" style="animation-delay:.9s"><svg class="icon acc" style="width:16px;height:16px"><use href="#i-doc"/></svg>Notes captured automatically</div>
+        <div style="opacity:0;animation:riseIn .4s ease forwards 1.3s;color:var(--muted)">↓</div>
+        <div class="chip" style="animation-delay:1.6s;border-color:rgba(5,150,105,.35);background:rgba(5,150,105,.08)"><svg class="icon acc" style="width:16px;height:16px"><use href="#i-bell"/></svg>Reminder set — follow up Thursday</div>
       </div>
     </div>
-    <h1>Meetings and court dates<br>that schedule themselves.</h1>
-    <p class="sub">Adjournments and instructions from emails and meeting recordings become calendar entries — no one types them in.</p>
+    <h1>Every meeting remembered.<br>Every reminder sent.</h1>
+    <p class="sub">Record virtual or in-office meetings — Reforma turns the notes into calendar entries and reminders automatically.</p>
   </section>
 
   <section class="slide" data-duration="6000">
@@ -200,14 +203,14 @@
     <div class="tag">Analytics</div>
     <div class="frame" style="position:relative"><div class="frame-bar"><span></span><span></span><span></span></div>
       <div class="frame-body">
-        <div class="stat">↑ 18% billable hours</div>
+        <div class="stat" style="display:flex;align-items:center;gap:6px"><span class="dotlive"></span>Live · ↑ 18% billable hours</div>
         <div class="bars">
           <div style="--h:40%"></div><div style="--h:65%"></div><div style="--h:50%"></div><div style="--h:85%"></div><div style="--h:70%"></div>
         </div>
       </div>
     </div>
-    <h1>The firm's performance,<br>at a glance.</h1>
-    <p class="sub">An executive dashboard for billing, workload, and growth — decisions backed by real data.</p>
+    <h1>Firm performance,<br>at your fingertips.</h1>
+    <p class="sub">Live dashboards for billing, workload, and growth — no waiting on month-end reports.</p>
   </section>
 
   <section class="slide" data-duration="8000">
