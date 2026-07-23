@@ -98,6 +98,20 @@ export async function getBriefManagerBoard(workspaceId: string, scope: 'firm' | 
     });
 }
 
+// Cheap re-fetch of one insight's current stored data — used to pick up a
+// record_brief_update regeneration that runs via after() post-response, so the
+// board's collapsed "what happened last" line catches up shortly after a chat
+// turn without the chat reply itself having to wait for that regeneration.
+export async function getInsightSnapshot(insightId: string): Promise<{ summary: string; data: Record<string, unknown> } | null> {
+    const session = await getSession();
+    const insight = await prisma.agentInsight.findUnique({
+        where: { id: insightId },
+        select: { workspaceId: true, summary: true, data: true },
+    });
+    if (!insight || insight.workspaceId !== session.user.workspaceId) return null;
+    return { summary: insight.summary, data: insight.data as Record<string, unknown> };
+}
+
 // Triggered by "Ask Brief Manager" — always regenerates, bypassing the
 // nightly scan's staleness check, since the user explicitly asked for a fresh look.
 export async function runBriefManagerNow(briefId: string): Promise<{ success: boolean; error?: string }> {

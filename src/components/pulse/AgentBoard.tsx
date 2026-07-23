@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { Bot, ChevronDown, ChevronUp, Send, RefreshCw } from 'lucide-react';
-import { getBriefManagerBoard, getOpenAgentInsights, runBriefManagerNow, type BriefBoardRow } from '@/app/actions/agent-insights';
+import { getBriefManagerBoard, getOpenAgentInsights, runBriefManagerNow, getInsightSnapshot, type BriefBoardRow } from '@/app/actions/agent-insights';
 import DocumentUpload from '@/components/briefs/DocumentUpload';
 import BriefHistorySearch from '@/components/pulse/BriefHistorySearch';
 
@@ -61,6 +61,8 @@ function BoardRowCard({ row, onChecked }: { row: BoardRow; onChecked: () => void
     const [sending, setSending] = useState(false);
     const [checking, setChecking] = useState(false);
     const [checkError, setCheckError] = useState<string | null>(null);
+    const mountedRef = useRef(true);
+    useEffect(() => () => { mountedRef.current = false; }, []);
 
     const ballStyle = data.ballInCourt ? (BALL_IN_COURT_STYLE[data.ballInCourt.status] ?? BALL_IN_COURT_STYLE.unclear) : null;
     const questionLine = data.questions?.[0] ?? data.prompt;
@@ -83,6 +85,22 @@ function BoardRowCard({ row, onChecked }: { row: BoardRow; onChecked: () => void
             const result = await res.json();
             setMessages([...next, { role: 'assistant', content: result.message ?? 'Done.' }]);
             if (result.data) setData(result.data);
+
+            // record_brief_update's insight regeneration runs via after() post-response
+            // (kept off the critical path so the reply above isn't slowed down by it),
+            // so the data just set above can still be pre-regeneration. Re-check shortly
+            // after so the collapsed "what happened last" line catches up without
+            // requiring a manual reload — this is the line lawyers rely on each morning.
+            const insightId = row.insightId;
+            if (insightId) {
+                setTimeout(async () => {
+                    if (!mountedRef.current) return;
+                    try {
+                        const fresh = await getInsightSnapshot(insightId);
+                        if (fresh && mountedRef.current) setData(fresh.data as AgentInsightData);
+                    } catch { /* best-effort — the next full board load will still pick it up */ }
+                }, 8000);
+            }
         } catch {
             setMessages([...next, { role: 'assistant', content: 'Something went wrong — please try again.' }]);
         } finally {
