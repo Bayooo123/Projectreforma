@@ -10,6 +10,27 @@ async function fetchOcrText(documentId: string): Promise<string | null> {
     return doc?.ocrText ?? null;
 }
 
+// .docx files have no OCR pipeline of their own — ocrText stays null until a
+// separate job runs, which can be indefinitely. Read the file directly instead,
+// the same way the brief summary generator already does, rather than treating
+// "no cached OCR yet" as "no content available".
+function isDocx(name: string, type: string): boolean {
+    return /docx?$/i.test(type) || /\.docx?(\?|$)/i.test(name);
+}
+
+async function extractDocxText(url: string): Promise<string | null> {
+    try {
+        const res = await fetch(url);
+        if (!res.ok) return null;
+        const buf = Buffer.from(await res.arrayBuffer());
+        const mammoth = await import('mammoth');
+        const result = await mammoth.extractRawText({ buffer: buf });
+        return result.value?.trim() || null;
+    } catch {
+        return null;
+    }
+}
+
 const EXTRACTION_PROMPT = (documentName: string) =>
     `You are a legal document analyst reviewing "${documentName}".
 
@@ -59,6 +80,15 @@ export async function extractDocumentTimeline(
     const resolvedOcr = ocrText ?? await fetchOcrText(documentId);
     if (resolvedOcr && resolvedOcr.trim().length >= 20) {
         return await extractWithText(client, documentId, documentName, briefId, resolvedOcr);
+    }
+
+    // No cached OCR yet (e.g. .docx uploads sitting at ocrStatus "pending") — read
+    // the file directly rather than reporting "no content available".
+    if (documentUrl && isDocx(documentName, documentType ?? '')) {
+        const docxText = await extractDocxText(documentUrl);
+        if (docxText && docxText.length >= 20) {
+            return await extractWithText(client, documentId, documentName, briefId, docxText);
+        }
     }
 
     console.log(`[Timeline] No content available for: ${documentName}`);
