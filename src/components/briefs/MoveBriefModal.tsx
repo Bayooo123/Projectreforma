@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { X, Loader, FolderInput, Briefcase } from 'lucide-react';
-import { reassignBriefHierarchy, getBriefs } from '@/app/actions/briefs';
+import { reassignBriefHierarchy, getBriefsForPicker } from '@/app/actions/briefs';
 import styles from './CreateFolderModal.module.css';
 
 interface MoveBriefModalProps {
@@ -40,7 +40,7 @@ export default function MoveBriefModal({
     const fetchBriefs = async () => {
         setIsLoading(true);
         try {
-            const result = await getBriefs(workspaceId);
+            const result = await getBriefsForPicker(workspaceId);
             // Filter out the brief itself to prevent self-parenting
             setBriefs(result.filter((b: any) => b.id !== briefId));
         } catch (err) {

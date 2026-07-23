@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { Prisma } from '@prisma/client';
+import { after } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { config } from '@/lib/config';
 import { SYSTEM_PROMPTS } from '@/lib/drafting/prompts';
@@ -167,32 +168,37 @@ async function recordBriefUpdate(briefId: string, insightId: string, userId: str
 
     // The saved fact is what matters and must never be lost even if this fails —
     // regeneration only refreshes the board's cached view (status/next steps/
-    // needsDocuments) to reflect it immediately, instead of leaving it stale
-    // until the next nightly scan or a manual "Check now".
+    // needsDocuments) to reflect it, instead of leaving it stale until the next
+    // nightly scan or a manual "Check now". Deferred via after() rather than
+    // awaited here: it's a full claude-sonnet-4-6 call re-reading chronology,
+    // documents, and correspondence, and blocking the chat reply on it would
+    // add several seconds to every turn that mentions something new.
     if (likelyNew) {
-        try {
-            const generated = await generateBriefManagerInsight(briefId);
-            if (generated) {
-                await prisma.agentInsight.update({
-                    where: { id: insightId },
-                    data: {
-                        title: generated.title,
-                        summary: generated.summary,
-                        data: generated.data as unknown as Prisma.InputJsonValue,
-                        lastSignalAt: generated.lastSignalAt,
-                    },
-                });
+        after(async () => {
+            try {
+                const generated = await generateBriefManagerInsight(briefId);
+                if (generated) {
+                    await prisma.agentInsight.update({
+                        where: { id: insightId },
+                        data: {
+                            title: generated.title,
+                            summary: generated.summary,
+                            data: generated.data as unknown as Prisma.InputJsonValue,
+                            lastSignalAt: generated.lastSignalAt,
+                        },
+                    });
+                }
+            } catch (error) {
+                console.error('[BriefManager] Failed to refresh insight after record_brief_update:', error);
             }
-        } catch (error) {
-            console.error('[BriefManager] Failed to refresh insight after record_brief_update:', error);
-        }
+        });
     }
 
     return {
         recorded: true,
         likelyNew,
         message: likelyNew
-            ? 'Recorded, and the case assessment has been refreshed to reflect it — you may ask ONE short optional clarifying question, but it is already saved and reflected either way.'
+            ? 'Recorded — the case assessment is refreshing in the background and will reflect this shortly. You may ask ONE short optional clarifying question, but it is already saved either way.'
             : 'Recorded — this matches what was already known, no need to ask further.',
     };
 }

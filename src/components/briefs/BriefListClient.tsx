@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { Search, Filter, MoreVertical, Plus, Trash2, Eye, Briefcase, MessageSquare, Edit, FolderTree, ChevronDown, ChevronRight, Share2, FileText } from 'lucide-react';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
@@ -137,58 +137,65 @@ export default function BriefListClient({ initialBriefs, workspaceId }: Omit<Bri
         setQuickViewBrief({ id: brief.id, name: getBriefDisplayTitle(brief) });
     };
 
-    // Client-side filtering and sorting
-    const displayedBriefs = briefs
-        .filter(brief => {
-            if (searchQuery) {
-                const query = searchQuery.toLowerCase();
-                const matchesSearch =
-                    brief.name?.toLowerCase().includes(query) ||
-                    brief.briefNumber?.toLowerCase().includes(query) ||
-                    (brief.client?.name || '').toLowerCase().includes(query) ||
-                    brief.category?.toLowerCase().includes(query);
-                if (!matchesSearch) return false;
-            }
-            if (statusFilter !== 'all' && brief.status.toLowerCase() !== statusFilter) {
-                return false;
-            }
-            return true;
-        })
-        .sort((a, b) => {
-            if (sortBy === 'name') return (a.name || '').localeCompare(b.name || '');
-            if (sortBy === 'client') return (a.client?.name || '').localeCompare(b.client?.name || '');
-            if (sortBy === 'status') return (a.status || '').localeCompare(b.status || '');
-            // default: recent (updatedAt desc)
-            return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
-        });
+    // Client-side filtering, sorting, and hierarchy flattening — memoized since
+    // `briefs` can run into the thousands; without this, every keystroke in the
+    // search box (or any unrelated state change) re-ran filter+sort+tree-flatten
+    // over the entire array on every render.
+    const { displayedBriefs, renderRows, parentIds } = useMemo(() => {
+        const filtered = briefs
+            .filter(brief => {
+                if (searchQuery) {
+                    const query = searchQuery.toLowerCase();
+                    const matchesSearch =
+                        brief.name?.toLowerCase().includes(query) ||
+                        brief.briefNumber?.toLowerCase().includes(query) ||
+                        (brief.client?.name || '').toLowerCase().includes(query) ||
+                        brief.category?.toLowerCase().includes(query);
+                    if (!matchesSearch) return false;
+                }
+                if (statusFilter !== 'all' && brief.status.toLowerCase() !== statusFilter) {
+                    return false;
+                }
+                return true;
+            })
+            .sort((a, b) => {
+                if (sortBy === 'name') return (a.name || '').localeCompare(b.name || '');
+                if (sortBy === 'client') return (a.client?.name || '').localeCompare(b.client?.name || '');
+                if (sortBy === 'status') return (a.status || '').localeCompare(b.status || '');
+                // default: recent (updatedAt desc)
+                return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+            });
 
-    // --- HIERARCHY LOGIC ---
-    // 1. Identify which briefs have children
-    const parentIds = new Set(briefs.map(b => b.parentBriefId).filter(Boolean));
-    
-    // 2. Build the tree (Top-level briefs)
-    const rootBriefs = displayedBriefs.filter(b => !b.parentBriefId);
-    
-    // 3. Helper to get children for a brief
-    const getChildren = (parentId: string) => displayedBriefs.filter(b => b.parentBriefId === parentId);
+        // --- HIERARCHY LOGIC ---
+        // 1. Identify which briefs have children
+        const parentIdSet = new Set(briefs.map(b => b.parentBriefId).filter(Boolean));
 
-    // 4. Flatten the tree for rendering (only if parent is expanded OR if searching)
-    // If searching, we show everything flat mostly, but here we'll try to keep hierarchy if possible.
-    const renderRows: any[] = [];
-    
-    const flatten = (items: any[], depth = 0) => {
-        items.forEach(brief => {
-            renderRows.push({ ...brief, depth });
-            const hasChildren = parentIds.has(brief.id);
-            const isExpanded = expandedBriefIds.has(brief.id) || searchQuery; // Auto-expand when searching
-            
-            if (hasChildren && isExpanded) {
-                flatten(getChildren(brief.id), depth + 1);
-            }
-        });
-    };
+        // 2. Build the tree (Top-level briefs)
+        const rootBriefs = filtered.filter(b => !b.parentBriefId);
 
-    flatten(rootBriefs);
+        // 3. Helper to get children for a brief
+        const getChildren = (parentId: string) => filtered.filter(b => b.parentBriefId === parentId);
+
+        // 4. Flatten the tree for rendering (only if parent is expanded OR if searching)
+        // If searching, we show everything flat mostly, but here we'll try to keep hierarchy if possible.
+        const rows: any[] = [];
+
+        const flatten = (items: any[], depth = 0) => {
+            items.forEach(brief => {
+                rows.push({ ...brief, depth });
+                const hasChildren = parentIdSet.has(brief.id);
+                const isExpanded = expandedBriefIds.has(brief.id) || searchQuery; // Auto-expand when searching
+
+                if (hasChildren && isExpanded) {
+                    flatten(getChildren(brief.id), depth + 1);
+                }
+            });
+        };
+
+        flatten(rootBriefs);
+
+        return { displayedBriefs: filtered, renderRows: rows, parentIds: parentIdSet };
+    }, [briefs, searchQuery, statusFilter, sortBy, expandedBriefIds]);
 
     const isMobile = useIsMobile();
 

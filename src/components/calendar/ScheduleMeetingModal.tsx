@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react';
 import { X, Calendar, Loader, Search, Users, MapPin, AlignLeft } from 'lucide-react';
 import { scheduleMeeting } from '@/app/actions/matters';
-import { getLawyersForWorkspace, getBriefs } from '@/lib/briefs';
+import { getLawyersForWorkspace } from '@/lib/briefs';
+import { getBriefsForPicker } from '@/app/actions/briefs';
 import styles from './LitigationForm.module.css';
 
 interface ScheduleMeetingModalProps {
@@ -46,7 +47,7 @@ const ScheduleMeetingModal = ({
         try {
             const [lawyersData, briefsData] = await Promise.all([
                 getLawyersForWorkspace(workspaceId),
-                getBriefs(workspaceId)
+                getBriefsForPicker(workspaceId)
             ]);
             setLawyers(lawyersData);
             setMatters(briefsData.filter(b => b.matter).map(b => b.matter));

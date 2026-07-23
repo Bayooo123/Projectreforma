@@ -31,10 +31,38 @@ export async function getBriefs(workspaceId: string) {
     try {
         // No pagination UI exists on the briefs list yet, so fetch everything
         // rather than silently truncating at BriefService.list's default cap.
-        const { briefs } = await BriefService.list(workspaceId, { limit: 10_000 });
+        // Capped at 2,000 (not literally unbounded) as a safety net against a
+        // pathologically large workspace — still "everything" for any realistic
+        // firm size today.
+        const { briefs } = await BriefService.list(workspaceId, { limit: 2_000 });
         return briefs;
     } catch (error) {
         console.error('[getBriefs] Error fetching briefs:', error);
+        return [];
+    }
+}
+
+// Lightweight brief picker for dropdowns/modals (parent-brief selection, meeting
+// scheduling, move-brief) — these only ever render id/name/briefNumber (and,
+// for meetings, the linked matter), so they shouldn't pay for the full
+// client/lawyer/lawyerInCharge/document-count joins that getBriefs() carries.
+export async function getBriefsForPicker(workspaceId: string) {
+    await requireAuth();
+    try {
+        return await prisma.brief.findMany({
+            where: { workspaceId, deletedAt: null },
+            select: {
+                id: true,
+                name: true,
+                briefNumber: true,
+                parentBriefId: true,
+                matter: { select: { id: true, name: true, caseNumber: true } },
+            },
+            orderBy: { createdAt: 'desc' },
+            take: 2_000,
+        });
+    } catch (error) {
+        console.error('[getBriefsForPicker] Error fetching briefs:', error);
         return [];
     }
 }

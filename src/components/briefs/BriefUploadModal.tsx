@@ -3,7 +3,7 @@
 import { X, UploadCloud, Loader, Plus } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import styles from './BriefUploadModal.module.css';
-import { createBrief, getBriefs, setBriefLawyerAssignments } from '@/app/actions/briefs';
+import { createBrief, getBriefsForPicker, setBriefLawyerAssignments } from '@/app/actions/briefs';
 import { getClientsForWorkspace, getLawyersForWorkspace, generateBriefNumber, createClientQuick } from '@/lib/briefs';
 
 interface BriefUploadModalProps {
@@ -65,7 +65,7 @@ const BriefUploadModal = ({ isOpen, onClose, onSuccess, workspaceId }: BriefUplo
             const [clientsData, lawyersData, briefsData] = await Promise.all([
                 getClientsForWorkspace(workspaceId),
                 getLawyersForWorkspace(workspaceId),
-                getBriefs(workspaceId)
+                getBriefsForPicker(workspaceId)
             ]);
 
             setClients(clientsData);

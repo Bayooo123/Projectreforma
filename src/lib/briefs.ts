@@ -27,31 +27,6 @@ export async function getClientsForWorkspace(workspaceId: string) {
 }
 
 /**
- * Get all briefs for a workspace (including Matter and Client info)
- */
-export async function getBriefs(workspaceId: string) {
-    try {
-        const briefs = await prisma.brief.findMany({
-            where: { workspaceId },
-            include: {
-                client: {
-                    select: { id: true, name: true }
-                },
-                matter: {
-                    select: { id: true, name: true, caseNumber: true }
-                }
-            },
-            orderBy: { createdAt: 'desc' }
-        });
-        return briefs;
-    } catch (error) {
-        console.error('Error fetching briefs:', error);
-        return [];
-    }
-}
-
-
-/**
  * Get lawyers for a workspace — only members with legal roles.
  * Uses isLegalRole() as the single source of truth so non-legal staff
  * (viewers, admins, practice managers, etc.) are excluded everywhere:
