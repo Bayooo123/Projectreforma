@@ -160,7 +160,7 @@ ${input.daysSinceClientContact} (flag as needing a courtesy update past ${CLIENT
 Write like a senior associate handing this file to a partner before a meeting — synthesised, not a data dump. Respond with EXACTLY this JSON (no markdown fences, no commentary):
 {
   "summary": {
-    "currentStatus": "<1-2 sentences: the present position of the matter, right now>",
+    "currentStatus": "<1-2 sentences, forward-looking, NOT a chronological recap: state the LAST thing that happened (the most recent single development) and the LIKELY NEXT ACTION(S) — this is the one line a lawyer sees by default on the board, so it must read like 'here's where we just landed, and here's what's probably coming next', not a mini-history of dated events>",
     "background": "<2-4 sentences: how the matter reached this stage — the short version, not the full chronology>",
     "keyDevelopments": ["<a significant filing, ruling, correspondence, or action — most recent first>", "..."],
     "outstandingIssues": ["<something unresolved that needs attention or a decision>", "..."]
@@ -182,6 +182,7 @@ Write like a senior associate handing this file to a partner before a meeting �
 Rules:
 - Ground every statement in the material above — never invent facts, dates, or names not present.
 - "summary" is the synthesised executive view — currentStatus and background should read as prose a partner can absorb in seconds, not a list of every event; keyDevelopments and outstandingIssues are short bullet-style items, not paragraphs.
+- currentStatus is NOT a second chronology. Do not narrate two or three past events with their dates — that belongs in background/keyDevelopments. currentStatus answers exactly two questions: what just happened (most recently), and what's likely to happen next. If the most recent thing was a lawyer directly telling Brief Manager something (see "Recorded by lawyers"), lead with that — it is more current than the document chronology.
 - If the material is too thin to say anything useful, set needsDocuments: true and explain what's missing in docRequestReason.
 - "ballInCourt" must be your best inference from who sent the most recent correspondence (client/court/opposing counsel) and whether there are open tasks or upcoming hearings requiring firm action — use "unclear" if genuinely ambiguous, do not guess wildly.
 - "representing" must not be guessed wildly either — set confidence "unclear" and ask about it in questions rather than assume, if the material doesn't make it reasonably clear.
