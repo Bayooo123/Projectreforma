@@ -5,7 +5,7 @@ import { config } from '@/lib/config';
 import { SYSTEM_PROMPTS } from '@/lib/drafting/prompts';
 import { addBriefActivity } from '@/lib/briefs';
 import { calculateTextSimilarity } from '@/lib/services/ocr-versioning';
-import type { BriefManagerInsightData } from './scan';
+import { generateBriefManagerInsight, type BriefManagerInsightData } from './scan';
 
 // Below this, a lawyer's statement is treated as unrelated to any existing
 // record rather than a restatement of it — lower than ocr-versioning's 0.85
@@ -165,11 +165,34 @@ async function recordBriefUpdate(briefId: string, insightId: string, userId: str
 
     await addBriefActivity(briefId, 'agent_memory', statement, { source: 'brief_manager_chat', insightId, likelyNew }, userId);
 
+    // The saved fact is what matters and must never be lost even if this fails —
+    // regeneration only refreshes the board's cached view (status/next steps/
+    // needsDocuments) to reflect it immediately, instead of leaving it stale
+    // until the next nightly scan or a manual "Check now".
+    if (likelyNew) {
+        try {
+            const generated = await generateBriefManagerInsight(briefId);
+            if (generated) {
+                await prisma.agentInsight.update({
+                    where: { id: insightId },
+                    data: {
+                        title: generated.title,
+                        summary: generated.summary,
+                        data: generated.data as unknown as Prisma.InputJsonValue,
+                        lastSignalAt: generated.lastSignalAt,
+                    },
+                });
+            }
+        } catch (error) {
+            console.error('[BriefManager] Failed to refresh insight after record_brief_update:', error);
+        }
+    }
+
     return {
         recorded: true,
         likelyNew,
         message: likelyNew
-            ? 'Recorded. This looks like new information — you may ask ONE short optional clarifying question about it, but it is already saved either way.'
+            ? 'Recorded, and the case assessment has been refreshed to reflect it — you may ask ONE short optional clarifying question, but it is already saved and reflected either way.'
             : 'Recorded — this matches what was already known, no need to ask further.',
     };
 }
