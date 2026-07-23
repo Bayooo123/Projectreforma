@@ -48,9 +48,21 @@ const PROTECTED_TERMS = [
 ];
 const PROTECTED_MAP = new Map(PROTECTED_TERMS.map(t => [t.toUpperCase(), t]));
 
+// Must match hasIntentionalCasing() in src/lib/sentence-case.ts — a word that's
+// already ALL CAPS (an acronym) or has internal capitalisation (a brand name)
+// is left untouched rather than lowercased, since PROTECTED_TERMS can never
+// cover every acronym/party name that shows up in a legal matter.
+function hasIntentionalCasing(word) {
+    const letters = word.replace(/[^A-Za-z]/g, '');
+    if (letters.length < 2) return false;
+    if (!/[a-z]/.test(letters)) return true;
+    return /[A-Z]/.test(letters.slice(1));
+}
+
 function normalizeWord(word) {
     const upper = word.toUpperCase();
     if (PROTECTED_MAP.has(upper)) return PROTECTED_MAP.get(upper);
+    if (hasIntentionalCasing(word)) return word;
     return word.toLowerCase();
 }
 
@@ -63,6 +75,7 @@ function capitaliseSentence(sentence) {
         const norm = normalizeWord(word);
         if (!firstDone) {
             firstDone = true;
+            if (PROTECTED_MAP.has(word.toUpperCase()) || hasIntentionalCasing(word)) return norm;
             return norm.charAt(0).toUpperCase() + norm.slice(1);
         }
         return norm;

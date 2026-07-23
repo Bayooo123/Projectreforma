@@ -45,15 +45,49 @@ const _PROTECTED_MAP = new Map<string, string>(
 // ─── Core transform ───────────────────────────────────────────────────────────
 
 /**
+ * A static whitelist (PROTECTED_TERMS) can never keep up with every acronym or
+ * party name that shows up in a legal matter — opposing parties, regulators,
+ * client trading names, and so on. Rather than requiring someone to remember to
+ * add each one, a word that's already ALL CAPS (e.g. "IBEDC", "CCETC") or has
+ * internal capitalisation (e.g. "McDonald") is treated as an intentional casing
+ * signal from whoever typed it, and is left exactly as-is instead of being
+ * lowercased and re-capitalised as if it were an ordinary word.
+ */
+function hasIntentionalCasing(word: string): boolean {
+    const letters = word.replace(/[^A-Za-z]/g, '');
+    if (letters.length < 2) return false;
+    if (!/[a-z]/.test(letters)) return true; // all-caps acronym, e.g. IBEDC
+    return /[A-Z]/.test(letters.slice(1)); // internal capital, e.g. McDonald
+}
+
+/**
+ * A whole passage typed with caps lock (no lowercase letters anywhere) carries
+ * no acronym signal — every word being uppercase means nothing stands out, and
+ * the existing behaviour of converting it to readable sentence case is exactly
+ * what's wanted (see the toSentenceCase examples below). Acronym preservation
+ * for prose only makes sense once the text is genuinely mixed-case, so a single
+ * embedded acronym (e.g. "...represented by IBEDC in this matter") still stands
+ * out against the rest of the sentence.
+ */
+function isShoutingText(text: string): boolean {
+    const letters = text.replace(/[^A-Za-z]/g, '');
+    if (letters.length < 8) return false; // too short a sample to call it "shouting"
+    return !/[a-z]/.test(letters);
+}
+
+/**
  * Converts a single token (word) to its correct form:
  *  • If it's a protected term, return the canonical casing.
+ *  • If it already carries intentional casing (an acronym, a brand name) and the
+ *    surrounding text isn't itself all-caps, leave it untouched.
  *  • Otherwise return the word fully lowercased.
  */
-function normalizeWord(word: string): string {
+function normalizeWord(word: string, preserveCasing: boolean): string {
     const upper = word.toUpperCase();
     if (_PROTECTED_MAP.has(upper)) {
         return _PROTECTED_MAP.get(upper)!;
     }
+    if (preserveCasing && hasIntentionalCasing(word)) return word;
     return word.toLowerCase();
 }
 
@@ -61,7 +95,7 @@ function normalizeWord(word: string): string {
  * Applies sentence case to a single sentence string (no full-stop splitting).
  * The first alphabetic character of the sentence is capitalised.
  */
-function _capitaliseSentence(sentence: string): string {
+function _capitaliseSentence(sentence: string, preserveCasing: boolean): string {
     if (!sentence) return sentence;
 
     const words = sentence.split(/\s+/);
@@ -70,11 +104,17 @@ function _capitaliseSentence(sentence: string): string {
     return words
         .map(word => {
             if (!word) return word;
-            const normalized = normalizeWord(word);
+            const normalized = normalizeWord(word, preserveCasing);
 
-            // Capitalise the first meaningful word of the sentence
+            // Capitalise the first meaningful word of the sentence — but don't
+            // override an already-cased word (an acronym, a protected term), since
+            // its casing is already correct and forcing charAt(0) could corrupt it
+            // (e.g. a brand name that intentionally opens with a lowercase letter).
             if (!firstWordCapitalised) {
                 firstWordCapitalised = true;
+                if (_PROTECTED_MAP.has(word.toUpperCase()) || (preserveCasing && hasIntentionalCasing(word))) {
+                    return normalized;
+                }
                 return normalized.charAt(0).toUpperCase() + normalized.slice(1);
             }
             return normalized;
@@ -99,6 +139,10 @@ function _capitaliseSentence(sentence: string): string {
 export function toSentenceCase(text: string | null | undefined): string {
     if (!text) return '';
 
+    // Computed once over the whole passage, not per-sentence — a caps-lock
+    // habit spans the whole field, so the signal should too.
+    const preserveCasing = !isShoutingText(text);
+
     // Split on sentence boundaries (". " or ".\n") while keeping the period.
     // We use a lookahead so the delimiter stays attached to the preceding sentence.
     const sentences = text.split(/(?<=\.)\s+/);
@@ -113,7 +157,7 @@ export function toSentenceCase(text: string | null | undefined): string {
             const hasPeriod = trimmed.endsWith('.');
             const withoutPeriod = hasPeriod ? trimmed.slice(0, -1) : trimmed;
 
-            return _capitaliseSentence(withoutPeriod) + (hasPeriod ? '.' : '');
+            return _capitaliseSentence(withoutPeriod, preserveCasing) + (hasPeriod ? '.' : '');
         })
         .join(' ');
 }
@@ -181,6 +225,10 @@ function _titleCaseToken(word: string, isFirst: boolean): string {
     if (_PROTECTED_MAP.has(upper)) {
         return _PROTECTED_MAP.get(upper)!;
     }
+
+    // Already-cased word (an acronym not on the protected list, a brand name) —
+    // leave it exactly as typed rather than lowercasing it to "fix" it.
+    if (hasIntentionalCasing(word)) return word;
 
     const lower = word.toLowerCase();
 
