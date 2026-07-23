@@ -261,21 +261,6 @@ function CaseChronology({ briefId, initialEvents }: { briefId: string; initialEv
         );
     }
 
-    // Group by year; undated events go last
-    const grouped = new Map<string, CaseChronologyEvent[]>();
-    for (const e of events) {
-        const year = e.eventDate
-            ? new Date(e.eventDate).getFullYear().toString()
-            : 'Undated';
-        if (!grouped.has(year)) grouped.set(year, []);
-        grouped.get(year)!.push(e);
-    }
-    const yearKeys = [...grouped.keys()].sort((a, b) => {
-        if (a === 'Undated') return 1;
-        if (b === 'Undated') return -1;
-        return Number(a) - Number(b);
-    });
-
     return (
         <div className={styles.chronoFeedSection}>
             <div className={styles.chronoFeedHeader}>
@@ -310,45 +295,36 @@ function CaseChronology({ briefId, initialEvents }: { briefId: string; initialEv
                 </div>
             </div>
 
-            {yearKeys.map(year => (
-                <div key={year} className={styles.group}>
-                    <div className={styles.yearLabel}>{year}</div>
-                    {grouped.get(year)!.map(e => {
-                        const d = e.eventDate ? new Date(e.eventDate) : null;
-                        const dayMonth = d
-                            ? d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
-                            : '—';
-
-                        return (
-                            <div key={e.id} className={styles.event}>
-                                <div className={styles.dateCol}>
-                                    <span className={styles.dateDay}>{dayMonth}</span>
-                                    {!d && (
-                                        <span className={styles.dateMonth} title={e.eventDateRaw}>
-                                            {e.eventDateRaw.length > 10
-                                                ? e.eventDateRaw.slice(0, 10) + '…'
-                                                : e.eventDateRaw}
-                                        </span>
-                                    )}
-                                </div>
-
-                                <div
-                                    className={styles.dot}
-                                    style={{ background: '#7c3aed', boxShadow: '0 0 0 1.5px #7c3aed' }}
-                                />
-
-                                <div className={styles.card}>
-                                    <p className={styles.title}>{e.description}</p>
-                                    <p className={styles.source}>
-                                        {e.sourceType === 'agent' ? <Bot size={9} /> : <BookOpen size={9} />}
+            <div className={styles.chronoTableWrap}>
+                <table className={styles.chronoTable}>
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Event</th>
+                            <th>Source</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {events.map(e => {
+                            const d = e.eventDate ? new Date(e.eventDate) : null;
+                            return (
+                                <tr key={e.id}>
+                                    <td className={styles.chronoDate}>
+                                        {d
+                                            ? d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+                                            : e.eventDateRaw}
+                                    </td>
+                                    <td className={styles.chronoTitle2}>{e.description}</td>
+                                    <td className={styles.source}>
+                                        {e.sourceType === 'agent' ? <Bot size={11} /> : <BookOpen size={11} />}
                                         {e.documentName}
-                                    </p>
-                                </div>
-                            </div>
-                        );
-                    })}
-                </div>
-            ))}
+                                    </td>
+                                </tr>
+                            );
+                        })}
+                    </tbody>
+                </table>
+            </div>
 
             <p className={styles.chronoAutoNote}>
                 <RefreshCcw size={10} />
