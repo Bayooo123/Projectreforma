@@ -174,7 +174,7 @@ Write like a senior associate handing this file to a partner before a meeting �
     "party": "<which party the firm acts for, e.g. 'Claimant', 'Defendant', 'Applicant', named specifically if known — infer from client name, document content, and correspondence direction>",
     "confidence": "<confirmed|inferred|unclear>"
   },
-  "questions": ["<a specific clarifying question you would ask the responsible lawyer, phrased naturally, e.g. 'Where are we at with this case?' or 'Is the ball in our court or are we waiting from opposing counsel?' — include a question about which party we represent if representing.confidence is 'unclear'>"],
+  "questions": ["<a specific question you would ask the responsible lawyer, phrased naturally — see the rule on when to ask 'what's happened since / what's next', and include a question about which party we represent if representing.confidence is 'unclear'>"],
   "needsDocuments": <true|false>,
   "docRequestReason": "<if needsDocuments is true, what specifically is missing and why you need it before you can say more — omit if false>"
 }
@@ -186,6 +186,7 @@ Rules:
 - If the material is too thin to say anything useful, set needsDocuments: true and explain what's missing in docRequestReason.
 - "ballInCourt" must be your best inference from who sent the most recent correspondence (client/court/opposing counsel) and whether there are open tasks or upcoming hearings requiring firm action — use "unclear" if genuinely ambiguous, do not guess wildly.
 - "representing" must not be guessed wildly either — set confidence "unclear" and ask about it in questions rather than assume, if the material doesn't make it reasonably clear.
+- Documents and correspondence only ever establish what was true as of when they were written — they cannot tell you what's happened since. Whenever your understanding is built mostly from documents/chronology rather than something a lawyer told you directly, or the most recent dated material is old relative to today, lead with a direct question: what has happened on this matter since <the most recent date you actually have>, and what's next? Ask this even when you can otherwise describe the file confidently — having documents is not the same as being current.
 - Waiting on the other side or the court ("ballInCourt" not "us") is NOT a reason to skip a client update — if days since client contact exceeds ${CLIENT_UPDATE_THRESHOLD_DAYS}, include a next step to send the client a courtesy update on where things stand, even if there's nothing else for the firm to do right now.
 - questions should be 1-3 items, phrased as a case manager would ask a partner, not generic.`;
 }
@@ -304,12 +305,20 @@ export async function generateBriefManagerInsight(briefId: string): Promise<Gene
     data.daysSinceClientContact = daysSinceClientContact;
     data.needsClientUpdate = daysSinceClientContact > CLIENT_UPDATE_THRESHOLD_DAYS;
 
+    // Defensive: the model's JSON can omit a field it was asked for (truncation,
+    // an edge-case brief with almost nothing to go on, etc). Reading straight
+    // into data.ballInCourt.status / data.nextSteps[0] without guards used to
+    // throw here — uncaught, since this ran after the try/catch above — which
+    // silently killed the whole insight with no error surfaced anywhere up the
+    // call chain. Every field touched below is optional-chained instead.
     const currentStatus = data.summary?.currentStatus ?? data.lastActivity ?? '';
+    const nextStep = data.nextSteps?.[0];
+    const ballInCourtStatus = data.ballInCourt?.status;
     const summary = data.needsDocuments
         ? `Needs more documents — ${data.docRequestReason ?? 'insufficient information'}`
         : data.needsClientUpdate
-            ? `Client update overdue — ${daysSinceClientContact} days. ${data.nextSteps[0] ?? currentStatus}`
-            : `${BALL_IN_COURT_LABEL[data.ballInCourt.status]}. ${data.nextSteps[0] ?? currentStatus}`;
+            ? `Client update overdue — ${daysSinceClientContact} days. ${nextStep ?? currentStatus}`
+            : `${(ballInCourtStatus && BALL_IN_COURT_LABEL[ballInCourtStatus]) ?? 'Status unclear'}. ${nextStep ?? currentStatus}`;
 
     return {
         title: brief.name,

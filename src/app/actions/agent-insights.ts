@@ -108,15 +108,20 @@ export async function runBriefManagerNow(briefId: string): Promise<{ success: bo
         return { success: false, error: 'Brief not found' };
     }
 
-    const generated = await generateBriefManagerInsight(briefId);
-    if (!generated) {
-        return { success: false, error: 'Could not generate an insight for this brief right now' };
-    }
+    try {
+        const generated = await generateBriefManagerInsight(briefId);
+        if (!generated) {
+            return { success: false, error: 'Could not generate an insight for this brief right now' };
+        }
 
-    await upsertInsightForBrief(brief.workspaceId, briefId, generated);
-    revalidatePath('/pulse');
-    revalidatePath(`/briefs/${briefId}`);
-    return { success: true };
+        await upsertInsightForBrief(brief.workspaceId, briefId, generated);
+        revalidatePath('/pulse');
+        revalidatePath(`/briefs/${briefId}`);
+        return { success: true };
+    } catch (error) {
+        console.error('[runBriefManagerNow] Failed:', error);
+        return { success: false, error: 'Something went wrong generating this insight — please try again' };
+    }
 }
 
 export async function viewAgentInsight(insightId: string) {

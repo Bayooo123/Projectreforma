@@ -60,6 +60,7 @@ function BoardRowCard({ row, onChecked }: { row: BoardRow; onChecked: () => void
     const [input, setInput] = useState('');
     const [sending, setSending] = useState(false);
     const [checking, setChecking] = useState(false);
+    const [checkError, setCheckError] = useState<string | null>(null);
 
     const ballStyle = data.ballInCourt ? (BALL_IN_COURT_STYLE[data.ballInCourt.status] ?? BALL_IN_COURT_STYLE.unclear) : null;
     const questionLine = data.questions?.[0] ?? data.prompt;
@@ -92,9 +93,19 @@ function BoardRowCard({ row, onChecked }: { row: BoardRow; onChecked: () => void
     const checkNow = async () => {
         if (!row.briefId) return;
         setChecking(true);
-        await runBriefManagerNow(row.briefId);
-        setChecking(false);
-        onChecked();
+        setCheckError(null);
+        try {
+            const result = await runBriefManagerNow(row.briefId);
+            if (!result.success) {
+                setCheckError(result.error ?? 'Could not check this brief right now.');
+                return;
+            }
+            onChecked();
+        } catch {
+            setCheckError('Something went wrong — please try again.');
+        } finally {
+            setChecking(false);
+        }
     };
 
     return (
@@ -124,6 +135,14 @@ function BoardRowCard({ row, onChecked }: { row: BoardRow; onChecked: () => void
                     <p style={{ fontSize: '0.78rem', color: '#4b5563', margin: 0, lineHeight: 1.5 }}>
                         {currentStatus ?? row.summary ?? (row.insightId ? '' : 'No status yet — click Check now to have Brief Manager review this brief.')}
                     </p>
+                    {!open && questionLine && (
+                        <p style={{ fontSize: '0.75rem', color: '#7c3aed', fontStyle: 'italic', margin: '0.3rem 0 0' }}>
+                            &ldquo;{questionLine}&rdquo;
+                        </p>
+                    )}
+                    {checkError && (
+                        <p style={{ fontSize: '0.72rem', color: '#b91c1c', margin: '0.3rem 0 0' }}>{checkError}</p>
+                    )}
                 </div>
                 <div style={{ display: 'flex', gap: '0.4rem', flexShrink: 0 }}>
                     {row.insightId && data.summary && (
