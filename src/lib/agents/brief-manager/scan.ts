@@ -6,8 +6,18 @@ import { config } from '@/lib/config';
 export type BallInCourtStatus = 'us' | 'opposing_counsel' | 'court' | 'unclear';
 export type RepresentationConfidence = 'confirmed' | 'inferred' | 'unclear';
 
+export interface BriefExecutiveSummary {
+    currentStatus: string;
+    background: string;
+    keyDevelopments: string[];
+    outstandingIssues: string[];
+}
+
 export interface BriefManagerInsightData {
-    lastActivity: string;
+    // Optional for backward compatibility with insights generated before this
+    // field existed — the board falls back to it when `summary` is absent.
+    lastActivity?: string;
+    summary: BriefExecutiveSummary;
     nextSteps: string[];
     ballInCourt: { status: BallInCourtStatus; rationale: string };
     representing: { party: string; confidence: RepresentationConfidence };
@@ -147,9 +157,14 @@ ${input.daysSinceClientContact} (flag as needing a courtesy update past ${CLIENT
 
 ---
 
-Based ONLY on the material above, respond with EXACTLY this JSON (no markdown fences, no commentary):
+Write like a senior associate handing this file to a partner before a meeting — synthesised, not a data dump. Respond with EXACTLY this JSON (no markdown fences, no commentary):
 {
-  "lastActivity": "<1-2 sentence plain-English statement of what happened most recently on this case>",
+  "summary": {
+    "currentStatus": "<1-2 sentences: the present position of the matter, right now>",
+    "background": "<2-4 sentences: how the matter reached this stage — the short version, not the full chronology>",
+    "keyDevelopments": ["<a significant filing, ruling, correspondence, or action — most recent first>", "..."],
+    "outstandingIssues": ["<something unresolved that needs attention or a decision>", "..."]
+  },
   "nextSteps": ["<specific, actionable next step — ground this in the recent document contents where possible, not just the chronology summary>", "..."],
   "ballInCourt": {
     "status": "<us|opposing_counsel|court|unclear>",
@@ -166,6 +181,7 @@ Based ONLY on the material above, respond with EXACTLY this JSON (no markdown fe
 
 Rules:
 - Ground every statement in the material above — never invent facts, dates, or names not present.
+- "summary" is the synthesised executive view — currentStatus and background should read as prose a partner can absorb in seconds, not a list of every event; keyDevelopments and outstandingIssues are short bullet-style items, not paragraphs.
 - If the material is too thin to say anything useful, set needsDocuments: true and explain what's missing in docRequestReason.
 - "ballInCourt" must be your best inference from who sent the most recent correspondence (client/court/opposing counsel) and whether there are open tasks or upcoming hearings requiring firm action — use "unclear" if genuinely ambiguous, do not guess wildly.
 - "representing" must not be guessed wildly either — set confidence "unclear" and ask about it in questions rather than assume, if the material doesn't make it reasonably clear.
@@ -287,11 +303,12 @@ export async function generateBriefManagerInsight(briefId: string): Promise<Gene
     data.daysSinceClientContact = daysSinceClientContact;
     data.needsClientUpdate = daysSinceClientContact > CLIENT_UPDATE_THRESHOLD_DAYS;
 
+    const currentStatus = data.summary?.currentStatus ?? data.lastActivity ?? '';
     const summary = data.needsDocuments
         ? `Needs more documents — ${data.docRequestReason ?? 'insufficient information'}`
         : data.needsClientUpdate
-            ? `Client update overdue — ${daysSinceClientContact} days. ${data.nextSteps[0] ?? data.lastActivity}`
-            : `${BALL_IN_COURT_LABEL[data.ballInCourt.status]}. ${data.nextSteps[0] ?? data.lastActivity}`;
+            ? `Client update overdue — ${daysSinceClientContact} days. ${data.nextSteps[0] ?? currentStatus}`
+            : `${BALL_IN_COURT_LABEL[data.ballInCourt.status]}. ${data.nextSteps[0] ?? currentStatus}`;
 
     return {
         title: brief.name,

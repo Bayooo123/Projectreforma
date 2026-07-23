@@ -117,11 +117,13 @@ async function draftClientUpdate(briefId: string, insightData: BriefManagerInsig
     });
     if (!brief) return { error: 'Brief not found.' };
 
+    const currentStatus = insightData.summary?.currentStatus ?? insightData.lastActivity;
     const context = [
         `Brief: ${brief.name}`,
         brief.client?.name ? `Client: ${brief.client.name}` : null,
         brief.aiSummaryProse ? `Case summary:\n${brief.aiSummaryProse}` : null,
-        `Most recent activity: ${insightData.lastActivity}`,
+        insightData.summary?.background ? `Background: ${insightData.summary.background}` : null,
+        currentStatus ? `Most recent activity: ${currentStatus}` : null,
         `Next steps: ${insightData.nextSteps.join('; ')}`,
         `Current position: ${insightData.ballInCourt.rationale}`,
     ].filter(Boolean).join('\n\n');

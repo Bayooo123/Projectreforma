@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { Bot, ChevronDown, ChevronUp, Send, RefreshCw } from 'lucide-react';
 import { getBriefManagerBoard, getOpenAgentInsights, runBriefManagerNow, type BriefBoardRow } from '@/app/actions/agent-insights';
 import DocumentUpload from '@/components/briefs/DocumentUpload';
+import BriefHistorySearch from '@/components/pulse/BriefHistorySearch';
 
 interface ChatMessage {
     role: 'user' | 'assistant';
@@ -14,6 +15,7 @@ interface ChatMessage {
 // fields relevant to it (see BriefManagerInsightData / MeetingAgentInsightData).
 interface AgentInsightData {
     lastActivity?: string;
+    summary?: { currentStatus: string; background: string; keyDevelopments: string[]; outstandingIssues: string[] };
     nextSteps?: string[];
     ballInCourt?: { status: string; rationale: string };
     representing?: { party: string; confidence: string };
@@ -52,6 +54,7 @@ const AGENT_LABELS: Record<string, string> = {
 function BoardRowCard({ row, onChecked }: { row: BoardRow; onChecked: () => void }) {
     const [open, setOpen] = useState(false);
     const [showSteps, setShowSteps] = useState(false);
+    const [showSummary, setShowSummary] = useState(false);
     const [messages, setMessages] = useState<ChatMessage[]>(row.messages);
     const [data, setData] = useState(row.data);
     const [input, setInput] = useState('');
@@ -60,6 +63,8 @@ function BoardRowCard({ row, onChecked }: { row: BoardRow; onChecked: () => void
 
     const ballStyle = data.ballInCourt ? (BALL_IN_COURT_STYLE[data.ballInCourt.status] ?? BALL_IN_COURT_STYLE.unclear) : null;
     const questionLine = data.questions?.[0] ?? data.prompt;
+    // Falls back to the pre-executive-summary shape for insights not yet regenerated.
+    const currentStatus = data.summary?.currentStatus ?? data.lastActivity;
 
     const send = async () => {
         const text = input.trim();
@@ -117,10 +122,22 @@ function BoardRowCard({ row, onChecked }: { row: BoardRow; onChecked: () => void
                         {row.client && <span style={{ fontSize: '0.72rem', color: '#9ca3af' }}>· {row.client}</span>}
                     </div>
                     <p style={{ fontSize: '0.78rem', color: '#4b5563', margin: 0, lineHeight: 1.5 }}>
-                        {data.lastActivity ?? row.summary ?? (row.insightId ? '' : 'No status yet — click Check now to have Brief Manager review this brief.')}
+                        {currentStatus ?? row.summary ?? (row.insightId ? '' : 'No status yet — click Check now to have Brief Manager review this brief.')}
                     </p>
                 </div>
                 <div style={{ display: 'flex', gap: '0.4rem', flexShrink: 0 }}>
+                    {row.insightId && data.summary && (
+                        <button
+                            onClick={() => setShowSummary(s => !s)}
+                            style={{
+                                display: 'flex', alignItems: 'center', gap: '4px',
+                                padding: '0.35rem 0.85rem', borderRadius: 6, border: '1px solid #e5e7eb',
+                                background: '#fff', color: '#374151', fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer',
+                            }}
+                        >
+                            Case summary {showSummary ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                        </button>
+                    )}
                     {row.insightId && data.nextSteps && data.nextSteps.length > 0 && (
                         <button
                             onClick={() => setShowSteps(s => !s)}
@@ -159,6 +176,36 @@ function BoardRowCard({ row, onChecked }: { row: BoardRow; onChecked: () => void
                     )}
                 </div>
             </div>
+
+            {showSummary && data.summary && (
+                <div style={{ borderTop: '1px solid #f3f4f6', background: '#fafafa', padding: '0.6rem 1rem' }}>
+                    {data.summary.background && (
+                        <p style={{ fontSize: '0.75rem', color: '#374151', margin: '0 0 0.5rem', lineHeight: 1.6 }}>
+                            <strong>Background:</strong> {data.summary.background}
+                        </p>
+                    )}
+                    {data.summary.keyDevelopments && data.summary.keyDevelopments.length > 0 && (
+                        <div style={{ marginBottom: '0.5rem' }}>
+                            <p style={{ fontSize: '0.72rem', fontWeight: 700, color: '#6b7280', margin: '0 0 0.25rem', textTransform: 'uppercase', letterSpacing: '0.03em' }}>Key developments</p>
+                            <ul style={{ margin: 0, paddingLeft: '1.1rem' }}>
+                                {data.summary.keyDevelopments.map((d, i) => (
+                                    <li key={i} style={{ fontSize: '0.75rem', color: '#374151', lineHeight: 1.6 }}>{d}</li>
+                                ))}
+                            </ul>
+                        </div>
+                    )}
+                    {data.summary.outstandingIssues && data.summary.outstandingIssues.length > 0 && (
+                        <div>
+                            <p style={{ fontSize: '0.72rem', fontWeight: 700, color: '#6b7280', margin: '0 0 0.25rem', textTransform: 'uppercase', letterSpacing: '0.03em' }}>Outstanding issues</p>
+                            <ul style={{ margin: 0, paddingLeft: '1.1rem' }}>
+                                {data.summary.outstandingIssues.map((issue, i) => (
+                                    <li key={i} style={{ fontSize: '0.75rem', color: '#374151', lineHeight: 1.6 }}>{issue}</li>
+                                ))}
+                            </ul>
+                        </div>
+                    )}
+                </div>
+            )}
 
             {showSteps && data.nextSteps && data.nextSteps.length > 0 && (
                 <div style={{ borderTop: '1px solid #f3f4f6', background: '#fafafa', padding: '0.6rem 1rem' }}>
@@ -270,6 +317,7 @@ export default function AgentBoard({ workspaceId, agentType }: { workspaceId: st
 
     return (
         <div>
+            {agentType === 'brief_manager' && <BriefHistorySearch workspaceId={workspaceId} />}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                     <Bot size={18} color="#0d9488" />
