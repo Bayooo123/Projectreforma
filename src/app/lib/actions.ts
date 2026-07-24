@@ -19,6 +19,10 @@ import { config } from '@/lib/config';
 export type AuthState = {
     message?: string;
     success?: boolean;
+    // Set when the password check passed but a TOTP code is now required —
+    // the login form stays on the same submission (email/password preserved)
+    // and reveals the code field, resubmitting everything together.
+    mfaRequired?: boolean;
 };
 
 export async function authenticate(
@@ -37,6 +41,19 @@ export async function authenticate(
     } catch (error) {
         if ((error as Error).message.includes('Pending Approval')) {
             return { message: 'Your account is pending firm approval. Please contact your administrator.' };
+        }
+        // Checked ahead of the generic AuthError handling below (which would
+        // otherwise surface these as a raw, unfriendly error string) so the
+        // login form knows to switch into "enter your code" mode.
+        const rawMessage = (error as Error).message || (error as AuthError).cause?.err?.message;
+        if (rawMessage === 'MFA_REQUIRED') {
+            return { mfaRequired: true, message: 'Enter the 6-digit code from your authenticator app.' };
+        }
+        if (rawMessage === 'MFA_INVALID') {
+            return { mfaRequired: true, message: 'Invalid or expired code. Please try again.' };
+        }
+        if (typeof rawMessage === 'string' && rawMessage.includes('Too many login attempts')) {
+            return { message: rawMessage };
         }
         if (error instanceof AuthError) {
             // Check for our custom errors wrapped in AuthError

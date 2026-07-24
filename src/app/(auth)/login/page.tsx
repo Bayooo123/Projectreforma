@@ -141,6 +141,27 @@ function LoginForm() {
                             </div>
                         </div>
 
+                        {state?.mfaRequired && (
+                            <div className={styles.formGroup}>
+                                <label htmlFor="mfaCode" className={styles.label}>
+                                    Authentication code
+                                </label>
+                                <input
+                                    id="mfaCode"
+                                    name="mfaCode"
+                                    type="text"
+                                    inputMode="numeric"
+                                    autoComplete="one-time-code"
+                                    pattern="[0-9]{6}"
+                                    maxLength={6}
+                                    autoFocus
+                                    required
+                                    className={styles.input}
+                                    placeholder="123456"
+                                />
+                            </div>
+                        )}
+
                         <button
                             type="submit"
                             disabled={isPending || state?.success}
@@ -151,6 +172,8 @@ function LoginForm() {
                                     <Loader2 className={styles.spinner} size={20} />
                                     {state?.success ? 'Redirecting...' : 'Signing in...'}
                                 </>
+                            ) : state?.mfaRequired ? (
+                                'Verify & sign in'
                             ) : (
                                 'Sign in'
                             )}

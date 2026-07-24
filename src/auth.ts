@@ -10,6 +10,8 @@ import Resend from "next-auth/providers/resend"
 import { mailService } from "@/lib/services/mail/mail"
 import { getVerificationEmail } from "@/lib/services/mail/templates"
 import { logSecurityEvent, SecurityEvent } from "@/lib/services/auth/audit"
+import { verifyMfaToken } from "@/lib/services/auth/mfa"
+import { checkRateLimit, getClientIp } from "@/lib/services/auth/ratelimit"
 import { config } from "@/lib/config"
 
 // Valid role types for type safety
@@ -18,6 +20,37 @@ import { getPermissionsForRole } from "@/lib/rbac"
 
 // Valid role types for type safety
 type RoleType = "owner" | RoleValue;
+
+// Shared by both authorize() branches (magic-token invite flow and standard
+// email/password flow) so a brute-force attempt against either path is
+// throttled the same way, keyed by the target account rather than IP alone
+// (authorize() doesn't reliably get a client IP on every deployment target).
+async function enforceLoginRateLimit(email: string, request?: Request) {
+    const ip = request ? getClientIp(request.headers) : 'unknown';
+    const rl = await checkRateLimit({ key: `login:${email.toLowerCase()}`, limit: 10, windowSeconds: 15 * 60 });
+    if (!rl.success) {
+        await logSecurityEvent({ event: SecurityEvent.RATE_LIMIT_EXCEEDED, description: `Login rate limit exceeded for ${email} (ip: ${ip})` });
+        throw new Error('Too many login attempts. Please wait a few minutes and try again.');
+    }
+}
+
+// Called after the password has already been verified. Throwing a distinct,
+// recognisable error here (rather than just returning null) is what lets the
+// login action (src/app/lib/actions.ts) tell "wrong password" apart from
+// "right password, now enter your code" and re-render the form accordingly —
+// the client resubmits the same credentials plus mfaCode on the next attempt.
+async function verifyMfaIfEnabled(
+    user: { id: string; mfaEnabled: boolean | null; mfaSecret: string | null },
+    mfaCode: string | undefined,
+    email: string,
+) {
+    if (!user.mfaEnabled) return;
+    if (!mfaCode) throw new Error('MFA_REQUIRED');
+    if (!user.mfaSecret || !verifyMfaToken(user.mfaSecret, mfaCode)) {
+        await logSecurityEvent({ userId: user.id, event: SecurityEvent.MFA_VERIFY_FAILED, description: `Invalid TOTP token at login for ${email}` });
+        throw new Error('MFA_INVALID');
+    }
+}
 
 export const { auth, signIn, signOut, handlers } = NextAuth({
     ...authConfig,
@@ -52,7 +85,7 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
             },
         }),
         Credentials({
-            async authorize(credentials) {
+            async authorize(credentials, request) {
                 // 1. Check for Magic Token Flow
                 if (credentials.inviteToken) {
                     const token = credentials.inviteToken as string;
@@ -64,12 +97,16 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
                         throw new Error('Invalid Invite Link');
                     }
 
-                    const password = (credentials as any).password;
-                    const email = ((credentials as any).email as string).toLowerCase();
+                    const rawCredentials = credentials as Record<string, unknown>;
+                    const password = rawCredentials.password as string;
+                    const email = (rawCredentials.email as string).toLowerCase();
+                    const mfaCode = rawCredentials.mfaCode as string | undefined;
+
+                    await enforceLoginRateLimit(email, request);
 
                     const user = await prisma.user.findUnique({
                         where: { email },
-                        include: { 
+                        include: {
                             workspaces: true,
                             ownedWorkspaces: { select: { id: true } }
                         }
@@ -78,6 +115,8 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
                     if (user) {
                         const passwordMatch = await bcrypt.compare(password, user.password || '');
                         if (!passwordMatch) return null;
+
+                        await verifyMfaIfEnabled(user, mfaCode, email);
 
                         const membership = user.workspaces.find(ws => ws.workspaceId === workspace.id);
                         const role = membership?.role || 'associate';
@@ -104,14 +143,17 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
                         email: z.string().email(),
                         password: z.string().min(8, 'Password must be at least 8 characters'),
                         firmCode: z.string().optional(),
-                        firmPassword: z.string().optional()
+                        firmPassword: z.string().optional(),
+                        mfaCode: z.string().optional(),
                     })
                     .safeParse(credentials);
 
                 if (parsedCredentials.success) {
-                    const { password, firmPassword } = parsedCredentials.data;
+                    const { password, firmPassword, mfaCode } = parsedCredentials.data;
                     const email = parsedCredentials.data.email.toLowerCase();
                     const firmCode = parsedCredentials.data.firmCode?.toLowerCase();
+
+                    await enforceLoginRateLimit(email, request);
 
                     // If firmCode provided, Validate Firm
                     let workspaceId: string | null = null;
@@ -125,7 +167,7 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
                     // Verify User
                     const user = await prisma.user.findUnique({
                         where: { email },
-                        include: { 
+                        include: {
                             workspaces: true,
                             ownedWorkspaces: { select: { id: true } }
                         }
@@ -139,6 +181,8 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
                         await logSecurityEvent({ userId: user.id, event: SecurityEvent.LOGIN_FAILURE, description: `Incorrect password for ${email}`, req: null as any });
                         return null;
                     }
+
+                    await verifyMfaIfEnabled(user, mfaCode, email);
 
                     // Email verification: warn if unverified but allow login (grace period)
                     // To enforce hard block, change to: throw new Error('Email not verified.')
