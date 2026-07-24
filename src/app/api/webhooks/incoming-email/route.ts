@@ -1,139 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
-import { put } from '@vercel/blob';
 import {
-    classifyEmailIntent,
-    identifyBriefFromContent,
-    BriefCandidate,
-    MatterCandidate,
-} from '@/lib/services/email-processor';
-import { addBriefActivity } from '@/lib/briefs';
-import { executeIntentActions } from '@/lib/institutional-memory/actions';
-
-// ── Attachment helpers ───────────────────────────────────────────────────────
-
-interface RawAttachment {
-    name: string;
-    content: string;   // base64
-    contentType: string;
-    contentLength: number;
-}
-
-const ALLOWED_ATTACHMENT_TYPES = [
-    'application/pdf',
-    'application/msword',
-    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-    'application/vnd.ms-excel',
-    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    'image/jpeg', 'image/png', 'image/gif', 'image/webp',
-    'text/plain',
-];
-
-const MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024; // 10 MB
-
-async function uploadAttachments(
-    attachments: RawAttachment[],
-    workspaceId: string,
-    inboundEmailId: string,
-    briefId: string | null
-): Promise<void> {
-    const { DocumentIngestionService } = await import('@/lib/services/ingestion');
-    
-    let correspondenceFolderId: string | null = null;
-    if (briefId) {
-        const folder = await DocumentIngestionService.getOrCreateCorrespondenceFolder(briefId);
-        correspondenceFolderId = folder.id;
-    }
-
-    for (const att of attachments) {
-        try {
-            if (!ALLOWED_ATTACHMENT_TYPES.includes(att.contentType)) {
-                console.log(`⏭  Skipping attachment "${att.name}" — unsupported type ${att.contentType}`);
-                continue;
-            }
-
-            const buffer = Buffer.from(att.content, 'base64');
-            if (buffer.byteLength > MAX_ATTACHMENT_BYTES) {
-                console.log(`⏭  Skipping attachment "${att.name}" — too large (${buffer.byteLength} bytes)`);
-                continue;
-            }
-
-            const safeName = att.name.replace(/[^a-zA-Z0-9._-]/g, '_');
-            const blobPath = `email-attachments/${workspaceId}/${inboundEmailId}/${safeName}`;
-
-            const blob = await put(blobPath, buffer, {
-                access: 'public',
-                contentType: att.contentType,
-            });
-
-            // Always create EmailAttachment record for the Email timeline
-            await prisma.emailAttachment.create({
-                data: {
-                    inboundEmailId,
-                    name: att.name,
-                    url: blob.url,
-                    contentType: att.contentType,
-                    size: buffer.byteLength,
-                },
-            });
-
-            // If matched to a brief, perform full ingestion so it appears in the regular Documents vault
-            if (briefId) {
-                await DocumentIngestionService.ingest({
-                    name: att.name,
-                    buffer,
-                    contentType: att.contentType,
-                    size: buffer.byteLength,
-                    briefId,
-                    folderId: correspondenceFolderId,
-                    url: blob.url,
-                });
-                console.log(`📎 Attachment "${att.name}" ingested into Brief vault (Correspondence folder)`);
-            } else {
-                console.log(`📎 Attachment "${att.name}" → EmailAttachment only (no brief match)`);
-            }
-        } catch (err) {
-            console.error(`Error uploading attachment "${att.name}":`, err);
-        }
-    }
-}
-
-// ── Fix 2: Noise filter ──────────────────────────────────────────────────────
-// Domains and address patterns that are always automated system mail.
-// Emails from these are stored as InboundEmail for audit but never create a PulseEvent.
-const NOISE_SENDER_PATTERNS = [
-    /^no[-.]?reply@/i,
-    /^noreply@/i,
-    /^do[-.]?not[-.]?reply@/i,
-    /^mailer-daemon@/i,
-    /^postmaster@/i,
-    /^bounce[s]?@/i,
-    /^notifications?@/i,
-    /^alerts?@/i,
-    /^support@zoho/i,
-];
-
-const NOISE_DOMAINS = [
-    'zohoaccounts.com',
-    'zohomail.com',
-    'accounts.google.com',
-    'facebookmail.com',
-    'linkedin.com',
-    'mailchimp.com',
-    'sendgrid.net',
-    'amazonses.com',
-];
-
-function isSystemNoise(senderEmail: string, subject: string): boolean {
-    const lower = senderEmail.toLowerCase();
-    if (NOISE_SENDER_PATTERNS.some(p => p.test(lower))) return true;
-    const domain = lower.split('@')[1] || '';
-    if (NOISE_DOMAINS.some(d => domain === d || domain.endsWith('.' + d))) return true;
-    // Subject-level signals
-    const subjectLower = subject.toLowerCase();
-    if (subjectLower.startsWith('delivery status') || subjectLower.startsWith('undeliverable')) return true;
-    return false;
-}
+    ingestInboundEmail,
+    resolveWorkspaceByRecipient,
+    type RawAttachment,
+} from '@/lib/services/email-ingestion';
 
 export async function POST(request: NextRequest) {
     console.log('📨 Institutional Memory: Incoming Email');
@@ -151,12 +21,12 @@ export async function POST(request: NextRequest) {
             body      = json.text || json.TextBody || json.html || json.HtmlBody || '';
             messageId = json.MessageID || json['Message-ID'] || json.messageId || '';
             // Postmark: Attachments array with { Name, Content (base64), ContentType, ContentLength }
-            const atts = json.Attachments || json.attachments || [];
-            rawAttachments = atts.map((a: any) => ({
-                name:          a.Name          || a.name          || 'attachment',
-                content:       a.Content       || a.content       || '',
-                contentType:   a.ContentType   || a.contentType   || 'application/octet-stream',
-                contentLength: a.ContentLength || a.contentLength || 0,
+            const atts: Record<string, unknown>[] = json.Attachments || json.attachments || [];
+            rawAttachments = atts.map((a) => ({
+                name:          (a.Name          || a.name          || 'attachment') as string,
+                content:       (a.Content       || a.content       || '') as string,
+                contentType:   (a.ContentType   || a.contentType   || 'application/octet-stream') as string,
+                contentLength: (a.ContentLength || a.contentLength || 0) as number,
             }));
         } else if (contentType.includes('multipart/form-data')) {
             const fd  = await request.formData();
@@ -184,248 +54,37 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Unsupported content type' }, { status: 400 });
         }
 
-        // ── 1. Workspace scoping ─────────────────────────────────────────────
-        const toMatch = recipient.match(/<(.+?)>/) || [null, recipient];
-        const toEmail = (toMatch[1] || recipient).toLowerCase().trim();
-
-        const emailConfig = await prisma.workspaceEmailConfig.findFirst({
-            where: { emailAddress: { equals: toEmail, mode: 'insensitive' }, isActive: true },
-            select: { workspaceId: true },
-        });
-
-        if (!emailConfig) {
-            console.log(`📭 No workspace for ${toEmail} — dropping`);
-            return NextResponse.json({ received: true });
-        }
-
-        const workspaceId = emailConfig.workspaceId;
-
-        // ── 2. Identity resolution ───────────────────────────────────────────
         const senderEmailMatch = sender.match(/<(.+?)>/);
         const senderEmail = (senderEmailMatch ? senderEmailMatch[1] : sender).toLowerCase().trim();
         const senderName  = senderEmailMatch ? sender.replace(/<.+>/, '').trim() : undefined;
 
-        // ── Fix 2: Drop system noise before any processing ───────────────────
-        if (isSystemNoise(senderEmail, subject)) {
-            console.log(`🔇 Noise filtered: ${senderEmail} — "${subject}"`);
-            return NextResponse.json({ received: true, filtered: 'noise' });
+        const workspaceId = await resolveWorkspaceByRecipient(recipient);
+        if (!workspaceId) {
+            console.log(`📭 No workspace for recipient "${recipient}" — dropping`);
+            return NextResponse.json({ received: true });
         }
 
-        // ── Fix 3: Deduplication ─────────────────────────────────────────────
-        // Guard against Postmark firing the same webhook multiple times.
-        // Primary: match by Message-ID header. Fallback: same sender+subject within 2 minutes.
-        const twoMinutesAgo = new Date(Date.now() - 2 * 60 * 1000);
-
-        const duplicate = await prisma.inboundEmail.findFirst({
-            where: {
-                workspaceId,
-                ...(messageId
-                    ? { messageId }
-                    : {
-                        fromEmail: senderEmail,
-                        subject,
-                        receivedAt: { gte: twoMinutesAgo },
-                    }),
-            },
-            select: { id: true },
-        });
-
-        if (duplicate) {
-            console.log(`♻️  Duplicate dropped: ${senderEmail} — "${subject}"`);
-            return NextResponse.json({ received: true, duplicate: true });
-        }
-
-        // ── Fix 1: Create InboundEmail first (always, matched or not) ────────
-        const inboundEmail = await prisma.inboundEmail.create({
-            data: {
-                workspaceId,
-                fromEmail:       senderEmail,
-                fromName:        senderName || undefined,
-                subject,
-                bodyPreview:     body.substring(0, 500),
-                body,
-                messageId:       messageId || undefined,
-                attachmentCount: rawAttachments.length,
-                attachmentNames: rawAttachments.length
-                    ? rawAttachments.map(a => a.name).join(', ')
-                    : undefined,
-                receivedAt:      new Date(),
-            },
-        });
-
-        // ── 3. Match against known clients ───────────────────────────────────
-        const knownClient = await prisma.client.findFirst({
-            where: { workspaceId, email: { equals: senderEmail, mode: 'insensitive' } },
-            select: { id: true, name: true },
-        });
-
-        // Upsert FirmContact
-        const firmContact = await prisma.firmContact.upsert({
-            where: { workspaceId_email: { workspaceId, email: senderEmail } },
-            create: {
-                workspaceId,
-                email:    senderEmail,
-                name:     knownClient?.name || senderName || senderEmail,
-                type:     knownClient ? 'client' : 'unknown',
-                clientId: knownClient?.id,
-            },
-            update: {
-                lastSeen:   new Date(),
-                emailCount: { increment: 1 },
-                ...(knownClient && { type: 'client', clientId: knownClient.id }),
-                ...(senderName && !knownClient && { name: senderName }),
-            },
-        });
-
-        // ── 4. Intent classification + brief ID (parallel) ───────────────────
-        const [intentResult, briefIdResult] = await Promise.all([
-            classifyEmailIntent(subject, body, senderEmail),
-            (async () => {
-                const m = recipient.match(/brief-([a-zA-Z0-9-]+)@/);
-                if (m) {
-                    return prisma.brief.findFirst({
-                        where: { inboundEmailId: m[1], workspaceId },
-                        select: { id: true, name: true, lawyerId: true, lawyerInChargeId: true, matterId: true },
-                    });
-                }
-                return null;
-            })(),
-        ]);
-
-        // ── 5. Brief + Matter identification via AI ──────────────────────────
-        let brief = briefIdResult;
-        let matchedMatterId: string | null = brief?.matterId ?? null;
-        let routingMethod = 'Direct Match (ID)';
-
-        if (!brief) {
-            const [briefCandidates, matterCandidates] = await Promise.all([
-                prisma.brief.findMany({
-                    where: { status: 'active', workspaceId },
-                    take: 50,
-                    orderBy: { updatedAt: 'desc' },
-                    select: { id: true, name: true, briefNumber: true, client: { select: { name: true } } },
-                }),
-                prisma.matter.findMany({
-                    where: { workspaceId, deletedAt: null, status: { notIn: ['closed', 'archived'] } },
-                    orderBy: { updatedAt: 'desc' },
-                    select: { id: true, name: true, caseNumber: true, status: true },
-                }),
-            ]);
-
-            const briefList: BriefCandidate[] = briefCandidates.map(b => ({
-                id: b.id, name: b.name, briefNumber: b.briefNumber,
-                clientName: b.client?.name || 'No Client',
-            }));
-
-            const matterList: MatterCandidate[] = matterCandidates.map(m => ({
-                id: m.id, name: m.name, caseNumber: m.caseNumber, status: m.status,
-            }));
-
-            const identification = await identifyBriefFromContent(subject, body, briefList, matterList);
-            const pct = Math.round(identification.confidence * 100);
-            routingMethod = `AI Routing (${pct}%): ${identification.reasoning}`;
-
-            if (identification.confidence > 0.5) {
-                if (identification.briefId) {
-                    brief = await prisma.brief.findFirst({
-                        where: { id: identification.briefId, workspaceId },
-                        select: { id: true, name: true, lawyerId: true, lawyerInChargeId: true, matterId: true },
-                    });
-                    matchedMatterId = brief?.matterId ?? null;
-                } else if (identification.matterId) {
-                    matchedMatterId = identification.matterId;
-                    // Also link the InboundEmail to the matter
-                    await prisma.inboundEmail.update({
-                        where: { id: inboundEmail.id },
-                        data: { matterId: identification.matterId },
-                    });
-                }
-            }
-        }
-
-        const assignedToId = brief?.lawyerInChargeId || brief?.lawyerId || null;
-
-        // ── 6. Create PulseEvent (linked to InboundEmail) ────────────────────
-        const pulseEvent = await prisma.pulseEvent.create({
-            data: {
-                workspaceId,
-                source:         'email',
-                intent:         intentResult.intent,
-                urgency:        intentResult.urgency,
-                title:          intentResult.title,
-                summary:        intentResult.summary,
-                senderName:     firmContact.name || senderEmail,
-                senderEmail,
-                senderType:     intentResult.senderType,
-                briefId:        brief?.id || null,
-                contactId:      firmContact.id,
-                assignedToId,
-                inboundEmailId: inboundEmail.id,
-                actionItems:    intentResult.actionItems,
-                status:         'new',
-            },
-        });
-
-        console.log(`🧠 PulseEvent created: [${intentResult.intent}/${intentResult.urgency}] → ${brief?.name || 'Unmatched'}`);
-
-        // ── 7. Log to brief activity feed (if matched) ───────────────────────
-        if (brief) {
-            await addBriefActivity(
-                brief.id,
-                'email_received',
-                `📧 ${intentResult.title}`,
-                {
-                    emailSubject:   subject,
-                    emailSender:    sender,
-                    inboundEmailId: inboundEmail.id,
-                    intent:         intentResult.intent,
-                    urgency:        intentResult.urgency,
-                    summary:        intentResult.summary,
-                    actionItems:    intentResult.actionItems,
-                    pulseEventId:   pulseEvent.id,
-                    routingMethod,
-                },
-                undefined
-            );
-        }
-
-        // ── 8. Upload attachments (non-blocking — don't delay the response) ────
-        if (rawAttachments.length > 0) {
-            uploadAttachments(rawAttachments, workspaceId, inboundEmail.id, brief?.id || null)
-                .catch(err => console.error('Attachment upload error:', err));
-        }
-
-        // ── 9. Execute intent actions (non-blocking) ─────────────────────────
-        executeIntentActions({
+        const result = await ingestInboundEmail({
             workspaceId,
-            pulseEventId: pulseEvent.id,
-            intent:       intentResult.intent,
-            urgency:      intentResult.urgency,
+            fromEmail: senderEmail,
+            fromName: senderName,
             subject,
             body,
-            senderName:   firmContact.name || senderEmail,
-            senderEmail,
-            summary:      intentResult.summary,
-            actionItems:  intentResult.actionItems,
-            brief: brief ? {
-                id:               brief.id,
-                name:             brief.name,
-                lawyerId:         brief.lawyerId,
-                lawyerInChargeId: brief.lawyerInChargeId,
-                matterId:         (brief as any).matterId ?? null,
-            } : null,
-            assignedToId,
-        }).catch(err => console.error('Action engine error:', err));
-
-        return NextResponse.json({
-            success:      true,
-            intent:       intentResult.intent,
-            urgency:      intentResult.urgency,
-            brief:        brief?.name || null,
-            pulseEventId: pulseEvent.id,
-            attachments:  rawAttachments.length,
+            messageId: messageId || undefined,
+            recipientRaw: recipient,
+            attachments: rawAttachments,
+            source: 'incoming-email',
         });
 
+        if (result.filtered) return NextResponse.json({ received: true, filtered: result.filtered });
+        if (result.duplicate) return NextResponse.json({ received: true, duplicate: true });
+
+        return NextResponse.json({
+            success: true,
+            brief: result.briefName,
+            pulseEventId: result.pulseEventId,
+            attachments: rawAttachments.length,
+        });
     } catch (error) {
         console.error('Institutional Memory pipeline error:', error);
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });

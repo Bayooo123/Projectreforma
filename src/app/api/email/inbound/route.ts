@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { put } from '@vercel/blob';
+import { ingestInboundEmail, type RawAttachment } from '@/lib/services/email-ingestion';
 
 interface PostmarkAttachment {
     Name: string;
@@ -16,6 +16,7 @@ interface PostmarkInboundPayload {
     Subject: string;
     TextBody?: string;
     HtmlBody?: string;
+    MessageID?: string;
     Attachments?: PostmarkAttachment[];
 }
 
@@ -37,89 +38,75 @@ export async function POST(req: NextRequest) {
     const fromName = payload.FromFull?.Name ?? payload.From.split('<')[0].trim();
     const subject = payload.Subject ?? '(no subject)';
     const body = payload.TextBody ?? '';
-    const attachments = payload.Attachments ?? [];
+    const attachments: RawAttachment[] = (payload.Attachments ?? []).map(a => ({
+        name: a.Name,
+        content: a.Content,
+        contentType: a.ContentType,
+        contentLength: a.ContentLength ?? 0,
+    }));
 
-    // 1. Match sender to a known client
+    // This integration's own routing strategy: match the sender to a known
+    // client, then try to match the subject line to that client's matter name.
+    // Kept distinct from the other two email integrations (which route by
+    // recipient alias / AI content matching) since it's a legitimately
+    // different, valid way for a differently-configured inbox to route mail —
+    // only the downstream record-creation (PulseEvent, activity log, and
+    // attachment ingestion) is shared, via knownBriefId.
     const client = await prisma.client.findFirst({
         where: { email: { equals: fromEmail, mode: 'insensitive' } },
         select: { id: true, workspaceId: true },
     });
 
-    // 2. Try to match subject line to a matter name
     let matter: { id: string; workspaceId: string } | null = null;
     const cleanSubject = subject.replace(/^(Re|Fwd?):\s*/gi, '').trim();
     if (client && cleanSubject.length > 3) {
         matter = await prisma.matter.findFirst({
-            where: {
-                workspaceId: client.workspaceId,
-                name: { contains: cleanSubject, mode: 'insensitive' },
-            },
+            where: { workspaceId: client.workspaceId, name: { contains: cleanSubject, mode: 'insensitive' } },
             select: { id: true, workspaceId: true },
         });
     }
 
-    const workspaceId = client?.workspaceId ?? null;
+    if (!client) {
+        // No way to attribute this to a workspace at all — log it standalone,
+        // same as before, rather than guessing.
+        const emailRecord = await prisma.inboundEmail.create({
+            data: {
+                fromEmail, fromName: fromName || null, subject,
+                bodyPreview: body.slice(0, 500) || null,
+                attachmentCount: attachments.length,
+                attachmentNames: attachments.map(a => a.name).join(', ') || null,
+            },
+        });
+        console.log(`[Email inbound] Unmatched sender, logged standalone: ${fromEmail}`);
+        return NextResponse.json({ ok: true, id: emailRecord.id });
+    }
 
-    // 3. Store the inbound email record
-    const emailRecord = await prisma.inboundEmail.create({
-        data: {
-            fromEmail,
-            fromName: fromName || null,
-            subject,
-            bodyPreview: body.slice(0, 500) || null,
-            attachmentCount: attachments.length,
-            attachmentNames: attachments.map(a => a.Name).join(', ') || null,
-            workspaceId,
-            clientId: client?.id ?? null,
-            matterId: matter?.id ?? null,
-        },
-    });
-
-    // 4. Update matter activity timestamps if matched
     if (matter) {
         await prisma.matter.update({
             where: { id: matter.id },
-            data: {
-                lastClientContact: new Date(),
-                lastActivityAt: new Date(),
-            },
+            data: { lastClientContact: new Date(), lastActivityAt: new Date() },
         });
     }
 
-    // 5. Store attachments
-    if (attachments.length > 0 && matter) {
-        const brief = await prisma.brief.findFirst({
-            where: { matterId: matter.id },
-            select: { id: true },
-            orderBy: { createdAt: 'desc' },
-        });
+    const brief = matter
+        ? await prisma.brief.findFirst({ where: { matterId: matter.id }, select: { id: true }, orderBy: { createdAt: 'desc' } })
+        : null;
 
-        if (brief) {
-            for (const attachment of attachments) {
-                if (!attachment.Content) continue;
-                try {
-                    const buffer = Buffer.from(attachment.Content, 'base64');
-                    const blob = await put(
-                        `inbound/${emailRecord.id}/${attachment.Name}`,
-                        buffer,
-                        { access: 'public', contentType: attachment.ContentType }
-                    );
-                    await prisma.document.create({
-                        data: {
-                            name: attachment.Name,
-                            url: blob.url,
-                            type: attachment.ContentType,
-                            size: attachment.ContentLength ?? buffer.length,
-                            briefId: brief.id,
-                        },
-                    });
-                } catch (err) {
-                    console.error('[Email inbound] Attachment upload failed:', attachment.Name, err);
-                }
-            }
-        }
-    }
+    const result = await ingestInboundEmail({
+        workspaceId: client.workspaceId,
+        fromEmail,
+        fromName: fromName || undefined,
+        subject,
+        body,
+        messageId: payload.MessageID || undefined,
+        knownBriefId: brief?.id,
+        attachments,
+        source: 'email-inbound',
+    });
 
-    console.log(`[Email inbound] Processed: from=${fromEmail} subject="${subject}" matched=${!!matter} attachments=${attachments.length}`);
-    return NextResponse.json({ ok: true, id: emailRecord.id });
+    console.log(`[Email inbound] Processed: from=${fromEmail} subject="${subject}" matched=${!!brief} attachments=${attachments.length}`);
+
+    if (result.filtered) return NextResponse.json({ ok: true, filtered: result.filtered });
+    if (result.duplicate) return NextResponse.json({ ok: true, duplicate: true });
+    return NextResponse.json({ ok: true, id: result.inboundEmailId, brief: result.briefName });
 }
