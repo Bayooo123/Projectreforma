@@ -112,6 +112,65 @@ export async function getInsightSnapshot(insightId: string): Promise<{ summary: 
     return { summary: insight.summary, data: insight.data as Record<string, unknown> };
 }
 
+export interface BulkCheckResult {
+    total: number;
+    succeeded: number;
+    failed: number;
+    failures: Array<{ briefId: string; briefName: string; reason: string }>;
+}
+
+// "Check all" — runs generateBriefManagerInsight for every active brief in the
+// workspace that has real material to review (at least one uploaded document
+// or at least one linked email), skipping briefs with neither since there'd
+// be nothing for the model to work from. Sequential, not parallel: this can
+// cover dozens of briefs, and running them concurrently would just hit the
+// same rate limits/timeouts faster for no real speed benefit on a background
+// bulk job the user isn't watching turn-by-turn.
+export async function runBriefManagerBulk(workspaceId: string): Promise<BulkCheckResult> {
+    const session = await getSession();
+    if (session.user.workspaceId !== workspaceId) {
+        return { total: 0, succeeded: 0, failed: 0, failures: [] };
+    }
+
+    const briefs = await prisma.brief.findMany({
+        where: {
+            workspaceId,
+            status: 'active',
+            deletedAt: null,
+            OR: [
+                { documents: { some: {} } },
+                { pulseEvents: { some: { inboundEmailId: { not: null } } } },
+            ],
+        },
+        select: { id: true, name: true },
+    });
+
+    const result: BulkCheckResult = { total: briefs.length, succeeded: 0, failed: 0, failures: [] };
+
+    for (const brief of briefs) {
+        try {
+            const generated = await generateBriefManagerInsight(brief.id);
+            if (!generated.success) {
+                result.failed++;
+                result.failures.push({ briefId: brief.id, briefName: brief.name, reason: generated.reason });
+                continue;
+            }
+            await upsertInsightForBrief(workspaceId, brief.id, generated.insight);
+            result.succeeded++;
+        } catch (error) {
+            result.failed++;
+            result.failures.push({
+                briefId: brief.id,
+                briefName: brief.name,
+                reason: error instanceof Error ? error.message : 'Unknown error',
+            });
+        }
+    }
+
+    revalidatePath('/pulse');
+    return result;
+}
+
 // Triggered by "Ask Brief Manager" — always regenerates, bypassing the
 // nightly scan's staleness check, since the user explicitly asked for a fresh look.
 export async function runBriefManagerNow(briefId: string): Promise<{ success: boolean; error?: string }> {
@@ -124,11 +183,11 @@ export async function runBriefManagerNow(briefId: string): Promise<{ success: bo
 
     try {
         const generated = await generateBriefManagerInsight(briefId);
-        if (!generated) {
-            return { success: false, error: 'Could not generate an insight for this brief right now' };
+        if (!generated.success) {
+            return { success: false, error: generated.reason };
         }
 
-        await upsertInsightForBrief(brief.workspaceId, briefId, generated);
+        await upsertInsightForBrief(brief.workspaceId, briefId, generated.insight);
         revalidatePath('/pulse');
         revalidatePath(`/briefs/${briefId}`);
         return { success: true };

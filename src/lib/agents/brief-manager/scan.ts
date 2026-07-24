@@ -35,6 +35,14 @@ interface GeneratedInsight {
     lastSignalAt: Date;
 }
 
+// Distinguishes *why* generation didn't produce an insight — a parse failure,
+// an API error, and "brief isn't active" used to all collapse into the same
+// bare `null`, so a "Check now" failure told the user nothing beyond a dead
+// end. Every caller now gets a real reason to show or log.
+export type InsightGenerationResult =
+    | { success: true; insight: GeneratedInsight }
+    | { success: false; reason: string };
+
 const MAX_CHRONOLOGY_ROWS = 30;
 const MAX_PULSE_EVENTS = 5;
 const MAX_TASKS = 10;
@@ -191,9 +199,9 @@ Rules:
 - questions should be 1-3 items, phrased as a case manager would ask a partner, not generic.`;
 }
 
-export async function generateBriefManagerInsight(briefId: string): Promise<GeneratedInsight | null> {
+export async function generateBriefManagerInsight(briefId: string): Promise<InsightGenerationResult> {
     const client = getClient();
-    if (!client) return null;
+    if (!client) return { success: false, reason: 'AI is not configured for this workspace (missing API key).' };
 
     const brief = await prisma.brief.findUnique({
         where: { id: briefId, deletedAt: null },
@@ -211,7 +219,8 @@ export async function generateBriefManagerInsight(briefId: string): Promise<Gene
             },
         },
     });
-    if (!brief || brief.status !== 'active') return null;
+    if (!brief) return { success: false, reason: 'Brief not found.' };
+    if (brief.status !== 'active') return { success: false, reason: `Brief status is "${brief.status}", not active — Brief Manager only reviews active briefs.` };
 
     const [chronologyRows, pulseEvents, openTasks, nextHearing, memoryEntries, recentDocs] = await Promise.all([
         prisma.documentTimelineEvent.findMany({
@@ -285,20 +294,29 @@ export async function generateBriefManagerInsight(briefId: string): Promise<Gene
     });
 
     let data: BriefManagerInsightData | null = null;
+    let rawText = '';
     try {
         const response = await client.messages.create({
             model: 'claude-sonnet-4-6',
-            max_tokens: 1024,
+            // Raised from 1024: the executive-summary schema (4-part summary plus
+            // nextSteps/ballInCourt/representing/questions) can run the model's
+            // JSON output long enough on a correspondence-heavy brief to get cut
+            // off mid-response, which then silently fails to parse below.
+            max_tokens: 2048,
             system: 'You are a meticulous legal case manager. Return only valid JSON — no markdown, no explanation.',
             messages: [{ role: 'user', content: prompt }],
         });
-        const text = response.content[0]?.type === 'text' ? response.content[0].text : '';
-        data = parseJSON<BriefManagerInsightData>(text);
+        rawText = response.content[0]?.type === 'text' ? response.content[0].text : '';
+        data = parseJSON<BriefManagerInsightData>(rawText);
     } catch (error) {
-        console.error('[BriefManager] Insight generation failed:', error);
-        return null;
+        const message = error instanceof Error ? error.message : 'Unknown error';
+        console.error(`[BriefManager] Insight generation failed for brief ${briefId}:`, error);
+        return { success: false, reason: `AI request failed: ${message}` };
     }
-    if (!data) return null;
+    if (!data) {
+        console.error(`[BriefManager] Could not parse AI response for brief ${briefId} (${rawText.length} chars). Preview: ${rawText.slice(0, 300)}`);
+        return { success: false, reason: 'The AI response could not be parsed — it may have been truncated or malformed. Try again; if it keeps happening, this brief may have unusually long correspondence history.' };
+    }
 
     // Deterministic, not left to the model's own arithmetic — these two fields
     // are always computed here, overwriting whatever (if anything) the LLM guessed.
@@ -321,10 +339,13 @@ export async function generateBriefManagerInsight(briefId: string): Promise<Gene
             : `${(ballInCourtStatus && BALL_IN_COURT_LABEL[ballInCourtStatus]) ?? 'Status unclear'}. ${nextStep ?? currentStatus}`;
 
     return {
-        title: brief.name,
-        summary,
-        data,
-        lastSignalAt,
+        success: true,
+        insight: {
+            title: brief.name,
+            summary,
+            data,
+            lastSignalAt,
+        },
     };
 }
 
@@ -406,9 +427,13 @@ export async function scanBriefsForWorkspace(workspaceId: string): Promise<{ cre
         }
 
         const generated = await generateBriefManagerInsight(brief.id);
-        if (!generated) { skipped++; continue; }
+        if (!generated.success) {
+            console.error(`[BriefManager] Nightly scan skipped brief ${brief.id}: ${generated.reason}`);
+            skipped++;
+            continue;
+        }
 
-        const result = await upsertInsightForBrief(workspaceId, brief.id, generated);
+        const result = await upsertInsightForBrief(workspaceId, brief.id, generated.insight);
         if (result === 'created') created++; else updated++;
     }
 

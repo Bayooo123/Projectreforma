@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { Bot, ChevronDown, ChevronUp, Send, RefreshCw } from 'lucide-react';
-import { getBriefManagerBoard, getOpenAgentInsights, runBriefManagerNow, getInsightSnapshot, type BriefBoardRow } from '@/app/actions/agent-insights';
+import { getBriefManagerBoard, getOpenAgentInsights, runBriefManagerNow, runBriefManagerBulk, getInsightSnapshot, type BriefBoardRow } from '@/app/actions/agent-insights';
 import DocumentUpload from '@/components/briefs/DocumentUpload';
 import BriefHistorySearch from '@/components/pulse/BriefHistorySearch';
 
@@ -315,6 +315,8 @@ export default function AgentBoard({ workspaceId, agentType }: { workspaceId: st
     const [scope, setScope] = useState<'firm' | 'mine'>('firm');
     const [rows, setRows] = useState<BoardRow[] | null>(null);
     const [loading, setLoading] = useState(true);
+    const [bulkChecking, setBulkChecking] = useState(false);
+    const [bulkSummary, setBulkSummary] = useState<string | null>(null);
 
     const load = useCallback(async () => {
         setLoading(true);
@@ -349,8 +351,28 @@ export default function AgentBoard({ workspaceId, agentType }: { workspaceId: st
     }, [workspaceId, agentType, scope]);
 
     // Standard fetch-on-mount/on-scope-change pattern; setState inside load() is intentional.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     useEffect(() => { load(); }, [load]);
+
+    const checkAll = async () => {
+        setBulkChecking(true);
+        setBulkSummary(null);
+        try {
+            const result = await runBriefManagerBulk(workspaceId);
+            const parts = [`Checked ${result.total} brief${result.total !== 1 ? 's' : ''}`];
+            if (result.succeeded) parts.push(`${result.succeeded} updated`);
+            if (result.failed) parts.push(`${result.failed} failed`);
+            let summary = parts.join(' — ');
+            if (result.failures.length > 0) {
+                summary += `. Failures: ${result.failures.map(f => `${f.briefName} (${f.reason})`).join('; ')}`;
+            }
+            setBulkSummary(summary);
+            await load();
+        } catch {
+            setBulkSummary('Bulk check failed to run — please try again.');
+        } finally {
+            setBulkChecking(false);
+        }
+    };
 
     return (
         <div>
@@ -363,22 +385,41 @@ export default function AgentBoard({ workspaceId, agentType }: { workspaceId: st
                     </h2>
                 </div>
                 {agentType === 'brief_manager' && (
-                    <div style={{ display: 'flex', border: '1px solid #e5e7eb', borderRadius: 8, overflow: 'hidden' }}>
-                        {(['firm', 'mine'] as const).map(s => (
-                            <button
-                                key={s}
-                                onClick={() => setScope(s)}
-                                style={{
-                                    padding: '0.35rem 0.9rem', fontSize: '0.75rem', fontWeight: 600, border: 'none', cursor: 'pointer',
-                                    background: scope === s ? '#0d9488' : '#fff', color: scope === s ? '#fff' : '#374151',
-                                }}
-                            >
-                                {s === 'firm' ? 'Firmwide' : 'My Briefs'}
-                            </button>
-                        ))}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                        <button
+                            onClick={checkAll}
+                            disabled={bulkChecking}
+                            title="Run Check now for every active brief in this workspace that has documents or emails linked"
+                            style={{
+                                display: 'flex', alignItems: 'center', gap: '4px',
+                                padding: '0.35rem 0.85rem', borderRadius: 6, border: '1px solid #e5e7eb',
+                                background: bulkChecking ? '#f3f4f6' : '#fff', color: '#374151', fontSize: '0.72rem', fontWeight: 600,
+                                cursor: bulkChecking ? 'default' : 'pointer',
+                            }}
+                        >
+                            <RefreshCw size={12} className={bulkChecking ? 'rm-spin' : ''} /> {bulkChecking ? 'Checking all…' : 'Check all'}
+                        </button>
+                        <div style={{ display: 'flex', border: '1px solid #e5e7eb', borderRadius: 8, overflow: 'hidden' }}>
+                            {(['firm', 'mine'] as const).map(s => (
+                                <button
+                                    key={s}
+                                    onClick={() => setScope(s)}
+                                    style={{
+                                        padding: '0.35rem 0.9rem', fontSize: '0.75rem', fontWeight: 600, border: 'none', cursor: 'pointer',
+                                        background: scope === s ? '#0d9488' : '#fff', color: scope === s ? '#fff' : '#374151',
+                                    }}
+                                >
+                                    {s === 'firm' ? 'Firmwide' : 'My Briefs'}
+                                </button>
+                            ))}
+                        </div>
                     </div>
                 )}
             </div>
+
+            {bulkSummary && (
+                <p style={{ fontSize: '0.75rem', color: '#4b5563', margin: '-0.5rem 0 1rem' }}>{bulkSummary}</p>
+            )}
 
             {loading && <p style={{ fontSize: '0.8rem', color: '#9ca3af' }}>Loading…</p>}
             {!loading && rows?.length === 0 && (

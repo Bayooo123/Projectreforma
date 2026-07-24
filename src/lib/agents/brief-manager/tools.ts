@@ -177,16 +177,18 @@ async function recordBriefUpdate(briefId: string, insightId: string, userId: str
         after(async () => {
             try {
                 const generated = await generateBriefManagerInsight(briefId);
-                if (generated) {
+                if (generated.success) {
                     await prisma.agentInsight.update({
                         where: { id: insightId },
                         data: {
-                            title: generated.title,
-                            summary: generated.summary,
-                            data: generated.data as unknown as Prisma.InputJsonValue,
-                            lastSignalAt: generated.lastSignalAt,
+                            title: generated.insight.title,
+                            summary: generated.insight.summary,
+                            data: generated.insight.data as unknown as Prisma.InputJsonValue,
+                            lastSignalAt: generated.insight.lastSignalAt,
                         },
                     });
+                } else {
+                    console.error(`[BriefManager] Could not refresh insight after record_brief_update: ${generated.reason}`);
                 }
             } catch (error) {
                 console.error('[BriefManager] Failed to refresh insight after record_brief_update:', error);
