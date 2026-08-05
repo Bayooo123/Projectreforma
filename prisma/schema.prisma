@@ -70,6 +70,7 @@ model Workspace {
   modulePinResets       ModulePinReset[]
   whatsappSessions      WhatsappSession[]
   agentInsights         AgentInsight[]
+  ingestionSessions     IngestionSession[]
 
   @@index([slug])
   @@index([firmCode])
@@ -203,6 +204,7 @@ model User {
   workEntries                  WorkEntry[]            @relation("UserWorkEntries")
   createdWorkEntries           WorkEntry[]            @relation("WorkEntryCreator")
   pulseEventAssignments        PulseEvent[]           @relation("PulseEventAssignee")
+  createdIngestionSessions     IngestionSession[]     @relation("IngestionSessionCreator")
 
   // Personal theme overrides
   themeSource          String?  @default("workspace")
@@ -561,6 +563,8 @@ model Brief {
   timelineEvents      DocumentTimelineEvent[]
   pulseEvents         PulseEvent[]
   agentInsights       AgentInsight[]
+  suggestedIngestionCandidates IngestionCandidate[] @relation("IngestionSuggestedBrief")
+  confirmedIngestionCandidates IngestionCandidate[] @relation("IngestionConfirmedBrief")
 
   @@index([lawyerId])
   @@index([lawyerInChargeId])
@@ -595,6 +599,7 @@ model Document {
   folder         Folder?                @relation(fields: [folderId], references: [id], onDelete: Cascade)
   chunks         DocumentChunk[]
   timelineEvents DocumentTimelineEvent[]
+  ingestionCandidate IngestionCandidate?
 
   @@index([briefId])
   @@index([folderId])
@@ -1464,4 +1469,58 @@ model WhatsappSession {
 
   @@unique([fromNumber, workspaceId])
   @@index([fromNumber])
+}
+
+// ── Local Document Onboarding Agent ─────────────────────────────────────────
+// Foundation only: token-issuance + upload intake. The local agent binary,
+// automatic classification job, and brief-assignment review UI are follow-on
+// work that build on this contract — nothing here auto-files a document into
+// a Brief. IngestionCandidate is a staging row; only DocumentIngestionService
+// (the same pipeline every other ingestion source uses) ever creates the real
+// Document, and only after a human confirms the Brief assignment.
+
+model IngestionSession {
+  id          String    @id @default(cuid())
+  workspaceId String
+  createdById String
+  label       String?
+  tokenHash   String    @unique
+  status      String    @default("active") // active | expired | revoked
+  expiresAt   DateTime
+  lastUsedAt  DateTime?
+  createdAt   DateTime  @default(now())
+  revokedAt   DateTime?
+
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  createdBy   User      @relation("IngestionSessionCreator", fields: [createdById], references: [id])
+  candidates  IngestionCandidate[]
+
+  @@index([workspaceId, status])
+  @@index([tokenHash])
+}
+
+model IngestionCandidate {
+  id                String    @id @default(cuid())
+  sessionId         String
+  workspaceId       String
+  sourcePath        String    // original relative path/filename on the firm's machine, for reviewer context
+  fileName          String
+  contentType       String
+  size              Int
+  blobUrl           String
+  checksum          String?   // content hash, for de-duplication across re-runs
+  suggestedBriefId  String?   // filled by the follow-on classification job
+  confirmedBriefId  String?   // set only when a human confirms in the review UI
+  documentId        String?   @unique // set once promoted via DocumentIngestionService
+  status            String    @default("pending") // pending | classified | confirmed | rejected | ingested
+  createdAt         DateTime  @default(now())
+  resolvedAt        DateTime?
+
+  session           IngestionSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  suggestedBrief    Brief?    @relation("IngestionSuggestedBrief", fields: [suggestedBriefId], references: [id], onDelete: SetNull)
+  confirmedBrief    Brief?    @relation("IngestionConfirmedBrief", fields: [confirmedBriefId], references: [id], onDelete: SetNull)
+  document          Document? @relation(fields: [documentId], references: [id], onDelete: SetNull)
+
+  @@index([sessionId, status])
+  @@index([workspaceId, status])
 }

@@ -2,12 +2,12 @@ import { prisma } from './prisma';
 
 export type ActivityResource =
     | 'BRIEF' | 'DOCUMENT' | 'INVOICE' | 'PAYMENT' | 'EXPENSE' | 'COMPLIANCE'
-    | 'CLIENT' | 'MATTER' | 'COURT_DATE';
+    | 'CLIENT' | 'MATTER' | 'COURT_DATE' | 'INGESTION_SESSION';
 
 export type ActivityAction =
     | 'CREATED' | 'UPDATED' | 'DELETED'
     | 'VIEWED' | 'DOWNLOADED' | 'UPLOADED'
-    | 'ACKNOWLEDGED';
+    | 'ACKNOWLEDGED' | 'REVOKED';
 
 export async function logActivity(data: {
     workspaceId: string;
