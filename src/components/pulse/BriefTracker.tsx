@@ -78,17 +78,23 @@ export default function BriefTracker({ workspaceId }: { workspaceId: string }) {
     const [scope, setScope] = useState<'firm' | 'mine'>('firm');
     const [rows, setRows] = useState<BriefTrackerRow[] | null>(null);
     const [loading, setLoading] = useState(true);
+    const [loadError, setLoadError] = useState<string | null>(null);
     const [query, setQuery] = useState('');
 
     const load = useCallback(async () => {
         setLoading(true);
-        const board = await getBriefTrackerBoard(workspaceId, scope);
-        setRows(board);
-        setLoading(false);
+        setLoadError(null);
+        try {
+            const board = await getBriefTrackerBoard(workspaceId, scope);
+            setRows(board);
+        } catch {
+            setLoadError('Could not load the tracker — please try again.');
+        } finally {
+            setLoading(false);
+        }
     }, [workspaceId, scope]);
 
     // Standard fetch-on-mount/on-scope-change pattern; setState inside load() is intentional.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     useEffect(() => { load(); }, [load]);
 
     const filtered = useMemo(() => {
@@ -145,11 +151,25 @@ export default function BriefTracker({ workspaceId }: { workspaceId: string }) {
             </div>
 
             {loading && <p style={{ fontSize: '0.8rem', color: '#9ca3af' }}>Loading…</p>}
-            {!loading && filtered.length === 0 && (
+            {!loading && loadError && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                    <p style={{ fontSize: '0.8rem', color: '#b91c1c', margin: 0 }}>{loadError}</p>
+                    <button
+                        onClick={load}
+                        style={{
+                            padding: '0.3rem 0.8rem', borderRadius: 6, border: '1px solid #e5e7eb',
+                            background: '#fff', color: '#374151', fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer',
+                        }}
+                    >
+                        Retry
+                    </button>
+                </div>
+            )}
+            {!loading && !loadError && filtered.length === 0 && (
                 <p style={{ fontSize: '0.8rem', color: '#9ca3af' }}>No briefs match.</p>
             )}
 
-            {!loading && filtered.length > 0 && (
+            {!loading && !loadError && filtered.length > 0 && (
                 <div style={{ border: '1px solid #e5e7eb', borderRadius: 10, overflow: 'hidden', background: '#fff' }}>
                     <div style={{
                         display: 'grid', gridTemplateColumns: 'minmax(180px, 1.1fr) 1.4fr 1.4fr',

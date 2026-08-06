@@ -315,39 +315,46 @@ export default function AgentBoard({ workspaceId, agentType }: { workspaceId: st
     const [scope, setScope] = useState<'firm' | 'mine'>('firm');
     const [rows, setRows] = useState<BoardRow[] | null>(null);
     const [loading, setLoading] = useState(true);
+    const [loadError, setLoadError] = useState<string | null>(null);
     const [bulkChecking, setBulkChecking] = useState(false);
     const [bulkSummary, setBulkSummary] = useState<string | null>(null);
 
     const load = useCallback(async () => {
         setLoading(true);
-        if (agentType === 'brief_manager') {
-            const board: BriefBoardRow[] = await getBriefManagerBoard(workspaceId, scope);
-            setRows(board.map(b => ({
-                briefId: b.id,
-                briefName: b.name,
-                client: b.client,
-                lawyerInCharge: b.lawyerInCharge,
-                insightId: b.insight?.id ?? null,
-                summary: b.insight?.summary ?? null,
-                data: (b.insight?.data as AgentInsightData) ?? {},
-                messages: (b.insight?.messages as unknown as ChatMessage[]) ?? [],
-                checking: false,
-            })));
-        } else {
-            const insights = await getOpenAgentInsights(workspaceId, agentType);
-            setRows(insights.map(i => ({
-                briefId: i.briefId,
-                briefName: i.brief?.name ?? i.title,
-                client: null,
-                lawyerInCharge: null,
-                insightId: i.id,
-                summary: i.summary,
-                data: (i.data as AgentInsightData) ?? {},
-                messages: (i.messages as unknown as ChatMessage[]) ?? [],
-                checking: false,
-            })));
+        setLoadError(null);
+        try {
+            if (agentType === 'brief_manager') {
+                const board: BriefBoardRow[] = await getBriefManagerBoard(workspaceId, scope);
+                setRows(board.map(b => ({
+                    briefId: b.id,
+                    briefName: b.name,
+                    client: b.client,
+                    lawyerInCharge: b.lawyerInCharge,
+                    insightId: b.insight?.id ?? null,
+                    summary: b.insight?.summary ?? null,
+                    data: (b.insight?.data as AgentInsightData) ?? {},
+                    messages: (b.insight?.messages as unknown as ChatMessage[]) ?? [],
+                    checking: false,
+                })));
+            } else {
+                const insights = await getOpenAgentInsights(workspaceId, agentType);
+                setRows(insights.map(i => ({
+                    briefId: i.briefId,
+                    briefName: i.brief?.name ?? i.title,
+                    client: null,
+                    lawyerInCharge: null,
+                    insightId: i.id,
+                    summary: i.summary,
+                    data: (i.data as AgentInsightData) ?? {},
+                    messages: (i.messages as unknown as ChatMessage[]) ?? [],
+                    checking: false,
+                })));
+            }
+        } catch {
+            setLoadError('Could not load this board — please try again.');
+        } finally {
+            setLoading(false);
         }
-        setLoading(false);
     }, [workspaceId, agentType, scope]);
 
     // Standard fetch-on-mount/on-scope-change pattern; setState inside load() is intentional.
@@ -422,7 +429,21 @@ export default function AgentBoard({ workspaceId, agentType }: { workspaceId: st
             )}
 
             {loading && <p style={{ fontSize: '0.8rem', color: '#9ca3af' }}>Loading…</p>}
-            {!loading && rows?.length === 0 && (
+            {!loading && loadError && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                    <p style={{ fontSize: '0.8rem', color: '#b91c1c', margin: 0 }}>{loadError}</p>
+                    <button
+                        onClick={load}
+                        style={{
+                            padding: '0.3rem 0.8rem', borderRadius: 6, border: '1px solid #e5e7eb',
+                            background: '#fff', color: '#374151', fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer',
+                        }}
+                    >
+                        Retry
+                    </button>
+                </div>
+            )}
+            {!loading && !loadError && rows?.length === 0 && (
                 <p style={{ fontSize: '0.8rem', color: '#9ca3af' }}>
                     {agentType === 'brief_manager' ? 'No active briefs in scope.' : 'Nothing needs attention right now.'}
                 </p>
