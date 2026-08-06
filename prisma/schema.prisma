@@ -205,6 +205,7 @@ model User {
   createdWorkEntries           WorkEntry[]            @relation("WorkEntryCreator")
   pulseEventAssignments        PulseEvent[]           @relation("PulseEventAssignee")
   createdIngestionSessions     IngestionSession[]     @relation("IngestionSessionCreator")
+  manualBriefStatusUpdates     Brief[]                @relation("BriefManualStatusUpdater")
 
   // Personal theme overrides
   themeSource          String?  @default("workspace")
@@ -543,6 +544,11 @@ model Brief {
   aiSummaryProse      String?
   aiSummaryChronology Json?
   aiSummaryGeneratedAt DateTime?
+  manualStatus          String?
+  manualNextAction      String?
+  manualStatusUpdatedAt DateTime?
+  manualStatusUpdatedById String?
+  manualStatusUpdatedBy  User?              @relation("BriefManualStatusUpdater", fields: [manualStatusUpdatedById], references: [id])
   parentBrief         Brief?               @relation("BriefHierarchy", fields: [parentBriefId], references: [id])
   subBriefs           Brief[]              @relation("BriefHierarchy")
   client              Client?              @relation(fields: [clientId], references: [id])

@@ -27,6 +27,7 @@ import PendingQuestionsPanel from './PendingQuestionsPanel';
 import AnomalyPanel from './AnomalyPanel';
 import BriefAgentPanel from '@/components/pulse/BriefAgentPanel';
 import AgentBoard from '@/components/pulse/AgentBoard';
+import BriefManagerBoard from '@/components/pulse/BriefManagerBoard';
 import MyBriefsGrid from './MyBriefsGrid';
 import DailyWorkLogPanel from './DailyWorkLogPanel';
 import FirmWorkLogBoard from './FirmWorkLogBoard';
@@ -165,7 +166,11 @@ export default function PulseClient({
     if (agent && VALID_AGENT_TYPES.has(agent)) {
         return (
             <div style={{ padding: isMobile ? '1rem' : '1.5rem 2rem', maxWidth: 900, margin: '0 auto' }}>
-                <AgentBoard workspaceId={workspaceId} agentType={agent} />
+                {agent === 'brief_manager' ? (
+                    <BriefManagerBoard workspaceId={workspaceId} />
+                ) : (
+                    <AgentBoard workspaceId={workspaceId} agentType={agent} />
+                )}
             </div>
         );
     }
