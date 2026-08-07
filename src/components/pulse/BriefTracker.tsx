@@ -2,74 +2,127 @@
 
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import Link from 'next/link';
-import { Search, ClipboardList } from 'lucide-react';
+import { Search, ClipboardList, Check } from 'lucide-react';
 import { getBriefTrackerBoard, updateBriefTracker, type BriefTrackerRow } from '@/app/actions/brief-tracker';
 
 function formatUpdatedAt(date: Date | string | null): string {
     if (!date) return '';
     const d = new Date(date);
-    return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+    return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) +
+        ' at ' + d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
 }
 
-function TrackerCell({
-    briefId,
-    field,
-    value,
-    placeholder,
+function TrackerRow({
+    row,
     onSaved,
 }: {
-    briefId: string;
-    field: 'manualStatus' | 'manualNextAction';
-    value: string | null;
-    placeholder: string;
-    onSaved: (meta: { manualStatusUpdatedAt: Date | null; manualStatusUpdatedBy: string | null }) => void;
+    row: BriefTrackerRow;
+    onSaved: (id: string, patch: Partial<BriefTrackerRow>) => void;
 }) {
-    const [text, setText] = useState(value ?? '');
+    const [status, setStatus] = useState(row.manualStatus ?? '');
+    const [nextAction, setNextAction] = useState(row.manualNextAction ?? '');
     const [saving, setSaving] = useState(false);
-    const [savedFlash, setSavedFlash] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
-    useEffect(() => setText(value ?? ''), [value]);
+    useEffect(() => { setStatus(row.manualStatus ?? ''); }, [row.manualStatus]);
+    useEffect(() => { setNextAction(row.manualNextAction ?? ''); }, [row.manualNextAction]);
+
+    const dirty = status !== (row.manualStatus ?? '') || nextAction !== (row.manualNextAction ?? '');
 
     const save = async () => {
-        if (text === (value ?? '')) return;
+        if (!dirty || saving) return;
         setSaving(true);
+        setError(null);
         try {
-            const result = await updateBriefTracker(briefId, { [field]: text });
+            const result = await updateBriefTracker(row.id, { manualStatus: status, manualNextAction: nextAction });
             if (result.success) {
-                onSaved({ manualStatusUpdatedAt: result.manualStatusUpdatedAt ?? null, manualStatusUpdatedBy: result.manualStatusUpdatedBy ?? null });
-                setSavedFlash(true);
-                setTimeout(() => setSavedFlash(false), 1500);
+                onSaved(row.id, {
+                    manualStatus: status,
+                    manualNextAction: nextAction,
+                    manualStatusUpdatedAt: result.manualStatusUpdatedAt ?? null,
+                    manualStatusUpdatedBy: result.manualStatusUpdatedBy ?? null,
+                });
+            } else {
+                setError(result.error ?? 'Could not save');
             }
+        } catch {
+            setError('Could not save');
         } finally {
             setSaving(false);
         }
     };
 
+    const textareaStyle = (focused: boolean): React.CSSProperties => ({
+        width: '100%', fontSize: '0.78rem', lineHeight: 1.5, color: '#1f2937',
+        border: `1px solid ${focused ? '#0d9488' : '#e5e7eb'}`, borderRadius: 6, padding: '0.4rem 0.5rem',
+        resize: 'vertical', fontFamily: 'inherit', background: '#fff',
+        outline: 'none', minHeight: '2.6rem',
+    });
+
     return (
-        <div style={{ position: 'relative' }}>
-            <textarea
-                value={text}
-                onChange={e => setText(e.target.value)}
-                onBlur={save}
-                placeholder={placeholder}
-                rows={2}
-                style={{
-                    width: '100%', fontSize: '0.78rem', lineHeight: 1.5, color: '#1f2937',
-                    border: '1px solid transparent', borderRadius: 6, padding: '0.4rem 0.5rem',
-                    resize: 'vertical', fontFamily: 'inherit', background: 'transparent',
-                    outline: 'none', minHeight: '2.6rem',
-                }}
-                onFocus={e => { e.currentTarget.style.border = '1px solid #0d9488'; e.currentTarget.style.background = '#fff'; }}
-                onBlurCapture={e => { e.currentTarget.style.border = '1px solid transparent'; e.currentTarget.style.background = 'transparent'; }}
-            />
-            {(saving || savedFlash) && (
-                <span style={{
-                    position: 'absolute', top: 2, right: 4, fontSize: '0.62rem', fontWeight: 600,
-                    color: saving ? '#9ca3af' : '#0d9488',
-                }}>
-                    {saving ? 'Saving…' : 'Saved'}
-                </span>
-            )}
+        <div style={{
+            display: 'grid', gridTemplateColumns: 'minmax(180px, 1.1fr) 1.3fr 1.3fr minmax(150px, 0.85fr)',
+            borderBottom: '1px solid #f3f4f6',
+        }}>
+            <div style={{ padding: '0.6rem 0.75rem', minWidth: 0 }}>
+                <Link href={`/briefs/${row.id}`} style={{ fontSize: '0.8rem', fontWeight: 600, color: '#111827', textDecoration: 'none' }}>
+                    {row.name}
+                </Link>
+                <div style={{ fontSize: '0.68rem', color: '#9ca3af', marginTop: 2 }}>
+                    {row.briefNumber}{row.client ? ` · ${row.client}` : ''}
+                </div>
+                {row.lawyerInCharge && (
+                    <div style={{ fontSize: '0.68rem', color: '#9ca3af' }}>{row.lawyerInCharge}</div>
+                )}
+            </div>
+            <div style={{ padding: '0.4rem', borderLeft: '1px solid #f3f4f6' }}>
+                <textarea
+                    value={status}
+                    onChange={e => setStatus(e.target.value)}
+                    placeholder="What's the status / last action?"
+                    rows={2}
+                    style={textareaStyle(false)}
+                    onFocus={e => { e.currentTarget.style.borderColor = '#0d9488'; }}
+                    onBlur={e => { e.currentTarget.style.borderColor = '#e5e7eb'; }}
+                />
+            </div>
+            <div style={{ padding: '0.4rem', borderLeft: '1px solid #f3f4f6' }}>
+                <textarea
+                    value={nextAction}
+                    onChange={e => setNextAction(e.target.value)}
+                    placeholder="What happens next?"
+                    rows={2}
+                    style={textareaStyle(false)}
+                    onFocus={e => { e.currentTarget.style.borderColor = '#0d9488'; }}
+                    onBlur={e => { e.currentTarget.style.borderColor = '#e5e7eb'; }}
+                />
+            </div>
+            <div style={{
+                padding: '0.5rem 0.6rem', borderLeft: '1px solid #f3f4f6',
+                display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '0.35rem',
+            }}>
+                <button
+                    onClick={save}
+                    disabled={!dirty || saving}
+                    style={{
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px',
+                        padding: '0.35rem 0.7rem', borderRadius: 6, border: 'none',
+                        background: !dirty ? '#f3f4f6' : saving ? '#5eead4' : '#0d9488',
+                        color: !dirty ? '#9ca3af' : '#fff',
+                        fontSize: '0.72rem', fontWeight: 600,
+                        cursor: dirty && !saving ? 'pointer' : 'default',
+                    }}
+                >
+                    {saving ? 'Saving…' : dirty ? 'Save' : <><Check size={12} /> Saved</>}
+                </button>
+                {error && <span style={{ fontSize: '0.64rem', color: '#b91c1c' }}>{error}</span>}
+                {row.manualStatusUpdatedAt && (
+                    <div style={{ fontSize: '0.64rem', color: '#9ca3af', lineHeight: 1.4 }}>
+                        Last updated {formatUpdatedAt(row.manualStatusUpdatedAt)}
+                        {row.manualStatusUpdatedBy ? <><br />by {row.manualStatusUpdatedBy}</> : null}
+                    </div>
+                )}
+            </div>
         </div>
     );
 }
@@ -108,8 +161,8 @@ export default function BriefTracker({ workspaceId }: { workspaceId: string }) {
         );
     }, [rows, query]);
 
-    const patchRow = (id: string, meta: { manualStatusUpdatedAt: Date | null; manualStatusUpdatedBy: string | null }) => {
-        setRows(prev => prev?.map(r => r.id === id ? { ...r, ...meta } : r) ?? prev);
+    const patchRow = (id: string, patch: Partial<BriefTrackerRow>) => {
+        setRows(prev => prev?.map(r => r.id === id ? { ...r, ...patch } : r) ?? prev);
     };
 
     return (
@@ -172,55 +225,17 @@ export default function BriefTracker({ workspaceId }: { workspaceId: string }) {
             {!loading && !loadError && filtered.length > 0 && (
                 <div style={{ border: '1px solid #e5e7eb', borderRadius: 10, overflow: 'hidden', background: '#fff' }}>
                     <div style={{
-                        display: 'grid', gridTemplateColumns: 'minmax(180px, 1.1fr) 1.4fr 1.4fr',
+                        display: 'grid', gridTemplateColumns: 'minmax(180px, 1.1fr) 1.3fr 1.3fr minmax(150px, 0.85fr)',
                         background: '#f8fafc', borderBottom: '1px solid #e5e7eb',
                     }}>
-                        {['Brief', 'Status / Last Action', 'Next Action / Possible Actions'].map(h => (
-                            <div key={h} style={{ padding: '0.55rem 0.75rem', fontSize: '0.68rem', fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.03em' }}>
+                        {['Brief', 'Status / Last Action', 'Next Action / Possible Actions', ''].map((h, i) => (
+                            <div key={i} style={{ padding: '0.55rem 0.75rem', fontSize: '0.68rem', fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.03em' }}>
                                 {h}
                             </div>
                         ))}
                     </div>
                     {filtered.map(row => (
-                        <div key={row.id} style={{
-                            display: 'grid', gridTemplateColumns: 'minmax(180px, 1.1fr) 1.4fr 1.4fr',
-                            borderBottom: '1px solid #f3f4f6',
-                        }}>
-                            <div style={{ padding: '0.6rem 0.75rem', minWidth: 0 }}>
-                                <Link href={`/briefs/${row.id}`} style={{ fontSize: '0.8rem', fontWeight: 600, color: '#111827', textDecoration: 'none' }}>
-                                    {row.name}
-                                </Link>
-                                <div style={{ fontSize: '0.68rem', color: '#9ca3af', marginTop: 2 }}>
-                                    {row.briefNumber}{row.client ? ` · ${row.client}` : ''}
-                                </div>
-                                {row.lawyerInCharge && (
-                                    <div style={{ fontSize: '0.68rem', color: '#9ca3af' }}>{row.lawyerInCharge}</div>
-                                )}
-                                {row.manualStatusUpdatedAt && (
-                                    <div style={{ fontSize: '0.64rem', color: '#c4c9d1', marginTop: 4 }}>
-                                        Updated {formatUpdatedAt(row.manualStatusUpdatedAt)}{row.manualStatusUpdatedBy ? ` by ${row.manualStatusUpdatedBy}` : ''}
-                                    </div>
-                                )}
-                            </div>
-                            <div style={{ padding: '0.3rem 0.4rem', borderLeft: '1px solid #f3f4f6' }}>
-                                <TrackerCell
-                                    briefId={row.id}
-                                    field="manualStatus"
-                                    value={row.manualStatus}
-                                    placeholder="What's the status / last action?"
-                                    onSaved={meta => patchRow(row.id, meta)}
-                                />
-                            </div>
-                            <div style={{ padding: '0.3rem 0.4rem', borderLeft: '1px solid #f3f4f6' }}>
-                                <TrackerCell
-                                    briefId={row.id}
-                                    field="manualNextAction"
-                                    value={row.manualNextAction}
-                                    placeholder="What happens next?"
-                                    onSaved={meta => patchRow(row.id, meta)}
-                                />
-                            </div>
-                        </div>
+                        <TrackerRow key={row.id} row={row} onSaved={patchRow} />
                     ))}
                 </div>
             )}
