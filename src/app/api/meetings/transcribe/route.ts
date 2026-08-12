@@ -5,13 +5,13 @@ import { requireAuth } from '@/lib/auth-utils';
 type TranscribeRequest = {
     recordingId?: string;
     transcriptText?: string;
-    summary?: string;
-    actionItems?: string | null;
 };
 
 /**
- * Temporary transcribe endpoint.
- * Keeps API contract stable for clients expecting /api/meetings/transcribe.
+ * Accepts a transcript for a previously-uploaded MeetingRecording.
+ * Nothing calls the transcription API yet — this just persists a transcript
+ * once one exists. Wiring Whisper (or another provider) to call this
+ * automatically is a follow-on step.
  */
 export async function POST(request: Request) {
     try {
@@ -23,7 +23,7 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'recordingId is required' }, { status: 400 });
         }
 
-        const existing = await (prisma as any).meetingRecording.findUnique({
+        const existing = await prisma.meetingRecording.findUnique({
             where: { id: recordingId },
             select: { id: true },
         });
@@ -32,22 +32,14 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'Recording not found' }, { status: 404 });
         }
 
-        // If explicit transcript payload is provided by an external worker,
-        // persist it. Otherwise return processing to preserve backward compatibility.
-        if (body.transcriptText || body.summary || body.actionItems !== undefined) {
-            const updated = await (prisma as any).meetingRecording.update({
+        if (body.transcriptText) {
+            const updated = await prisma.meetingRecording.update({
                 where: { id: recordingId },
                 data: {
-                    transcriptText: body.transcriptText ?? undefined,
-                    summary: body.summary ?? undefined,
-                    actionItems: body.actionItems ?? undefined,
+                    transcriptText: body.transcriptText,
+                    transcriptStatus: 'completed',
                 },
-                select: {
-                    id: true,
-                    transcriptText: true,
-                    summary: true,
-                    actionItems: true,
-                },
+                select: { id: true, transcriptText: true, transcriptStatus: true },
             });
 
             return NextResponse.json({ success: true, status: 'completed', data: updated });
@@ -56,11 +48,11 @@ export async function POST(request: Request) {
         return NextResponse.json({
             success: true,
             status: 'processing',
-            message: 'Transcription job accepted.',
+            message: 'No transcript provided yet.',
         });
-    } catch (error: any) {
+    } catch (error) {
         console.error('Error in transcribe route:', error);
-        if (String(error?.message || '').toLowerCase().includes('unauthorized')) {
+        if (error instanceof Error && error.message.toLowerCase().includes('unauthorized')) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
         return NextResponse.json({ error: 'Failed to process transcription' }, { status: 500 });

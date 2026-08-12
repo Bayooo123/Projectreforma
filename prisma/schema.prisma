@@ -206,6 +206,7 @@ model User {
   pulseEventAssignments        PulseEvent[]           @relation("PulseEventAssignee")
   createdIngestionSessions     IngestionSession[]     @relation("IngestionSessionCreator")
   manualBriefStatusUpdates     Brief[]                @relation("BriefManualStatusUpdater")
+  createdMeetingRecordings     MeetingRecording[]     @relation("MeetingRecordingCreator")
 
   // Personal theme overrides
   themeSource          String?  @default("workspace")
@@ -454,6 +455,7 @@ model CalendarEntry {
   scheduledNotifications ScheduledNotification[]
   appearances            User[]                  @relation("CalendarAppearances")
   matterQuestions        MatterQuestion[]
+  recordings             MeetingRecording[]
 
   @@index([briefId], map: "CourtDate_briefId_idx")
   @@index([clientId], map: "CourtDate_clientId_idx")
@@ -1529,4 +1531,26 @@ model IngestionCandidate {
 
   @@index([sessionId, status])
   @@index([workspaceId, status])
+}
+
+// ── Meeting recording (Meetings & Calendar) ─────────────────────────────────
+// A recording captured against a specific CalendarEntry (type: MEETING) — the
+// "each day you can record a meeting, save it, and pull out the transcript"
+// feature. Transcription is a follow-on step (Whisper API): transcriptStatus
+// stays 'pending' until that's wired in, this pass only captures and stores
+// the audio.
+model MeetingRecording {
+  id               String    @id @default(cuid())
+  calendarEntryId  String
+  audioUrl         String
+  durationSeconds  Int?
+  transcriptStatus String    @default("pending") // pending | processing | completed | failed
+  transcriptText   String?
+  createdById      String
+  createdAt        DateTime  @default(now())
+
+  calendarEntry    CalendarEntry @relation(fields: [calendarEntryId], references: [id], onDelete: Cascade)
+  createdBy        User          @relation("MeetingRecordingCreator", fields: [createdById], references: [id])
+
+  @@index([calendarEntryId])
 }

@@ -1,11 +1,12 @@
 "use client";
 
 import { useState } from 'react';
-import { X, Calendar, MapPin, Users, FileText, Loader, Trash2 } from 'lucide-react';
+import { X, Calendar, MapPin, Users, FileText, Loader, Trash2, Mic } from 'lucide-react';
 import styles from './EventModal.module.css';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import { CalendarEvent } from '@/types/legal';
 import { deleteCalendarEntry } from '@/app/actions/calendar-events';
+import MeetingRecorder from './MeetingRecorder';
 
 const SPECIAL_DELETE_EMAIL = 'bayo@abiolasanniandco.com';
 
@@ -122,6 +123,11 @@ export default function MeetingEventModal({ isOpen, onClose, event, userId, user
                         <div className={styles.notesBox}>
                             {event.agenda || event.description || event.proceedings || 'No notes available.'}
                         </div>
+                    </div>
+
+                    <div className={styles.section}>
+                        <h3 className={styles.sectionTitle}><Mic size={16} /> Recording</h3>
+                        <MeetingRecorder calendarEntryId={event.id} />
                     </div>
                 </div>
 

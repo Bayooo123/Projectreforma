@@ -18,7 +18,7 @@ function getSystemRole(role: string): string {
     return 'member';
 }
 
-async function getMembershipForCalendarEntry(entryId: string, userId: string) {
+export async function getMembershipForCalendarEntry(entryId: string, userId: string) {
     const entry = await prisma.calendarEntry.findUnique({
         where: { id: entryId },
         select: {
