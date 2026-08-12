@@ -10,7 +10,7 @@ function normalisePhone(raw: string): string {
     return raw.replace(/\D/g, '');
 }
 
-async function resolveUser(fromNumber: string): Promise<{ userId: string; userName: string; workspaceId: string; firmName: string } | null> {
+export async function resolveUser(fromNumber: string): Promise<{ userId: string; userName: string; workspaceId: string; firmName: string } | null> {
     const normalised = normalisePhone(fromNumber);
 
     // Try exact match first, then without country code prefix variants

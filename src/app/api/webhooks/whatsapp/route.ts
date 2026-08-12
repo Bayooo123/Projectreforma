@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { after } from 'next/server';
 import { config } from '@/lib/config';
 import { handleWhatsAppMessage } from '@/lib/agents/whatsapp';
+import { handleWhatsAppDocument, type IncomingWhatsAppDocument } from '@/lib/agents/whatsapp/documents';
 
 // ── GET: Meta webhook verification challenge ─────────────────────────────────
 export async function GET(req: NextRequest) {
@@ -33,33 +34,60 @@ export async function POST(req: NextRequest) {
     }
 
     // Extract messages from the Meta payload
-    type WaMsg = { from: string; type: string; text?: { body: string } };
+    type WaMedia = { id: string; mime_type: string; caption?: string; filename?: string };
+    type WaMsg = { from: string; type: string; text?: { body: string }; document?: WaMedia; image?: WaMedia };
     type WaChange = { value: { messages?: WaMsg[] } };
     type WaEntry = { changes: WaChange[] };
     const entries = (body.entry as WaEntry[]) ?? [];
 
-    const incoming: Array<{ from: string; text: string }> = [];
+    const incomingText: Array<{ from: string; text: string }> = [];
+    const incomingDocs: IncomingWhatsAppDocument[] = [];
+
     for (const entry of entries) {
         for (const change of entry.changes ?? []) {
             for (const msg of change.value?.messages ?? []) {
                 if (msg.type === 'text' && msg.text?.body) {
-                    incoming.push({ from: msg.from, text: msg.text.body.trim() });
+                    incomingText.push({ from: msg.from, text: msg.text.body.trim() });
+                } else if (msg.type === 'document' && msg.document) {
+                    incomingDocs.push({
+                        from: msg.from,
+                        mediaId: msg.document.id,
+                        filename: msg.document.filename || `document-${Date.now()}`,
+                        mimeType: msg.document.mime_type,
+                        caption: msg.document.caption,
+                    });
+                } else if (msg.type === 'image' && msg.image) {
+                    const ext = msg.image.mime_type.split('/')[1] || 'jpg';
+                    incomingDocs.push({
+                        from: msg.from,
+                        mediaId: msg.image.id,
+                        filename: `photo-${Date.now()}.${ext}`,
+                        mimeType: msg.image.mime_type,
+                        caption: msg.image.caption,
+                    });
                 }
             }
         }
     }
 
-    if (incoming.length === 0) {
+    if (incomingText.length === 0 && incomingDocs.length === 0) {
         return NextResponse.json({ ok: true });
     }
 
     // Process messages after returning 200 — Meta requires fast acknowledgement
     after(async () => {
-        for (const { from, text } of incoming) {
+        for (const { from, text } of incomingText) {
             try {
                 await handleWhatsAppMessage(from, text);
             } catch (err) {
                 console.error('[WhatsApp] Unhandled error for', from, err);
+            }
+        }
+        for (const doc of incomingDocs) {
+            try {
+                await handleWhatsAppDocument(doc);
+            } catch (err) {
+                console.error('[WhatsApp] Unhandled document error for', doc.from, err);
             }
         }
     });

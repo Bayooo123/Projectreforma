@@ -26,8 +26,7 @@ import { after } from 'next/server';
 import {
     classifyEmailIntent,
     identifyBriefFromContent,
-    type BriefCandidate,
-    type MatterCandidate,
+    getBriefRoutingCandidates,
 } from '@/lib/services/email-processor';
 import { addBriefActivity } from '@/lib/briefs';
 import { executeIntentActions } from '@/lib/institutional-memory/actions';
@@ -281,26 +280,7 @@ export async function ingestInboundEmail(input: InboundEmailInput): Promise<Inbo
     let routingMethod = brief ? (knownBriefId ? 'Direct Match (caller-resolved)' : 'Direct Match (ID)') : 'Unrouted';
 
     if (!brief) {
-        const [briefCandidates, matterCandidates] = await Promise.all([
-            prisma.brief.findMany({
-                where: { status: 'active', workspaceId },
-                take: 50,
-                orderBy: { updatedAt: 'desc' },
-                select: { id: true, name: true, briefNumber: true, client: { select: { name: true } } },
-            }),
-            prisma.matter.findMany({
-                where: { workspaceId, deletedAt: null, status: { notIn: ['closed', 'archived'] } },
-                orderBy: { updatedAt: 'desc' },
-                select: { id: true, name: true, caseNumber: true, status: true },
-            }),
-        ]);
-
-        const briefList: BriefCandidate[] = briefCandidates.map(b => ({
-            id: b.id, name: b.name, briefNumber: b.briefNumber, clientName: b.client?.name || 'No Client',
-        }));
-        const matterList: MatterCandidate[] = matterCandidates.map(m => ({
-            id: m.id, name: m.name, caseNumber: m.caseNumber, status: m.status,
-        }));
+        const { briefs: briefList, matters: matterList } = await getBriefRoutingCandidates(workspaceId);
 
         const identification = await identifyBriefFromContent(subject, body, briefList, matterList);
         routingMethod = `AI Routing (${Math.round(identification.confidence * 100)}%): ${identification.reasoning}`;

@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { config } from '@/lib/config';
+import { prisma } from '@/lib/prisma';
 
 export interface EmailAnalysis {
     summary: string;
@@ -20,6 +21,38 @@ export interface MatterCandidate {
     name: string;
     caseNumber: string | null;
     status: string;
+}
+
+// The candidate pool identifyBriefFromContent() picks from — shared by every
+// inbound channel that needs to guess which brief a piece of content belongs
+// to (email today, WhatsApp documents too) so they all route against the
+// same active-briefs/open-matters snapshot rather than drifting apart.
+export async function getBriefRoutingCandidates(workspaceId: string): Promise<{
+    briefs: BriefCandidate[];
+    matters: MatterCandidate[];
+}> {
+    const [briefCandidates, matterCandidates] = await Promise.all([
+        prisma.brief.findMany({
+            where: { status: 'active', workspaceId },
+            take: 50,
+            orderBy: { updatedAt: 'desc' },
+            select: { id: true, name: true, briefNumber: true, client: { select: { name: true } } },
+        }),
+        prisma.matter.findMany({
+            where: { workspaceId, deletedAt: null, status: { notIn: ['closed', 'archived'] } },
+            orderBy: { updatedAt: 'desc' },
+            select: { id: true, name: true, caseNumber: true, status: true },
+        }),
+    ]);
+
+    return {
+        briefs: briefCandidates.map(b => ({
+            id: b.id, name: b.name, briefNumber: b.briefNumber, clientName: b.client?.name || 'No Client',
+        })),
+        matters: matterCandidates.map(m => ({
+            id: m.id, name: m.name, caseNumber: m.caseNumber, status: m.status,
+        })),
+    };
 }
 
 function getClient(): Anthropic | null {
