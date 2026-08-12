@@ -116,10 +116,45 @@
     background-color: var(--background);
 }
 
+.dayCellHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
 .dayNumber {
     font-size: 0.9rem;
     font-weight: 600;
     color: var(--text-secondary);
+}
+
+.recordDayBtn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: none;
+    background: transparent;
+    color: var(--text-tertiary);
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.15s, background-color 0.15s, color 0.15s;
+}
+
+.dayCell:hover .recordDayBtn {
+    opacity: 1;
+}
+
+.recordDayBtn:hover {
+    background-color: #fef2f2;
+    color: #dc2626;
+}
+
+:global(.dark) .recordDayBtn:hover {
+    background-color: rgba(220, 38, 38, 0.2);
+    color: #fca5a5;
 }
 
 .todayNumber {

@@ -2,8 +2,9 @@
 
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import Link from 'next/link';
-import { Search, ClipboardList, Check } from 'lucide-react';
+import { Search, ClipboardList, Check, Mic } from 'lucide-react';
 import { getBriefTrackerBoard, updateBriefTracker, type BriefTrackerRow } from '@/app/actions/brief-tracker';
+import QuickRecordModal from '@/components/calendar/QuickRecordModal';
 
 function formatUpdatedAt(date: Date | string | null): string {
     if (!date) return '';
@@ -15,9 +16,11 @@ function formatUpdatedAt(date: Date | string | null): string {
 function TrackerRow({
     row,
     onSaved,
+    onRecord,
 }: {
     row: BriefTrackerRow;
     onSaved: (id: string, patch: Partial<BriefTrackerRow>) => void;
+    onRecord: (row: BriefTrackerRow) => void;
 }) {
     const [status, setStatus] = useState(row.manualStatus ?? '');
     const [nextAction, setNextAction] = useState(row.manualNextAction ?? '');
@@ -101,20 +104,34 @@ function TrackerRow({
                 padding: '0.5rem 0.6rem', borderLeft: '1px solid #f3f4f6',
                 display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '0.35rem',
             }}>
-                <button
-                    onClick={save}
-                    disabled={!dirty || saving}
-                    style={{
-                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px',
-                        padding: '0.35rem 0.7rem', borderRadius: 6, border: 'none',
-                        background: !dirty ? '#f3f4f6' : saving ? '#5eead4' : '#0d9488',
-                        color: !dirty ? '#9ca3af' : '#fff',
-                        fontSize: '0.72rem', fontWeight: 600,
-                        cursor: dirty && !saving ? 'pointer' : 'default',
-                    }}
-                >
-                    {saving ? 'Saving…' : dirty ? 'Save' : <><Check size={12} /> Saved</>}
-                </button>
+                <div style={{ display: 'flex', gap: '0.35rem' }}>
+                    <button
+                        onClick={save}
+                        disabled={!dirty || saving}
+                        style={{
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px',
+                            padding: '0.35rem 0.7rem', borderRadius: 6, border: 'none',
+                            background: !dirty ? '#f3f4f6' : saving ? '#5eead4' : '#0d9488',
+                            color: !dirty ? '#9ca3af' : '#fff',
+                            fontSize: '0.72rem', fontWeight: 600,
+                            cursor: dirty && !saving ? 'pointer' : 'default',
+                            flex: 1,
+                        }}
+                    >
+                        {saving ? 'Saving…' : dirty ? 'Save' : <><Check size={12} /> Saved</>}
+                    </button>
+                    <button
+                        onClick={() => onRecord(row)}
+                        title="Record meeting"
+                        style={{
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            width: 30, borderRadius: 6, border: '1px solid #fecaca',
+                            background: '#fef2f2', color: '#dc2626', cursor: 'pointer',
+                        }}
+                    >
+                        <Mic size={13} />
+                    </button>
+                </div>
                 {error && <span style={{ fontSize: '0.64rem', color: '#b91c1c' }}>{error}</span>}
                 {row.manualStatusUpdatedAt && (
                     <div style={{ fontSize: '0.64rem', color: '#9ca3af', lineHeight: 1.4 }}>
@@ -133,6 +150,7 @@ export default function BriefTracker({ workspaceId }: { workspaceId: string }) {
     const [loading, setLoading] = useState(true);
     const [loadError, setLoadError] = useState<string | null>(null);
     const [query, setQuery] = useState('');
+    const [recordingBrief, setRecordingBrief] = useState<{ id: string; name: string } | null>(null);
 
     const load = useCallback(async () => {
         setLoading(true);
@@ -235,10 +253,23 @@ export default function BriefTracker({ workspaceId }: { workspaceId: string }) {
                         ))}
                     </div>
                     {filtered.map(row => (
-                        <TrackerRow key={row.id} row={row} onSaved={patchRow} />
+                        <TrackerRow
+                            key={row.id}
+                            row={row}
+                            onSaved={patchRow}
+                            onRecord={r => setRecordingBrief({ id: r.id, name: r.name })}
+                        />
                     ))}
                 </div>
             )}
+
+            <QuickRecordModal
+                isOpen={!!recordingBrief}
+                onClose={() => setRecordingBrief(null)}
+                workspaceId={workspaceId}
+                briefId={recordingBrief?.id}
+                briefName={recordingBrief?.name}
+            />
         </div>
     );
 }

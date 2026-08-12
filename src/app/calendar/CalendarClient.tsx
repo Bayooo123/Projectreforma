@@ -8,6 +8,7 @@ import MeetingEventModal from '@/components/calendar/MeetingEventModal';
 import ScheduleMeetingModal from '@/components/calendar/ScheduleMeetingModal';
 import AddMatterModal from '@/components/calendar/AddMatterModal';
 import RecordProceedingModal from '@/components/calendar/RecordProceedingModal';
+import QuickRecordModal from '@/components/calendar/QuickRecordModal';
 import styles from './page.module.css';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import { Icon } from '@/components/mobile/MobileShared';
@@ -51,6 +52,7 @@ export default function CalendarClient({
     const [isAddMatterModalOpen, setIsAddMatterModalOpen] = useState(false);
     const [isScheduleMeetingModalOpen, setIsScheduleMeetingModalOpen] = useState(false);
     const [isRecordProceedingOpen, setIsRecordProceedingOpen] = useState(false);
+    const [quickRecordDate, setQuickRecordDate] = useState<Date | null>(null);
     const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
     // Filters
     const [searchQuery, setSearchQuery] = useState('');
@@ -83,6 +85,10 @@ export default function CalendarClient({
 
     const handleEventClick = (event: CalendarEvent) => {
         setSelectedEvent(event);
+    };
+
+    const handleRecordClick = (date: Date) => {
+        setQuickRecordDate(date);
     };
 
     const filteredEvents = events.filter(event => {
@@ -298,6 +304,7 @@ export default function CalendarClient({
                     currentDate={currentDate}
                     onDateChange={handleDateChange}
                     onEventClick={handleEventClick}
+                    onRecordClick={handleRecordClick}
                     isLoading={isLoading}
                 />
             </div>
@@ -358,6 +365,13 @@ export default function CalendarClient({
                 />
             )}
 
+            <QuickRecordModal
+                isOpen={!!quickRecordDate}
+                onClose={() => setQuickRecordDate(null)}
+                workspaceId={workspaceId}
+                date={quickRecordDate || undefined}
+                onCreated={handleRefresh}
+            />
         </div>
     );
 }

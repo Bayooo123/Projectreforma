@@ -302,6 +302,48 @@ export async function scheduleMeeting(input: {
     }
 }
 
+// Creates a bare-bones MEETING calendar entry anchored to a brief, purely so a
+// recording has somewhere to attach to. Used by the "Record meeting" shortcuts
+// on the calendar (pick a brief for a given date) and in the Brief Manager
+// (record straight from a brief row, date defaults to now). A CalendarEntry
+// with no matter/brief/client link is invisible to the rest of the app, so
+// briefId is required here rather than optional like scheduleMeeting's.
+export async function createQuickMeeting(input: {
+    workspaceId: string;
+    briefId: string;
+    date?: Date;
+    title?: string;
+}) {
+    try {
+        const user = await assertWorkspaceMembership(input.workspaceId);
+
+        const brief = await prisma.brief.findFirst({
+            where: { id: input.briefId, workspaceId: input.workspaceId, deletedAt: null },
+            select: { id: true, name: true, matterId: true },
+        });
+        if (!brief) {
+            return { success: false, error: 'Brief not found in this workspace' };
+        }
+
+        const entry = await prisma.calendarEntry.create({
+            data: {
+                title: input.title || `Recorded meeting — ${brief.name}`,
+                date: input.date || new Date(),
+                type: 'MEETING',
+                briefId: brief.id,
+                matterId: brief.matterId || null,
+                submittingLawyerId: user.id,
+            },
+        });
+
+        revalidatePath('/calendar');
+        return { success: true, data: entry };
+    } catch (error: any) {
+        console.error('createQuickMeeting failed:', error);
+        return { success: false, error: error?.message || 'Failed to create meeting' };
+    }
+}
+
 export async function adjournMatter(
     matterId: string,
     newDate: Date,

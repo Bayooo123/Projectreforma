@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from 'react';
-import { ChevronLeft, ChevronRight, Gavel, Loader, Users, MapPin, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Gavel, Loader, Users, MapPin, Mic, X } from 'lucide-react';
 import styles from './CalendarGrid.module.css';
 
 import { CalendarEvent } from '@/types/legal';
@@ -11,6 +11,7 @@ interface CalendarGridProps {
     currentDate: Date;
     onDateChange: (date: Date) => void;
     onEventClick: (event: CalendarEvent) => void;
+    onRecordClick?: (date: Date) => void;
     isLoading?: boolean;
 }
 
@@ -19,6 +20,7 @@ const CalendarGrid = ({
     currentDate,
     onDateChange,
     onEventClick,
+    onRecordClick,
     isLoading = false,
 }: CalendarGridProps) => {
     const [expandedDay, setExpandedDay] = useState<{ day: number; events: CalendarEvent[] } | null>(null);
@@ -150,9 +152,24 @@ const CalendarGrid = ({
                         >
                             {dayObj.type === 'day' && (
                                 <>
-                                    <span className={`${styles.dayNumber} ${new Date().toDateString() === new Date(currentDate.getFullYear(), currentDate.getMonth(), dayObj.value).toDateString() ? styles.todayNumber : ''}`}>
-                                        {dayObj.value}
-                                    </span>
+                                    <div className={styles.dayCellHeader}>
+                                        <span className={`${styles.dayNumber} ${new Date().toDateString() === new Date(currentDate.getFullYear(), currentDate.getMonth(), dayObj.value).toDateString() ? styles.todayNumber : ''}`}>
+                                            {dayObj.value}
+                                        </span>
+                                        {onRecordClick && (
+                                            <button
+                                                type="button"
+                                                className={styles.recordDayBtn}
+                                                title="Record meeting"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    onRecordClick(new Date(currentDate.getFullYear(), currentDate.getMonth(), dayObj.value));
+                                                }}
+                                            >
+                                                <Mic size={12} />
+                                            </button>
+                                        )}
+                                    </div>
                                     <div className={styles.eventList}>
                                         {(eventsByDay[dayObj.value] || []).slice(0, MAX_EVENTS_PER_DAY).map(renderEvent)}
                                         {(eventsByDay[dayObj.value] || []).length > MAX_EVENTS_PER_DAY && (
