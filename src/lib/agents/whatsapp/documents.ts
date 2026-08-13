@@ -5,6 +5,7 @@ import { sendWhatsAppMessage } from './send';
 import { identifyBriefFromContent, getBriefRoutingCandidates } from '@/lib/services/email-processor';
 import { ATTACHMENT_ALLOWED_TYPES, MAX_ATTACHMENT_BYTES } from '@/lib/services/email-ingestion';
 import { addBriefActivity } from '@/lib/briefs';
+import { recordFiledAttachment, recordPendingAttachment } from '@/lib/services/inbox-attachments';
 
 export interface IncomingWhatsAppDocument {
     from: string;
@@ -15,11 +16,14 @@ export interface IncomingWhatsAppDocument {
 }
 
 // Send a document (or photo) to the firm's WhatsApp number and it gets filed
-// under the right brief automatically — reuses the same AI brief-matching and
-// OCR ingestion pipeline email attachments already go through. Routing is
-// caption-driven the same way email routing is subject-driven: if the AI
-// can't tell which case it belongs to, we ask the sender to resend with the
-// case name/number in the caption rather than guessing wrong.
+// under the right brief — reuses the same AI brief-matching and OCR
+// ingestion pipeline email attachments already go through. Routing is
+// caption-driven the same way email routing is subject-driven.
+//
+// If the AI is confident, it files immediately. If it isn't, the file is
+// still downloaded and stored right away — never discarded, never bounced
+// back asking the sender to resend — it just lands in the shared Inbox as
+// "pending" for a human to point at the right brief later.
 export async function handleWhatsAppDocument(doc: IncomingWhatsAppDocument): Promise<void> {
     const resolved = await resolveUser(doc.from);
     if (!resolved) {
@@ -56,23 +60,36 @@ export async function handleWhatsAppDocument(doc: IncomingWhatsAppDocument): Pro
         })
         : null;
 
+    const { put } = await import('@vercel/blob');
+    const safeName = doc.filename.replace(/[^a-zA-Z0-9._-]/g, '_');
+    const blobPath = `whatsapp-attachments/${resolved.workspaceId}/${Date.now()}-${safeName}`;
+    const blob = await put(blobPath, media.buffer, { access: 'public', contentType: media.mimeType });
+
     if (!brief) {
+        await recordPendingAttachment({
+            workspaceId: resolved.workspaceId,
+            source: 'whatsapp',
+            fileName: doc.filename,
+            blobUrl: blob.url,
+            contentType: media.mimeType,
+            size: media.size,
+            caption: doc.caption ?? null,
+            whatsappFromNumber: doc.from,
+            createdById: resolved.userId,
+            suggestedBriefId: identification.briefId,
+            confidence: identification.confidence,
+            reasoning: identification.reasoning,
+        });
         await sendWhatsAppMessage(
             doc.from,
-            `I couldn't tell which case "${doc.filename}" belongs to. Please resend it with the case name or number in the caption.`,
+            `Got it — I've saved "${doc.filename}" but couldn't tell which case it belongs to. It's in the Reforma Inbox waiting for someone to confirm.`,
         );
         return;
     }
 
     const { DocumentIngestionService } = await import('@/lib/services/ingestion');
-    const { put } = await import('@vercel/blob');
-
-    const safeName = doc.filename.replace(/[^a-zA-Z0-9._-]/g, '_');
-    const blobPath = `whatsapp-attachments/${resolved.workspaceId}/${Date.now()}-${safeName}`;
-    const blob = await put(blobPath, media.buffer, { access: 'public', contentType: media.mimeType });
-
     const folder = await DocumentIngestionService.getOrCreateCorrespondenceFolder(brief.id);
-    await DocumentIngestionService.ingest({
+    const result = await DocumentIngestionService.ingest({
         name: doc.filename,
         buffer: media.buffer,
         contentType: media.mimeType,
@@ -80,6 +97,22 @@ export async function handleWhatsAppDocument(doc: IncomingWhatsAppDocument): Pro
         briefId: brief.id,
         folderId: folder.id,
         url: blob.url,
+    });
+
+    await recordFiledAttachment({
+        workspaceId: resolved.workspaceId,
+        source: 'whatsapp',
+        fileName: doc.filename,
+        blobUrl: blob.url,
+        contentType: media.mimeType,
+        size: media.size,
+        caption: doc.caption ?? null,
+        whatsappFromNumber: doc.from,
+        createdById: resolved.userId,
+        briefId: brief.id,
+        documentId: result.documentId,
+        confidence: identification.confidence,
+        reasoning: identification.reasoning,
     });
 
     await addBriefActivity(

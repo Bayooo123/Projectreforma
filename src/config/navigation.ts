@@ -8,6 +8,7 @@ import {
   ShieldCheck,
   Terminal,
   Inbox,
+  FolderInput,
   DollarSign,
   Bell,
   Settings,
@@ -50,6 +51,7 @@ export const navigationGroups: NavGroup[] = [
     color: '#059669',
     items: [
       { name: 'Briefs', href: '/briefs', icon: FileText },
+      { name: 'Inbox', href: '/inbox', icon: FolderInput },
       { name: 'Court & Calendar', href: '/calendar', icon: Gavel },
       { name: 'Clients', href: '/management/clients', icon: Users },
       { name: 'Compliance', href: '/management/compliance', icon: ShieldCheck },

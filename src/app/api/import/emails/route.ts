@@ -14,6 +14,7 @@ import { addBriefActivity } from '@/lib/briefs';
 import { executeIntentActions } from '@/lib/institutional-memory/actions';
 import { matchEmailToMatter } from '@/lib/services/content-matcher';
 import { classifyIntentDeterministic } from '@/lib/services/deterministic-processor';
+import { recordFiledAttachment, recordPendingAttachment } from '@/lib/services/inbox-attachments';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
@@ -80,12 +81,21 @@ function isNoise(senderEmail: string, subject: string): boolean {
 // attachments get the same OCR/classification as any other document instead
 // of a bare, unprocessed Document row.
 
+interface AttachmentRoutingContext {
+    subject: string;
+    briefId: string | null;
+    suggestedBriefId: string | null;
+    confidence: number | null;
+    reasoning: string | null;
+}
+
 async function uploadAttachments(
     attachments: ImportAttachment[],
     workspaceId: string,
     inboundEmailId: string,
-    briefId: string | null,
+    routing: AttachmentRoutingContext,
 ): Promise<void> {
+    const { briefId, suggestedBriefId, confidence, reasoning, subject } = routing;
     let correspondenceFolderId: string | null = null;
     if (briefId) {
         const { DocumentIngestionService } = await import('@/lib/services/ingestion');
@@ -115,7 +125,7 @@ async function uploadAttachments(
             });
             if (briefId) {
                 const { DocumentIngestionService } = await import('@/lib/services/ingestion');
-                await DocumentIngestionService.ingest({
+                const result = await DocumentIngestionService.ingest({
                     name: att.filename,
                     buffer,
                     contentType: att.content_type,
@@ -124,9 +134,36 @@ async function uploadAttachments(
                     folderId: correspondenceFolderId,
                     url: blob.url,
                 });
+                await recordFiledAttachment({
+                    workspaceId,
+                    source: 'email',
+                    fileName: att.filename,
+                    blobUrl: blob.url,
+                    contentType: att.content_type,
+                    size: buffer.byteLength,
+                    caption: subject,
+                    inboundEmailId,
+                    briefId,
+                    documentId: result.documentId,
+                    confidence,
+                    reasoning,
+                });
                 console.log(`[BulkImport] "${att.filename}" ingested into brief vault (Correspondence folder)`);
             } else {
-                console.log(`[BulkImport] "${att.filename}" saved as EmailAttachment only (no brief match)`);
+                await recordPendingAttachment({
+                    workspaceId,
+                    source: 'email',
+                    fileName: att.filename,
+                    blobUrl: blob.url,
+                    contentType: att.content_type,
+                    size: buffer.byteLength,
+                    caption: subject,
+                    inboundEmailId,
+                    suggestedBriefId,
+                    confidence,
+                    reasoning,
+                });
+                console.log(`[BulkImport] "${att.filename}" saved to the unified inbox — awaiting brief confirmation`);
             }
         } catch (err) {
             console.error(`[BulkImport] Attachment upload failed: ${att.filename}`, err);
@@ -294,7 +331,13 @@ async function processEmail(
         // issue for the real-time webhook pipeline).
         if (attachments.length > 0) {
             after(() =>
-                uploadAttachments(attachments, workspaceId, inboundEmail.id, brief?.id || null)
+                uploadAttachments(attachments, workspaceId, inboundEmail.id, {
+                    subject,
+                    briefId: brief?.id || null,
+                    suggestedBriefId: identification.briefId,
+                    confidence: identification.confidence,
+                    reasoning: identification.reasoning,
+                })
                     .catch(err => console.error('[BulkImport] Attachment error:', err)),
             );
         }

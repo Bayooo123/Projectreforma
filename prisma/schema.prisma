@@ -71,6 +71,7 @@ model Workspace {
   whatsappSessions      WhatsappSession[]
   agentInsights         AgentInsight[]
   ingestionSessions     IngestionSession[]
+  inboxAttachments      InboxAttachment[]
 
   @@index([slug])
   @@index([firmCode])
@@ -207,6 +208,7 @@ model User {
   createdIngestionSessions     IngestionSession[]     @relation("IngestionSessionCreator")
   manualBriefStatusUpdates     Brief[]                @relation("BriefManualStatusUpdater")
   createdMeetingRecordings     MeetingRecording[]     @relation("MeetingRecordingCreator")
+  createdInboxAttachments      InboxAttachment[]      @relation("InboxAttachmentCreator")
 
   // Personal theme overrides
   themeSource          String?  @default("workspace")
@@ -573,6 +575,8 @@ model Brief {
   agentInsights       AgentInsight[]
   suggestedIngestionCandidates IngestionCandidate[] @relation("IngestionSuggestedBrief")
   confirmedIngestionCandidates IngestionCandidate[] @relation("IngestionConfirmedBrief")
+  suggestedInboxAttachments    InboxAttachment[]    @relation("InboxAttachmentSuggestedBrief")
+  confirmedInboxAttachments    InboxAttachment[]    @relation("InboxAttachmentConfirmedBrief")
 
   @@index([lawyerId])
   @@index([lawyerInChargeId])
@@ -608,6 +612,7 @@ model Document {
   chunks         DocumentChunk[]
   timelineEvents DocumentTimelineEvent[]
   ingestionCandidate IngestionCandidate?
+  inboxAttachment    InboxAttachment?
 
   @@index([briefId])
   @@index([folderId])
@@ -1179,6 +1184,7 @@ model InboundEmail {
   matter          Matter?           @relation(fields: [matterId], references: [id], onDelete: SetNull)
   pulseEvents     PulseEvent[]
   attachments     EmailAttachment[]
+  inboxAttachments InboxAttachment[]
 
   @@index([workspaceId, receivedAt])
   @@index([workspaceId, messageId])
@@ -1553,4 +1559,48 @@ model MeetingRecording {
   createdBy        User          @relation("MeetingRecordingCreator", fields: [createdById], references: [id])
 
   @@index([calendarEntryId])
+}
+
+// Every document that arrives via email or WhatsApp lands here, whether the
+// AI could confidently tell which brief it belongs to or not. High-confidence
+// matches get auto-filed immediately (status becomes 'filed' right away,
+// documentId set) but still keep a row here for visibility/audit. Low-
+// confidence ones stay 'pending' — the file is downloaded and stored right
+// away, nothing is ever discarded or bounced back to the sender — until a
+// human confirms which brief it actually belongs to. This directly replaces
+// the old failure mode where an unmatched email attachment (or a WhatsApp
+// document with no confident case match) was either invisible (no Document
+// ever created, only a bare EmailAttachment row nobody thought to check) or
+// discarded outright.
+model InboxAttachment {
+  id                  String    @id @default(cuid())
+  workspaceId         String
+  source              String    // 'email' | 'whatsapp'
+  fileName            String
+  blobUrl             String
+  contentType         String
+  size                Int
+  caption             String?   // WhatsApp caption or email subject — the routing text
+  inboundEmailId      String?
+  whatsappFromNumber  String?
+  createdById         String?
+  suggestedBriefId    String?
+  suggestedConfidence Float?
+  suggestedReasoning  String?
+  confirmedBriefId    String?
+  documentId          String?   @unique
+  status              String    @default("pending") // pending | filed
+  createdAt           DateTime  @default(now())
+  filedAt             DateTime?
+
+  workspace      Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  inboundEmail   InboundEmail? @relation(fields: [inboundEmailId], references: [id], onDelete: SetNull)
+  createdBy      User?         @relation("InboxAttachmentCreator", fields: [createdById], references: [id])
+  suggestedBrief Brief?        @relation("InboxAttachmentSuggestedBrief", fields: [suggestedBriefId], references: [id], onDelete: SetNull)
+  confirmedBrief Brief?        @relation("InboxAttachmentConfirmedBrief", fields: [confirmedBriefId], references: [id], onDelete: SetNull)
+  document       Document?     @relation(fields: [documentId], references: [id], onDelete: SetNull)
+
+  @@index([workspaceId, status])
+  @@index([source])
+  @@index([inboundEmailId])
 }

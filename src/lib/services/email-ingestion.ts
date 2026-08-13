@@ -30,6 +30,7 @@ import {
 } from '@/lib/services/email-processor';
 import { addBriefActivity } from '@/lib/briefs';
 import { executeIntentActions } from '@/lib/institutional-memory/actions';
+import { recordFiledAttachment, recordPendingAttachment } from '@/lib/services/inbox-attachments';
 
 // ── Attachments ──────────────────────────────────────────────────────────────
 
@@ -64,12 +65,21 @@ export const ATTACHMENT_ALLOWED_TYPES = [
 // Raised from 10MB — scanned legal bundles/exhibits routinely exceed that.
 export const MAX_ATTACHMENT_BYTES = 20 * 1024 * 1024;
 
+interface AttachmentRoutingContext {
+    subject: string;
+    briefId: string | null;
+    suggestedBriefId: string | null;
+    confidence: number | null;
+    reasoning: string | null;
+}
+
 async function ingestAttachments(
     attachments: RawAttachment[],
     workspaceId: string,
     inboundEmailId: string,
-    briefId: string | null,
+    routing: AttachmentRoutingContext,
 ): Promise<void> {
+    const { briefId, suggestedBriefId, confidence, reasoning, subject } = routing;
     const { DocumentIngestionService } = await import('@/lib/services/ingestion');
 
     let correspondenceFolderId: string | null = null;
@@ -106,7 +116,7 @@ async function ingestAttachments(
             });
 
             if (briefId) {
-                await DocumentIngestionService.ingest({
+                const result = await DocumentIngestionService.ingest({
                     name: att.name,
                     buffer,
                     contentType: att.contentType,
@@ -115,9 +125,36 @@ async function ingestAttachments(
                     folderId: correspondenceFolderId,
                     url: blob.url,
                 });
+                await recordFiledAttachment({
+                    workspaceId,
+                    source: 'email',
+                    fileName: att.name,
+                    blobUrl: blob.url,
+                    contentType: att.contentType,
+                    size: buffer.byteLength,
+                    caption: subject,
+                    inboundEmailId,
+                    briefId,
+                    documentId: result.documentId,
+                    confidence,
+                    reasoning,
+                });
                 console.log(`[EmailIngestion] "${att.name}" ingested into brief vault (Correspondence folder)`);
             } else {
-                console.log(`[EmailIngestion] "${att.name}" saved as EmailAttachment only (no brief match)`);
+                await recordPendingAttachment({
+                    workspaceId,
+                    source: 'email',
+                    fileName: att.name,
+                    blobUrl: blob.url,
+                    contentType: att.contentType,
+                    size: buffer.byteLength,
+                    caption: subject,
+                    inboundEmailId,
+                    suggestedBriefId,
+                    confidence,
+                    reasoning,
+                });
+                console.log(`[EmailIngestion] "${att.name}" saved to the unified inbox — awaiting brief confirmation`);
             }
         } catch (err) {
             console.error(`[EmailIngestion] Attachment upload failed for "${att.name}":`, err);
@@ -278,12 +315,18 @@ export async function ingestInboundEmail(input: InboundEmailInput): Promise<Inbo
 
     let brief = briefIdResult;
     let routingMethod = brief ? (knownBriefId ? 'Direct Match (caller-resolved)' : 'Direct Match (ID)') : 'Unrouted';
+    let suggestedBriefId: string | null = brief?.id ?? null;
+    let suggestedConfidence: number | null = brief ? 1 : null;
+    let suggestedReasoning: string | null = brief ? routingMethod : null;
 
     if (!brief) {
         const { briefs: briefList, matters: matterList } = await getBriefRoutingCandidates(workspaceId);
 
         const identification = await identifyBriefFromContent(subject, body, briefList, matterList);
         routingMethod = `AI Routing (${Math.round(identification.confidence * 100)}%): ${identification.reasoning}`;
+        suggestedBriefId = identification.briefId;
+        suggestedConfidence = identification.confidence;
+        suggestedReasoning = identification.reasoning;
 
         if (identification.confidence > 0.5 && identification.briefId) {
             brief = await prisma.brief.findFirst({
@@ -347,8 +390,13 @@ export async function ingestInboundEmail(input: InboundEmailInput): Promise<Inbo
     // never became a Document.
     if (attachments.length > 0) {
         after(() =>
-            ingestAttachments(attachments, workspaceId, inboundEmail.id, brief?.id || null)
-                .catch(err => console.error(`[EmailIngestion:${source}] Attachment ingestion error:`, err)),
+            ingestAttachments(attachments, workspaceId, inboundEmail.id, {
+                subject,
+                briefId: brief?.id || null,
+                suggestedBriefId,
+                confidence: suggestedConfidence,
+                reasoning: suggestedReasoning,
+            }).catch(err => console.error(`[EmailIngestion:${source}] Attachment ingestion error:`, err)),
         );
     }
 
