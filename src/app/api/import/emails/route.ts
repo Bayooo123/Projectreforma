@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { after } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { put } from '@vercel/blob';
 import { withApiAuth } from '@/lib/api-auth';
@@ -8,6 +9,7 @@ import {
     BriefCandidate,
     MatterCandidate,
 } from '@/lib/services/email-processor';
+import { ATTACHMENT_ALLOWED_TYPES, MAX_ATTACHMENT_BYTES } from '@/lib/services/email-ingestion';
 import { addBriefActivity } from '@/lib/briefs';
 import { executeIntentActions } from '@/lib/institutional-memory/actions';
 import { matchEmailToMatter } from '@/lib/services/content-matcher';
@@ -72,14 +74,11 @@ function isNoise(senderEmail: string, subject: string): boolean {
 }
 
 // ── Attachment upload ────────────────────────────────────────────────────────
-
-const ALLOWED_TYPES = [
-    'application/pdf', 'application/msword',
-    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-    'application/vnd.ms-excel',
-    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'text/plain',
-];
+// Shares its allow-list/size-cap with the real-time email pipeline
+// (email-ingestion.ts) instead of maintaining a second, independently-drifting
+// copy, and files through DocumentIngestionService.ingest() so bulk-imported
+// attachments get the same OCR/classification as any other document instead
+// of a bare, unprocessed Document row.
 
 async function uploadAttachments(
     attachments: ImportAttachment[],
@@ -87,11 +86,24 @@ async function uploadAttachments(
     inboundEmailId: string,
     briefId: string | null,
 ): Promise<void> {
+    let correspondenceFolderId: string | null = null;
+    if (briefId) {
+        const { DocumentIngestionService } = await import('@/lib/services/ingestion');
+        const folder = await DocumentIngestionService.getOrCreateCorrespondenceFolder(briefId);
+        correspondenceFolderId = folder.id;
+    }
+
     for (const att of attachments) {
         try {
-            if (!ALLOWED_TYPES.includes(att.content_type)) continue;
+            if (!ATTACHMENT_ALLOWED_TYPES.includes(att.content_type)) {
+                console.log(`[BulkImport] Skipping attachment "${att.filename}" — unsupported type ${att.content_type}`);
+                continue;
+            }
             const buffer = Buffer.from(att.data, 'base64');
-            if (buffer.byteLength > 10 * 1024 * 1024) continue;
+            if (buffer.byteLength > MAX_ATTACHMENT_BYTES) {
+                console.log(`[BulkImport] Skipping attachment "${att.filename}" — too large (${buffer.byteLength} bytes)`);
+                continue;
+            }
             const safeName = att.filename.replace(/[^a-zA-Z0-9._-]/g, '_');
             const blob = await put(
                 `email-attachments/${workspaceId}/${inboundEmailId}/${safeName}`,
@@ -102,10 +114,19 @@ async function uploadAttachments(
                 data: { inboundEmailId, name: att.filename, url: blob.url, contentType: att.content_type, size: buffer.byteLength },
             });
             if (briefId) {
-                const ext = safeName.split('.').pop()?.toLowerCase() || 'bin';
-                await prisma.document.create({
-                    data: { name: att.filename, url: blob.url, type: ext, size: buffer.byteLength, briefId },
+                const { DocumentIngestionService } = await import('@/lib/services/ingestion');
+                await DocumentIngestionService.ingest({
+                    name: att.filename,
+                    buffer,
+                    contentType: att.content_type,
+                    size: buffer.byteLength,
+                    briefId,
+                    folderId: correspondenceFolderId,
+                    url: blob.url,
                 });
+                console.log(`[BulkImport] "${att.filename}" ingested into brief vault (Correspondence folder)`);
+            } else {
+                console.log(`[BulkImport] "${att.filename}" saved as EmailAttachment only (no brief match)`);
             }
         } catch (err) {
             console.error(`[BulkImport] Attachment upload failed: ${att.filename}`, err);
@@ -265,10 +286,17 @@ async function processEmail(
             );
         }
 
-        // Non-blocking: attachments + intent actions
+        // Deferred via after() rather than a bare, un-awaited promise: without
+        // it, the serverless function can be torn down once the response is
+        // sent, cutting the upload off mid-way — the exact bug that let
+        // correspondence link to a brief while its attachment silently never
+        // became a Document (see email-ingestion.ts, which fixed this same
+        // issue for the real-time webhook pipeline).
         if (attachments.length > 0) {
-            uploadAttachments(attachments, workspaceId, inboundEmail.id, brief?.id || null)
-                .catch(err => console.error('[BulkImport] Attachment error:', err));
+            after(() =>
+                uploadAttachments(attachments, workspaceId, inboundEmail.id, brief?.id || null)
+                    .catch(err => console.error('[BulkImport] Attachment error:', err)),
+            );
         }
 
         executeIntentActions({
