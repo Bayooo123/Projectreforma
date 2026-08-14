@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma';
+import { getCaseChronology } from '@/lib/ai-context/brief-context';
 
 type Prop = { type: string; description?: string };
 
@@ -56,7 +57,7 @@ export function getClaudeTools() {
             brief_id: { type: 'string', description: 'The brief ID' },
             brief_title: { type: 'string', description: 'Search by brief title or number if ID unknown' },
         }),
-        tool('get_brief_timeline', 'Get a full chronological timeline for a brief — court hearings, adjournments, tasks created/completed, documents uploaded (with OCR content), and facts a lawyer has told the Brief Manager or Meetings agent directly (agent_note events). Covers past (what happened), present (active items), and future (upcoming). Use this to narrate the history and trajectory of a matter.', {
+        tool('get_brief_timeline', 'Get a full chronological timeline for a brief — court hearings, adjournments, tasks created/completed, documents uploaded (with OCR content), dated facts extracted from inside document text, and facts a lawyer has told the Brief Manager, Meetings agent, or WhatsApp directly (agent_note events). Covers past (what happened), present (active items), and future (upcoming). Use this to narrate the history and trajectory of a matter.', {
             brief_id: { type: 'string', description: 'The brief ID' },
             brief_title: { type: 'string', description: 'Search by brief title or number if ID unknown' },
             matter_title: { type: 'string', description: 'Search by linked matter title' },
@@ -292,124 +293,14 @@ export async function executeTool(
                         : {}
                     ),
                 },
-                select: { id: true, name: true, briefNumber: true, createdAt: true, dueDate: true, status: true, matterId: true, client: { select: { name: true } } },
+                select: { id: true },
             });
             if (!brief) return { error: 'Brief not found. Try get_matter_detail first to get the brief ID.' };
 
-            const [calendarEntries, tasks, documents, agentNotes] = await Promise.all([
-                prisma.calendarEntry.findMany({
-                    where: { OR: [{ briefId: brief.id }, ...(brief.matterId ? [{ matterId: brief.matterId }] : [])] },
-                    select: {
-                        id: true, date: true, type: true, court: true, judge: true,
-                        proceedings: true, outcome: true, adjournedTo: true, adjournedFor: true,
-                        appearances: { select: { name: true } },
-                    },
-                    orderBy: { date: 'asc' },
-                }),
-                prisma.task.findMany({
-                    where: { briefId: brief.id },
-                    select: { id: true, title: true, description: true, status: true, priority: true, createdAt: true, dueDate: true, completedAt: true, assignedTo: { select: { name: true } } },
-                    orderBy: { createdAt: 'asc' },
-                }),
-                prisma.document.findMany({
-                    where: { briefId: brief.id },
-                    select: { id: true, name: true, uploadedAt: true, ocrStatus: true, ocrText: true },
-                    orderBy: { uploadedAt: 'asc' },
-                }),
-                // Facts a lawyer told Brief Manager/Meetings/WhatsApp directly, outside any
-                // document — same institutional memory those agents read back on their own
-                // next check-in. Both activity types are included: agent_memory (web chat)
-                // and status_changed (WhatsApp's record_brief_update) — without both, a fact
-                // recorded via WhatsApp would be invisible here even though the web agents
-                // can see it.
-                prisma.briefActivityLog.findMany({
-                    where: { briefId: brief.id, activityType: { in: ['agent_memory', 'status_changed'] } },
-                    select: { id: true, timestamp: true, description: true, metadata: true },
-                    orderBy: { timestamp: 'asc' },
-                }),
-            ]);
-
-            const now = new Date();
-            const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-
-            const classify = (date: Date) => {
-                const d = new Date(date);
-                if (d < todayStart) return 'past';
-                if (d.toDateString() === now.toDateString()) return 'today';
-                return 'future';
-            };
-
-            type TLEvent = {
-                date: Date; type: string; title: string;
-                when: 'past' | 'today' | 'future';
-                details?: Record<string, any>;
-            };
-            const events: TLEvent[] = [];
-
-            events.push({ date: brief.createdAt, type: 'brief_created', title: 'Brief opened', when: classify(brief.createdAt) });
-            if (brief.dueDate) events.push({ date: brief.dueDate, type: 'brief_due', title: 'Brief due date', when: classify(brief.dueDate) });
-
-            for (const e of calendarEntries) {
-                events.push({
-                    date: e.date, when: classify(e.date),
-                    type: e.type === 'MEETING' ? 'meeting' : 'court_hearing',
-                    title: e.proceedings || (e.type === 'MEETING' ? 'Meeting' : 'Court Hearing'),
-                    details: {
-                        court: e.court, judge: e.judge, outcome: e.outcome,
-                        adjournedTo: e.adjournedTo, adjournedFor: e.adjournedFor,
-                        counsel: e.appearances.map(a => a.name),
-                    },
-                });
-                if (e.adjournedTo) {
-                    events.push({ date: e.adjournedTo, when: classify(e.adjournedTo), type: 'court_adjourned', title: `Adjournment (from: ${e.proceedings || 'hearing'})`, details: { court: e.court } });
-                }
-            }
-
-            for (const t of tasks) {
-                events.push({ date: t.createdAt, when: classify(t.createdAt), type: 'task_created', title: t.title, details: { priority: t.priority, assignedTo: t.assignedTo?.name, description: t.description } });
-                if (t.completedAt) events.push({ date: t.completedAt, when: classify(t.completedAt), type: 'task_completed', title: `Completed: ${t.title}` });
-                else if (t.dueDate) events.push({ date: t.dueDate, when: classify(t.dueDate), type: 'task_deadline', title: `Deadline: ${t.title}`, details: { assignedTo: t.assignedTo?.name } });
-            }
-
-            for (const d of documents) {
-                events.push({
-                    date: d.uploadedAt, when: classify(d.uploadedAt), type: 'document_uploaded', title: d.name,
-                    details: {
-                        ocrStatus: d.ocrStatus,
-                        // Include first 600 chars of OCR so Eureka can read the document
-                        content: d.ocrText ? d.ocrText.slice(0, 600) + (d.ocrText.length > 600 ? '…' : '') : null,
-                    },
-                });
-            }
-
-            for (const n of agentNotes) {
-                const source = (n.metadata as { source?: string } | null)?.source;
-                const recordedVia = source === 'meetings_agent' ? 'Meetings agent'
-                    : source === 'whatsapp' ? 'WhatsApp'
-                    : 'Brief Manager';
-                events.push({
-                    date: n.timestamp, when: classify(n.timestamp), type: 'agent_note',
-                    title: n.description,
-                    details: { recordedVia },
-                });
-            }
-
-            events.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-
-            return {
-                brief: { id: brief.id, title: brief.name, briefNumber: brief.briefNumber, status: brief.status, client: brief.client?.name },
-                summary: {
-                    total_events: events.length,
-                    past_events: events.filter(e => e.when === 'past').length,
-                    upcoming_events: events.filter(e => e.when === 'future').length,
-                    documents_uploaded: documents.length,
-                    documents_with_ocr: documents.filter(d => d.ocrStatus === 'completed').length,
-                    pending_tasks: tasks.filter(t => t.status !== 'completed').length,
-                    completed_tasks: tasks.filter(t => t.status === 'completed').length,
-                    agent_recorded_notes: agentNotes.length,
-                },
-                timeline: events,
-            };
+            // Case chronology is the same canonical merge (hearings, tasks,
+            // document uploads, extracted document facts, agent-recorded notes)
+            // used by every other AI surface — see src/lib/ai-context/brief-context.ts.
+            return getCaseChronology(brief.id, workspaceId);
         }
 
         case 'get_clients': {

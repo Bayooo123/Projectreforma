@@ -41,7 +41,7 @@ const TOOLS: Anthropic.Tool[] = [
     },
     {
         name: 'get_case_chronology',
-        description: 'Get the chronological timeline of facts extracted from documents in a brief.',
+        description: 'Get the full chronological history of a brief: court hearings and adjournments, tasks, document uploads, facts extracted from document content, and updates recorded by any agent (WhatsApp, web chat, Meetings).',
         input_schema: {
             type: 'object' as const,
             properties: {

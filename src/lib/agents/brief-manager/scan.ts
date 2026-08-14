@@ -81,7 +81,7 @@ async function computeLastSignalAt(briefId: string, briefCreatedAt: Date): Promi
         prisma.documentTimelineEvent.findFirst({ where: { briefId }, orderBy: { createdAt: 'desc' }, select: { createdAt: true } }),
         prisma.calendarEntry.findFirst({ where: { briefId }, orderBy: { updatedAt: 'desc' }, select: { updatedAt: true } }),
         prisma.task.findFirst({ where: { briefId }, orderBy: { updatedAt: 'desc' }, select: { updatedAt: true } }),
-        prisma.briefActivityLog.findFirst({ where: { briefId, activityType: 'agent_memory' }, orderBy: { timestamp: 'desc' }, select: { timestamp: true } }),
+        prisma.briefActivityLog.findFirst({ where: { briefId, activityType: { in: ['agent_memory', 'status_changed'] } }, orderBy: { timestamp: 'desc' }, select: { timestamp: true } }),
     ]);
 
     const dates = [briefCreatedAt, lastPulse?.createdAt, lastTimeline?.createdAt, lastCalendar?.updatedAt, lastTask?.updatedAt, lastMemory?.timestamp]
@@ -247,7 +247,7 @@ export async function generateBriefManagerInsight(briefId: string): Promise<Insi
             select: { date: true, adjournedFor: true, court: true },
         }),
         prisma.briefActivityLog.findMany({
-            where: { briefId, activityType: 'agent_memory' },
+            where: { briefId, activityType: { in: ['agent_memory', 'status_changed'] } },
             orderBy: { timestamp: 'desc' },
             take: MAX_MEMORY_ENTRIES,
             select: { timestamp: true, description: true },
