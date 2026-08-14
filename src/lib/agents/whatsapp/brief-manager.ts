@@ -2,6 +2,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { prisma } from '@/lib/prisma';
 import { config } from '@/lib/config';
 import { AgentContext, HistoryMessage } from './types';
+import { searchBriefsByQuery, getCaseChronology, getUpcomingHearingsForWorkspace } from '@/lib/ai-context/brief-context';
 
 // ── Tool definitions ──────────────────────────────────────────────────────────
 
@@ -88,41 +89,10 @@ const TOOLS: Anthropic.Tool[] = [
 ];
 
 // ── Tool implementations ──────────────────────────────────────────────────────
-
-async function searchBriefs(query: string, workspaceId: string) {
-    const results = await prisma.brief.findMany({
-        where: {
-            workspaceId,
-            deletedAt: null,
-            OR: [
-                { name: { contains: query, mode: 'insensitive' } },
-                { client: { name: { contains: query, mode: 'insensitive' } } },
-                { matter: { name: { contains: query, mode: 'insensitive' } } },
-                { description: { contains: query, mode: 'insensitive' } },
-            ],
-        },
-        select: {
-            id: true,
-            name: true,
-            briefNumber: true,
-            status: true,
-            dueDate: true,
-            client: { select: { name: true } },
-            matter: { select: { name: true } },
-        },
-        take: 5,
-        orderBy: { updatedAt: 'desc' },
-    });
-    return results.map(b => ({
-        id: b.id,
-        name: b.name,
-        briefNumber: b.briefNumber,
-        status: b.status,
-        client: b.client?.name ?? null,
-        matter: b.matter?.name ?? null,
-        dueDate: b.dueDate?.toISOString().split('T')[0] ?? null,
-    }));
-}
+// search_briefs, get_case_chronology, and get_upcoming_hearings are now
+// backed by the shared src/lib/ai-context/brief-context.ts module (the same
+// queries were hand-rolled near-identically in Pulse's Brief Manager and
+// Eureka) — see that file for the implementations.
 
 async function listBriefs(workspaceId: string, limit = 8) {
     const results = await prisma.brief.findMany({
@@ -187,75 +157,6 @@ async function getBriefDetail(briefId: string, workspaceId: string) {
         aiSummary: brief.aiSummaryProse ?? null,
         aiSummaryDate: brief.aiSummaryGeneratedAt?.toISOString().split('T')[0] ?? null,
     };
-}
-
-async function getCaseChronology(briefId: string, workspaceId: string) {
-    // Verify brief belongs to workspace
-    const brief = await prisma.brief.findFirst({
-        where: { id: briefId, workspaceId },
-        select: { id: true, name: true },
-    });
-    if (!brief) return { error: 'Brief not found' };
-
-    const events = await prisma.documentTimelineEvent.findMany({
-        where: { briefId },
-        select: { eventDate: true, eventDateRaw: true, description: true, documentName: true },
-        take: 30,
-    });
-
-    const sorted = events.sort((a, b) => {
-        if (!a.eventDate && !b.eventDate) return 0;
-        if (!a.eventDate) return 1;
-        if (!b.eventDate) return -1;
-        return a.eventDate.getTime() - b.eventDate.getTime();
-    });
-
-    return {
-        briefName: brief.name,
-        eventCount: sorted.length,
-        events: sorted.map(e => ({
-            date: e.eventDate?.toISOString().split('T')[0] ?? e.eventDateRaw,
-            description: e.description,
-            source: e.documentName,
-        })),
-    };
-}
-
-async function getUpcomingHearings(workspaceId: string, daysAhead = 30) {
-    const from = new Date();
-    const to = new Date(from.getTime() + daysAhead * 86_400_000);
-
-    const entries = await prisma.calendarEntry.findMany({
-        where: {
-            date: { gte: from, lte: to },
-            deletedAt: null,
-            OR: [
-                { brief: { workspaceId } },
-                { matter: { workspaceId } },
-            ],
-        },
-        select: {
-            date: true,
-            title: true,
-            type: true,
-            court: true,
-            judge: true,
-            brief: { select: { name: true } },
-            matter: { select: { name: true } },
-        },
-        orderBy: { date: 'asc' },
-        take: 15,
-    });
-
-    return entries.map(e => ({
-        date: e.date.toISOString().split('T')[0],
-        title: e.title,
-        type: e.type,
-        court: e.court ?? null,
-        judge: e.judge ?? null,
-        brief: e.brief?.name ?? null,
-        matter: e.matter?.name ?? null,
-    }));
 }
 
 async function recordBriefUpdate(
@@ -342,7 +243,7 @@ async function executeTool(name: string, input: Record<string, unknown>, ctx: Ag
     const workspaceId = ctx.workspaceId;
     switch (name) {
         case 'search_briefs':
-            return searchBriefs(input.query as string, workspaceId);
+            return searchBriefsByQuery(input.query as string, workspaceId);
         case 'list_briefs':
             return listBriefs(workspaceId, (input.limit as number) ?? 8);
         case 'get_brief_detail':
@@ -350,7 +251,7 @@ async function executeTool(name: string, input: Record<string, unknown>, ctx: Ag
         case 'get_case_chronology':
             return getCaseChronology(input.brief_id as string, workspaceId);
         case 'get_upcoming_hearings':
-            return getUpcomingHearings(workspaceId, (input.days_ahead as number) ?? 30);
+            return getUpcomingHearingsForWorkspace(workspaceId, (input.days_ahead as number) ?? 30);
         case 'record_brief_update':
             return recordBriefUpdate(
                 input.brief_id as string,
