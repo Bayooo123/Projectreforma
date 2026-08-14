@@ -13,6 +13,7 @@ import { useRouter } from 'next/navigation';
 import BriefUploadModal from './BriefUploadModal';
 import { getBriefDisplayTitle } from '@/lib/brief-display';
 import { toTitleCase } from '@/lib/sentence-case';
+import { matchesBriefQuery } from '@/lib/utils/brief-search';
 import BriefDocsQuickView from './BriefDocsQuickView';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import { Icon, Pill } from '@/components/mobile/MobileShared';
@@ -144,14 +145,8 @@ export default function BriefListClient({ initialBriefs, workspaceId }: Omit<Bri
     const { displayedBriefs, renderRows, parentIds } = useMemo(() => {
         const filtered = briefs
             .filter(brief => {
-                if (searchQuery) {
-                    const query = searchQuery.toLowerCase();
-                    const matchesSearch =
-                        brief.name?.toLowerCase().includes(query) ||
-                        brief.briefNumber?.toLowerCase().includes(query) ||
-                        (brief.client?.name || '').toLowerCase().includes(query) ||
-                        brief.category?.toLowerCase().includes(query);
-                    if (!matchesSearch) return false;
+                if (!matchesBriefQuery({ name: brief.name, briefNumber: brief.briefNumber, client: brief.client?.name, category: brief.category }, searchQuery)) {
+                    return false;
                 }
                 if (statusFilter !== 'all' && brief.status.toLowerCase() !== statusFilter) {
                     return false;

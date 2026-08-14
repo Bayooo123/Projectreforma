@@ -9,7 +9,6 @@ import {
     Ban, AlertTriangle, Clock, LogOut, Mail, RotateCcw, GitBranch, Inbox,
     BookOpen, CheckCircle2, Circle,
 } from 'lucide-react';
-import EmailInboxClient from '@/app/emails/EmailInboxClient';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import {
     getGuestMembers, inviteGuestMember, updateGuestMember, revokeGuestMember,
@@ -23,7 +22,7 @@ import {
 import { getTeamWorkLogs, updateWorkEntryStatus, deleteWorkEntry } from '@/app/actions/work-entries';
 import type { WorkEntry } from '@/app/actions/work-entries';
 
-type Tab = 'inbox' | 'guests' | 'roles' | 'audit' | 'sessions' | 'activity' | 'deleted' | 'attribution' | 'worklogs';
+type Tab = 'guests' | 'roles' | 'audit' | 'sessions' | 'activity' | 'deleted' | 'attribution' | 'worklogs';
 
 const ROLES = ['owner', 'admin', 'lawyer', 'paralegal', 'viewer'];
 
@@ -36,11 +35,10 @@ const ROLE_DESCRIPTIONS: Record<string, string> = {
 };
 
 export default function ITManagementClient({ workspaceId, isAdmin = false }: { workspaceId: string; isAdmin?: boolean }) {
-    const [activeTab, setActiveTab] = useState<Tab>('inbox');
+    const [activeTab, setActiveTab] = useState<Tab>('guests');
     const isMobile = useIsMobile();
 
     const allTabs: { id: Tab; label: string; icon: React.ElementType; adminOnly?: boolean }[] = [
-        { id: 'inbox', label: 'Email Inbox', icon: Inbox },
         { id: 'guests', label: 'Guest Accounts', icon: Users, adminOnly: true },
         { id: 'roles', label: 'Roles & Permissions', icon: ShieldCheck, adminOnly: true },
         { id: 'audit', label: 'Audit Log', icon: ClipboardList, adminOnly: true },
@@ -62,6 +60,26 @@ export default function ITManagementClient({ workspaceId, isAdmin = false }: { w
         return <ITManagementMobile workspaceId={workspaceId} isAdmin={isAdmin} />;
     }
 
+    // Every remaining tab is admin-only — a non-admin who reaches this route
+    // directly (it's not linked for them) has nothing to do here. Point them
+    // at the Email Inbox, which used to be duplicated on this page but is
+    // just as reachable from the sidebar with no extra PIN gate.
+    if (!isAdmin) {
+        return (
+            <div style={{ maxWidth: 500, margin: '4rem auto', textAlign: 'center' }}>
+                <h1 style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>
+                    IT Management
+                </h1>
+                <p style={{ color: '#64748b', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
+                    These tools are limited to workspace admins. Looking for the email inbox? It&apos;s in the sidebar under &quot;Email Inbox&quot;.
+                </p>
+                <a href="/emails" style={{ color: '#2563eb', fontSize: '0.9rem', fontWeight: 600, textDecoration: 'none' }}>
+                    Go to Email Inbox →
+                </a>
+            </div>
+        );
+    }
+
     return (
         <div style={{ maxWidth: 1100, margin: '0 auto' }}>
             <div style={{ marginBottom: '2rem' }}>
@@ -69,9 +87,7 @@ export default function ITManagementClient({ workspaceId, isAdmin = false }: { w
                     IT Management
                 </h1>
                 <p style={{ color: '#64748b', fontSize: '0.9rem' }}>
-                    {isAdmin
-                        ? 'Control access, roles, audit trails, and active sessions across your workspace.'
-                        : 'Manage your firm\'s email inbox — link emails to briefs and triage unlinked mail.'}
+                    Control access, roles, audit trails, and active sessions across your workspace.
                 </p>
             </div>
 
@@ -98,7 +114,6 @@ export default function ITManagementClient({ workspaceId, isAdmin = false }: { w
                 ))}
             </div>
 
-            {activeTab === 'inbox' && <EmailInboxClient />}
             {activeTab === 'guests' && <GuestAccountsTab workspaceId={workspaceId} />}
             {activeTab === 'roles' && <RolesTab />}
             {activeTab === 'audit' && <AuditLogTab />}

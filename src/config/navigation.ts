@@ -12,7 +12,6 @@ import {
   DollarSign,
   Bell,
   Settings,
-  Receipt,
   Bot,
   CalendarClock,
 } from 'lucide-react';
@@ -62,7 +61,6 @@ export const navigationGroups: NavGroup[] = [
     color: '#7c3aed',
     items: [
       { name: 'Finance', href: '/finance', icon: DollarSign },
-      { name: 'Invoices', href: '/finance?tab=invoices', icon: Receipt },
       { name: 'Analytics', href: '/analytics', icon: BarChart2 },
     ],
   },

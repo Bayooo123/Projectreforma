@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Search, ClipboardList, Check, Mic } from 'lucide-react';
 import { getBriefTrackerBoard, updateBriefTracker, type BriefTrackerRow } from '@/app/actions/brief-tracker';
 import QuickRecordModal from '@/components/calendar/QuickRecordModal';
+import { matchesBriefQuery } from '@/lib/utils/brief-search';
 
 function formatUpdatedAt(date: Date | string | null): string {
     if (!date) return '';
@@ -170,13 +171,7 @@ export default function BriefTracker({ workspaceId }: { workspaceId: string }) {
 
     const filtered = useMemo(() => {
         if (!rows) return [];
-        const q = query.trim().toLowerCase();
-        if (!q) return rows;
-        return rows.filter(r =>
-            r.name.toLowerCase().includes(q) ||
-            r.briefNumber.toLowerCase().includes(q) ||
-            (r.client ?? '').toLowerCase().includes(q)
-        );
+        return rows.filter(r => matchesBriefQuery(r, query));
     }, [rows, query]);
 
     const patchRow = (id: string, patch: Partial<BriefTrackerRow>) => {
