@@ -59,6 +59,32 @@ const TOOLS: Anthropic.Tool[] = [
             },
         },
     },
+    {
+        name: 'record_brief_update',
+        description: 'Record a status update and/or next action on a specific brief — writes to the manual tracker (the "Status / Last Action" and "Next Action" fields visible on the Brief Tracker) and logs it to the brief\'s activity history. Use this once you know which brief the user means — from search_briefs/list_briefs, from the user naming it directly, or from the user picking a number off a list you showed them earlier in this conversation.',
+        input_schema: {
+            type: 'object' as const,
+            properties: {
+                brief_id: { type: 'string', description: 'The brief to update' },
+                status_update: { type: 'string', description: 'What just happened / the current status. Optional if only recording a next action.' },
+                next_action: { type: 'string', description: 'What happens next / who needs to do what. Optional if only recording a status update.' },
+            },
+            required: ['brief_id'],
+        },
+    },
+    {
+        name: 'create_brief',
+        description: 'Create a new brief when the user wants to log something against a case that doesn\'t exist yet. Only use after confirming no existing brief matches (search_briefs/list_briefs came up empty, or the user explicitly says to create one). The brief number is generated automatically — never ask the user for one.',
+        input_schema: {
+            type: 'object' as const,
+            properties: {
+                name: { type: 'string', description: 'The case/brief name, e.g. "Smith v Adeyemi"' },
+                client_name: { type: 'string', description: 'Client name, if known — links to an existing client with a matching name, or leaves unlinked if none matches' },
+                category: { type: 'string', description: 'Category, e.g. Litigation, Advisory, Drafting. Defaults to "General" if not given.' },
+            },
+            required: ['name'],
+        },
+    },
 ];
 
 // ── Tool implementations ──────────────────────────────────────────────────────
@@ -232,9 +258,88 @@ async function getUpcomingHearings(workspaceId: string, daysAhead = 30) {
     }));
 }
 
+async function recordBriefUpdate(
+    briefId: string,
+    workspaceId: string,
+    userId: string,
+    statusUpdate?: string,
+    nextAction?: string,
+) {
+    const brief = await prisma.brief.findFirst({
+        where: { id: briefId, workspaceId, deletedAt: null },
+        select: { id: true, name: true },
+    });
+    if (!brief) return { error: 'Brief not found in this workspace' };
+    if (!statusUpdate && !nextAction) return { error: 'Provide at least a status update or a next action' };
+
+    await prisma.brief.update({
+        where: { id: briefId },
+        data: {
+            ...(statusUpdate ? { manualStatus: statusUpdate } : {}),
+            ...(nextAction ? { manualNextAction: nextAction } : {}),
+            manualStatusUpdatedAt: new Date(),
+            manualStatusUpdatedById: userId,
+        },
+    });
+
+    const { addBriefActivity } = await import('@/lib/briefs');
+    await addBriefActivity(
+        briefId,
+        'status_changed',
+        `📱 WhatsApp update: ${statusUpdate || nextAction}`,
+        { statusUpdate: statusUpdate ?? null, nextAction: nextAction ?? null, source: 'whatsapp' },
+        userId,
+    );
+
+    return { success: true, briefId: brief.id, briefName: brief.name };
+}
+
+async function createBriefFromWhatsApp(
+    name: string,
+    workspaceId: string,
+    userId: string,
+    clientName?: string,
+    category?: string,
+) {
+    const { generateBriefNumber } = await import('@/lib/briefs');
+    const briefNumber = await generateBriefNumber(workspaceId);
+
+    let clientId: string | null = null;
+    if (clientName) {
+        const client = await prisma.client.findFirst({
+            where: { workspaceId, name: { equals: clientName, mode: 'insensitive' }, deletedAt: null },
+            select: { id: true },
+        });
+        clientId = client?.id ?? null;
+    }
+
+    const brief = await prisma.brief.create({
+        data: {
+            briefNumber,
+            name,
+            clientId,
+            lawyerId: userId,
+            workspaceId,
+            category: category || 'General',
+            status: 'active',
+        },
+        select: { id: true, name: true, briefNumber: true },
+    });
+
+    return {
+        success: true,
+        briefId: brief.id,
+        briefName: brief.name,
+        briefNumber: brief.briefNumber,
+        clientLinked: !!clientId,
+        note: clientName && !clientId ? `No existing client named "${clientName}" was found — brief created without a linked client.` : undefined,
+    };
+}
+
 // ── Tool executor ─────────────────────────────────────────────────────────────
 
-async function executeTool(name: string, input: Record<string, unknown>, workspaceId: string): Promise<unknown> {
+async function executeTool(name: string, input: Record<string, unknown>, ctx: AgentContext): Promise<unknown> {
+    const workspaceId = ctx.workspaceId;
     switch (name) {
         case 'search_briefs':
             return searchBriefs(input.query as string, workspaceId);
@@ -246,6 +351,22 @@ async function executeTool(name: string, input: Record<string, unknown>, workspa
             return getCaseChronology(input.brief_id as string, workspaceId);
         case 'get_upcoming_hearings':
             return getUpcomingHearings(workspaceId, (input.days_ahead as number) ?? 30);
+        case 'record_brief_update':
+            return recordBriefUpdate(
+                input.brief_id as string,
+                workspaceId,
+                ctx.userId,
+                input.status_update as string | undefined,
+                input.next_action as string | undefined,
+            );
+        case 'create_brief':
+            return createBriefFromWhatsApp(
+                input.name as string,
+                workspaceId,
+                ctx.userId,
+                input.client_name as string | undefined,
+                input.category as string | undefined,
+            );
         default:
             return { error: `Unknown tool: ${name}` };
     }
@@ -268,15 +389,21 @@ export async function runBriefManager(
 You are talking to: ${ctx.userName}
 Today: ${new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
 
-You have access to the firm's brief database. Use your tools to answer accurately.
+You have access to the firm's brief database, and you can also record updates and create new briefs.
 
 Rules for WhatsApp responses:
 - Keep responses under 800 characters when possible
 - Use plain text — no markdown bold, no tables
 - Use numbered lists for chronologies
-- If multiple briefs match a search, list them and ask which one
 - For AI summaries, give the headline points, not the full text
-- Always cite the source document when mentioning case facts`;
+- Always cite the source document when mentioning case facts
+
+Recording updates (record_brief_update):
+- When the user tells you something that happened on a case, or what needs to happen next, record it — don't just chat back and let it evaporate. That's the whole point of this channel.
+- Record-then-optionally-clarify: if it's clear which brief they mean (they named it, or it's the only/obvious match from search_briefs), call record_brief_update immediately. Don't ask for confirmation you don't need.
+- Only pause to ask when it's genuinely ambiguous: if search_briefs/list_briefs returns multiple plausible matches, reply with a short numbered list ("1. Smith v Adeyemi (BRF-014)\\n2. Smith v Okafor (BRF-021)\\nWhich one?") and wait for their reply. When they answer with just a number, match it against the list you showed in your own previous message in this conversation.
+- If nothing matches at all, tell them so and ask if they want to create a new brief for it. If they say yes (or already said so), call create_brief, then immediately record the update against the brief you just created — don't make them repeat themselves.
+- After recording or creating, confirm briefly and concretely: what you recorded, and against which brief (name + number).`;
 
     // Build messages from history + current message
     const messages: Anthropic.MessageParam[] = [
@@ -307,7 +434,7 @@ Rules for WhatsApp responses:
 
             for (const block of response.content) {
                 if (block.type === 'tool_use') {
-                    const result = await executeTool(block.name, block.input as Record<string, unknown>, ctx.workspaceId);
+                    const result = await executeTool(block.name, block.input as Record<string, unknown>, ctx);
                     toolResults.push({
                         type: 'tool_result',
                         tool_use_id: block.id,
