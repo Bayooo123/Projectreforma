@@ -1,7 +1,6 @@
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
-import { runAnomalyScan } from '@/lib/anomaly/detector';
 import PulseContent from './PulseContent';
 import PulseSkeleton from './PulseSkeleton';
 
@@ -20,8 +19,11 @@ export default async function PulsePage({ searchParams }: { searchParams: Promis
         );
     }
 
-    // Fire anomaly scan in background — don't block page load.
-    runAnomalyScan(workspaceId).catch(e => console.error('[Pulse] anomaly scan failed:', e));
+    // Anomaly detection already runs daily for every workspace via the
+    // /api/cron/anomaly-scan cron (vercel.json). Re-running the same
+    // multi-query scan on every single Pulse visit was pure duplicated
+    // load — it competed for the same connection-constrained database pool
+    // as this page's own data fetch, right when load time matters most.
 
     return (
         <Suspense fallback={<PulseSkeleton />}>
