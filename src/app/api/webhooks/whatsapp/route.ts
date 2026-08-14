@@ -4,6 +4,14 @@ import { config } from '@/lib/config';
 import { handleWhatsAppMessage } from '@/lib/agents/whatsapp';
 import { handleWhatsAppDocument, type IncomingWhatsAppDocument } from '@/lib/agents/whatsapp/documents';
 
+export const dynamic = 'force-dynamic';
+// The response to Meta returns immediately (see after() below), but the
+// background processing it defers to — an agentic tool-use loop that can
+// now search, create, and write briefs, plus document OCR — needs real
+// headroom. Without this, Vercel's default timeout was cutting off long
+// case updates mid-reasoning, surfacing as "something went wrong."
+export const maxDuration = 60;
+
 // ── GET: Meta webhook verification challenge ─────────────────────────────────
 export async function GET(req: NextRequest) {
     const mode      = req.nextUrl.searchParams.get('hub.mode');
