@@ -591,7 +591,7 @@ export async function executeTool(
             } else {
                 const text = Buffer.from(buffer).toString('utf-8').slice(0, 50000);
                 const response = await client.messages.create({
-                    model: 'claude-sonnet-4-6',
+                    model: 'claude-sonnet-5',
                     max_tokens: 2048,
                     messages: [{ role: 'user', content: `Document: "${doc.name}"\n\n${text}\n\n${input.question}` }],
                 });
@@ -600,7 +600,7 @@ export async function executeTool(
             }
 
             const response = await client.messages.create({
-                model: 'claude-sonnet-4-6',
+                model: 'claude-sonnet-5',
                 max_tokens: 2048,
                 messages: [{ role: 'user', content: [docBlock, { type: 'text', text: input.question }] }],
             });

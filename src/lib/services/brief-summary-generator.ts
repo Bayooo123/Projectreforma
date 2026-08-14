@@ -354,7 +354,7 @@ export async function generateBriefSummaryFromDocuments(
     // Sonnet when PDFs need vision, emails are present, or merging into a prior
     // summary (richer reasoning needed). Haiku only for pure text-only, first-pass briefs.
     const usesSonnet = docBlocks.length > 0 || emails.length > 0 || !!previous;
-    const model = usesSonnet ? 'claude-sonnet-4-6' : 'claude-haiku-4-5-20251001';
+    const model = usesSonnet ? 'claude-sonnet-5' : 'claude-haiku-4-5-20251001';
 
     try {
         const callParams: any = {

@@ -416,7 +416,7 @@ Recording updates (record_brief_update):
     while (iterations < 8) {
         iterations++;
         const response = await client.messages.create({
-            model: 'claude-sonnet-4-6',
+            model: 'claude-sonnet-5',
             max_tokens: 1024,
             system: systemPrompt,
             tools: TOOLS,

@@ -297,7 +297,7 @@ export async function generateBriefManagerInsight(briefId: string): Promise<Insi
     let rawText = '';
     try {
         const response = await client.messages.create({
-            model: 'claude-sonnet-4-6',
+            model: 'claude-sonnet-5',
             // Raised from 1024: the executive-summary schema (4-part summary plus
             // nextSteps/ballInCourt/representing/questions) can run the model's
             // JSON output long enough on a correspondence-heavy brief to get cut

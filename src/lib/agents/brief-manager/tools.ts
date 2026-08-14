@@ -136,7 +136,7 @@ async function draftClientUpdate(briefId: string, insightData: BriefManagerInsig
     const client = new Anthropic({ apiKey: config.ANTHROPIC_API_KEY });
     try {
         const response = await client.messages.create({
-            model: 'claude-sonnet-4-6',
+            model: 'claude-sonnet-5',
             max_tokens: 1024,
             system: SYSTEM_PROMPTS.SENIOR_ASSOCIATE,
             messages: [{ role: 'user', content: prompt }],
@@ -170,7 +170,7 @@ async function recordBriefUpdate(briefId: string, insightId: string, userId: str
     // regeneration only refreshes the board's cached view (status/next steps/
     // needsDocuments) to reflect it, instead of leaving it stale until the next
     // nightly scan or a manual "Check now". Deferred via after() rather than
-    // awaited here: it's a full claude-sonnet-4-6 call re-reading chronology,
+    // awaited here: it's a full claude-sonnet-5 call re-reading chronology,
     // documents, and correspondence, and blocking the chat reply on it would
     // add several seconds to every turn that mentions something new.
     if (likelyNew) {

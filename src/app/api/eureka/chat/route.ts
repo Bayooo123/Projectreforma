@@ -79,7 +79,7 @@ export async function POST(req: NextRequest) {
 
         let currentMessages = [...claudeMessages];
         let response = await client.messages.create({
-            model: 'claude-sonnet-4-6',
+            model: 'claude-sonnet-5',
             max_tokens: 4096,
             system: SYSTEM_PROMPT,
             tools: getClaudeTools(),
@@ -120,7 +120,7 @@ export async function POST(req: NextRequest) {
             ];
 
             response = await client.messages.create({
-                model: 'claude-sonnet-4-6',
+                model: 'claude-sonnet-5',
                 max_tokens: 4096,
                 system: SYSTEM_PROMPT,
                 tools: getClaudeTools(),
