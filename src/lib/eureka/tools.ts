@@ -316,10 +316,14 @@ export async function executeTool(
                     select: { id: true, name: true, uploadedAt: true, ocrStatus: true, ocrText: true },
                     orderBy: { uploadedAt: 'asc' },
                 }),
-                // Facts a lawyer told Brief Manager/Meetings directly, outside any document —
-                // same institutional memory those agents read back on their own next check-in.
+                // Facts a lawyer told Brief Manager/Meetings/WhatsApp directly, outside any
+                // document — same institutional memory those agents read back on their own
+                // next check-in. Both activity types are included: agent_memory (web chat)
+                // and status_changed (WhatsApp's record_brief_update) — without both, a fact
+                // recorded via WhatsApp would be invisible here even though the web agents
+                // can see it.
                 prisma.briefActivityLog.findMany({
-                    where: { briefId: brief.id, activityType: 'agent_memory' },
+                    where: { briefId: brief.id, activityType: { in: ['agent_memory', 'status_changed'] } },
                     select: { id: true, timestamp: true, description: true, metadata: true },
                     orderBy: { timestamp: 'asc' },
                 }),
@@ -380,10 +384,13 @@ export async function executeTool(
 
             for (const n of agentNotes) {
                 const source = (n.metadata as { source?: string } | null)?.source;
+                const recordedVia = source === 'meetings_agent' ? 'Meetings agent'
+                    : source === 'whatsapp' ? 'WhatsApp'
+                    : 'Brief Manager';
                 events.push({
                     date: n.timestamp, when: classify(n.timestamp), type: 'agent_note',
                     title: n.description,
-                    details: { recordedVia: source === 'meetings_agent' ? 'Meetings agent' : 'Brief Manager' },
+                    details: { recordedVia },
                 });
             }
 
