@@ -355,6 +355,21 @@ export async function upsertInsightForBrief(workspaceId: string, briefId: string
         select: { id: true },
     });
 
+    // Keep Brief.aiSummaryProse — the summary Eureka and the WhatsApp agent
+    // actually read — in sync with what Pulse just synthesized, instead of
+    // leaving it to drift until someone happens to click "Generate summary."
+    // This is free: the LLM call already happened to produce this insight:
+    // no second summarization call, just reusing its output where the other
+    // two surfaces look for it. (aiSummaryChronology is left untouched — this
+    // pipeline doesn't produce an equivalent structured chronology.)
+    await prisma.brief.update({
+        where: { id: briefId },
+        data: {
+            aiSummaryProse: generated.data.summary.currentStatus,
+            aiSummaryGeneratedAt: new Date(),
+        },
+    }).catch(err => console.error(`[BriefManager] Failed to sync aiSummaryProse for brief ${briefId}:`, err));
+
     if (existing) {
         await prisma.agentInsight.update({
             where: { id: existing.id },
