@@ -48,7 +48,7 @@ export async function getBriefTrackerBoard(workspaceId: string, scope: 'firm' | 
             manualStatusUpdatedAt: true,
             manualStatusUpdatedBy: { select: { name: true } },
         },
-        orderBy: { name: 'asc' },
+        orderBy: { updatedAt: 'desc' },
     });
 
     return briefs.map(b => ({
