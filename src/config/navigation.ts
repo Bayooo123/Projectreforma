@@ -40,7 +40,7 @@ export const todayItem: NavItem = {
 // (via ?agent=) rather than a separate route, per the registry in
 // src/lib/agents/registry.ts. Add a new item here when a new agent ships.
 export const agentItems: NavItem[] = [
-  { name: 'Brief Manager', href: '/pulse?agent=brief_manager', icon: Bot },
+  { name: 'Status Quo', href: '/pulse?agent=brief_manager', icon: Bot },
   { name: 'Meetings', href: '/pulse?agent=meetings', icon: CalendarClock },
 ];
 

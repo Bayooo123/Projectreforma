@@ -2,10 +2,18 @@
 
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import Link from 'next/link';
-import { Search, ClipboardList, Check, Mic } from 'lucide-react';
+import { Search, ClipboardList, Check, Mic, ChevronDown, ChevronUp } from 'lucide-react';
 import { getBriefTrackerBoard, updateBriefTracker, type BriefTrackerRow } from '@/app/actions/brief-tracker';
 import QuickRecordModal from '@/components/calendar/QuickRecordModal';
 import { matchesBriefQuery } from '@/lib/utils/brief-search';
+
+const clampStyle: React.CSSProperties = {
+    display: '-webkit-box',
+    WebkitLineClamp: 1,
+    WebkitBoxOrient: 'vertical',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+};
 
 function formatUpdatedAt(date: Date | string | null): string {
     if (!date) return '';
@@ -27,6 +35,7 @@ function TrackerRow({
     const [nextAction, setNextAction] = useState(row.manualNextAction ?? '');
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [expanded, setExpanded] = useState(false);
 
     useEffect(() => { setStatus(row.manualStatus ?? ''); }, [row.manualStatus]);
     useEffect(() => { setNextAction(row.manualNextAction ?? ''); }, [row.manualNextAction]);
@@ -63,84 +72,125 @@ function TrackerRow({
         outline: 'none', minHeight: '2.6rem',
     });
 
+    const toggle = () => setExpanded(e => !e);
+
     return (
-        <div style={{
-            display: 'grid', gridTemplateColumns: 'minmax(180px, 1.1fr) 1.3fr 1.3fr minmax(150px, 0.85fr)',
-            borderBottom: '1px solid #f3f4f6',
-        }}>
-            <div style={{ padding: '0.6rem 0.75rem', minWidth: 0 }}>
-                <Link href={`/briefs/${row.id}`} style={{ fontSize: '0.8rem', fontWeight: 600, color: '#111827', textDecoration: 'none' }}>
-                    {row.name}
-                </Link>
-                <div style={{ fontSize: '0.68rem', color: '#9ca3af', marginTop: 2 }}>
-                    {row.briefNumber}{row.client ? ` · ${row.client}` : ''}
-                </div>
-                {row.lawyerInCharge && (
-                    <div style={{ fontSize: '0.68rem', color: '#9ca3af' }}>{row.lawyerInCharge}</div>
-                )}
-            </div>
-            <div style={{ padding: '0.4rem', borderLeft: '1px solid #f3f4f6' }}>
-                <textarea
-                    value={status}
-                    onChange={e => setStatus(e.target.value)}
-                    placeholder="What's the status / last action?"
-                    rows={2}
-                    style={textareaStyle(false)}
-                    onFocus={e => { e.currentTarget.style.borderColor = '#0d9488'; }}
-                    onBlur={e => { e.currentTarget.style.borderColor = '#e5e7eb'; }}
-                />
-            </div>
-            <div style={{ padding: '0.4rem', borderLeft: '1px solid #f3f4f6' }}>
-                <textarea
-                    value={nextAction}
-                    onChange={e => setNextAction(e.target.value)}
-                    placeholder="What happens next?"
-                    rows={2}
-                    style={textareaStyle(false)}
-                    onFocus={e => { e.currentTarget.style.borderColor = '#0d9488'; }}
-                    onBlur={e => { e.currentTarget.style.borderColor = '#e5e7eb'; }}
-                />
-            </div>
-            <div style={{
-                padding: '0.5rem 0.6rem', borderLeft: '1px solid #f3f4f6',
-                display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '0.35rem',
-            }}>
-                <div style={{ display: 'flex', gap: '0.35rem' }}>
-                    <button
-                        onClick={save}
-                        disabled={!dirty || saving}
-                        style={{
-                            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px',
-                            padding: '0.35rem 0.7rem', borderRadius: 6, border: 'none',
-                            background: !dirty ? '#f3f4f6' : saving ? '#5eead4' : '#0d9488',
-                            color: !dirty ? '#9ca3af' : '#fff',
-                            fontSize: '0.72rem', fontWeight: 600,
-                            cursor: dirty && !saving ? 'pointer' : 'default',
-                            flex: 1,
-                        }}
+        <div style={{ borderBottom: '1px solid #f3f4f6' }}>
+            <div
+                onClick={toggle}
+                style={{
+                    display: 'grid', gridTemplateColumns: 'minmax(180px, 1.1fr) 1.3fr 1.3fr minmax(150px, 0.85fr)',
+                    cursor: 'pointer',
+                }}
+            >
+                <div style={{ padding: '0.6rem 0.75rem', minWidth: 0 }}>
+                    <Link
+                        href={`/briefs/${row.id}`}
+                        onClick={e => e.stopPropagation()}
+                        style={{ fontSize: '0.8rem', fontWeight: 600, color: '#111827', textDecoration: 'none' }}
                     >
-                        {saving ? 'Saving…' : dirty ? 'Save' : <><Check size={12} /> Saved</>}
-                    </button>
-                    <button
-                        onClick={() => onRecord(row)}
-                        title="Record meeting"
-                        style={{
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            width: 30, borderRadius: 6, border: '1px solid #fecaca',
-                            background: '#fef2f2', color: '#dc2626', cursor: 'pointer',
-                        }}
-                    >
-                        <Mic size={13} />
-                    </button>
-                </div>
-                {error && <span style={{ fontSize: '0.64rem', color: '#b91c1c' }}>{error}</span>}
-                {row.manualStatusUpdatedAt && (
-                    <div style={{ fontSize: '0.64rem', color: '#9ca3af', lineHeight: 1.4 }}>
-                        Last updated {formatUpdatedAt(row.manualStatusUpdatedAt)}
-                        {row.manualStatusUpdatedBy ? <><br />by {row.manualStatusUpdatedBy}</> : null}
+                        {row.name}
+                    </Link>
+                    <div style={{ fontSize: '0.68rem', color: '#9ca3af', marginTop: 2 }}>
+                        {row.briefNumber}{row.client ? ` · ${row.client}` : ''}
                     </div>
-                )}
+                    {row.lawyerInCharge && (
+                        <div style={{ fontSize: '0.68rem', color: '#9ca3af' }}>{row.lawyerInCharge}</div>
+                    )}
+                </div>
+                <div style={{ padding: '0.6rem 0.75rem', borderLeft: '1px solid #f3f4f6', minWidth: 0, display: 'flex', alignItems: 'center' }}>
+                    <p style={{ ...clampStyle, fontSize: '0.78rem', color: status ? '#374151' : '#9ca3af', margin: 0, lineHeight: 1.5 }}>
+                        {status || "What's the status / last action?"}
+                    </p>
+                </div>
+                <div style={{ padding: '0.6rem 0.75rem', borderLeft: '1px solid #f3f4f6', minWidth: 0, display: 'flex', alignItems: 'center' }}>
+                    <p style={{ ...clampStyle, fontSize: '0.78rem', color: nextAction ? '#374151' : '#9ca3af', margin: 0, lineHeight: 1.5 }}>
+                        {nextAction || 'What happens next?'}
+                    </p>
+                </div>
+                <div style={{
+                    padding: '0.5rem 0.6rem', borderLeft: '1px solid #f3f4f6',
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.4rem',
+                }}>
+                    {row.manualStatusUpdatedAt ? (
+                        <div style={{ fontSize: '0.64rem', color: '#9ca3af', lineHeight: 1.4, minWidth: 0 }}>
+                            Updated {formatUpdatedAt(row.manualStatusUpdatedAt)}
+                            {row.manualStatusUpdatedBy ? <><br />by {row.manualStatusUpdatedBy}</> : null}
+                        </div>
+                    ) : <span />}
+                    {expanded ? <ChevronUp size={14} color="#9ca3af" style={{ flexShrink: 0 }} /> : <ChevronDown size={14} color="#9ca3af" style={{ flexShrink: 0 }} />}
+                </div>
             </div>
+
+            {expanded && (
+                <div style={{
+                    display: 'grid', gridTemplateColumns: 'minmax(180px, 1.1fr) 1.3fr 1.3fr minmax(150px, 0.85fr)',
+                    borderTop: '1px solid #f3f4f6', background: '#fafafa',
+                }}>
+                    <div />
+                    <div style={{ padding: '0.4rem' }}>
+                        <textarea
+                            value={status}
+                            onChange={e => setStatus(e.target.value)}
+                            onClick={e => e.stopPropagation()}
+                            placeholder="What's the status / last action?"
+                            rows={4}
+                            style={textareaStyle(false)}
+                            onFocus={e => { e.currentTarget.style.borderColor = '#0d9488'; }}
+                            onBlur={e => { e.currentTarget.style.borderColor = '#e5e7eb'; }}
+                        />
+                    </div>
+                    <div style={{ padding: '0.4rem' }}>
+                        <textarea
+                            value={nextAction}
+                            onChange={e => setNextAction(e.target.value)}
+                            onClick={e => e.stopPropagation()}
+                            placeholder="What happens next?"
+                            rows={4}
+                            style={textareaStyle(false)}
+                            onFocus={e => { e.currentTarget.style.borderColor = '#0d9488'; }}
+                            onBlur={e => { e.currentTarget.style.borderColor = '#e5e7eb'; }}
+                        />
+                    </div>
+                    <div
+                        onClick={e => e.stopPropagation()}
+                        style={{
+                            padding: '0.5rem 0.6rem',
+                            display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '0.35rem',
+                        }}
+                    >
+                        <div style={{ display: 'flex', gap: '0.35rem' }}>
+                            <button
+                                onClick={save}
+                                disabled={!dirty || saving}
+                                style={{
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px',
+                                    padding: '0.35rem 0.7rem', borderRadius: 6, border: 'none',
+                                    background: !dirty ? '#f3f4f6' : saving ? '#5eead4' : '#0d9488',
+                                    color: !dirty ? '#9ca3af' : '#fff',
+                                    fontSize: '0.72rem', fontWeight: 600,
+                                    cursor: dirty && !saving ? 'pointer' : 'default',
+                                    flex: 1,
+                                }}
+                            >
+                                {saving ? 'Saving…' : dirty ? 'Save' : <><Check size={12} /> Saved</>}
+                            </button>
+                            <button
+                                onClick={() => onRecord(row)}
+                                title="Record meeting"
+                                style={{
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    width: 30, borderRadius: 6, border: '1px solid #fecaca',
+                                    background: '#fef2f2', color: '#dc2626', cursor: 'pointer',
+                                }}
+                            >
+                                <Mic size={13} />
+                            </button>
+                        </div>
+                        {error && <span style={{ fontSize: '0.64rem', color: '#b91c1c' }}>{error}</span>}
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
