@@ -26,11 +26,11 @@ export const TOOLS: Anthropic.Tool[] = [
     },
     {
         name: 'list_briefs',
-        description: 'List active briefs in the workspace. Use when the user asks "what briefs do I have" or needs an overview.',
+        description: 'List active briefs in the workspace. Defaults to the 8 most recently updated — fine for "what briefs do I have" or a quick overview. If the user asks for ALL briefs, the complete list, or every brief, call this with limit set to 200 so nothing is left out.',
         input_schema: {
             type: 'object' as const,
             properties: {
-                limit: { type: 'number', description: 'Max results (default 8)' },
+                limit: { type: 'number', description: 'Max results. Default 8 for a quick overview — set to 200 when the user wants the complete list.' },
             },
         },
     },
