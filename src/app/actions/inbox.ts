@@ -3,7 +3,7 @@
 import { prisma } from '@/lib/prisma';
 import { auth } from '@/auth';
 import { revalidatePath } from 'next/cache';
-import { fileInboxAttachment } from '@/lib/services/inbox-attachments';
+import { fileInboxAttachment, recordPendingAttachment } from '@/lib/services/inbox-attachments';
 
 async function getSession() {
     const session = await auth();
@@ -83,6 +83,43 @@ export async function getInboxAttachments(
         confirmedBriefId: i.confirmedBriefId,
         confirmedBriefName: i.confirmedBrief?.name ?? null,
     }));
+}
+
+// Bulk-upload path: a lawyer drops in a pile of documents without knowing
+// yet which brief each belongs to. Files are already sitting in blob storage
+// by the time this runs (client-side upload already completed) — this just
+// records each as a pending inbox row, same shape as anything that arrived
+// by email or WhatsApp, so the existing confirm-to-brief flow sorts them too.
+export interface ManualUploadInput {
+    fileName: string;
+    blobUrl: string;
+    contentType: string;
+    size: number;
+}
+
+export async function recordManualUploads(workspaceId: string, files: ManualUploadInput[]) {
+    try {
+        const session = await getSession();
+        if (session.user.workspaceId !== workspaceId) {
+            return { success: false, error: 'Not a member of this workspace' };
+        }
+
+        await Promise.all(files.map(f => recordPendingAttachment({
+            workspaceId,
+            source: 'upload',
+            fileName: f.fileName,
+            blobUrl: f.blobUrl,
+            contentType: f.contentType,
+            size: f.size,
+            createdById: session.user.id,
+        })));
+
+        revalidatePath('/inbox');
+        return { success: true, count: files.length };
+    } catch (error) {
+        console.error('Error recording manual uploads:', error);
+        return { success: false, error: error instanceof Error ? error.message : 'Failed to save uploaded files' };
+    }
 }
 
 export async function confirmInboxAttachment(id: string, briefId: string) {

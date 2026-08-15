@@ -1,9 +1,10 @@
 'use client';
 
 import { useEffect, useState, useCallback, useMemo } from 'react';
-import { Inbox, Mail, MessageCircle, FileText, Check, Loader } from 'lucide-react';
+import { Inbox, Mail, MessageCircle, Upload, FileText, Check, Loader } from 'lucide-react';
 import { getInboxAttachments, confirmInboxAttachment, type InboxAttachmentRow } from '@/app/actions/inbox';
 import { getBriefsForPicker } from '@/app/actions/briefs';
+import BulkUploadDropzone from '@/components/inbox/BulkUploadDropzone';
 
 interface BriefOption {
     id: string;
@@ -23,18 +24,23 @@ function formatDate(date: Date | string): string {
         ' at ' + d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
 }
 
+const SOURCE_STYLE: Record<string, { bg: string; text: string; label: string; Icon: typeof Mail }> = {
+    whatsapp: { bg: '#ecfdf5', text: '#047857', label: 'WhatsApp', Icon: MessageCircle },
+    upload:   { bg: '#fef3c7', text: '#92400e', label: 'Uploaded', Icon: Upload },
+    email:    { bg: '#eff6ff', text: '#1e40af', label: 'Email', Icon: Mail },
+};
+
 function SourceBadge({ source }: { source: string }) {
-    const isWhatsApp = source === 'whatsapp';
+    const s = SOURCE_STYLE[source] ?? SOURCE_STYLE.email;
     return (
         <span style={{
             display: 'inline-flex', alignItems: 'center', gap: '4px',
             fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.03em',
             padding: '2px 8px', borderRadius: 999,
-            background: isWhatsApp ? '#ecfdf5' : '#eff6ff',
-            color: isWhatsApp ? '#047857' : '#1e40af',
+            background: s.bg, color: s.text,
         }}>
-            {isWhatsApp ? <MessageCircle size={10} /> : <Mail size={10} />}
-            {isWhatsApp ? 'WhatsApp' : 'Email'}
+            <s.Icon size={10} />
+            {s.label}
         </span>
     );
 }
@@ -217,7 +223,7 @@ export default function InboxClient({ workspaceId }: { workspaceId: string }) {
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                     <Inbox size={20} color="#0d9488" />
                     <h1 style={{ fontSize: '1.15rem', fontWeight: 700, color: '#111827', margin: 0 }}>Inbox</h1>
-                    <span style={{ fontSize: '0.72rem', color: '#9ca3af' }}>— documents from email &amp; WhatsApp, one place</span>
+                    <span style={{ fontSize: '0.72rem', color: '#9ca3af' }}>— documents from email, WhatsApp &amp; direct upload, one place</span>
                 </div>
                 <div style={{ position: 'relative' }}>
                     <input
@@ -231,6 +237,8 @@ export default function InboxClient({ workspaceId }: { workspaceId: string }) {
                     />
                 </div>
             </div>
+
+            {tab === 'pending' && <BulkUploadDropzone workspaceId={workspaceId} onUploaded={load} />}
 
             <div style={{ display: 'flex', border: '1px solid #e5e7eb', borderRadius: 8, overflow: 'hidden', width: 'fit-content', marginBottom: '1rem' }}>
                 {(['pending', 'filed'] as const).map(t => (

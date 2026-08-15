@@ -7,7 +7,7 @@ import { prisma } from '@/lib/prisma';
 // downloadable file behind it, waiting for a human to confirm which brief it
 // belongs to.
 
-export type InboxAttachmentSource = 'email' | 'whatsapp';
+export type InboxAttachmentSource = 'email' | 'whatsapp' | 'upload';
 
 interface BaseAttachmentInput {
     workspaceId: string;
