@@ -23,17 +23,42 @@ export interface BriefSearchResult {
     dueDate: string | null;
 }
 
+// Stop words dropped from tokenized matching — mostly the "v"/"v." in case
+// names, which is too short and too common to be a useful discriminator.
+const SEARCH_STOP_WORDS = new Set(['v', 'vs', 'and', 'of', 'the', 'in', 're']);
+
+// A single literal-substring match on the whole query is brittle for case
+// names: "Miles Driver v Innovative Logistics" is NOT a substring of
+// "Miles Drivers v. Innovative Logistics" (extra "s", extra "."), even
+// though they're obviously the same case. Splitting into words and
+// requiring each one to appear somewhere (in any order, on any field)
+// tolerates exactly this kind of minor transcription drift — a real
+// duplicate brief was created in production because of it.
+function tokenize(query: string): string[] {
+    return query
+        .split(/[^a-zA-Z0-9]+/)
+        .map(w => w.trim())
+        .filter(w => w.length > 1 && !SEARCH_STOP_WORDS.has(w.toLowerCase()));
+}
+
 export async function searchBriefsByQuery(query: string, workspaceId: string, limit = 5): Promise<BriefSearchResult[]> {
+    const tokens = tokenize(query);
+    // Fall back to the raw query as a single token if it's all stop words /
+    // too short to tokenize meaningfully (e.g. a bare brief number search).
+    const terms = tokens.length > 0 ? tokens : [query];
+
     const results = await prisma.brief.findMany({
         where: {
             workspaceId,
             deletedAt: null,
-            OR: [
-                { name: { contains: query, mode: 'insensitive' } },
-                { client: { name: { contains: query, mode: 'insensitive' } } },
-                { matter: { name: { contains: query, mode: 'insensitive' } } },
-                { description: { contains: query, mode: 'insensitive' } },
-            ],
+            AND: terms.map(term => ({
+                OR: [
+                    { name: { contains: term, mode: 'insensitive' as const } },
+                    { client: { name: { contains: term, mode: 'insensitive' as const } } },
+                    { matter: { name: { contains: term, mode: 'insensitive' as const } } },
+                    { description: { contains: term, mode: 'insensitive' as const } },
+                ],
+            })),
         },
         select: {
             id: true,
