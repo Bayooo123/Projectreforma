@@ -1,9 +1,25 @@
 import { prisma } from '@/lib/prisma';
+import { config } from '@/lib/config';
 import { sendWhatsAppMessage } from './send';
 import { getOrCreateSession, appendToSession, getHistory } from './session';
 import { dispatch } from './dispatcher';
-import { runBriefManager } from './brief-manager';
-import { AgentContext } from './types';
+import { runBriefManagerAnthropic } from './brief-manager';
+import { runBriefManagerOpenAI } from './brief-manager-openai';
+import { AgentContext, HistoryMessage } from './types';
+
+// Provider router: OpenAI primary when configured, Anthropic as fallback —
+// both on a genuine failure and whenever OPENAI_API_KEY isn't set at all, so
+// this is a no-op (Anthropic-only, today's behavior) until that key exists.
+async function runBriefManager(message: string, ctx: AgentContext, history: HistoryMessage[]): Promise<string> {
+    if (config.OPENAI_API_KEY) {
+        try {
+            return await runBriefManagerOpenAI(message, ctx, history);
+        } catch (err) {
+            console.error('[WhatsApp Agent] OpenAI provider failed, falling back to Anthropic:', err);
+        }
+    }
+    return runBriefManagerAnthropic(message, ctx, history);
+}
 
 // Normalise phone numbers — WhatsApp sends them without the + prefix
 function normalisePhone(raw: string): string {

@@ -14,6 +14,9 @@ const envSchema = z.object({
 
     // External Services
     ANTHROPIC_API_KEY: z.string().optional(),
+    OPENAI_API_KEY: z.string().optional(),
+    // Overridable so a model-ID change doesn't need a code deploy.
+    OPENAI_MODEL: z.string().default('gpt-4o'),
     VOYAGE_API_KEY: z.string().optional(),
     BLOB_READ_WRITE_TOKEN: z.string().optional(),
     CRON_SECRET: z.string().min(32).optional(),

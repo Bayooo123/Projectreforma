@@ -5,8 +5,14 @@ import { AgentContext, HistoryMessage } from './types';
 import { searchBriefsByQuery, getCaseChronology, getUpcomingHearingsForWorkspace } from '@/lib/ai-context/brief-context';
 
 // ── Tool definitions ──────────────────────────────────────────────────────────
+// Exported so the OpenAI-driven loop (brief-manager-openai.ts) can reuse the
+// exact same schemas and business logic — only the "which LLM drives the
+// loop" part differs per provider. Anthropic's input_schema and OpenAI's
+// function.parameters are both just JSON Schema, so one canonical
+// Anthropic-shaped array is the source of truth; brief-manager-openai.ts
+// converts it at the wrapper boundary rather than duplicating it by hand.
 
-const TOOLS: Anthropic.Tool[] = [
+export const TOOLS: Anthropic.Tool[] = [
     {
         name: 'search_briefs',
         description: 'Search for briefs by name, client, or matter. Use this first when the user asks about a specific case.',
@@ -239,7 +245,7 @@ async function createBriefFromWhatsApp(
 
 // ── Tool executor ─────────────────────────────────────────────────────────────
 
-async function executeTool(name: string, input: Record<string, unknown>, ctx: AgentContext): Promise<unknown> {
+export async function executeTool(name: string, input: Record<string, unknown>, ctx: AgentContext): Promise<unknown> {
     const workspaceId = ctx.workspaceId;
     switch (name) {
         case 'search_briefs':
@@ -273,19 +279,12 @@ async function executeTool(name: string, input: Record<string, unknown>, ctx: Ag
     }
 }
 
-// ── Agent entry point ─────────────────────────────────────────────────────────
+// ── Shared system prompt ──────────────────────────────────────────────────────
+// Exported so the OpenAI loop uses word-for-word identical instructions —
+// the two providers should differ in mechanics only, never in behavior.
 
-export async function runBriefManager(
-    message: string,
-    ctx: AgentContext,
-    history: HistoryMessage[],
-): Promise<string> {
-    const apiKey = config.ANTHROPIC_API_KEY;
-    if (!apiKey) return 'AI is not configured. Please contact your administrator.';
-
-    const client = new Anthropic({ apiKey });
-
-    const systemPrompt = `You are Reforma's Brief Manager — a legal assistant accessible via WhatsApp for ${ctx.firmName}.
+export function buildSystemPrompt(ctx: AgentContext): string {
+    return `You are Reforma's Brief Manager — a legal assistant accessible via WhatsApp for ${ctx.firmName}.
 
 You are talking to: ${ctx.userName}
 Today: ${new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
@@ -305,6 +304,22 @@ Recording updates (record_brief_update):
 - Only pause to ask when it's genuinely ambiguous: if search_briefs/list_briefs returns multiple plausible matches, reply with a short numbered list ("1. Smith v Adeyemi (BRF-014)\\n2. Smith v Okafor (BRF-021)\\nWhich one?") and wait for their reply. When they answer with just a number, match it against the list you showed in your own previous message in this conversation.
 - If nothing matches at all, tell them so and ask if they want to create a new brief for it. If they say yes (or already said so), call create_brief, then immediately record the update against the brief you just created — don't make them repeat themselves.
 - After recording or creating, confirm briefly and concretely: what you recorded, and against which brief (name + number).`;
+}
+
+// ── Agent entry point (Anthropic) ─────────────────────────────────────────────
+// This is the fallback path — see runBriefManager in index.ts for the
+// OpenAI-primary/Anthropic-fallback router.
+
+export async function runBriefManagerAnthropic(
+    message: string,
+    ctx: AgentContext,
+    history: HistoryMessage[],
+): Promise<string> {
+    const apiKey = config.ANTHROPIC_API_KEY;
+    if (!apiKey) return 'AI is not configured. Please contact your administrator.';
+
+    const client = new Anthropic({ apiKey });
+    const systemPrompt = buildSystemPrompt(ctx);
 
     // Build messages from history + current message
     const messages: Anthropic.MessageParam[] = [
