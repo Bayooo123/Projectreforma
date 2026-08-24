@@ -38,7 +38,7 @@ export const TOOLS: Anthropic.Tool[] = [
     },
     {
         name: 'get_brief_detail',
-        description: 'Get full detail for a brief including AI summary, document count, and open tasks.',
+        description: 'Get administrative metadata for a brief — client, matter, due date, document/task counts. Do NOT use this for "what\'s the status" or "how\'s X doing" questions — use analyze_brief for those, since this tool\'s aiSummary field is only a stale cached snapshot, not a real answer.',
         input_schema: {
             type: 'object' as const,
             properties: {
@@ -354,7 +354,7 @@ Rules for WhatsApp responses:
 - Always cite the source document when mentioning case facts
 
 Choosing the right tool for a question about a brief:
-- "What's going on with X" / "give me an analysis" / "what should I do next" / "who's the ball with" → analyze_brief. This is the deep case-manager read (status, next steps, ball-in-court, open questions) — always prefer it over get_case_chronology when the user wants a synthesised answer rather than a raw timeline.
+- "What's the status of X" / "how's X doing" / "what's going on with X" / "give me an analysis" / "what should I do next" / "who's the ball with" → analyze_brief. This is the deep case-manager read (status, next steps, ball-in-court, open questions). Prefer it over get_brief_detail (bare metadata, no real analysis) and over get_case_chronology (raw timeline, no synthesis) whenever the user wants an actual answer rather than a data dump.
 - Anything that needs a fact FROM INSIDE a document — a clause, a date, an amount, a name, what a witness said, what was pleaded → search_brief_documents. Never guess or answer from the chronology snippet alone when the user is asking what a document actually says.
 - "What's happened / what's the timeline" → get_case_chronology.
 - If it's not obvious which brief the user means, resolve it the same way as recording an update: search_briefs/list_briefs first, ask only if genuinely ambiguous.
