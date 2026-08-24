@@ -120,8 +120,12 @@ export async function getCaseChronology(
     workspaceId: string,
     limit = 100,
 ): Promise<CaseChronologyResult | { error: string }> {
+    // OR on briefNumber too: a tool-calling agent that learned this brief's
+    // human-readable number ("BRF-344") from an earlier reply in the same
+    // conversation may pass that back instead of the internal id — both
+    // should resolve to the same brief rather than a spurious "not found".
     const brief = await prisma.brief.findFirst({
-        where: { id: briefId, workspaceId, deletedAt: null },
+        where: { workspaceId, deletedAt: null, OR: [{ id: briefId }, { briefNumber: briefId }] },
         select: {
             id: true, name: true, briefNumber: true, status: true,
             createdAt: true, dueDate: true, matterId: true,
@@ -129,6 +133,7 @@ export async function getCaseChronology(
         },
     });
     if (!brief) return { error: 'Brief not found' };
+    briefId = brief.id; // caller may have passed the brief number — every query below needs the real id
 
     const [extractedFacts, calendarEntries, tasks, documents, agentNotes] = await Promise.all([
         prisma.documentTimelineEvent.findMany({

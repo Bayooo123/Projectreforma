@@ -153,7 +153,7 @@ async function listBriefs(workspaceId: string, limit = 8) {
 
 async function getBriefDetail(briefId: string, workspaceId: string) {
     const brief = await prisma.brief.findFirst({
-        where: { id: briefId, workspaceId, deletedAt: null },
+        where: { workspaceId, deletedAt: null, OR: [{ id: briefId }, { briefNumber: briefId }] },
         select: {
             id: true,
             name: true,
@@ -198,11 +198,12 @@ async function recordBriefUpdate(
     nextAction?: string,
 ) {
     const brief = await prisma.brief.findFirst({
-        where: { id: briefId, workspaceId, deletedAt: null },
+        where: { workspaceId, deletedAt: null, OR: [{ id: briefId }, { briefNumber: briefId }] },
         select: { id: true, name: true },
     });
     if (!brief) return { error: 'Brief not found in this workspace' };
     if (!statusUpdate && !nextAction) return { error: 'Provide at least a status update or a next action' };
+    briefId = brief.id; // caller may have passed the brief number instead of the internal id
 
     await prisma.brief.update({
         where: { id: briefId },
@@ -269,8 +270,9 @@ async function createBriefFromWhatsApp(
 }
 
 async function searchBriefDocuments(briefId: string, workspaceId: string, query: string) {
-    const brief = await prisma.brief.findFirst({ where: { id: briefId, workspaceId, deletedAt: null }, select: { id: true } });
+    const brief = await prisma.brief.findFirst({ where: { workspaceId, deletedAt: null, OR: [{ id: briefId }, { briefNumber: briefId }] }, select: { id: true } });
     if (!brief) return { error: 'Brief not found in this workspace' };
+    briefId = brief.id; // caller may have passed the brief number instead of the internal id
 
     if (!config.VOYAGE_API_KEY) return { error: 'Document search is not configured for this workspace.' };
 
@@ -285,8 +287,9 @@ async function searchBriefDocuments(briefId: string, workspaceId: string, query:
 }
 
 async function analyzeBrief(briefId: string, workspaceId: string) {
-    const brief = await prisma.brief.findFirst({ where: { id: briefId, workspaceId, deletedAt: null }, select: { id: true } });
+    const brief = await prisma.brief.findFirst({ where: { workspaceId, deletedAt: null, OR: [{ id: briefId }, { briefNumber: briefId }] }, select: { id: true } });
     if (!brief) return { error: 'Brief not found in this workspace' };
+    briefId = brief.id; // caller may have passed the brief number instead of the internal id
 
     const result = await generateBriefManagerInsight(briefId);
     if (!result.success) return { error: result.reason };
