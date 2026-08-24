@@ -3,6 +3,8 @@ import { prisma } from '@/lib/prisma';
 import { config } from '@/lib/config';
 import { AgentContext, HistoryMessage } from './types';
 import { searchBriefsByQuery, getCaseChronology, getUpcomingHearingsForWorkspace } from '@/lib/ai-context/brief-context';
+import { DraftingService } from '@/lib/drafting/drafting-service';
+import { generateBriefManagerInsight } from '@/lib/agents/brief-manager/scan';
 
 // ── Tool definitions ──────────────────────────────────────────────────────────
 // Exported so the OpenAI-driven loop (brief-manager-openai.ts) can reuse the
@@ -64,6 +66,29 @@ export const TOOLS: Anthropic.Tool[] = [
             properties: {
                 days_ahead: { type: 'number', description: 'How many days ahead (default 30)' },
             },
+        },
+    },
+    {
+        name: 'search_brief_documents',
+        description: 'Search the actual text of documents filed under a brief — use this whenever the user asks what a specific document says, or asks something that needs a fact, clause, date, amount, or name from inside a document rather than the chronology summary (e.g. "what does the tenancy agreement say about rent review", "who witnessed the affidavit", "what damages did we claim"). Returns the most relevant passages, not a full chronology.',
+        input_schema: {
+            type: 'object' as const,
+            properties: {
+                brief_id: { type: 'string' },
+                query: { type: 'string', description: 'The question or topic to search for, in natural language' },
+            },
+            required: ['brief_id', 'query'],
+        },
+    },
+    {
+        name: 'analyze_brief',
+        description: 'Run a full case-manager analysis of a brief on demand: current status, key developments, next steps, who currently holds the ball (firm/opposing counsel/court), open questions, and whether documents or a client update are needed. Use this when the user asks for an analysis, a status check, "what\'s going on with X", or "what should I do next on X" — this is deeper than get_case_chronology, which only lists raw events.',
+        input_schema: {
+            type: 'object' as const,
+            properties: {
+                brief_id: { type: 'string' },
+            },
+            required: ['brief_id'],
         },
     },
     {
@@ -243,6 +268,32 @@ async function createBriefFromWhatsApp(
     };
 }
 
+async function searchBriefDocuments(briefId: string, workspaceId: string, query: string) {
+    const brief = await prisma.brief.findFirst({ where: { id: briefId, workspaceId, deletedAt: null }, select: { id: true } });
+    if (!brief) return { error: 'Brief not found in this workspace' };
+
+    if (!config.VOYAGE_API_KEY) return { error: 'Document search is not configured for this workspace.' };
+
+    try {
+        const context = await DraftingService.retrieveContext(briefId, query, 6);
+        if (!context.trim()) return { results: [], note: 'No matching passages found in this brief\'s documents.' };
+        return { results: context };
+    } catch (err) {
+        console.error(`[WhatsApp Agent] Document search failed for brief ${briefId}:`, err);
+        return { error: 'Document search failed. Try again in a moment.' };
+    }
+}
+
+async function analyzeBrief(briefId: string, workspaceId: string) {
+    const brief = await prisma.brief.findFirst({ where: { id: briefId, workspaceId, deletedAt: null }, select: { id: true } });
+    if (!brief) return { error: 'Brief not found in this workspace' };
+
+    const result = await generateBriefManagerInsight(briefId);
+    if (!result.success) return { error: result.reason };
+
+    return { headline: result.insight.summary, ...result.insight.data };
+}
+
 // ── Tool executor ─────────────────────────────────────────────────────────────
 
 export async function executeTool(name: string, input: Record<string, unknown>, ctx: AgentContext): Promise<unknown> {
@@ -258,6 +309,10 @@ export async function executeTool(name: string, input: Record<string, unknown>, 
             return getCaseChronology(input.brief_id as string, workspaceId);
         case 'get_upcoming_hearings':
             return getUpcomingHearingsForWorkspace(workspaceId, (input.days_ahead as number) ?? 30);
+        case 'search_brief_documents':
+            return searchBriefDocuments(input.brief_id as string, workspaceId, input.query as string);
+        case 'analyze_brief':
+            return analyzeBrief(input.brief_id as string, workspaceId);
         case 'record_brief_update':
             return recordBriefUpdate(
                 input.brief_id as string,
@@ -297,6 +352,12 @@ Rules for WhatsApp responses:
 - Use numbered lists for chronologies
 - For AI summaries, give the headline points, not the full text
 - Always cite the source document when mentioning case facts
+
+Choosing the right tool for a question about a brief:
+- "What's going on with X" / "give me an analysis" / "what should I do next" / "who's the ball with" → analyze_brief. This is the deep case-manager read (status, next steps, ball-in-court, open questions) — always prefer it over get_case_chronology when the user wants a synthesised answer rather than a raw timeline.
+- Anything that needs a fact FROM INSIDE a document — a clause, a date, an amount, a name, what a witness said, what was pleaded → search_brief_documents. Never guess or answer from the chronology snippet alone when the user is asking what a document actually says.
+- "What's happened / what's the timeline" → get_case_chronology.
+- If it's not obvious which brief the user means, resolve it the same way as recording an update: search_briefs/list_briefs first, ask only if genuinely ambiguous.
 
 Recording updates (record_brief_update):
 - When the user tells you something that happened on a case, or what needs to happen next, record it — don't just chat back and let it evaporate. That's the whole point of this channel.
