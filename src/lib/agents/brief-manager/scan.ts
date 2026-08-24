@@ -2,6 +2,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { config } from '@/lib/config';
+import { sendWhatsAppMessage } from '@/lib/agents/whatsapp/send';
 
 export type BallInCourtStatus = 'us' | 'opposing_counsel' | 'court' | 'unclear';
 export type RepresentationConfidence = 'confirmed' | 'inferred' | 'unclear';
@@ -398,11 +399,43 @@ export async function upsertInsightForBrief(workspaceId: string, briefId: string
     return 'created';
 }
 
+// Closes the loop from "detected obligation" to "the responsible lawyer knows
+// right now" — without this, a fresh insight just sits on the board until
+// someone happens to open Reforma. Only fires for the three cases that are
+// genuinely someone's job to act on, not every reshuffled chronology.
+function buildNudgeMessage(brief: { name: string; briefNumber: string }, data: BriefManagerInsightData): string {
+    const reasons: string[] = [];
+    if (data.ballInCourt?.status === 'us') reasons.push(BALL_IN_COURT_LABEL.us);
+    if (data.needsClientUpdate) reasons.push(`Client update overdue — ${data.daysSinceClientContact}d since last contact`);
+    if (data.needsDocuments) reasons.push(`Needs documents — ${data.docRequestReason ?? 'more information required'}`);
+
+    const lines = [`⚖️ *${brief.name}* (${brief.briefNumber})`, reasons.join(' · ')];
+    const nextStep = data.nextSteps?.[0];
+    if (nextStep) lines.push(`Next: ${nextStep}`);
+    lines.push('Reply here to update Brief Manager, or open Reforma for the full brief.');
+    return lines.join('\n');
+}
+
+async function notifyResponsibleLawyer(
+    brief: { id: string; name: string; briefNumber: string; lawyerId: string; lawyerInChargeId: string | null },
+    data: BriefManagerInsightData,
+): Promise<void> {
+    const isActionable = data.ballInCourt?.status === 'us' || data.needsClientUpdate || data.needsDocuments;
+    if (!isActionable) return;
+
+    const responsibleId = brief.lawyerInChargeId ?? brief.lawyerId;
+    const user = await prisma.user.findUnique({ where: { id: responsibleId }, select: { phone: true } });
+    if (!user?.phone) return;
+
+    await sendWhatsAppMessage(user.phone.replace(/\D/g, ''), buildNudgeMessage(brief, data))
+        .catch(err => console.error(`[BriefManager] Nudge failed for brief ${brief.id}:`, err));
+}
+
 export async function scanBriefsForWorkspace(workspaceId: string): Promise<{ created: number; updated: number; skipped: number }> {
     const [briefs, existingInsights] = await Promise.all([
         prisma.brief.findMany({
             where: { workspaceId, status: 'active', deletedAt: null },
-            select: { id: true, createdAt: true },
+            select: { id: true, createdAt: true, name: true, briefNumber: true, lawyerId: true, lawyerInChargeId: true },
         }),
         prisma.agentInsight.findMany({
             where: { workspaceId, agentType: 'brief_manager', status: { in: ['new', 'viewed'] } },
@@ -450,6 +483,8 @@ export async function scanBriefsForWorkspace(workspaceId: string): Promise<{ cre
 
         const result = await upsertInsightForBrief(workspaceId, brief.id, generated.insight);
         if (result === 'created') created++; else updated++;
+
+        await notifyResponsibleLawyer(brief, generated.insight.data);
     }
 
     return { created, updated, skipped };
