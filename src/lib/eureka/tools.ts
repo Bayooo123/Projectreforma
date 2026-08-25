@@ -240,7 +240,18 @@ export async function executeTool(
                     },
                 },
             });
-            if (!matter) return { error: 'Matter not found' };
+            if (!matter) {
+                // "Matter" and "brief" are easily conflated — a name that isn't a
+                // matter is very often actually a brief. Check before giving up.
+                const briefSuggestions = await suggestBriefs(workspaceId, input.matter_id || input.title);
+                return briefSuggestions.length > 0
+                    ? {
+                        error: `No matter found matching "${input.matter_id || input.title}".`,
+                        note: 'No matter matched, but these briefs have a similar name — this is very likely what was meant. Use get_brief_detail or analyze_brief with one of these instead of treating this as a dead end.',
+                        briefSuggestions,
+                    }
+                    : { error: 'No matter found matching that reference.' };
+            }
             const now = new Date();
             return {
                 ...matter,
@@ -751,7 +762,16 @@ export async function executeTool(
                 where: { workspaceId, OR: updateMatterOr },
                 select: { id: true, name: true },
             });
-            if (!matter) return { error: 'Matter not found.' };
+            if (!matter) {
+                const briefSuggestions = await suggestBriefs(workspaceId, input.matter_id || input.matter_title);
+                return briefSuggestions.length > 0
+                    ? {
+                        error: `No matter found matching "${input.matter_id || input.matter_title}".`,
+                        note: 'No matter matched, but these briefs have a similar name — confirm with the user whether they actually meant one of these (use update_brief instead) before giving up.',
+                        briefSuggestions,
+                    }
+                    : { error: 'No matter found matching that reference.' };
+            }
 
             const updates: Record<string, any> = {};
 
