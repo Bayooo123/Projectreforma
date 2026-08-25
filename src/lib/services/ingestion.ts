@@ -78,6 +78,11 @@ export class DocumentIngestionService {
                 extractDocumentTimeline(documentId, name, briefId, extractedText, url, contentType.split('/')[1] || '')
             ).catch(e => console.error('[IngestionService] Timeline extraction failed:', e));
 
+            // 2.5 Chunk + embed for semantic search (fire-and-forget, same reasoning as 2.4)
+            import('@/lib/ingestion/embed-document').then(({ embedDocument }) =>
+                embedDocument(documentId, extractedText)
+            ).catch(e => console.error('[IngestionService] Embedding failed:', e));
+
             return { success: true, documentId, docType, version };
 
         } catch (error) {
