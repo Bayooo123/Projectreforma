@@ -2,7 +2,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { prisma } from '@/lib/prisma';
 import { config } from '@/lib/config';
 import { AgentContext, HistoryMessage } from './types';
-import { searchBriefsByQuery, getUpcomingHearingsForWorkspace } from '@/lib/ai-context/brief-context';
+import { searchBriefsByQuery, getUpcomingHearingsForWorkspace, type BriefSearchResult } from '@/lib/ai-context/brief-context';
 import { DraftingService } from '@/lib/drafting/drafting-service';
 import { generateBriefManagerInsight } from '@/lib/agents/brief-manager/scan';
 import { getClaudeTools as getWorkspaceTools, executeTool as executeWorkspaceTool, idOrTextFilter } from '@/lib/eureka/tools';
@@ -136,6 +136,31 @@ async function listBriefs(workspaceId: string, limit = 8) {
     }));
 }
 
+// Shared by every WhatsApp tool that takes a single brief_id/brief_title
+// slot. A failed lookup never dead-ends in a bare "not found" — it falls
+// back to the closest name matches (the same tokenized, word-order-tolerant
+// search behind search_briefs) so the model always has something to act
+// on: present the candidates, let the person pick, retry with the real id.
+type BriefResolution =
+    | { ok: true; id: string; name: string }
+    | { ok: false; result: { error: string; suggestions?: BriefSearchResult[] } };
+
+async function resolveBriefRef(ref: string, workspaceId: string): Promise<BriefResolution> {
+    const brief = await prisma.brief.findFirst({
+        where: { workspaceId, deletedAt: null, OR: idOrTextFilter(ref, ['name', 'briefNumber', 'customBriefNumber'], undefined) },
+        select: { id: true, name: true },
+    });
+    if (brief) return { ok: true, id: brief.id, name: brief.name };
+
+    const suggestions = await searchBriefsByQuery(ref, workspaceId, 5);
+    return {
+        ok: false,
+        result: suggestions.length > 0
+            ? { error: `No exact match for "${ref}".`, suggestions }
+            : { error: 'No brief found matching that reference.' },
+    };
+}
+
 async function recordBriefUpdate(
     briefId: string,
     workspaceId: string,
@@ -143,13 +168,10 @@ async function recordBriefUpdate(
     statusUpdate?: string,
     nextAction?: string,
 ) {
-    const brief = await prisma.brief.findFirst({
-        where: { workspaceId, deletedAt: null, OR: idOrTextFilter(briefId, ['name', 'briefNumber', 'customBriefNumber'], undefined) },
-        select: { id: true, name: true },
-    });
-    if (!brief) return { error: 'Brief not found in this workspace' };
+    const resolved = await resolveBriefRef(briefId, workspaceId);
+    if (!resolved.ok) return resolved.result;
     if (!statusUpdate && !nextAction) return { error: 'Provide at least a status update or a next action' };
-    briefId = brief.id; // caller may have passed the brief number instead of the internal id
+    briefId = resolved.id;
 
     await prisma.brief.update({
         where: { id: briefId },
@@ -170,13 +192,13 @@ async function recordBriefUpdate(
         userId,
     );
 
-    return { success: true, briefId: brief.id, briefName: brief.name };
+    return { success: true, briefId: resolved.id, briefName: resolved.name };
 }
 
 async function searchBriefDocuments(briefId: string, workspaceId: string, query: string) {
-    const brief = await prisma.brief.findFirst({ where: { workspaceId, deletedAt: null, OR: idOrTextFilter(briefId, ['name', 'briefNumber', 'customBriefNumber'], undefined) }, select: { id: true } });
-    if (!brief) return { error: 'Brief not found in this workspace' };
-    briefId = brief.id; // caller may have passed a name/number instead of the internal id
+    const resolved = await resolveBriefRef(briefId, workspaceId);
+    if (!resolved.ok) return resolved.result;
+    briefId = resolved.id;
 
     if (!config.VOYAGE_API_KEY) return { error: 'Document search is not configured for this workspace.' };
 
@@ -191,9 +213,9 @@ async function searchBriefDocuments(briefId: string, workspaceId: string, query:
 }
 
 async function analyzeBrief(briefId: string, workspaceId: string) {
-    const brief = await prisma.brief.findFirst({ where: { workspaceId, deletedAt: null, OR: idOrTextFilter(briefId, ['name', 'briefNumber', 'customBriefNumber'], undefined) }, select: { id: true } });
-    if (!brief) return { error: 'Brief not found in this workspace' };
-    briefId = brief.id; // caller may have passed a name/number instead of the internal id
+    const resolved = await resolveBriefRef(briefId, workspaceId);
+    if (!resolved.ok) return resolved.result;
+    briefId = resolved.id;
 
     const result = await generateBriefManagerInsight(briefId);
     if (!result.success) return { error: result.reason };
@@ -257,19 +279,23 @@ Rules for WhatsApp responses:
 Matters vs briefs — these are different records:
 - A "matter" is the case-level record (court, judge, overall status); a "brief" is the work product/file within it (or can stand alone with just a client, no matter). A question naming a case could mean either — if get_matters/get_matter_detail comes up empty, try search_briefs/get_brief_detail before concluding it doesn't exist, and vice versa.
 
+Never dead-end on a brief lookup — this is non-negotiable:
+- Every tool that resolves a brief (get_brief_detail, get_brief_timeline, analyze_brief, search_brief_documents, record_brief_update, update_brief) automatically falls back to the closest name matches when there's no exact hit, returned as a "suggestions" array (same names/numbers as search_briefs).
+- If a tool result includes "suggestions", you MUST show them to the user as a short numbered list ("1. Smith v Adeyemi (BRF-014) — Adeyemi Motors\\n2. Smith v Okafor (BRF-021) — Okafor & Co\\nWhich one?") and wait for their reply — never respond with just "not found" or "no results" when suggestions were offered. When they answer with a number, match it against the list you just showed and immediately carry out the ORIGINAL request (the analysis, the timeline, the update, whatever they originally asked for) against the brief they picked — don't just confirm the pick and stop.
+- If a tool result has an error but no "suggestions" (truly nothing close), call list_briefs as a last resort to show what's actually in the workspace before telling the user you found nothing — only report a genuine dead end after that.
+- If it's not obvious which brief the user means even before calling a tool, search_briefs/list_briefs first rather than guessing an id.
+
 Choosing the right tool for a question about a brief:
 - "What's the status of X" / "how's X doing" / "what's going on with X" / "give me an analysis" / "what should I do next" / "who's the ball with" → analyze_brief. This is the deep case-manager read (status, next steps, ball-in-court, open questions). Prefer it over get_brief_detail (metadata + docs/tasks, no real analysis) and over get_brief_timeline (raw timeline, no synthesis) whenever the user wants an actual answer rather than a data dump.
 - Anything that needs a fact FROM INSIDE a document — a clause, a date, an amount, a name, what a witness said, what was pleaded → search_brief_documents (semantic search over document content). Never guess or answer from a chronology snippet alone when the user is asking what a document actually says. analyse_document is for going deep on one already-identified document (including PDFs and images) once you have its document_id.
 - "What's happened / what's the timeline" → get_brief_timeline.
-- If it's not obvious which brief the user means, resolve it the same way as recording an update: search_briefs/list_briefs first, ask only if genuinely ambiguous.
 
 Everything beyond briefs — clients, matters, court dates, financials, deadlines, anomalies, emails — works the same way: search/list first if the target record isn't already clear from context, then call the specific tool. Don't ask the user for an ID you can look up yourself.
 
 Recording updates (record_brief_update):
 - When the user tells you something that happened on a case, or what needs to happen next, record it — don't just chat back and let it evaporate. That's the whole point of this channel.
 - Record-then-optionally-clarify: if it's clear which brief they mean (they named it, or it's the only/obvious match from search_briefs), call record_brief_update immediately. Don't ask for confirmation you don't need.
-- Only pause to ask when it's genuinely ambiguous: if search_briefs/list_briefs returns multiple plausible matches, reply with a short numbered list ("1. Smith v Adeyemi (BRF-014)\\n2. Smith v Okafor (BRF-021)\\nWhich one?") and wait for their reply. When they answer with just a number, match it against the list you showed in your own previous message in this conversation.
-- If nothing matches at all, tell them so and ask if they want to create a new brief for it (create_brief). If they say yes (or already said so), create it, then immediately record the update against the brief you just created — don't make them repeat themselves.
+- If nothing matches at all (record_brief_update returns an error with no suggestions), ask if they want to create a new brief for it (create_brief). If they say yes (or already said so), create it, then immediately record the update against the brief you just created — don't make them repeat themselves.
 - After recording, creating, or updating anything, confirm briefly and concretely: what you did, and against which record (name + number/reference).`;
 }
 

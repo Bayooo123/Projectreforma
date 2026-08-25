@@ -1,6 +1,18 @@
 import { prisma } from '@/lib/prisma';
-import { getCaseChronology } from '@/lib/ai-context/brief-context';
+import { getCaseChronology, searchBriefsByQuery, type BriefSearchResult } from '@/lib/ai-context/brief-context';
 import { generateBriefNumber } from '@/lib/briefs';
+
+// A brief lookup that comes up empty should never dead-end in a bare "not
+// found" — the model (and the person on the other end of WhatsApp) has no
+// way to act on that. Instead it gets the closest name matches back as
+// data, so it can present them as a numbered pick-one list and retry the
+// original request once the user answers, rather than just reporting
+// failure. Reuses the same tokenized, word-order-tolerant search used for
+// the search_briefs tool.
+async function suggestBriefs(workspaceId: string, ref: string | undefined): Promise<BriefSearchResult[]> {
+    if (!ref) return [];
+    return searchBriefsByQuery(ref, workspaceId, 5);
+}
 
 // A tool-calling model has no reliable way to remember whether it's holding
 // an internal id or a human-readable reference (name/title/number) for a
@@ -258,7 +270,12 @@ export async function executeTool(
                     },
                 },
             });
-            if (!brief) return { error: 'Brief not found' };
+            if (!brief) {
+                const suggestions = await suggestBriefs(workspaceId, input.brief_id || input.brief_title);
+                return suggestions.length > 0
+                    ? { error: `No exact match for "${input.brief_id || input.brief_title}".`, suggestions }
+                    : { error: 'No brief found matching that reference.' };
+            }
 
             return {
                 id: brief.id,
@@ -302,7 +319,12 @@ export async function executeTool(
                 },
                 select: { id: true },
             });
-            if (!brief) return { error: 'Brief not found. Try get_matter_detail first to get the brief ID.' };
+            if (!brief) {
+                const suggestions = await suggestBriefs(workspaceId, input.brief_id || input.brief_title);
+                return suggestions.length > 0
+                    ? { error: `No exact match for "${input.brief_id || input.brief_title}".`, suggestions }
+                    : { error: 'No brief found matching that reference. Try get_matter_detail if this might be a matter rather than a brief.' };
+            }
 
             // Case chronology is the same canonical merge (hearings, tasks,
             // document uploads, extracted document facts, agent-recorded notes)
@@ -780,7 +802,12 @@ export async function executeTool(
                 where: { workspaceId, OR: updateBriefOr },
                 select: { id: true, name: true },
             });
-            if (!brief) return { error: 'Brief not found.' };
+            if (!brief) {
+                const suggestions = await suggestBriefs(workspaceId, input.brief_id || input.brief_title);
+                return suggestions.length > 0
+                    ? { error: `No exact match for "${input.brief_id || input.brief_title}".`, suggestions }
+                    : { error: 'No brief found matching that reference.' };
+            }
 
             const updates: Record<string, any> = {};
 
