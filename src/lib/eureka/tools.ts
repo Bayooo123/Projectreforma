@@ -1,5 +1,25 @@
 import { prisma } from '@/lib/prisma';
 import { getCaseChronology } from '@/lib/ai-context/brief-context';
+import { generateBriefNumber } from '@/lib/briefs';
+
+// A tool-calling model has no reliable way to remember whether it's holding
+// an internal id or a human-readable reference (name/title/number) for a
+// record it saw a few turns ago — it will pass either into whichever slot
+// looks right. An exact id-only lookup then fails with a spurious "not
+// found" on a record that was just found seconds earlier in the same
+// conversation. This builds an OR filter that accepts the id in either the
+// id field or any of the given text fields, plus a separate text value.
+export function idOrTextFilter(id: string | undefined, textFields: string[], text: string | undefined): Record<string, unknown>[] {
+    const or: Record<string, unknown>[] = [];
+    if (id) {
+        or.push({ id });
+        for (const f of textFields) or.push({ [f]: { contains: id, mode: 'insensitive' } });
+    }
+    if (text) {
+        for (const f of textFields) or.push({ [f]: { contains: text, mode: 'insensitive' } });
+    }
+    return or;
+}
 
 type Prop = { type: string; description?: string };
 
@@ -177,10 +197,10 @@ export async function executeTool(
         }
 
         case 'get_matter_detail': {
+            const matterOr = idOrTextFilter(input.matter_id, ['name'], input.title);
+            if (matterOr.length === 0) return { error: 'Provide a matter_id or title.' };
             const matter = await prisma.matter.findFirst({
-                where: input.matter_id
-                    ? { id: input.matter_id, workspaceId }
-                    : { name: { contains: input.title, mode: 'insensitive' }, workspaceId },
+                where: { workspaceId, OR: matterOr },
                 include: {
                     client: { select: { name: true, email: true, phone: true } },
                     calendarEntries: {
@@ -220,18 +240,10 @@ export async function executeTool(
         }
 
         case 'get_brief_detail': {
+            const briefOr = idOrTextFilter(input.brief_id, ['name', 'briefNumber', 'customBriefNumber'], input.brief_title);
+            if (briefOr.length === 0) return { error: 'Provide a brief_id or brief_title.' };
             const brief = await prisma.brief.findFirst({
-                where: {
-                    workspaceId, deletedAt: null,
-                    ...(input.brief_id
-                        ? { id: input.brief_id }
-                        : { OR: [
-                            { name: { contains: input.brief_title, mode: 'insensitive' } },
-                            { briefNumber: { contains: input.brief_title, mode: 'insensitive' } },
-                            { customBriefNumber: { contains: input.brief_title, mode: 'insensitive' } },
-                        ]}
-                    ),
-                },
+                where: { workspaceId, deletedAt: null, OR: briefOr },
                 include: {
                     client: { select: { name: true } },
                     matter: { select: { id: true, name: true, court: true, status: true } },
@@ -276,18 +288,13 @@ export async function executeTool(
         }
 
         case 'get_brief_timeline': {
-            // Resolve brief
+            // Resolve brief — by id/title on the brief itself, or by its matter's title
+            const briefOr = idOrTextFilter(input.brief_id, ['name', 'briefNumber', 'customBriefNumber'], input.brief_title);
             const brief = await prisma.brief.findFirst({
                 where: {
                     workspaceId, deletedAt: null,
-                    ...(input.brief_id
-                        ? { id: input.brief_id }
-                        : input.brief_title
-                        ? { OR: [
-                            { name: { contains: input.brief_title, mode: 'insensitive' } },
-                            { briefNumber: { contains: input.brief_title, mode: 'insensitive' } },
-                            { customBriefNumber: { contains: input.brief_title, mode: 'insensitive' } },
-                        ]}
+                    ...(briefOr.length > 0
+                        ? { OR: briefOr }
                         : input.matter_title
                         ? { matter: { name: { contains: input.matter_title, mode: 'insensitive' } } }
                         : {}
@@ -319,10 +326,10 @@ export async function executeTool(
         }
 
         case 'get_client_detail': {
+            const clientOr = idOrTextFilter(input.client_id, ['name'], input.name);
+            if (clientOr.length === 0) return { error: 'Provide a client_id or name.' };
             const client = await prisma.client.findFirst({
-                where: input.client_id
-                    ? { id: input.client_id, workspaceId }
-                    : { name: { contains: input.name, mode: 'insensitive' }, workspaceId },
+                where: { workspaceId, OR: clientOr },
                 include: {
                     matters: { select: { id: true, name: true, status: true, court: true }, orderBy: { createdAt: 'desc' } },
                     payments: { select: { amount: true, date: true, method: true, reference: true }, orderBy: { date: 'desc' }, take: 20 },
@@ -571,9 +578,7 @@ export async function executeTool(
                 });
                 if (client) clientId = client.id;
             }
-            const year = new Date().getFullYear();
-            const count = await prisma.brief.count({ where: { workspaceId } });
-            const briefNumber = `EUR-${year}-${String(count + 1).padStart(4, '0')}`;
+            const briefNumber = await generateBriefNumber(workspaceId);
             const brief = await prisma.brief.create({
                 data: {
                     briefNumber, name: input.name, category: input.category,
@@ -718,10 +723,10 @@ export async function executeTool(
 
         case 'update_matter': {
             // Resolve matter
+            const updateMatterOr = idOrTextFilter(input.matter_id, ['name'], input.matter_title);
+            if (updateMatterOr.length === 0) return { error: 'Provide a matter_id or matter_title.' };
             const matter = await prisma.matter.findFirst({
-                where: input.matter_id
-                    ? { id: input.matter_id, workspaceId }
-                    : { name: { contains: input.matter_title, mode: 'insensitive' }, workspaceId },
+                where: { workspaceId, OR: updateMatterOr },
                 select: { id: true, name: true },
             });
             if (!matter) return { error: 'Matter not found.' };
@@ -769,10 +774,10 @@ export async function executeTool(
         }
 
         case 'update_brief': {
+            const updateBriefOr = idOrTextFilter(input.brief_id, ['name', 'briefNumber', 'customBriefNumber'], input.brief_title);
+            if (updateBriefOr.length === 0) return { error: 'Provide a brief_id or brief_title.' };
             const brief = await prisma.brief.findFirst({
-                where: input.brief_id
-                    ? { id: input.brief_id, workspaceId }
-                    : { name: { contains: input.brief_title, mode: 'insensitive' }, workspaceId },
+                where: { workspaceId, OR: updateBriefOr },
                 select: { id: true, name: true },
             });
             if (!brief) return { error: 'Brief not found.' };

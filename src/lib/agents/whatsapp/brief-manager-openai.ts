@@ -38,11 +38,11 @@ export async function runBriefManagerOpenAI(
     ];
 
     let iterations = 0;
-    while (iterations < 8) {
+    while (iterations < 10) {
         iterations++;
         const response = await client.chat.completions.create({
             model: config.OPENAI_MODEL,
-            max_tokens: 1024,
+            max_tokens: 4096,
             tools,
             messages,
         });

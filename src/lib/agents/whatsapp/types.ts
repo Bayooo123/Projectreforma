@@ -10,5 +10,3 @@ export interface AgentContext {
     userName: string;
     firmName: string;
 }
-
-export type AgentName = 'brief_manager' | 'calendar' | 'unknown';

@@ -2,9 +2,10 @@ import Anthropic from '@anthropic-ai/sdk';
 import { prisma } from '@/lib/prisma';
 import { config } from '@/lib/config';
 import { AgentContext, HistoryMessage } from './types';
-import { searchBriefsByQuery, getCaseChronology, getUpcomingHearingsForWorkspace } from '@/lib/ai-context/brief-context';
+import { searchBriefsByQuery, getUpcomingHearingsForWorkspace } from '@/lib/ai-context/brief-context';
 import { DraftingService } from '@/lib/drafting/drafting-service';
 import { generateBriefManagerInsight } from '@/lib/agents/brief-manager/scan';
+import { getClaudeTools as getWorkspaceTools, executeTool as executeWorkspaceTool, idOrTextFilter } from '@/lib/eureka/tools';
 
 // ── Tool definitions ──────────────────────────────────────────────────────────
 // Exported so the OpenAI-driven loop (brief-manager-openai.ts) can reuse the
@@ -13,11 +14,21 @@ import { generateBriefManagerInsight } from '@/lib/agents/brief-manager/scan';
 // function.parameters are both just JSON Schema, so one canonical
 // Anthropic-shaped array is the source of truth; brief-manager-openai.ts
 // converts it at the wrapper boundary rather than duplicating it by hand.
+//
+// This agent is not brief-only — it's the whole workspace, reached over
+// WhatsApp. It reuses Eureka's full tool set (matters, clients, court dates,
+// financials, documents, anomalies, emails — everything the web chat agent
+// can do) via getWorkspaceTools()/executeWorkspaceTool below, and adds only
+// what's genuinely specific to this channel: a lightweight brief-only
+// search/list pair for the "which brief do you mean" disambiguation flow,
+// semantic document search, on-demand case-manager analysis, and recording
+// an update from a WhatsApp message. get_brief_detail, get_brief_timeline,
+// and create_brief come from Eureka's set — no need to duplicate them here.
 
-export const TOOLS: Anthropic.Tool[] = [
+const WHATSAPP_TOOLS: Anthropic.Tool[] = [
     {
         name: 'search_briefs',
-        description: 'Search for briefs by name, client, or matter. Use this first when the user asks about a specific case.',
+        description: 'Search for briefs by name, client, or matter. Use this first when the user asks about a specific case, or to disambiguate before recording an update.',
         input_schema: {
             type: 'object' as const,
             properties: {
@@ -37,30 +48,8 @@ export const TOOLS: Anthropic.Tool[] = [
         },
     },
     {
-        name: 'get_brief_detail',
-        description: 'Get administrative metadata for a brief — client, matter, due date, document/task counts. Do NOT use this for "what\'s the status" or "how\'s X doing" questions — use analyze_brief for those, since this tool\'s aiSummary field is only a stale cached snapshot, not a real answer.',
-        input_schema: {
-            type: 'object' as const,
-            properties: {
-                brief_id: { type: 'string' },
-            },
-            required: ['brief_id'],
-        },
-    },
-    {
-        name: 'get_case_chronology',
-        description: 'Get the full chronological history of a brief: court hearings and adjournments, tasks, document uploads, facts extracted from document content, and updates recorded by any agent (WhatsApp, web chat, Meetings).',
-        input_schema: {
-            type: 'object' as const,
-            properties: {
-                brief_id: { type: 'string' },
-            },
-            required: ['brief_id'],
-        },
-    },
-    {
         name: 'get_upcoming_hearings',
-        description: 'Get upcoming court hearings and meetings across all briefs.',
+        description: 'Get upcoming court hearings and meetings (both types) across the whole workspace within a day window — the quickest way to answer "what\'s coming up". For date-range or lawyer-filtered court queries specifically, use get_court_dates instead.',
         input_schema: {
             type: 'object' as const,
             properties: {
@@ -82,7 +71,7 @@ export const TOOLS: Anthropic.Tool[] = [
     },
     {
         name: 'analyze_brief',
-        description: 'Run a full case-manager analysis of a brief on demand: current status, key developments, next steps, who currently holds the ball (firm/opposing counsel/court), open questions, and whether documents or a client update are needed. Use this when the user asks for an analysis, a status check, "what\'s going on with X", or "what should I do next on X" — this is deeper than get_case_chronology, which only lists raw events.',
+        description: 'Run a full case-manager analysis of a brief on demand: current status, key developments, next steps, who currently holds the ball (firm/opposing counsel/court), open questions, and whether documents or a client update are needed. Use this when the user asks for an analysis, a status check, "what\'s going on with X", or "what should I do next on X" — this is deeper than get_brief_timeline, which only lists raw events.',
         input_schema: {
             type: 'object' as const,
             properties: {
@@ -104,26 +93,22 @@ export const TOOLS: Anthropic.Tool[] = [
             required: ['brief_id'],
         },
     },
-    {
-        name: 'create_brief',
-        description: 'Create a new brief when the user wants to log something against a case that doesn\'t exist yet. Only use after confirming no existing brief matches (search_briefs/list_briefs came up empty, or the user explicitly says to create one). The brief number is generated automatically — never ask the user for one.',
-        input_schema: {
-            type: 'object' as const,
-            properties: {
-                name: { type: 'string', description: 'The case/brief name, e.g. "Smith v Adeyemi"' },
-                client_name: { type: 'string', description: 'Client name, if known — links to an existing client with a matching name, or leaves unlinked if none matches' },
-                category: { type: 'string', description: 'Category, e.g. Litigation, Advisory, Drafting. Defaults to "General" if not given.' },
-            },
-            required: ['name'],
-        },
-    },
 ];
 
+// The full merged tool set exposed to the model: Eureka's workspace-wide
+// tools plus this channel's own additions. No name collisions — verified
+// against getWorkspaceTools()'s list (get_brief_detail, get_brief_timeline,
+// and create_brief live there now, not here).
+export const TOOLS: Anthropic.Tool[] = [...(getWorkspaceTools() as Anthropic.Tool[]), ...WHATSAPP_TOOLS];
+
 // ── Tool implementations ──────────────────────────────────────────────────────
-// search_briefs, get_case_chronology, and get_upcoming_hearings are now
-// backed by the shared src/lib/ai-context/brief-context.ts module (the same
-// queries were hand-rolled near-identically in Pulse's Brief Manager and
-// Eureka) — see that file for the implementations.
+// search_briefs and get_upcoming_hearings are backed by the shared
+// src/lib/ai-context/brief-context.ts module (the same queries were
+// hand-rolled near-identically in Pulse's Brief Manager and Eureka) — see
+// that file for the implementations. Everything not specific to this
+// channel (get_matters, get_brief_detail, financials, clients, anomalies,
+// emails, create/update tools, etc.) is delegated to executeWorkspaceTool
+// in the default case below — see src/lib/eureka/tools.ts.
 
 async function listBriefs(workspaceId: string, limit = 8) {
     const results = await prisma.brief.findMany({
@@ -151,45 +136,6 @@ async function listBriefs(workspaceId: string, limit = 8) {
     }));
 }
 
-async function getBriefDetail(briefId: string, workspaceId: string) {
-    const brief = await prisma.brief.findFirst({
-        where: { workspaceId, deletedAt: null, OR: [{ id: briefId }, { briefNumber: briefId }] },
-        select: {
-            id: true,
-            name: true,
-            briefNumber: true,
-            status: true,
-            description: true,
-            dueDate: true,
-            aiSummaryProse: true,
-            aiSummaryGeneratedAt: true,
-            client: { select: { name: true } },
-            matter: { select: { name: true } },
-            _count: {
-                select: {
-                    documents: true,
-                    tasks: { where: { status: { not: 'completed' } } },
-                },
-            },
-        },
-    });
-    if (!brief) return { error: 'Brief not found' };
-    return {
-        id: brief.id,
-        name: brief.name,
-        briefNumber: brief.briefNumber,
-        status: brief.status,
-        client: brief.client?.name ?? null,
-        matter: brief.matter?.name ?? null,
-        description: brief.description,
-        dueDate: brief.dueDate?.toISOString().split('T')[0] ?? null,
-        documentCount: brief._count.documents,
-        openTaskCount: brief._count.tasks,
-        aiSummary: brief.aiSummaryProse ?? null,
-        aiSummaryDate: brief.aiSummaryGeneratedAt?.toISOString().split('T')[0] ?? null,
-    };
-}
-
 async function recordBriefUpdate(
     briefId: string,
     workspaceId: string,
@@ -198,7 +144,7 @@ async function recordBriefUpdate(
     nextAction?: string,
 ) {
     const brief = await prisma.brief.findFirst({
-        where: { workspaceId, deletedAt: null, OR: [{ id: briefId }, { briefNumber: briefId }] },
+        where: { workspaceId, deletedAt: null, OR: idOrTextFilter(briefId, ['name', 'briefNumber', 'customBriefNumber'], undefined) },
         select: { id: true, name: true },
     });
     if (!brief) return { error: 'Brief not found in this workspace' };
@@ -227,52 +173,10 @@ async function recordBriefUpdate(
     return { success: true, briefId: brief.id, briefName: brief.name };
 }
 
-async function createBriefFromWhatsApp(
-    name: string,
-    workspaceId: string,
-    userId: string,
-    clientName?: string,
-    category?: string,
-) {
-    const { generateBriefNumber } = await import('@/lib/briefs');
-    const briefNumber = await generateBriefNumber(workspaceId);
-
-    let clientId: string | null = null;
-    if (clientName) {
-        const client = await prisma.client.findFirst({
-            where: { workspaceId, name: { equals: clientName, mode: 'insensitive' }, deletedAt: null },
-            select: { id: true },
-        });
-        clientId = client?.id ?? null;
-    }
-
-    const brief = await prisma.brief.create({
-        data: {
-            briefNumber,
-            name,
-            clientId,
-            lawyerId: userId,
-            workspaceId,
-            category: category || 'General',
-            status: 'active',
-        },
-        select: { id: true, name: true, briefNumber: true },
-    });
-
-    return {
-        success: true,
-        briefId: brief.id,
-        briefName: brief.name,
-        briefNumber: brief.briefNumber,
-        clientLinked: !!clientId,
-        note: clientName && !clientId ? `No existing client named "${clientName}" was found — brief created without a linked client.` : undefined,
-    };
-}
-
 async function searchBriefDocuments(briefId: string, workspaceId: string, query: string) {
-    const brief = await prisma.brief.findFirst({ where: { workspaceId, deletedAt: null, OR: [{ id: briefId }, { briefNumber: briefId }] }, select: { id: true } });
+    const brief = await prisma.brief.findFirst({ where: { workspaceId, deletedAt: null, OR: idOrTextFilter(briefId, ['name', 'briefNumber', 'customBriefNumber'], undefined) }, select: { id: true } });
     if (!brief) return { error: 'Brief not found in this workspace' };
-    briefId = brief.id; // caller may have passed the brief number instead of the internal id
+    briefId = brief.id; // caller may have passed a name/number instead of the internal id
 
     if (!config.VOYAGE_API_KEY) return { error: 'Document search is not configured for this workspace.' };
 
@@ -287,9 +191,9 @@ async function searchBriefDocuments(briefId: string, workspaceId: string, query:
 }
 
 async function analyzeBrief(briefId: string, workspaceId: string) {
-    const brief = await prisma.brief.findFirst({ where: { workspaceId, deletedAt: null, OR: [{ id: briefId }, { briefNumber: briefId }] }, select: { id: true } });
+    const brief = await prisma.brief.findFirst({ where: { workspaceId, deletedAt: null, OR: idOrTextFilter(briefId, ['name', 'briefNumber', 'customBriefNumber'], undefined) }, select: { id: true } });
     if (!brief) return { error: 'Brief not found in this workspace' };
-    briefId = brief.id; // caller may have passed the brief number instead of the internal id
+    briefId = brief.id; // caller may have passed a name/number instead of the internal id
 
     const result = await generateBriefManagerInsight(briefId);
     if (!result.success) return { error: result.reason };
@@ -306,10 +210,6 @@ export async function executeTool(name: string, input: Record<string, unknown>, 
             return searchBriefsByQuery(input.query as string, workspaceId);
         case 'list_briefs':
             return listBriefs(workspaceId, (input.limit as number) ?? 8);
-        case 'get_brief_detail':
-            return getBriefDetail(input.brief_id as string, workspaceId);
-        case 'get_case_chronology':
-            return getCaseChronology(input.brief_id as string, workspaceId);
         case 'get_upcoming_hearings':
             return getUpcomingHearingsForWorkspace(workspaceId, (input.days_ahead as number) ?? 30);
         case 'search_brief_documents':
@@ -324,16 +224,13 @@ export async function executeTool(name: string, input: Record<string, unknown>, 
                 input.status_update as string | undefined,
                 input.next_action as string | undefined,
             );
-        case 'create_brief':
-            return createBriefFromWhatsApp(
-                input.name as string,
-                workspaceId,
-                ctx.userId,
-                input.client_name as string | undefined,
-                input.category as string | undefined,
-            );
         default:
-            return { error: `Unknown tool: ${name}` };
+            // Everything else — matters, clients, court dates, financials,
+            // documents, anomalies, emails, create/update — is Eureka's tool
+            // set. See src/lib/eureka/tools.ts; this channel doesn't need its
+            // own copy of logic that's already implemented and battle-tested
+            // there.
+            return executeWorkspaceTool(name, input, workspaceId, ctx.userId);
     }
 }
 
@@ -342,32 +239,38 @@ export async function executeTool(name: string, input: Record<string, unknown>, 
 // the two providers should differ in mechanics only, never in behavior.
 
 export function buildSystemPrompt(ctx: AgentContext): string {
-    return `You are Reforma's Brief Manager — a legal assistant accessible via WhatsApp for ${ctx.firmName}.
+    return `You are Reforma's assistant, accessible via WhatsApp for ${ctx.firmName} — the same intelligence behind Reforma's web chat (Eureka), reachable from a phone. You are not limited to briefs: you have live access to the whole workspace — matters, clients, court dates, financials, documents, anomalies, and email correspondence — and you can create and update records, not just read them.
 
 You are talking to: ${ctx.userName}
 Today: ${new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
 
-You have access to the firm's brief database, and you can also record updates and create new briefs.
+Never refuse a question or say you can "only help with briefs and case information" — if it's about this firm's work, there is very likely a tool for it. Try the tool that fits before concluding you can't help, and if you're genuinely unsure which one applies, make your best attempt rather than deflecting.
 
 Rules for WhatsApp responses:
-- Keep responses under 800 characters when possible
-- Use plain text — no markdown bold, no tables
+- Keep responses under 800 characters when possible — split naturally into a few messages if the answer genuinely needs more, don't cram it or truncate it
+- Use plain text — no markdown bold, no tables, no markdown links (unlike the web chat, WhatsApp won't render them) — just say the name/number in prose
 - Use numbered lists for chronologies
 - For AI summaries, give the headline points, not the full text
 - Always cite the source document when mentioning case facts
+- Format money in Naira (₦) with commas
+
+Matters vs briefs — these are different records:
+- A "matter" is the case-level record (court, judge, overall status); a "brief" is the work product/file within it (or can stand alone with just a client, no matter). A question naming a case could mean either — if get_matters/get_matter_detail comes up empty, try search_briefs/get_brief_detail before concluding it doesn't exist, and vice versa.
 
 Choosing the right tool for a question about a brief:
-- "What's the status of X" / "how's X doing" / "what's going on with X" / "give me an analysis" / "what should I do next" / "who's the ball with" → analyze_brief. This is the deep case-manager read (status, next steps, ball-in-court, open questions). Prefer it over get_brief_detail (bare metadata, no real analysis) and over get_case_chronology (raw timeline, no synthesis) whenever the user wants an actual answer rather than a data dump.
-- Anything that needs a fact FROM INSIDE a document — a clause, a date, an amount, a name, what a witness said, what was pleaded → search_brief_documents. Never guess or answer from the chronology snippet alone when the user is asking what a document actually says.
-- "What's happened / what's the timeline" → get_case_chronology.
+- "What's the status of X" / "how's X doing" / "what's going on with X" / "give me an analysis" / "what should I do next" / "who's the ball with" → analyze_brief. This is the deep case-manager read (status, next steps, ball-in-court, open questions). Prefer it over get_brief_detail (metadata + docs/tasks, no real analysis) and over get_brief_timeline (raw timeline, no synthesis) whenever the user wants an actual answer rather than a data dump.
+- Anything that needs a fact FROM INSIDE a document — a clause, a date, an amount, a name, what a witness said, what was pleaded → search_brief_documents (semantic search over document content). Never guess or answer from a chronology snippet alone when the user is asking what a document actually says. analyse_document is for going deep on one already-identified document (including PDFs and images) once you have its document_id.
+- "What's happened / what's the timeline" → get_brief_timeline.
 - If it's not obvious which brief the user means, resolve it the same way as recording an update: search_briefs/list_briefs first, ask only if genuinely ambiguous.
+
+Everything beyond briefs — clients, matters, court dates, financials, deadlines, anomalies, emails — works the same way: search/list first if the target record isn't already clear from context, then call the specific tool. Don't ask the user for an ID you can look up yourself.
 
 Recording updates (record_brief_update):
 - When the user tells you something that happened on a case, or what needs to happen next, record it — don't just chat back and let it evaporate. That's the whole point of this channel.
 - Record-then-optionally-clarify: if it's clear which brief they mean (they named it, or it's the only/obvious match from search_briefs), call record_brief_update immediately. Don't ask for confirmation you don't need.
 - Only pause to ask when it's genuinely ambiguous: if search_briefs/list_briefs returns multiple plausible matches, reply with a short numbered list ("1. Smith v Adeyemi (BRF-014)\\n2. Smith v Okafor (BRF-021)\\nWhich one?") and wait for their reply. When they answer with just a number, match it against the list you showed in your own previous message in this conversation.
-- If nothing matches at all, tell them so and ask if they want to create a new brief for it. If they say yes (or already said so), call create_brief, then immediately record the update against the brief you just created — don't make them repeat themselves.
-- After recording or creating, confirm briefly and concretely: what you recorded, and against which brief (name + number).`;
+- If nothing matches at all, tell them so and ask if they want to create a new brief for it (create_brief). If they say yes (or already said so), create it, then immediately record the update against the brief you just created — don't make them repeat themselves.
+- After recording, creating, or updating anything, confirm briefly and concretely: what you did, and against which record (name + number/reference).`;
 }
 
 // ── Agent entry point (Anthropic) ─────────────────────────────────────────────
@@ -391,13 +294,17 @@ export async function runBriefManagerAnthropic(
         { role: 'user', content: message },
     ];
 
-    // Agentic loop
+    // Agentic loop — 10 iterations and a 4096-token budget to match Eureka:
+    // a workspace-wide tool set means more multi-hop lookups (matter → brief
+    // → timeline, or client → matters → invoices) than the old brief-only
+    // set ever needed, and richer tool output (document OCR, timelines) can
+    // need more room than the old 1024-token cap allowed for.
     let iterations = 0;
-    while (iterations < 8) {
+    while (iterations < 10) {
         iterations++;
         const response = await client.messages.create({
             model: 'claude-sonnet-5',
-            max_tokens: 1024,
+            max_tokens: 4096,
             system: systemPrompt,
             tools: TOOLS,
             messages,

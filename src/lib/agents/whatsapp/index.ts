@@ -2,7 +2,6 @@ import { prisma } from '@/lib/prisma';
 import { config } from '@/lib/config';
 import { sendWhatsAppMessage } from './send';
 import { getOrCreateSession, appendToSession, getHistory } from './session';
-import { dispatch } from './dispatcher';
 import { runBriefManagerAnthropic } from './brief-manager';
 import { runBriefManagerOpenAI } from './brief-manager-openai';
 import { AgentContext, HistoryMessage } from './types';
@@ -26,30 +25,69 @@ function normalisePhone(raw: string): string {
     return raw.replace(/\D/g, '');
 }
 
-export async function resolveUser(fromNumber: string): Promise<{ userId: string; userName: string; workspaceId: string; firmName: string } | null> {
-    const normalised = normalisePhone(fromNumber);
+// Nigerian numbers are routinely entered in two incompatible shapes — local
+// ("0803...") and international ("234803...") — depending on who typed them
+// in and when. WhatsApp always sends international-with-no-plus. Without
+// this, a genuinely registered lawyer whose profile has the local form gets
+// told they're "not registered".
+function phoneCandidates(normalised: string): string[] {
+    const candidates = new Set([normalised]);
+    if (normalised.startsWith('234') && normalised.length === 13) {
+        candidates.add(`0${normalised.slice(3)}`);
+    } else if (normalised.startsWith('0') && normalised.length === 11) {
+        candidates.add(`234${normalised.slice(1)}`);
+    }
+    return Array.from(candidates);
+}
 
-    // Try exact match first, then without country code prefix variants
-    const user = await prisma.user.findFirst({
-        where: {
-            OR: [
-                { phone: fromNumber },
-                { phone: `+${normalised}` },
-                { phone: normalised },
-            ],
-        },
-        select: { id: true, name: true, workspaces: { select: { workspaceId: true, workspace: { select: { name: true } } } } },
-    });
+type ResolvedUser = { userId: string; userName: string; workspaceId: string; firmName: string };
 
-    if (!user || user.workspaces.length === 0) return null;
-
+function toResolvedUser(user: { id: string; name: string | null; workspaces: { workspaceId: string; workspace: { name: string } }[] }): ResolvedUser | null {
     const membership = user.workspaces[0];
+    if (!membership) return null;
     return {
         userId: user.id,
         userName: user.name ?? 'Colleague',
         workspaceId: membership.workspaceId,
         firmName: membership.workspace.name,
     };
+}
+
+const userSelect = {
+    id: true, name: true, phone: true,
+    workspaces: { select: { workspaceId: true, workspace: { select: { name: true } } } },
+} as const;
+
+export async function resolveUser(fromNumber: string): Promise<ResolvedUser | null> {
+    const normalised = normalisePhone(fromNumber);
+    const candidates = phoneCandidates(normalised);
+
+    // Fast path: exact match against the raw value plus the common local/
+    // international/+-prefixed representations — covers the overwhelming
+    // majority of correctly entered numbers, index-backed.
+    let user = await prisma.user.findFirst({
+        where: { OR: candidates.flatMap(c => [{ phone: c }, { phone: `+${c}` }]) },
+        select: userSelect,
+    });
+
+    // Fallback: a firm's whole user base is small (dozens, not millions), so
+    // comparing digits-only is cheap and catches formatting the stored value
+    // carries (spaces, dashes, parentheses) that an exact-match query can't
+    // see through.
+    if (!user) {
+        const candidates10 = candidates.map(c => c.slice(-10)).filter(c => c.length === 10);
+        const withPhone = await prisma.user.findMany({
+            where: { phone: { not: null } },
+            select: userSelect,
+        });
+        user = withPhone.find(u => {
+            const dbDigits = normalisePhone(u.phone!).slice(-10);
+            return candidates10.includes(dbDigits);
+        }) ?? null;
+    }
+
+    if (!user) return null;
+    return toResolvedUser(user);
 }
 
 export async function handleWhatsAppMessage(fromNumber: string, text: string): Promise<void> {
@@ -69,19 +107,12 @@ export async function handleWhatsAppMessage(fromNumber: string, text: string): P
     const session = await getOrCreateSession(fromNumber, resolved.workspaceId);
     const history = getHistory(session);
 
-    // Route to the correct agent
-    const agent = await dispatch(text);
-
+    // One agent, the full workspace toolset — there's no longer a separate
+    // "calendar" vs "brief" path to route between (both used to call the
+    // same function anyway), so the routing step is gone.
     let reply: string;
     try {
-        if (agent === 'brief_manager') {
-            reply = await runBriefManager(text, ctx, history);
-        } else if (agent === 'calendar') {
-            // Calendar agent — brief_manager handles hearings for now until calendar agent is built
-            reply = await runBriefManager(text, ctx, history);
-        } else {
-            reply = "I can help with briefs and case information. Try asking about a specific case or client.";
-        }
+        reply = await runBriefManager(text, ctx, history);
     } catch (err) {
         console.error('[WhatsApp Agent] Error:', err);
         reply = 'Something went wrong on my end. Please try again in a moment.';
