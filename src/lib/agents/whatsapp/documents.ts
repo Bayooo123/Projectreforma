@@ -6,6 +6,7 @@ import { identifyBriefFromContent, getBriefRoutingCandidates } from '@/lib/servi
 import { ATTACHMENT_ALLOWED_TYPES, MAX_ATTACHMENT_BYTES } from '@/lib/services/email-ingestion';
 import { addBriefActivity } from '@/lib/briefs';
 import { recordFiledAttachment, recordPendingAttachment } from '@/lib/services/inbox-attachments';
+import { scanAndNotifyBrief } from '@/lib/agents/brief-manager/scan';
 
 export interface IncomingWhatsAppDocument {
     from: string;
@@ -129,4 +130,13 @@ export async function handleWhatsAppDocument(doc: IncomingWhatsAppDocument): Pro
     );
 
     await sendWhatsAppMessage(doc.from, `Filed "${doc.filename}" under ${brief.name}.`);
+
+    // Fire-and-forget: look at what this document means for the brief right
+    // now, rather than waiting for the next nightly scan — a document
+    // arriving live over WhatsApp is exactly the kind of signal the "eye on
+    // the file" should react to same-minute, not up to a day later. Never
+    // blocks the filing confirmation above; any follow-up (a question, an
+    // obligation) arrives as its own message shortly after.
+    scanAndNotifyBrief(resolved.workspaceId, brief.id)
+        .catch(err => console.error(`[WhatsApp Agent] On-demand rescan failed for brief ${brief.id}:`, err));
 }

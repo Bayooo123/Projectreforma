@@ -401,27 +401,47 @@ export async function upsertInsightForBrief(workspaceId: string, briefId: string
 
 // Closes the loop from "detected obligation" to "the responsible lawyer knows
 // right now" — without this, a fresh insight just sits on the board until
-// someone happens to open Reforma. Only fires for the three cases that are
-// genuinely someone's job to act on, not every reshuffled chronology.
+// someone happens to open Reforma. The gate stays narrow (four genuinely
+// actionable cases, not every reshuffled chronology) since the analyzer's
+// prompt asks for a "what's happened since" question on almost every brief
+// by design — nudging on any non-empty question list would make this
+// channel noisy enough to get muted. representing-confidence being
+// "unclear" is the one question-shaped case worth a push on its own, since
+// Reforma genuinely can't reason well about the brief until it's answered.
+// Once nudging for any reason, the top question rides along in the message
+// so a real question still reaches the lawyer, without being what triggers
+// the push by itself.
+type NotifiableBrief = { id: string; name: string; briefNumber: string; lawyerId: string; lawyerInChargeId: string | null };
+
+function isActionable(data: BriefManagerInsightData): boolean {
+    return data.ballInCourt?.status === 'us'
+        || data.needsClientUpdate
+        || data.needsDocuments
+        || data.representing?.confidence === 'unclear';
+}
+
 function buildNudgeMessage(brief: { name: string; briefNumber: string }, data: BriefManagerInsightData): string {
     const reasons: string[] = [];
     if (data.ballInCourt?.status === 'us') reasons.push(BALL_IN_COURT_LABEL.us);
     if (data.needsClientUpdate) reasons.push(`Client update overdue — ${data.daysSinceClientContact}d since last contact`);
     if (data.needsDocuments) reasons.push(`Needs documents — ${data.docRequestReason ?? 'more information required'}`);
+    if (data.representing?.confidence === 'unclear') reasons.push('Unclear which party we represent');
 
-    const lines = [`⚖️ *${brief.name}* (${brief.briefNumber})`, reasons.join(' · ')];
+    const lines = [`${brief.name} (${brief.briefNumber})`];
+    if (reasons.length > 0) lines.push(reasons.join(' · '));
+
     const nextStep = data.nextSteps?.[0];
     if (nextStep) lines.push(`Next: ${nextStep}`);
-    lines.push('Reply here to update Brief Manager, or open Reforma for the full brief.');
+
+    const question = data.questions?.[0];
+    if (question) lines.push(`Reforma asks: ${question}`);
+
+    lines.push('Reply here to answer, update Brief Manager, or open Reforma for the full brief.');
     return lines.join('\n');
 }
 
-async function notifyResponsibleLawyer(
-    brief: { id: string; name: string; briefNumber: string; lawyerId: string; lawyerInChargeId: string | null },
-    data: BriefManagerInsightData,
-): Promise<void> {
-    const isActionable = data.ballInCourt?.status === 'us' || data.needsClientUpdate || data.needsDocuments;
-    if (!isActionable) return;
+async function notifyResponsibleLawyer(brief: NotifiableBrief, data: BriefManagerInsightData): Promise<void> {
+    if (!isActionable(data)) return;
 
     const responsibleId = brief.lawyerInChargeId ?? brief.lawyerId;
     const user = await prisma.user.findUnique({ where: { id: responsibleId }, select: { phone: true } });
@@ -429,6 +449,23 @@ async function notifyResponsibleLawyer(
 
     await sendWhatsAppMessage(user.phone.replace(/\D/g, ''), buildNudgeMessage(brief, data))
         .catch(err => console.error(`[BriefManager] Nudge failed for brief ${brief.id}:`, err));
+}
+
+// The generate → save → notify tail shared by the gated nightly loop below
+// and the ungated on-demand entry point (scanAndNotifyBrief) — a fresh
+// signal (e.g. a document that just arrived) is definitionally worth
+// looking at, so the on-demand path skips the nightly loop's "has anything
+// changed" gate and goes straight here.
+async function generateUpsertNotify(
+    workspaceId: string,
+    brief: NotifiableBrief,
+): Promise<{ success: true; result: 'created' | 'updated' } | { success: false; reason: string }> {
+    const generated = await generateBriefManagerInsight(brief.id);
+    if (!generated.success) return { success: false, reason: generated.reason };
+
+    const result = await upsertInsightForBrief(workspaceId, brief.id, generated.insight);
+    await notifyResponsibleLawyer(brief, generated.insight.data);
+    return { success: true, result };
 }
 
 export async function scanBriefsForWorkspace(workspaceId: string): Promise<{ created: number; updated: number; skipped: number }> {
@@ -474,20 +511,35 @@ export async function scanBriefsForWorkspace(workspaceId: string): Promise<{ cre
             }
         }
 
-        const generated = await generateBriefManagerInsight(brief.id);
-        if (!generated.success) {
-            console.error(`[BriefManager] Nightly scan skipped brief ${brief.id}: ${generated.reason}`);
+        const outcome = await generateUpsertNotify(workspaceId, brief);
+        if (!outcome.success) {
+            console.error(`[BriefManager] Nightly scan skipped brief ${brief.id}: ${outcome.reason}`);
             skipped++;
             continue;
         }
-
-        const result = await upsertInsightForBrief(workspaceId, brief.id, generated.insight);
-        if (result === 'created') created++; else updated++;
-
-        await notifyResponsibleLawyer(brief, generated.insight.data);
+        if (outcome.result === 'created') created++; else updated++;
     }
 
     return { created, updated, skipped };
+}
+
+// On-demand version of the above for exactly one brief — call this right
+// after a live signal arrives (a document filed via WhatsApp, say) so the
+// case-manager read, and any question or obligation it surfaces, reaches
+// the lawyer within the same conversation instead of waiting for the next
+// nightly run. No gating: being called at all already means something new
+// just happened.
+export async function scanAndNotifyBrief(workspaceId: string, briefId: string): Promise<void> {
+    const brief = await prisma.brief.findFirst({
+        where: { id: briefId, workspaceId, status: 'active', deletedAt: null },
+        select: { id: true, name: true, briefNumber: true, lawyerId: true, lawyerInChargeId: true },
+    });
+    if (!brief) return;
+
+    const outcome = await generateUpsertNotify(workspaceId, brief);
+    if (!outcome.success) {
+        console.error(`[BriefManager] On-demand scan skipped brief ${brief.id}: ${outcome.reason}`);
+    }
 }
 
 export async function scanBriefsAllWorkspaces(): Promise<void> {

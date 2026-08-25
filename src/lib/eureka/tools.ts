@@ -1,6 +1,8 @@
 import { prisma } from '@/lib/prisma';
 import { getCaseChronology, searchBriefsByQuery, type BriefSearchResult } from '@/lib/ai-context/brief-context';
 import { generateBriefNumber } from '@/lib/briefs';
+import { config } from '@/lib/config';
+import { DraftingService } from '@/lib/drafting/drafting-service';
 
 // A brief lookup that comes up empty should never dead-end in a bare "not
 // found" — the model (and the person on the other end of WhatsApp) has no
@@ -126,6 +128,11 @@ export function getClaudeTools() {
             proceedings: { type: 'string', description: 'What the hearing is for e.g. Cross-examination (optional)' },
             type: { type: 'string', description: 'COURT or MEETING (default COURT)' },
         }, ['matter_title', 'date']),
+        tool('draft_document', 'Draft a letter, reply, or legal document grounded in a brief\'s actual filed documents and correspondence — e.g. "draft a reply to MBA\'s solicitor demanding remittance of the purchase price". Uses semantic search over the brief\'s documents as context so the draft reflects real facts, dates, names, and figures rather than generic boilerplate. Always returns the draft text for review — never sends, files, or records it automatically; that is a separate, explicit step the user takes afterward.', {
+            brief_id: { type: 'string', description: 'The brief ID' },
+            brief_title: { type: 'string', description: 'Search by brief title or number if ID unknown' },
+            instruction: { type: 'string', description: 'What to draft, e.g. "a letter to opposing counsel demanding compliance with the settlement terms"' },
+        }, ['instruction']),
         tool('get_anomalies', 'Get open anomalies detected by the system — things that ought not to be: briefs with no documents, placeholder client data, past court hearings with no outcome recorded, months with no expenses despite active operations, matters with no future hearings scheduled. Use this when the user asks about problems, gaps, or things that need attention.', {
             type: { type: 'string', description: 'Filter by type: SPARSE_BRIEF | PLACEHOLDER_CLIENT | MISSING_COURT_OUTCOME | MISSING_EXPENSE_PERIOD | UNSCHEDULED_MATTER (optional)' },
             severity: { type: 'string', description: 'Filter by severity: low | medium | high | critical (optional)' },
@@ -645,6 +652,30 @@ export async function executeTool(
                 },
             });
             return { success: true, id: entry.id, date: entry.date, message: `Court date scheduled for ${new Date(input.date).toLocaleDateString('en-NG', { dateStyle: 'long' })}.` };
+        }
+
+        case 'draft_document': {
+            const draftBriefOr = idOrTextFilter(input.brief_id, ['name', 'briefNumber', 'customBriefNumber'], input.brief_title);
+            if (draftBriefOr.length === 0) return { error: 'Provide a brief_id or brief_title.' };
+            const brief = await prisma.brief.findFirst({
+                where: { workspaceId, deletedAt: null, OR: draftBriefOr },
+                select: { id: true, name: true },
+            });
+            if (!brief) {
+                const suggestions = await suggestBriefs(workspaceId, input.brief_id || input.brief_title);
+                return suggestions.length > 0
+                    ? { error: `No exact match for "${input.brief_id || input.brief_title}".`, suggestions }
+                    : { error: 'No brief found matching that reference.' };
+            }
+            if (!config.VOYAGE_API_KEY) return { error: 'Drafting needs document search, which is not configured for this workspace.' };
+
+            try {
+                const draft = await DraftingService.generateDraft(brief.id, input.instruction as string);
+                return { brief: brief.name, draft, note: 'This is a draft for review — it has not been sent, filed, or saved anywhere.' };
+            } catch (err) {
+                console.error(`[Eureka] draft_document failed for brief ${brief.id}:`, err);
+                return { error: 'Drafting failed. Try again in a moment.' };
+            }
         }
 
         case 'get_anomalies': {
