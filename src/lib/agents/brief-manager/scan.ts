@@ -6,6 +6,7 @@ import { sendWhatsAppMessage } from '@/lib/agents/whatsapp/send';
 
 export type BallInCourtStatus = 'us' | 'opposing_counsel' | 'court' | 'unclear';
 export type RepresentationConfidence = 'confirmed' | 'inferred' | 'unclear';
+export type TimeBoundStatus = 'no_deadline' | 'upcoming' | 'due_now' | 'overdue';
 
 export interface BriefExecutiveSummary {
     currentStatus: string;
@@ -27,6 +28,11 @@ export interface BriefManagerInsightData {
     docRequestReason?: string;
     needsClientUpdate: boolean;
     daysSinceClientContact: number;
+    // A stated or clearly implied time limit found anywhere in the material —
+    // a demand giving N days to comply, a court-ordered compliance date, a
+    // limitation period, a response window. Optional for backward
+    // compatibility with insights generated before this field existed.
+    timeBoundDeadline?: { description: string; dueDateRaw: string | null; status: TimeBoundStatus };
 }
 
 interface GeneratedInsight {
@@ -52,6 +58,11 @@ const MAX_RECENT_DOCS = 3;
 const MAX_DOC_CHARS = 2000;
 const CLIENT_UPDATE_THRESHOLD_DAYS = 14;
 const DORMANT_RECHECK_COOLDOWN_DAYS = 7;
+// Distinct from CLIENT_UPDATE_THRESHOLD_DAYS: a brief can be in regular
+// client contact while nothing has actually moved on the file itself
+// (no documents, tasks, correspondence, or calendar activity) — this
+// catches that silence regardless of client-contact cadence.
+const GENERAL_DORMANCY_THRESHOLD_DAYS = 14;
 
 function getClient(): Anthropic | null {
     if (!config.ANTHROPIC_API_KEY) return null;
@@ -126,8 +137,11 @@ function buildPrompt(input: {
     recordedByLawyers: string;
     recentDocuments: string;
     daysSinceClientContact: number;
+    today: string;
 }): string {
     return `You are a Legal Case Manager assistant for a Nigerian law firm, reviewing one brief (case file) to brief a partner on its status.
+
+Today's date: ${input.today}
 
 ## Brief
 Name: ${input.brief.name} (${input.brief.briefNumber})
@@ -185,7 +199,12 @@ Write like a senior associate handing this file to a partner before a meeting �
   },
   "questions": ["<a specific question you would ask the responsible lawyer, phrased naturally — see the rule on when to ask 'what's happened since / what's next', and include a question about which party we represent if representing.confidence is 'unclear'>"],
   "needsDocuments": <true|false>,
-  "docRequestReason": "<if needsDocuments is true, what specifically is missing and why you need it before you can say more — omit if false>"
+  "docRequestReason": "<if needsDocuments is true, what specifically is missing and why you need it before you can say more — omit if false>",
+  "timeBoundDeadline": {
+    "description": "<what the time limit is about, e.g. 'MBA to remit the purchase price within 7 days of the letter dated 24 August 2026' — leave empty and set status to no_deadline if nothing time-bound is mentioned anywhere in the material>",
+    "dueDateRaw": "<the actual date if you can calculate one from the material, e.g. '31 August 2026' — null if no_deadline, or if time-bound but no calculable date>",
+    "status": "<no_deadline|upcoming|due_now|overdue>"
+  }
 }
 
 Rules:
@@ -197,7 +216,8 @@ Rules:
 - "representing" must not be guessed wildly either — set confidence "unclear" and ask about it in questions rather than assume, if the material doesn't make it reasonably clear.
 - Documents and correspondence only ever establish what was true as of when they were written — they cannot tell you what's happened since. Whenever your understanding is built mostly from documents/chronology rather than something a lawyer told you directly, or the most recent dated material is old relative to today, lead with a direct question: what has happened on this matter since <the most recent date you actually have>, and what's next? Ask this even when you can otherwise describe the file confidently — having documents is not the same as being current.
 - Waiting on the other side or the court ("ballInCourt" not "us") is NOT a reason to skip a client update — if days since client contact exceeds ${CLIENT_UPDATE_THRESHOLD_DAYS}, include a next step to send the client a courtesy update on where things stand, even if there's nothing else for the firm to do right now.
-- questions should be 1-3 items, phrased as a case manager would ask a partner, not generic.`;
+- questions should be 1-3 items, phrased as a case manager would ask a partner, not generic.
+- "timeBoundDeadline": scan every part of the material — document text, correspondence, recorded notes — for anything with a stated or clearly implied time limit: a demand giving a number of days to comply, a court-ordered compliance date, a statutory limitation period, an undertaking with a deadline, a response window stated in a letter. Where you can calculate an actual date (e.g. "within 7 days" of a letter dated 24 August 2026 means due 31 August 2026), put it in dueDateRaw and compare it to today's date above: "overdue" once that date has passed with nothing in the material showing it was complied with, "due_now" if it falls within the next 3 days, "upcoming" if further out. Use "no_deadline" if genuinely nothing time-bound exists — do not invent one. A vague future intention ("we will proceed with enforcement") is not time-bound; a stated or countable period is.`;
 }
 
 export async function generateBriefManagerInsight(briefId: string): Promise<InsightGenerationResult> {
@@ -292,6 +312,7 @@ export async function generateBriefManagerInsight(briefId: string): Promise<Insi
         recordedByLawyers: memoryEntries.map(m => `- ${m.timestamp.toISOString().slice(0, 10)}: ${m.description}`).join('\n'),
         recentDocuments: recentDocs.map(d => `--- ${d.name} ---\n${(d.ocrText ?? '').slice(0, MAX_DOC_CHARS)}`).join('\n\n'),
         daysSinceClientContact,
+        today: new Date().toISOString().slice(0, 10),
     });
 
     let data: BriefManagerInsightData | null = null;
@@ -401,53 +422,82 @@ export async function upsertInsightForBrief(workspaceId: string, briefId: string
 
 // Closes the loop from "detected obligation" to "the responsible lawyer knows
 // right now" — without this, a fresh insight just sits on the board until
-// someone happens to open Reforma. The gate stays narrow (four genuinely
+// someone happens to open Reforma. The gate stays narrow (genuinely
 // actionable cases, not every reshuffled chronology) since the analyzer's
 // prompt asks for a "what's happened since" question on almost every brief
 // by design — nudging on any non-empty question list would make this
 // channel noisy enough to get muted. representing-confidence being
-// "unclear" is the one question-shaped case worth a push on its own, since
-// Reforma genuinely can't reason well about the brief until it's answered.
-// Once nudging for any reason, the top question rides along in the message
-// so a real question still reaches the lawyer, without being what triggers
+// "unclear", a stale-but-time-bound fact, and plain silence (nothing at all
+// has happened in a while) are the shapes worth a push on their own. Once
+// nudging for any reason, the top question rides along in the message so a
+// real question still reaches the lawyer, without being what triggers
 // the push by itself.
 type NotifiableBrief = { id: string; name: string; briefNumber: string; lawyerId: string; lawyerInChargeId: string | null };
 
-function isActionable(data: BriefManagerInsightData): boolean {
+function isActionable(data: BriefManagerInsightData, daysSinceLastActivity: number): boolean {
     return data.ballInCourt?.status === 'us'
         || data.needsClientUpdate
         || data.needsDocuments
-        || data.representing?.confidence === 'unclear';
+        || data.representing?.confidence === 'unclear'
+        || data.timeBoundDeadline?.status === 'overdue'
+        || data.timeBoundDeadline?.status === 'due_now'
+        || daysSinceLastActivity > GENERAL_DORMANCY_THRESHOLD_DAYS;
 }
 
-function buildNudgeMessage(brief: { name: string; briefNumber: string }, data: BriefManagerInsightData): string {
-    const reasons: string[] = [];
-    if (data.ballInCourt?.status === 'us') reasons.push(BALL_IN_COURT_LABEL.us);
-    if (data.needsClientUpdate) reasons.push(`Client update overdue — ${data.daysSinceClientContact}d since last contact`);
-    if (data.needsDocuments) reasons.push(`Needs documents — ${data.docRequestReason ?? 'more information required'}`);
-    if (data.representing?.confidence === 'unclear') reasons.push('Unclear which party we represent');
-
+function buildNudgeMessage(
+    brief: { name: string; briefNumber: string },
+    data: BriefManagerInsightData,
+    lastSignalAt: Date,
+    daysSinceLastActivity: number,
+): string {
+    const isDormant = daysSinceLastActivity > GENERAL_DORMANCY_THRESHOLD_DAYS;
     const lines = [`${brief.name} (${brief.briefNumber})`];
-    if (reasons.length > 0) lines.push(reasons.join(' · '));
 
-    const nextStep = data.nextSteps?.[0];
-    if (nextStep) lines.push(`Next: ${nextStep}`);
+    if (isDormant) {
+        // The user's exact ask: state the last thing that happened and ask
+        // what's next, rather than a generic "not found" style status line.
+        const lastDate = lastSignalAt.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+        lines.push(`Since ${lastDate}, not much has happened on this brief.`);
+        if (data.summary?.currentStatus) lines.push(`Last: ${data.summary.currentStatus}`);
+        lines.push('What is the update, or the next course of action?');
+    } else {
+        const reasons: string[] = [];
+        if (data.ballInCourt?.status === 'us') reasons.push(BALL_IN_COURT_LABEL.us);
+        if (data.needsClientUpdate) reasons.push(`Client update overdue — ${data.daysSinceClientContact}d since last contact`);
+        if (data.needsDocuments) reasons.push(`Needs documents — ${data.docRequestReason ?? 'more information required'}`);
+        if (data.representing?.confidence === 'unclear') reasons.push('Unclear which party we represent');
+        if (reasons.length > 0) lines.push(reasons.join(' · '));
 
-    const question = data.questions?.[0];
+        const nextStep = data.nextSteps?.[0];
+        if (nextStep) lines.push(`Next: ${nextStep}`);
+    }
+
+    // Shown regardless of dormancy — a stale time-bound fact is its own
+    // distinct escalation ("has anything been done about this?"), not
+    // folded into the generic reasons list above.
+    if (data.timeBoundDeadline?.status === 'overdue' || data.timeBoundDeadline?.status === 'due_now') {
+        const label = data.timeBoundDeadline.status === 'overdue' ? 'Overdue' : 'Due now';
+        lines.push(`${label}: ${data.timeBoundDeadline.description} — has anything been done about this?`);
+    }
+
+    // The dormancy message already asks its own question — avoid piling a
+    // second, less specific one on top of it.
+    const question = !isDormant ? data.questions?.[0] : undefined;
     if (question) lines.push(`Reforma asks: ${question}`);
 
     lines.push('Reply here to answer, update Brief Manager, or open Reforma for the full brief.');
     return lines.join('\n');
 }
 
-async function notifyResponsibleLawyer(brief: NotifiableBrief, data: BriefManagerInsightData): Promise<void> {
-    if (!isActionable(data)) return;
+async function notifyResponsibleLawyer(brief: NotifiableBrief, data: BriefManagerInsightData, lastSignalAt: Date): Promise<void> {
+    const daysSinceLastActivity = Math.floor((Date.now() - lastSignalAt.getTime()) / 86_400_000);
+    if (!isActionable(data, daysSinceLastActivity)) return;
 
     const responsibleId = brief.lawyerInChargeId ?? brief.lawyerId;
     const user = await prisma.user.findUnique({ where: { id: responsibleId }, select: { phone: true } });
     if (!user?.phone) return;
 
-    await sendWhatsAppMessage(user.phone.replace(/\D/g, ''), buildNudgeMessage(brief, data))
+    await sendWhatsAppMessage(user.phone.replace(/\D/g, ''), buildNudgeMessage(brief, data, lastSignalAt, daysSinceLastActivity))
         .catch(err => console.error(`[BriefManager] Nudge failed for brief ${brief.id}:`, err));
 }
 
@@ -464,7 +514,7 @@ async function generateUpsertNotify(
     if (!generated.success) return { success: false, reason: generated.reason };
 
     const result = await upsertInsightForBrief(workspaceId, brief.id, generated.insight);
-    await notifyResponsibleLawyer(brief, generated.insight.data);
+    await notifyResponsibleLawyer(brief, generated.insight.data, generated.insight.lastSignalAt);
     return { success: true, result };
 }
 
@@ -493,19 +543,24 @@ export async function scanBriefsForWorkspace(workspaceId: string): Promise<{ cre
 
         if (!hasNewSignal) {
             // No new activity — this is exactly the dormant case, so it needs its
-            // own check rather than being skipped outright like a "nothing changed" brief.
+            // own check rather than being skipped outright like a "nothing changed"
+            // brief. Two independent silences count: the client hasn't heard from
+            // us, or nothing has happened on the file at all (which can be true
+            // even with recent, unrelated client contact).
             const daysSinceClientContact = await computeDaysSinceClientContact(brief.id, brief.createdAt);
-            const isDormant = daysSinceClientContact > CLIENT_UPDATE_THRESHOLD_DAYS;
+            const daysSinceLastActivity = Math.floor((Date.now() - currentSignal.getTime()) / 86_400_000);
+            const isDormant = daysSinceClientContact > CLIENT_UPDATE_THRESHOLD_DAYS || daysSinceLastActivity > GENERAL_DORMANCY_THRESHOLD_DAYS;
 
             if (!isDormant) {
                 skipped++;
                 continue;
             }
 
-            const alreadyFlagged = !!(prior?.data as unknown as BriefManagerInsightData | undefined)?.needsClientUpdate;
+            // Once already reviewed recently, don't re-run the LLM every night
+            // just because the silence continues — re-check on the same cooldown
+            // regardless of which kind of dormancy triggered it.
             const insightAgeDays = prior ? (Date.now() - prior.createdAt.getTime()) / 86_400_000 : Infinity;
-            if (alreadyFlagged && insightAgeDays < DORMANT_RECHECK_COOLDOWN_DAYS) {
-                // Already flagged recently — don't re-run the LLM every night while dormant.
+            if (prior && insightAgeDays < DORMANT_RECHECK_COOLDOWN_DAYS) {
                 skipped++;
                 continue;
             }
