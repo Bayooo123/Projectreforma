@@ -2,24 +2,20 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { Mic, Square, Trash2, Loader, FileAudio } from 'lucide-react';
-import { getMeetingRecordings, deleteMeetingRecording, type MeetingRecordingRow } from '@/app/actions/meeting-recordings';
-
-function formatDuration(totalSeconds: number | null): string {
-    if (totalSeconds == null) return '';
-    const m = Math.floor(totalSeconds / 60);
-    const s = totalSeconds % 60;
-    return `${m}:${s.toString().padStart(2, '0')}`;
-}
-
-function formatDate(date: Date | string): string {
-    const d = new Date(date);
-    return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) +
-        ' at ' + d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
-}
+import { getMeetingRecordings, deleteMeetingRecording, type MeetingRecordingRow, type RecordingScope } from '@/app/actions/meeting-recordings';
+import { formatMeetingDuration as formatDuration, formatMeetingDate as formatDate, transcriptBadge } from '@/lib/meetings/format';
 
 type Phase = 'idle' | 'recording' | 'reviewing' | 'uploading';
 
-export default function MeetingRecorder({ calendarEntryId }: { calendarEntryId: string }) {
+interface MeetingRecorderProps {
+    scope: RecordingScope;
+    /** Only used when scope has no calendarEntryId — labels a general/brief-tied recording. */
+    title?: string;
+    /** Fires after a recording is successfully saved — lets a parent feed (e.g. the Recordings page) refresh. */
+    onSaved?: () => void;
+}
+
+export default function MeetingRecorder({ scope, title, onSaved }: MeetingRecorderProps) {
     const [phase, setPhase] = useState<Phase>('idle');
     const [seconds, setSeconds] = useState(0);
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -32,26 +28,39 @@ export default function MeetingRecorder({ calendarEntryId }: { calendarEntryId: 
     const streamRef = useRef<MediaStream | null>(null);
     const blobRef = useRef<Blob | null>(null);
     const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+    const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
     const loadRecordings = useCallback(async () => {
         setLoadingList(true);
         try {
-            const list = await getMeetingRecordings(calendarEntryId);
+            const list = await getMeetingRecordings(scope);
             setRecordings(list);
         } catch {
             setRecordings([]);
         } finally {
             setLoadingList(false);
         }
-    }, [calendarEntryId]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [JSON.stringify(scope)]);
 
     // Standard fetch-on-mount pattern; setState inside load() is intentional.
     useEffect(() => { loadRecordings(); }, [loadRecordings]);
+
+    // Transcription runs async server-side after upload — poll while anything
+    // is still pending/processing, so "Transcribing…" flips to the finished
+    // transcript without the user having to refresh.
+    useEffect(() => {
+        const hasPending = recordings?.some(r => r.transcriptStatus === 'pending' || r.transcriptStatus === 'processing');
+        if (!hasPending) return;
+        pollRef.current = setInterval(loadRecordings, 5000);
+        return () => { if (pollRef.current) clearInterval(pollRef.current); };
+    }, [recordings, loadRecordings]);
 
     useEffect(() => () => {
         // Clean up on unmount: stop any live stream/timer, release the preview object URL.
         streamRef.current?.getTracks().forEach(t => t.stop());
         if (timerRef.current) clearInterval(timerRef.current);
+        if (pollRef.current) clearInterval(pollRef.current);
         if (previewUrl) URL.revokeObjectURL(previewUrl);
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
@@ -102,8 +111,16 @@ export default function MeetingRecorder({ calendarEntryId }: { calendarEntryId: 
         setError(null);
         try {
             const ext = (blobRef.current.type.split('/')[1] || 'webm').split(';')[0];
-            const filename = `meeting-${calendarEntryId}-${Date.now()}.${ext}`;
-            const params = new URLSearchParams({ filename, calendarEntryId, durationSeconds: String(seconds) });
+            const filename = `meeting-${Date.now()}.${ext}`;
+            const params = new URLSearchParams({ filename, durationSeconds: String(seconds) });
+            if ('calendarEntryId' in scope) {
+                params.set('calendarEntryId', scope.calendarEntryId);
+            } else {
+                params.set('workspaceId', scope.workspaceId);
+                if (scope.briefId) params.set('briefId', scope.briefId);
+            }
+            if (title) params.set('title', title);
+
             const res = await fetch(`/api/meetings/upload-audio?${params.toString()}`, {
                 method: 'POST',
                 body: blobRef.current,
@@ -118,6 +135,7 @@ export default function MeetingRecorder({ calendarEntryId }: { calendarEntryId: 
             setSeconds(0);
             setPhase('idle');
             await loadRecordings();
+            onSaved?.();
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Could not save the recording — please try again.');
             setPhase('reviewing');
@@ -205,41 +223,43 @@ export default function MeetingRecorder({ calendarEntryId }: { calendarEntryId: 
             <div style={{ marginTop: '0.9rem' }}>
                 {loadingList && <p style={{ fontSize: '0.75rem', color: '#9ca3af' }}>Loading recordings…</p>}
                 {!loadingList && recordings?.length === 0 && (
-                    <p style={{ fontSize: '0.75rem', color: '#9ca3af' }}>No recordings for this meeting yet.</p>
+                    <p style={{ fontSize: '0.75rem', color: '#9ca3af' }}>No recordings yet.</p>
                 )}
                 {!loadingList && recordings && recordings.length > 0 && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                        {recordings.map(r => (
-                            <div key={r.id} style={{
-                                display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap',
-                                padding: '0.6rem 0.75rem', borderRadius: 8, border: '1px solid #e5e7eb', background: '#fff',
-                            }}>
-                                <FileAudio size={15} color="#6b7280" />
-                                <audio controls src={r.audioUrl} style={{ height: 30, flex: '1 1 220px', minWidth: 200 }} />
-                                <span style={{ fontSize: '0.7rem', color: '#9ca3af' }}>{formatDuration(r.durationSeconds)}</span>
-                                <span style={{ fontSize: '0.7rem', color: '#9ca3af' }}>{formatDate(r.createdAt)}{r.createdByName ? ` · ${r.createdByName}` : ''}</span>
-                                <span style={{
-                                    fontSize: '0.62rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.03em',
-                                    padding: '2px 8px', borderRadius: 999,
-                                    background: r.transcriptStatus === 'completed' ? '#ecfdf5' : '#f3f4f6',
-                                    color: r.transcriptStatus === 'completed' ? '#047857' : '#6b7280',
+                        {recordings.map(r => {
+                            const badge = transcriptBadge(r.transcriptStatus);
+                            return (
+                                <div key={r.id} style={{
+                                    display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap',
+                                    padding: '0.6rem 0.75rem', borderRadius: 8, border: '1px solid #e5e7eb', background: '#fff',
                                 }}>
-                                    {r.transcriptStatus === 'completed' ? 'Transcribed' : 'Transcript pending'}
-                                </span>
-                                <button
-                                    onClick={() => removeRecording(r.id)}
-                                    title="Delete recording"
-                                    style={{ display: 'flex', border: 'none', background: 'none', color: '#9ca3af', cursor: 'pointer', padding: 4 }}
-                                >
-                                    <Trash2 size={13} />
-                                </button>
-                                {r.transcriptText && (
-                                    <p style={{ width: '100%', fontSize: '0.75rem', color: '#374151', lineHeight: 1.5, margin: '0.3rem 0 0' }}>
-                                        {r.transcriptText}
-                                    </p>
-                                )}
-                            </div>
-                        ))}
+                                    <FileAudio size={15} color="#6b7280" />
+                                    <audio controls src={r.audioUrl} style={{ height: 30, flex: '1 1 220px', minWidth: 200 }} />
+                                    <span style={{ fontSize: '0.7rem', color: '#9ca3af' }}>{formatDuration(r.durationSeconds)}</span>
+                                    <span style={{ fontSize: '0.7rem', color: '#9ca3af' }}>{formatDate(r.createdAt)}{r.createdByName ? ` · ${r.createdByName}` : ''}</span>
+                                    <span style={{
+                                        fontSize: '0.62rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.03em',
+                                        padding: '2px 8px', borderRadius: 999,
+                                        background: badge.bg, color: badge.fg,
+                                    }}>
+                                        {badge.label}
+                                    </span>
+                                    <button
+                                        onClick={() => removeRecording(r.id)}
+                                        title="Delete recording"
+                                        style={{ display: 'flex', border: 'none', background: 'none', color: '#9ca3af', cursor: 'pointer', padding: 4 }}
+                                    >
+                                        <Trash2 size={13} />
+                                    </button>
+                                    {r.transcriptText && (
+                                        <p style={{ width: '100%', fontSize: '0.75rem', color: '#374151', lineHeight: 1.5, margin: '0.3rem 0 0' }}>
+                                            {r.transcriptText}
+                                        </p>
+                                    )}
+                                </div>
+                            );
+                        })}
                     </div>
                 )}
             </div>

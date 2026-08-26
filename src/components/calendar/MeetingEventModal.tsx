@@ -127,7 +127,7 @@ export default function MeetingEventModal({ isOpen, onClose, event, userId, user
 
                     <div className={styles.section}>
                         <h3 className={styles.sectionTitle}><Mic size={16} /> Recording</h3>
-                        <MeetingRecorder calendarEntryId={event.id} />
+                        <MeetingRecorder scope={{ calendarEntryId: event.id }} />
                     </div>
                 </div>
 

@@ -1,18 +1,17 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { requireAuth } from '@/lib/auth-utils';
+import { transcribeMeetingRecording } from '@/lib/meetings/transcribe';
 
 type TranscribeRequest = {
     recordingId?: string;
     transcriptText?: string;
 };
 
-/**
- * Accepts a transcript for a previously-uploaded MeetingRecording.
- * Nothing calls the transcription API yet — this just persists a transcript
- * once one exists. Wiring Whisper (or another provider) to call this
- * automatically is a follow-on step.
- */
+// Manual retry endpoint for a recording whose automatic transcription
+// (kicked off from upload-audio) failed or never ran — e.g. OPENAI_API_KEY
+// wasn't set at upload time. Also still accepts a transcript typed/pasted
+// in directly, for a recording transcribed by other means.
 export async function POST(request: Request) {
     try {
         await requireAuth();
@@ -45,11 +44,13 @@ export async function POST(request: Request) {
             return NextResponse.json({ success: true, status: 'completed', data: updated });
         }
 
-        return NextResponse.json({
-            success: true,
-            status: 'processing',
-            message: 'No transcript provided yet.',
+        await transcribeMeetingRecording(recordingId);
+        const result = await prisma.meetingRecording.findUnique({
+            where: { id: recordingId },
+            select: { id: true, transcriptText: true, transcriptStatus: true },
         });
+
+        return NextResponse.json({ success: true, status: result?.transcriptStatus ?? 'processing', data: result });
     } catch (error) {
         console.error('Error in transcribe route:', error);
         if (error instanceof Error && error.message.toLowerCase().includes('unauthorized')) {

@@ -14,6 +14,7 @@ import {
   Settings,
   Bot,
   CalendarClock,
+  Mic,
 } from 'lucide-react';
 import { ComponentType } from 'react';
 
@@ -52,6 +53,7 @@ export const navigationGroups: NavGroup[] = [
       { name: 'Briefs', href: '/briefs', icon: FileText },
       { name: 'Inbox', href: '/inbox', icon: FolderInput },
       { name: 'Court & Calendar', href: '/calendar', icon: Gavel },
+      { name: 'Recordings', href: '/recordings', icon: Mic },
       { name: 'Clients', href: '/management/clients', icon: Users },
       { name: 'Compliance', href: '/management/compliance', icon: ShieldCheck },
     ],

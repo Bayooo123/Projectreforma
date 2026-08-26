@@ -72,6 +72,7 @@ model Workspace {
   agentInsights         AgentInsight[]
   ingestionSessions     IngestionSession[]
   inboxAttachments      InboxAttachment[]
+  meetingRecordings     MeetingRecording[]
 
   @@index([slug])
   @@index([firmCode])
@@ -577,6 +578,7 @@ model Brief {
   confirmedIngestionCandidates IngestionCandidate[] @relation("IngestionConfirmedBrief")
   suggestedInboxAttachments    InboxAttachment[]    @relation("InboxAttachmentSuggestedBrief")
   confirmedInboxAttachments    InboxAttachment[]    @relation("InboxAttachmentConfirmedBrief")
+  meetingRecordings   MeetingRecording[]
 
   @@index([lawyerId])
   @@index([lawyerInChargeId])
@@ -1540,14 +1542,19 @@ model IngestionCandidate {
 }
 
 // ── Meeting recording (Meetings & Calendar) ─────────────────────────────────
-// A recording captured against a specific CalendarEntry (type: MEETING) — the
-// "each day you can record a meeting, save it, and pull out the transcript"
-// feature. Transcription is a follow-on step (Whisper API): transcriptStatus
-// stays 'pending' until that's wired in, this pass only captures and stores
-// the audio.
+// A recording captured either against a specific CalendarEntry (type:
+// MEETING), directly against a brief with no calendar entry involved, or
+// fully general — a day-to-day recording tied to nothing but the workspace.
+// workspaceId is direct (not derived through calendarEntry/brief) so a
+// general recording always has somewhere to be scoped and listed from.
+// Transcription runs via OpenAI Whisper (src/lib/meetings/transcribe.ts),
+// kicked off automatically right after upload.
 model MeetingRecording {
   id               String    @id @default(cuid())
-  calendarEntryId  String
+  workspaceId      String
+  calendarEntryId  String?
+  briefId          String?
+  title            String?
   audioUrl         String
   durationSeconds  Int?
   transcriptStatus String    @default("pending") // pending | processing | completed | failed
@@ -1555,10 +1562,14 @@ model MeetingRecording {
   createdById      String
   createdAt        DateTime  @default(now())
 
-  calendarEntry    CalendarEntry @relation(fields: [calendarEntryId], references: [id], onDelete: Cascade)
-  createdBy        User          @relation("MeetingRecordingCreator", fields: [createdById], references: [id])
+  workspace        Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  calendarEntry    CalendarEntry? @relation(fields: [calendarEntryId], references: [id], onDelete: Cascade)
+  brief            Brief?         @relation(fields: [briefId], references: [id], onDelete: SetNull)
+  createdBy        User           @relation("MeetingRecordingCreator", fields: [createdById], references: [id])
 
   @@index([calendarEntryId])
+  @@index([workspaceId])
+  @@index([briefId])
 }
 
 // Every document that arrives via email or WhatsApp lands here, whether the

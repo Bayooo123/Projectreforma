@@ -171,7 +171,7 @@ export default function QuickRecordModal({
                         </div>
                     )}
 
-                    {entryId && <MeetingRecorder calendarEntryId={entryId} />}
+                    {entryId && <MeetingRecorder scope={{ calendarEntryId: entryId }} />}
                 </div>
 
                 <div style={{ padding: '1rem 1.5rem', borderTop: '1px solid #e5e7eb', display: 'flex', justifyContent: 'flex-end' }}>
