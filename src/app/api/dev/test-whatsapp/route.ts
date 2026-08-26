@@ -10,11 +10,17 @@ import { sendWhatsAppMessage } from '@/lib/agents/whatsapp/send';
 //
 //   GET /api/dev/test-whatsapp?to=2348031234567&message=hello
 //   Authorization: Bearer <CRON_SECRET>  (same secret every /api/cron/* route uses)
+// The secret is also accepted as a ?secret= query param, purely so this can
+// be triggered through tools that can't set custom headers — acceptable for
+// a throwaway internal test route, not a pattern to carry into anything
+// that stays.
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
     const auth = req.headers.get('authorization');
-    if (!config.CRON_SECRET || auth !== `Bearer ${config.CRON_SECRET}`) {
+    const secretParam = req.nextUrl.searchParams.get('secret');
+    const authorised = !!config.CRON_SECRET && (auth === `Bearer ${config.CRON_SECRET}` || secretParam === config.CRON_SECRET);
+    if (!authorised) {
         return NextResponse.json({ error: 'Unauthorised' }, { status: 401 });
     }
 
