@@ -19,6 +19,38 @@ function chunk(text: string): string[] {
     return parts;
 }
 
+// Sends a document by public URL rather than the two-step Graph API media
+// upload — every generated file already ends up in Vercel Blob (public
+// access, same pattern used for inbound WhatsApp document filing), so
+// there's a URL to hand the Graph API directly instead of uploading bytes
+// a second time.
+export async function sendWhatsAppDocument(to: string, url: string, filename: string, caption?: string): Promise<void> {
+    const token = config.WHATSAPP_TOKEN;
+    const phoneNumberId = config.WHATSAPP_PHONE_NUMBER_ID;
+    if (!token || !phoneNumberId) {
+        console.error('[WhatsApp] WHATSAPP_TOKEN or WHATSAPP_PHONE_NUMBER_ID not set');
+        return;
+    }
+
+    const res = await fetch(`${GRAPH_URL}/${phoneNumberId}/messages`, {
+        method: 'POST',
+        headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            messaging_product: 'whatsapp',
+            to,
+            type: 'document',
+            document: { link: url, filename, ...(caption ? { caption } : {}) },
+        }),
+    });
+    if (!res.ok) {
+        const err = await res.text();
+        console.error('[WhatsApp] Document send failed:', res.status, err);
+    }
+}
+
 export async function sendWhatsAppMessage(to: string, text: string): Promise<void> {
     const token = config.WHATSAPP_TOKEN;
     const phoneNumberId = config.WHATSAPP_PHONE_NUMBER_ID;

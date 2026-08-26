@@ -1,8 +1,11 @@
 import { prisma } from '@/lib/prisma';
+import type { ExpenseCategory } from '@prisma/client';
 import { getCaseChronology, searchBriefsByQuery, type BriefSearchResult } from '@/lib/ai-context/brief-context';
 import { generateBriefNumber } from '@/lib/briefs';
 import { config } from '@/lib/config';
 import { DraftingService } from '@/lib/drafting/drafting-service';
+import { InvoiceService } from '@/lib/services/invoices/invoice-service';
+import { generateInvoiceDOCX } from '@/lib/invoice-docx';
 
 // A brief lookup that comes up empty should never dead-end in a bare "not
 // found" — the model (and the person on the other end of WhatsApp) has no
@@ -35,7 +38,10 @@ export function idOrTextFilter(id: string | undefined, textFields: string[], tex
     return or;
 }
 
-type Prop = { type: string; description?: string };
+// Loose on purpose — these are passed straight through as JSON Schema
+// fragments, and a couple of tools (create_invoice's line items) need
+// `items`/nested `properties`, not just a flat { type, description }.
+type Prop = Record<string, unknown>;
 
 function tool(name: string, description: string, properties: Record<string, Prop>, required?: string[]) {
     return {
@@ -133,6 +139,35 @@ export function getClaudeTools() {
             brief_title: { type: 'string', description: 'Search by brief title or number if ID unknown' },
             instruction: { type: 'string', description: 'What to draft, e.g. "a letter to opposing counsel demanding compliance with the settlement terms"' },
         }, ['instruction']),
+        tool('record_expense', 'Record a firm expense — office costs, court fees, staff costs, subscriptions, etc. This is a general firm expense, not billed to a specific client/matter.', {
+            amount: { type: 'number', description: 'Amount in Naira' },
+            category: { type: 'string', description: 'OFFICE_UTILITIES | OFFICE_EQUIPMENT_MAINTENANCE | COURT_LITIGATION | NON_LITIGATION_ADVISORY | COMMUNICATION_SUBSCRIPTIONS | STAFF_COSTS | VEHICLE_LOGISTICS | MISCELLANEOUS' },
+            date: { type: 'string', description: 'ISO date string e.g. 2026-04-15' },
+            description: { type: 'string', description: 'What this expense was for' },
+            reference: { type: 'string', description: 'Receipt or reference number (optional)' },
+        }, ['amount', 'category', 'date', 'description']),
+        tool('create_invoice', 'Create and generate an invoice for a client, and produce a downloadable .docx file for it. Resolves the client by name if no ID given, and the matter by title if mentioned. Uses the workspace\'s saved bank account (if any) for payment details and the requesting user as signatory. VAT and security-charge rates default to the firm\'s standard rates unless told otherwise.', {
+            client_id: { type: 'string', description: 'The client ID' },
+            client_name: { type: 'string', description: 'Client name if ID unknown' },
+            matter_title: { type: 'string', description: 'Matter to link the invoice to (optional)' },
+            items: {
+                type: 'array',
+                description: 'Line items — amount in Naira per unit, quantity defaults to 1 if omitted',
+                items: {
+                    type: 'object',
+                    properties: {
+                        description: { type: 'string' },
+                        amount: { type: 'number' },
+                        quantity: { type: 'number' },
+                    },
+                    required: ['description', 'amount'],
+                },
+            },
+            due_date: { type: 'string', description: 'ISO date the invoice is due (optional)' },
+            notes: { type: 'string', description: 'Additional notes to print on the invoice (optional)' },
+            vat_rate: { type: 'number', description: 'VAT percentage — defaults to the firm standard (7.5) if omitted' },
+            security_charge_rate: { type: 'number', description: 'Security charge percentage — defaults to the firm standard (1.0) if omitted' },
+        }, ['items']),
         tool('get_anomalies', 'Get open anomalies detected by the system — things that ought not to be: briefs with no documents, placeholder client data, past court hearings with no outcome recorded, months with no expenses despite active operations, matters with no future hearings scheduled. Use this when the user asks about problems, gaps, or things that need attention.', {
             type: { type: 'string', description: 'Filter by type: SPARSE_BRIEF | PLACEHOLDER_CLIENT | MISSING_COURT_OUTCOME | MISSING_EXPENSE_PERIOD | UNSCHEDULED_MATTER (optional)' },
             severity: { type: 'string', description: 'Filter by severity: low | medium | high | critical (optional)' },
@@ -652,6 +687,114 @@ export async function executeTool(
                 },
             });
             return { success: true, id: entry.id, date: entry.date, message: `Court date scheduled for ${new Date(input.date).toLocaleDateString('en-NG', { dateStyle: 'long' })}.` };
+        }
+
+        case 'record_expense': {
+            await prisma.expense.create({
+                data: {
+                    workspaceId,
+                    amount: input.amount,
+                    category: input.category as ExpenseCategory,
+                    date: new Date(input.date),
+                    description: input.description,
+                    reference: input.reference,
+                },
+            });
+            return { success: true, message: `₦${Number(input.amount).toLocaleString()} expense recorded under ${input.category}.` };
+        }
+
+        case 'create_invoice': {
+            const clientOr = idOrTextFilter(input.client_id, ['name'], input.client_name);
+            if (clientOr.length === 0) return { error: 'Provide a client_id or client_name.' };
+            const client = await prisma.client.findFirst({ where: { workspaceId, OR: clientOr }, select: { id: true, name: true } });
+            if (!client) return { error: `No client found matching "${input.client_id || input.client_name}".` };
+
+            let matterId: string | null = null;
+            if (input.matter_title) {
+                const matter = await prisma.matter.findFirst({
+                    where: { name: { contains: input.matter_title, mode: 'insensitive' }, workspaceId, clientId: client.id },
+                    select: { id: true },
+                });
+                matterId = matter?.id ?? null;
+            }
+
+            const rawItems = Array.isArray(input.items)
+                ? (input.items as Array<{ description: string; amount: number; quantity?: number }>)
+                : [];
+            if (rawItems.length === 0) return { error: 'Provide at least one line item (description + amount).' };
+            const items = rawItems.map((it, i) => ({
+                description: it.description,
+                amount: it.amount,
+                quantity: it.quantity ?? 1,
+                order: i,
+            }));
+
+            const created = await InvoiceService.create({
+                clientId: client.id,
+                matterId,
+                billToName: client.name,
+                dueDate: (input.due_date as string | undefined) ?? null,
+                notes: (input.notes as string | undefined) ?? null,
+                items,
+                vatRate: (input.vat_rate as number | undefined) ?? 7.5,
+                securityChargeRate: (input.security_charge_rate as number | undefined) ?? 1.0,
+            });
+            if (!created.success) return { error: created.error };
+            const invoice = created.data;
+
+            // The invoice record itself always succeeds independently of the
+            // file — a rendering failure shouldn't undo a real invoice that
+            // now exists and is visible in the app either way.
+            let downloadUrl: string | null = null;
+            try {
+                const [workspace, bankAccount, signatoryUser] = await Promise.all([
+                    prisma.workspace.findUnique({ where: { id: workspaceId }, select: { letterheadUrl: true } }),
+                    prisma.bankAccount.findFirst({ where: { workspaceId } }),
+                    prisma.user.findUnique({ where: { id: userId }, select: { name: true, jobTitle: true } }),
+                ]);
+                const docxBlob = await generateInvoiceDOCX({
+                    invoiceNumber: invoice.invoiceNumber,
+                    date: invoice.date,
+                    dueDate: invoice.dueDate ?? undefined,
+                    billTo: {
+                        name: invoice.billToName,
+                        address: invoice.billToAddress,
+                        city: invoice.billToCity,
+                        state: invoice.billToState,
+                        attentionTo: invoice.attentionTo,
+                    },
+                    items: invoice.items.map(it => ({ description: it.description, amount: Number(it.amount), quantity: it.quantity })),
+                    totals: {
+                        subtotal: Number(invoice.subtotal),
+                        vat: Number(invoice.vatAmount),
+                        securityCharge: Number(invoice.securityChargeAmount),
+                        total: Number(invoice.totalAmount),
+                    },
+                    bankDetails: bankAccount ?? undefined,
+                    signatory: signatoryUser?.name ? { name: signatoryUser.name, jobTitle: signatoryUser.jobTitle ?? undefined } : undefined,
+                    letterheadUrl: workspace?.letterheadUrl,
+                });
+                const { put } = await import('@vercel/blob');
+                const buffer = Buffer.from(await docxBlob.arrayBuffer());
+                const blob = await put(`invoices/${workspaceId}/${invoice.invoiceNumber}.docx`, buffer, {
+                    access: 'public',
+                    contentType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                });
+                downloadUrl = blob.url;
+            } catch (err) {
+                console.error(`[Eureka] Invoice DOCX generation failed for ${invoice.invoiceNumber}:`, err);
+            }
+
+            return {
+                success: true,
+                invoiceNumber: invoice.invoiceNumber,
+                client: client.name,
+                total: Number(invoice.totalAmount),
+                downloadUrl,
+                message: downloadUrl
+                    ? `Invoice ${invoice.invoiceNumber} created for ${client.name} — ₦${Number(invoice.totalAmount).toLocaleString()}.`
+                    : `Invoice ${invoice.invoiceNumber} created for ${client.name} — ₦${Number(invoice.totalAmount).toLocaleString()}, but the document file could not be generated.`,
+            };
         }
 
         case 'draft_document': {

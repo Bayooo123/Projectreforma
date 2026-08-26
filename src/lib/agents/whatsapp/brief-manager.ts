@@ -6,6 +6,8 @@ import { searchBriefsByQuery, getUpcomingHearingsForWorkspace, type BriefSearchR
 import { DraftingService } from '@/lib/drafting/drafting-service';
 import { generateBriefManagerInsight } from '@/lib/agents/brief-manager/scan';
 import { getClaudeTools as getWorkspaceTools, executeTool as executeWorkspaceTool, idOrTextFilter } from '@/lib/eureka/tools';
+import { sendWhatsAppDocument } from './send';
+import { markdownToDocxBuffer } from '@/lib/documents/markdown-to-docx';
 
 // ── Tool definitions ──────────────────────────────────────────────────────────
 // Exported so the OpenAI-driven loop (brief-manager-openai.ts) can reuse the
@@ -246,6 +248,43 @@ export async function executeTool(name: string, input: Record<string, unknown>, 
                 input.status_update as string | undefined,
                 input.next_action as string | undefined,
             );
+        case 'draft_document': {
+            // Eureka's version returns Markdown text — fine to read inline in
+            // a web chat, but a wall of Markdown as a WhatsApp text message is
+            // a worse experience than just handing over the actual file. This
+            // channel renders the same draft to a .docx and sends it as a
+            // document instead of relaying the raw text.
+            const result = await executeWorkspaceTool('draft_document', input, workspaceId, ctx.userId);
+            if (!result || typeof result !== 'object' || 'error' in result) return result;
+            const { brief, draft } = result as { brief: string; draft: string };
+
+            try {
+                const buffer = await markdownToDocxBuffer(draft, brief);
+                const { put } = await import('@vercel/blob');
+                const safeName = (brief || 'Draft').replace(/[^a-zA-Z0-9 _-]/g, '').trim().slice(0, 60) || 'Draft';
+                const filename = `${safeName}.docx`;
+                const blob = await put(`whatsapp-drafts/${workspaceId}/${Date.now()}-${filename}`, buffer, {
+                    access: 'public',
+                    contentType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                });
+                await sendWhatsAppDocument(ctx.fromNumber, blob.url, filename, `Draft for ${brief} — review before sending.`);
+                return { success: true, sentAsDocument: true, filename, brief };
+            } catch (err) {
+                console.error('[WhatsApp Agent] Failed to render/send draft document:', err);
+                return { success: true, draft, note: 'Could not send this as a file — here is the draft text instead.' };
+            }
+        }
+        case 'create_invoice': {
+            const result = await executeWorkspaceTool('create_invoice', input, workspaceId, ctx.userId);
+            if (result && typeof result === 'object' && 'downloadUrl' in result) {
+                const { downloadUrl, invoiceNumber } = result as { downloadUrl: string | null; invoiceNumber: string };
+                if (downloadUrl) {
+                    await sendWhatsAppDocument(ctx.fromNumber, downloadUrl, `${invoiceNumber}.docx`, `Invoice ${invoiceNumber}`)
+                        .catch(err => console.error('[WhatsApp Agent] Failed to send invoice document:', err));
+                }
+            }
+            return result;
+        }
         default:
             // Everything else — matters, clients, court dates, financials,
             // documents, anomalies, emails, create/update — is Eureka's tool
@@ -290,7 +329,9 @@ Choosing the right tool for a question about a brief:
 - "What's the status of X" / "how's X doing" / "what's going on with X" / "give me an analysis" / "what should I do next" / "who's the ball with" → analyze_brief. This is the deep case-manager read (status, next steps, ball-in-court, open questions). Prefer it over get_brief_detail (metadata + docs/tasks, no real analysis) and over get_brief_timeline (raw timeline, no synthesis) whenever the user wants an actual answer rather than a data dump.
 - Anything that needs a fact FROM INSIDE a document — a clause, a date, an amount, a name, what a witness said, what was pleaded → search_brief_documents (semantic search over document content). Never guess or answer from a chronology snippet alone when the user is asking what a document actually says. analyse_document is for going deep on one already-identified document (including PDFs and images) once you have its document_id.
 - "What's happened / what's the timeline" → get_brief_timeline.
-- "Draft/write a letter/reply/notice to X" → draft_document. It grounds the draft in the brief's actual filed documents via semantic search, not generic language. Present the draft as plain text (no markdown, no asterisks — same rule as everything else here), and always make clear it's a draft for review: you have not sent, filed, or recorded anything by drafting it. If the user then says to file it or record it as the update, use record_brief_update or the document tools — drafting and filing are two separate steps, never combined automatically.
+- "Draft/write a letter/reply/notice to X" → draft_document. It grounds the draft in the brief's actual filed documents via semantic search, not generic language. On WhatsApp the drafted text is automatically rendered as a real .docx file and sent to the user as a document attachment — don't paste the draft body into your reply as text, since they'll already have it as a file. Just confirm briefly (what the draft is, which brief it's grounded in) and make clear it's a draft for review: you have not sent, filed, or recorded anything by drafting it. If the user then says to file it or record it as the update, use record_brief_update or the document tools — drafting and filing are two separate steps, never combined automatically.
+- "Record/log an expense" (fees paid, disbursements, filing costs, etc.) → record_expense. Confirm briefly what was recorded and against which brief/matter/client once done.
+- "Create/generate/prepare an invoice/bill for X" → create_invoice. Needs the client and the line items (description + amount each); ask only for whichever of those isn't already clear from the conversation. It auto-selects the workspace's bank account and uses you (the calling lawyer) as signatory — don't ask the user to choose either. The generated invoice is rendered as a .docx and sent automatically as a document attachment, same as draft_document — confirm briefly (invoice number, client, total) rather than repeating the line items back as text.
 
 Everything beyond briefs — clients, matters, court dates, financials, deadlines, anomalies, emails — works the same way: search/list first if the target record isn't already clear from context, then call the specific tool. Don't ask the user for an ID you can look up yourself.
 
