@@ -50,3 +50,71 @@ export async function notifyForNewAnomalies(workspaceId: string, newAnomalies: N
         }).catch(err => console.error(`[AnomalyNotify] Nudge failed for ${a.type} ${a.resourceId}:`, err));
     }
 }
+
+const ESCALATION_THRESHOLD_DAYS = 3;
+
+interface StaleAnomaly {
+    id: string;
+    type: string;
+    severity: string;
+    title: string;
+    question: string;
+    resourceId: string | null;
+    resourceName: string | null;
+    detectedAt: Date;
+}
+
+// "Unanswered" isn't tracked as a reply thread — WhatsApp nudges aren't
+// threaded to a specific inbound reply in this system. Instead this uses
+// the signal the anomaly system already has for free: an anomaly only
+// stays open because its underlying condition is still true (the outcome
+// still isn't logged, the invoice still isn't paid, the task still isn't
+// done) — runAnomalyScan auto-resolves it the moment that stops being the
+// case. So "still open N days after it was first raised" is a real,
+// already-computed proxy for "nobody's dealt with this yet."
+//
+// Escalates once per anomaly (checked via a WorkspaceActivityLog row from
+// a prior run), not every day it stays open — a single heads-up to the
+// managing partner, not a repeating alarm.
+export async function escalateStaleAnomalies(workspaceId: string): Promise<void> {
+    const threshold = new Date(Date.now() - ESCALATION_THRESHOLD_DAYS * 86_400_000);
+
+    const staleAnomalies = await prisma.workspaceAnomaly.findMany({
+        where: {
+            workspaceId,
+            status: { in: ['open', 'acknowledged'] },
+            type: { in: [...NOTIFIABLE_TYPES] },
+            detectedAt: { lt: threshold },
+        },
+        select: { id: true, type: true, severity: true, title: true, question: true, resourceId: true, resourceName: true, detectedAt: true },
+    });
+    if (staleAnomalies.length === 0) return;
+
+    const alreadyEscalated = await prisma.workspaceActivityLog.findMany({
+        where: { workspaceId, resource: 'WHATSAPP_NUDGE', action: 'anomaly_escalation', resourceId: { in: staleAnomalies.map(a => a.id) } },
+        select: { resourceId: true },
+    });
+    const escalatedIds = new Set(alreadyEscalated.map(l => l.resourceId));
+
+    const toEscalate = staleAnomalies.filter((a: StaleAnomaly) => !escalatedIds.has(a.id));
+    if (toEscalate.length === 0) return;
+
+    const workspace = await prisma.workspace.findUnique({ where: { id: workspaceId }, select: { ownerId: true } });
+    if (!workspace) return;
+    const owner = await prisma.user.findUnique({ where: { id: workspace.ownerId }, select: { phone: true } });
+    if (!owner?.phone) return;
+
+    for (const a of toEscalate) {
+        const daysOpen = Math.floor((Date.now() - a.detectedAt.getTime()) / 86_400_000);
+        await sendGatedWhatsAppNudge({
+            workspaceId,
+            userId: workspace.ownerId,
+            phone: owner.phone.replace(/\D/g, ''),
+            message: `Escalation: ${a.title}\nOpen for ${daysOpen} days with no resolution — ${a.question}\n\nOpen Reforma for the full detail.`,
+            triggerType: 'anomaly_escalation',
+            resourceId: a.id,
+            resourceName: a.resourceName ?? undefined,
+            urgent: a.severity === 'critical',
+        }).catch(err => console.error(`[AnomalyNotify] Escalation failed for ${a.type} ${a.id}:`, err));
+    }
+}

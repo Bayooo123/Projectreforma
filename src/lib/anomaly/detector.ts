@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/prisma';
-import { notifyForNewAnomalies } from './whatsapp-notify';
+import { notifyForNewAnomalies, escalateStaleAnomalies } from './whatsapp-notify';
 
 export type AnomalyType =
     | 'SPARSE_BRIEF'
@@ -429,6 +429,10 @@ export async function runAnomalyScan(workspaceId: string): Promise<{ created: nu
 
         await notifyForNewAnomalies(workspaceId, toCreate).catch(err => console.error('[AnomalyScan] WhatsApp notify failed:', err));
     }
+
+    // Independent of whether anything new was created this run — this checks
+    // anomalies that have been open for a while regardless of when they started.
+    await escalateStaleAnomalies(workspaceId).catch(err => console.error('[AnomalyScan] Escalation failed:', err));
 
     return { created: toCreate.length, resolved: staleIds.length };
 }
