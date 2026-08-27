@@ -37,6 +37,9 @@ yarn-error.log*
 /scratch/
 /tmp/
 
+# local-only data for one-off scripts (may contain real names/contact info — this repo is public)
+*.local.json
+
 # env files (can opt-in for committing if needed)
 .env*
 !.env.example
