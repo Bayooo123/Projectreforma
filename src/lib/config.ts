@@ -31,6 +31,15 @@ const envSchema = z.object({
     // API key the sync job authenticates with when calling POST /api/import/emails itself.
     EMAIL_SYNC_API_KEY: z.string().optional(),
 
+    // Zoom Cloud Recording — a Server-to-Server OAuth app used to (a) verify
+    // and consume the "Recording Completed" webhook and (b) authenticate
+    // downloading the recording file it points to. See
+    // src/app/api/webhooks/zoom-meeting/route.ts.
+    ZOOM_ACCOUNT_ID: z.string().optional(),
+    ZOOM_CLIENT_ID: z.string().optional(),
+    ZOOM_CLIENT_SECRET: z.string().optional(),
+    ZOOM_WEBHOOK_SECRET_TOKEN: z.string().optional(),
+
 
     // Email Service (Resend)
     MAIL_FROM: z.string().default('Reforma <Registration@reforma.ng>'),
