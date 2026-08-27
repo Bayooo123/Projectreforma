@@ -1,0 +1,21 @@
+name: Email IMAP sync
+
+# Polls ascolp@reforma.ng and files new mail into Reforma. Runs here rather
+# than as a Vercel Cron because Vercel's Hobby plan only allows once-daily
+# crons — far too infrequent for mail that should show up promptly. GitHub
+# Actions' schedule trigger is best-effort (can slip a few minutes under
+# load), which is fine for this.
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch: {}
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger sync endpoint
+        run: |
+          curl -sS -f -X GET \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            https://reforma.ng/api/cron/email-imap-sync

@@ -23,6 +23,14 @@ const envSchema = z.object({
     RESEND_API_KEY: z.string().optional(),
     EMAIL_WEBHOOK_SECRET: z.string().optional(),
 
+    // IMAP polling fallback for ascolp@reforma.ng (see src/lib/services/imap-sync.ts) —
+    // used because the provider-side auto-forward/webhook relay (Zoho Flow) is unreliable.
+    ZOHO_IMAP_HOST: z.string().default('imap.zoho.com'),
+    ZOHO_IMAP_USER: z.string().optional(),
+    ZOHO_IMAP_PASSWORD: z.string().optional(),
+    // API key the sync job authenticates with when calling POST /api/import/emails itself.
+    EMAIL_SYNC_API_KEY: z.string().optional(),
+
 
     // Email Service (Resend)
     MAIL_FROM: z.string().default('Reforma <Registration@reforma.ng>'),
