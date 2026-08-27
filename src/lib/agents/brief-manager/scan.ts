@@ -2,7 +2,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { config } from '@/lib/config';
-import { sendWhatsAppMessage } from '@/lib/agents/whatsapp/send';
+import { sendGatedWhatsAppNudge } from '@/lib/agents/whatsapp/notify-gate';
 
 export type BallInCourtStatus = 'us' | 'opposing_counsel' | 'court' | 'unclear';
 export type RepresentationConfidence = 'confirmed' | 'inferred' | 'unclear';
@@ -489,7 +489,7 @@ function buildNudgeMessage(
     return lines.join('\n');
 }
 
-async function notifyResponsibleLawyer(brief: NotifiableBrief, data: BriefManagerInsightData, lastSignalAt: Date): Promise<void> {
+async function notifyResponsibleLawyer(workspaceId: string, brief: NotifiableBrief, data: BriefManagerInsightData, lastSignalAt: Date): Promise<void> {
     const daysSinceLastActivity = Math.floor((Date.now() - lastSignalAt.getTime()) / 86_400_000);
     if (!isActionable(data, daysSinceLastActivity)) return;
 
@@ -497,8 +497,21 @@ async function notifyResponsibleLawyer(brief: NotifiableBrief, data: BriefManage
     const user = await prisma.user.findUnique({ where: { id: responsibleId }, select: { phone: true } });
     if (!user?.phone) return;
 
-    await sendWhatsAppMessage(user.phone.replace(/\D/g, ''), buildNudgeMessage(brief, data, lastSignalAt, daysSinceLastActivity))
-        .catch(err => console.error(`[BriefManager] Nudge failed for brief ${brief.id}:`, err));
+    // Overdue is the one condition here genuinely time-critical enough to bypass
+    // quiet hours/the daily cap — everything else (dormancy, ball-in-court,
+    // documents needed, unclear representation) can wait for the next non-quiet window.
+    const urgent = data.timeBoundDeadline?.status === 'overdue';
+
+    await sendGatedWhatsAppNudge({
+        workspaceId,
+        userId: responsibleId,
+        phone: user.phone.replace(/\D/g, ''),
+        message: buildNudgeMessage(brief, data, lastSignalAt, daysSinceLastActivity),
+        triggerType: 'brief_manager',
+        resourceId: brief.id,
+        resourceName: brief.name,
+        urgent,
+    }).catch(err => console.error(`[BriefManager] Nudge failed for brief ${brief.id}:`, err));
 }
 
 // The generate → save → notify tail shared by the gated nightly loop below
@@ -514,7 +527,7 @@ async function generateUpsertNotify(
     if (!generated.success) return { success: false, reason: generated.reason };
 
     const result = await upsertInsightForBrief(workspaceId, brief.id, generated.insight);
-    await notifyResponsibleLawyer(brief, generated.insight.data, generated.insight.lastSignalAt);
+    await notifyResponsibleLawyer(workspaceId, brief, generated.insight.data, generated.insight.lastSignalAt);
     return { success: true, result };
 }
 

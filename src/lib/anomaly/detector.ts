@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma';
+import { notifyForNewAnomalies } from './whatsapp-notify';
 
 export type AnomalyType =
     | 'SPARSE_BRIEF'
@@ -7,7 +8,9 @@ export type AnomalyType =
     | 'MISSING_EXPENSE_PERIOD'
     | 'UNSCHEDULED_MATTER'
     | 'FILING_DEADLINE_RISK'
-    | 'OVERDUE_MILESTONE';
+    | 'OVERDUE_MILESTONE'
+    | 'INVOICE_OVERDUE'
+    | 'TASK_OVERDUE';
 
 export type AnomalySeverity = 'low' | 'medium' | 'high' | 'critical';
 
@@ -20,6 +23,8 @@ interface DetectedAnomaly {
     resourceId: string;
     resourceName: string;
     context?: Record<string, any>;
+    /** Populated only for types with one clear responsible person — used to route a WhatsApp nudge (see whatsapp-notify.ts). Not every type has one. */
+    responsibleUserId?: string;
 }
 
 // Returns months where the firm was active but no expenses were recorded
@@ -134,7 +139,7 @@ export async function detectAnomalies(workspaceId: string): Promise<DetectedAnom
         },
         select: {
             id: true, date: true, court: true,
-            matter: { select: { id: true, name: true } },
+            matter: { select: { id: true, name: true, lawyerInChargeId: true } },
         },
         orderBy: { date: 'desc' },
         take: 20,
@@ -152,6 +157,7 @@ export async function detectAnomalies(workspaceId: string): Promise<DetectedAnom
             resourceId: e.id,
             resourceName: e.matter.name,
             context: { matterId: e.matter.id, date: e.date, court: e.court },
+            responsibleUserId: e.matter.lawyerInChargeId ?? undefined,
         });
     }
 
@@ -215,7 +221,7 @@ export async function detectAnomalies(workspaceId: string): Promise<DetectedAnom
         },
         select: {
             id: true, date: true, adjournedFor: true,
-            matter: { select: { id: true, name: true, court: true, lawyerInCharge: { select: { name: true } } } },
+            matter: { select: { id: true, name: true, court: true, lawyerInChargeId: true, lawyerInCharge: { select: { name: true } } } },
         },
     });
 
@@ -250,6 +256,7 @@ export async function detectAnomalies(workspaceId: string): Promise<DetectedAnom
             resourceId: entry.id,
             resourceName: entry.matter.name,
             context: { matterId: entry.matter.id, date: entry.date, adjournedFor: entry.adjournedFor, daysLeft, lawyerInCharge: entry.matter.lawyerInCharge?.name },
+            responsibleUserId: entry.matter.lawyerInChargeId ?? undefined,
         });
     }
 
@@ -270,7 +277,7 @@ export async function detectAnomalies(workspaceId: string): Promise<DetectedAnom
             where: { workspaceId, status: 'OVERDUE' },
             select: {
                 id: true, type: true, dueDate: true,
-                matter: { select: { id: true, name: true, lawyerInCharge: { select: { name: true } } } },
+                matter: { select: { id: true, name: true, lawyerInChargeId: true, lawyerInCharge: { select: { name: true } } } },
             },
             orderBy: { dueDate: 'asc' },
             take: 20,
@@ -299,10 +306,79 @@ export async function detectAnomalies(workspaceId: string): Promise<DetectedAnom
                     daysOverdue,
                     lawyerInCharge: m.matter.lawyerInCharge?.name,
                 },
+                responsibleUserId: m.matter.lawyerInChargeId ?? undefined,
             });
         }
     } catch {
         // LitigationMilestone table not yet migrated — skip silently
+    }
+
+    // ── 8. INVOICE_OVERDUE ────────────────────────────────────────────────
+    const overdueInvoices = await prisma.invoice.findMany({
+        where: {
+            client: { workspaceId },
+            // Actual status values in use are lowercase ('pending', 'paid',
+            // 'overdue' — see invoice-service.ts); this only needs to exclude paid.
+            status: { not: 'paid' },
+            dueDate: { lt: now },
+        },
+        select: {
+            id: true, invoiceNumber: true, dueDate: true, totalAmount: true,
+            client: { select: { name: true } },
+            matter: { select: { lawyerInChargeId: true } },
+        },
+        orderBy: { dueDate: 'asc' },
+        take: 20,
+    });
+
+    if (overdueInvoices.length > 0) {
+        const workspace = await prisma.workspace.findUnique({ where: { id: workspaceId }, select: { ownerId: true } });
+        for (const inv of overdueInvoices) {
+            const daysOverdue = inv.dueDate ? Math.floor((now.getTime() - new Date(inv.dueDate).getTime()) / 86_400_000) : null;
+            const dueDateStr = inv.dueDate ? new Date(inv.dueDate).toLocaleDateString('en-NG', { day: 'numeric', month: 'long', year: 'numeric' }) : 'a while ago';
+            detected.push({
+                type: 'INVOICE_OVERDUE',
+                severity: daysOverdue && daysOverdue > 30 ? 'critical' : daysOverdue && daysOverdue > 14 ? 'high' : 'medium',
+                title: `Invoice ${inv.invoiceNumber} overdue — ${inv.client.name}`,
+                question: `Invoice ${inv.invoiceNumber} for ${inv.client.name} (₦${Number(inv.totalAmount).toLocaleString('en-NG')}) was due ${dueDateStr} and remains unpaid. Has payment been received, or should we follow up with the client?`,
+                resourceType: 'invoice',
+                resourceId: inv.id,
+                resourceName: inv.client.name,
+                context: { invoiceNumber: inv.invoiceNumber, dueDate: inv.dueDate, daysOverdue, totalAmount: inv.totalAmount.toString() },
+                // Falls back to the workspace owner — an invoice has no direct
+                // "owner" field, and unlike a matter/brief there's no single
+                // assignee to default to.
+                responsibleUserId: inv.matter?.lawyerInChargeId ?? workspace?.ownerId,
+            });
+        }
+    }
+
+    // ── 9. TASK_OVERDUE ────────────────────────────────────────────────────
+    const overdueTasks = await prisma.task.findMany({
+        where: {
+            workspaceId,
+            status: { notIn: ['completed', 'cancelled'] },
+            dueDate: { lt: now },
+        },
+        select: { id: true, title: true, dueDate: true, assignedToId: true, assignedById: true },
+        orderBy: { dueDate: 'asc' },
+        take: 20,
+    });
+
+    for (const t of overdueTasks) {
+        const daysOverdue = t.dueDate ? Math.floor((now.getTime() - new Date(t.dueDate).getTime()) / 86_400_000) : null;
+        detected.push({
+            type: 'TASK_OVERDUE',
+            severity: daysOverdue && daysOverdue > 7 ? 'critical' : daysOverdue && daysOverdue > 3 ? 'high' : 'medium',
+            title: `Overdue task — ${t.title}`,
+            question: `The task "${t.title}"${t.dueDate ? ` was due ${new Date(t.dueDate).toLocaleDateString('en-NG', { day: 'numeric', month: 'long', year: 'numeric' })}` : ''} and is still not marked complete. Is it done, or does it need more time?`,
+            resourceType: 'task',
+            resourceId: t.id,
+            resourceName: t.title,
+            context: { dueDate: t.dueDate, daysOverdue },
+            // Falls back to whoever created the task if it was never assigned.
+            responsibleUserId: t.assignedToId ?? t.assignedById,
+        });
     }
 
     return detected;
@@ -350,6 +426,8 @@ export async function runAnomalyScan(workspaceId: string): Promise<{ created: nu
             })),
             skipDuplicates: true,
         });
+
+        await notifyForNewAnomalies(workspaceId, toCreate).catch(err => console.error('[AnomalyScan] WhatsApp notify failed:', err));
     }
 
     return { created: toCreate.length, resolved: staleIds.length };

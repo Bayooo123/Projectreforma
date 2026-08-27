@@ -1,5 +1,6 @@
 import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
+import { sendGatedWhatsAppNudge } from '@/lib/agents/whatsapp/notify-gate';
 
 export interface MeetingAgentInsightData {
     calendarEntryId: string;
@@ -28,7 +29,10 @@ export async function scanMeetingsForWorkspace(workspaceId: string): Promise<{ c
                     { OR: [{ outcome: null }, { outcome: '' }] },
                 ],
             },
-            select: { id: true, date: true, title: true, briefId: true, brief: { select: { name: true } } },
+            select: {
+                id: true, date: true, title: true, briefId: true,
+                brief: { select: { name: true, briefNumber: true, lawyerId: true, lawyerInChargeId: true } },
+            },
         }),
         prisma.agentInsight.findMany({
             where: { workspaceId, agentType: 'meetings', status: { in: ['new', 'viewed'] } },
@@ -64,6 +68,22 @@ export async function scanMeetingsForWorkspace(workspaceId: string): Promise<{ c
             },
         });
         created++;
+
+        const responsibleId = entry.brief?.lawyerInChargeId ?? entry.brief?.lawyerId;
+        if (responsibleId) {
+            const user = await prisma.user.findUnique({ where: { id: responsibleId }, select: { phone: true } });
+            if (user?.phone) {
+                await sendGatedWhatsAppNudge({
+                    workspaceId,
+                    userId: responsibleId,
+                    phone: user.phone.replace(/\D/g, ''),
+                    message: `${entry.brief?.name ?? entry.title}${entry.brief?.briefNumber ? ` (${entry.brief.briefNumber})` : ''}\n${data.prompt}\n\nReply here to record it, or open Reforma.`,
+                    triggerType: 'meeting_outcome_missing',
+                    resourceId: entry.id,
+                    resourceName: entry.brief?.name ?? entry.title ?? undefined,
+                }).catch(err => console.error(`[MeetingsAgent] Nudge failed for calendar entry ${entry.id}:`, err));
+            }
+        }
     }
 
     return { created, skipped };
