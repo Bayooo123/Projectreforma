@@ -3,7 +3,10 @@
 // generateApiKey) — bypasses that page's owner/partner role gate, for when
 // nobody with that role is available to click "Generate" themselves.
 //
-// Run with: npx tsx scripts/generate-email-sync-api-key.ts <user-email>
+// Run with: npx tsx scripts/generate-email-sync-api-key.ts <user-email> ["key name"]
+// The name defaults to the email-sync use case this was originally written
+// for, but any integration that authenticates as an API key can use this —
+// e.g. the Zoom join-bot (zoom-bot/) — just pass a name that says what it's for.
 //
 // The user must already exist and belong to a workspace — this attributes
 // the key to them and their workspace, it doesn't create either.
@@ -15,8 +18,9 @@ const prisma = new PrismaClient();
 
 async function main() {
     const email = process.argv[2];
+    const keyName = process.argv[3] || 'Email sync (IMAP -> Reforma)';
     if (!email) {
-        console.error('Usage: npx tsx scripts/generate-email-sync-api-key.ts <user-email>');
+        console.error('Usage: npx tsx scripts/generate-email-sync-api-key.ts <user-email> ["key name"]');
         return;
     }
 
@@ -44,7 +48,7 @@ async function main() {
         data: {
             userId: user.id,
             workspaceId: membership.workspaceId,
-            name: 'Email sync (IMAP -> Reforma)',
+            name: keyName,
             keyHash,
             keyPrefix,
         },

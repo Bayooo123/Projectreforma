@@ -139,6 +139,11 @@ export function getClaudeTools() {
             brief_title: { type: 'string', description: 'Search by brief title or number if ID unknown' },
             instruction: { type: 'string', description: 'What to draft, e.g. "a letter to opposing counsel demanding compliance with the settlement terms"' },
         }, ['instruction']),
+        tool('join_zoom_meeting', 'Send the firm\'s Zoom join-bot into a meeting the firm is attending but not hosting (so it has no cloud recording of its own to pick up). Give it the Zoom meeting link and, once someone is actually free to run it, it joins, records the audio, and files the recording — tied to a brief if one is given, otherwise general. This only works for Zoom links, and only once the local bot machine is on and polling for jobs; it is not instant.', {
+            meeting_link: { type: 'string', description: 'The full Zoom meeting URL (e.g. https://zoom.us/j/123456789?pwd=...)' },
+            brief_id: { type: 'string', description: 'Brief to attach the recording to (optional)' },
+            brief_title: { type: 'string', description: 'Search by brief title or number if ID unknown (optional)' },
+        }, ['meeting_link']),
         tool('record_expense', 'Record a firm expense — office costs, court fees, staff costs, subscriptions, etc. This is a general firm expense, not billed to a specific client/matter.', {
             amount: { type: 'number', description: 'Amount in Naira' },
             category: { type: 'string', description: 'OFFICE_UTILITIES | OFFICE_EQUIPMENT_MAINTENANCE | COURT_LITIGATION | NON_LITIGATION_ADVISORY | COMMUNICATION_SUBSCRIPTIONS | STAFF_COSTS | VEHICLE_LOGISTICS | MISCELLANEOUS' },
@@ -687,6 +692,24 @@ export async function executeTool(
                 },
             });
             return { success: true, id: entry.id, date: entry.date, message: `Court date scheduled for ${new Date(input.date).toLocaleDateString('en-NG', { dateStyle: 'long' })}.` };
+        }
+
+        case 'join_zoom_meeting': {
+            const link = String(input.meeting_link || '');
+            if (!/zoom\.us\//i.test(link)) {
+                return { error: 'That doesn\'t look like a Zoom link — the join-bot only supports Zoom meetings right now.' };
+            }
+            let briefId: string | undefined;
+            if (input.brief_id || input.brief_title) {
+                const briefOr = idOrTextFilter(input.brief_id, ['name', 'briefNumber', 'customBriefNumber'], input.brief_title);
+                const brief = await prisma.brief.findFirst({ where: { workspaceId, deletedAt: null, OR: briefOr }, select: { id: true } });
+                if (!brief) return { error: 'Could not find that brief — the meeting can still be joined without one, just drop the brief reference.' };
+                briefId = brief.id;
+            }
+            const request = await prisma.meetingBotRequest.create({
+                data: { workspaceId, briefId, meetingLink: link, requestedById: userId },
+            });
+            return { success: true, id: request.id, message: 'Queued — the join-bot will pick this up next time it polls and join the meeting. The recording will show up on the Recordings page once it\'s done.' };
         }
 
         case 'record_expense': {

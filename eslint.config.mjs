@@ -12,6 +12,9 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Standalone package with its own dependencies (playwright, dotenv) not
+    // installed at the repo root — see zoom-bot/README.md.
+    "zoom-bot/**",
   ]),
 ]);
 

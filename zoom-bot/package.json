@@ -1,0 +1,20 @@
+{
+  "name": "reforma-zoom-bot",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Local Windows service that joins Zoom meetings Reforma requests, records the audio, and uploads it back for filing/transcription.",
+  "type": "module",
+  "scripts": {
+    "start": "tsx watch --clear-screen=false index.ts",
+    "postinstall": "playwright install chromium"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "playwright": "^1.47.0"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.0",
+    "typescript": "^5.5.0",
+    "@types/node": "^20.14.0"
+  }
+}

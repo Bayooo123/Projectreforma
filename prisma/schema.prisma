@@ -73,6 +73,7 @@ model Workspace {
   ingestionSessions     IngestionSession[]
   inboxAttachments      InboxAttachment[]
   meetingRecordings     MeetingRecording[]
+  meetingBotRequests    MeetingBotRequest[]
 
   @@index([slug])
   @@index([firmCode])
@@ -210,6 +211,7 @@ model User {
   manualBriefStatusUpdates     Brief[]                @relation("BriefManualStatusUpdater")
   createdMeetingRecordings     MeetingRecording[]     @relation("MeetingRecordingCreator")
   createdInboxAttachments      InboxAttachment[]      @relation("InboxAttachmentCreator")
+  requestedMeetingBotRequests  MeetingBotRequest[]    @relation("MeetingBotRequester")
 
   // Personal theme overrides
   themeSource          String?  @default("workspace")
@@ -579,6 +581,7 @@ model Brief {
   suggestedInboxAttachments    InboxAttachment[]    @relation("InboxAttachmentSuggestedBrief")
   confirmedInboxAttachments    InboxAttachment[]    @relation("InboxAttachmentConfirmedBrief")
   meetingRecordings   MeetingRecording[]
+  meetingBotRequests  MeetingBotRequest[]
 
   @@index([lawyerId])
   @@index([lawyerInChargeId])
@@ -1570,6 +1573,35 @@ model MeetingRecording {
   @@index([calendarEntryId])
   @@index([workspaceId])
   @@index([briefId])
+}
+
+// A request to send the local Zoom join-bot into a meeting the firm doesn't
+// host on its own Zoom account (so Cloud Recording's webhook, above, never
+// fires for it). Created by the join_zoom_meeting WhatsApp tool; polled and
+// claimed by a bot process running on a machine outside this deployment
+// (Vercel can't run something that has to stay connected as a meeting
+// participant for the call's whole duration) — see zoom-bot/. recordingId
+// is a plain reference (no FK) since it's only set after the fact, once the
+// bot uploads the recording and a MeetingRecording row already exists.
+model MeetingBotRequest {
+  id            String    @id @default(cuid())
+  workspaceId   String
+  briefId       String?
+  meetingLink   String
+  status        String    @default("pending") // pending | claimed | completed | failed
+  recordingId   String?
+  errorMessage  String?
+  requestedById String
+  createdAt     DateTime  @default(now())
+  claimedAt     DateTime?
+  completedAt   DateTime?
+
+  workspace     Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  brief         Brief?    @relation(fields: [briefId], references: [id], onDelete: SetNull)
+  requestedBy   User      @relation("MeetingBotRequester", fields: [requestedById], references: [id])
+
+  @@index([workspaceId])
+  @@index([status])
 }
 
 // Every document that arrives via email or WhatsApp lands here, whether the
