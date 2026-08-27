@@ -7,6 +7,33 @@ import { formatMeetingDuration as formatDuration, formatMeetingDate as formatDat
 
 type Phase = 'idle' | 'recording' | 'reviewing' | 'uploading';
 
+// getUserMedia throws different DOMException names for genuinely different
+// problems — permission denied, no device, device already in use, an
+// insecure origin — but the old code collapsed all of them into one
+// "check your permissions" message, which is actively misleading once
+// permissions and hardware have already been confirmed fine.
+function micErrorMessage(err: unknown): string {
+    const name = err instanceof DOMException ? err.name : '';
+    switch (name) {
+        case 'NotAllowedError':
+        case 'PermissionDeniedError':
+            return 'Microphone access was denied — check your browser/app permissions.';
+        case 'NotFoundError':
+        case 'DevicesNotFoundError':
+            return 'No microphone was found — check that one is connected and enabled.';
+        case 'NotReadableError':
+        case 'TrackStartError':
+            return 'The microphone could not be started — it may be in use by another app (Zoom, Teams, another browser tab). Close anything else using it and try again.';
+        case 'SecurityError':
+            return 'Microphone access requires a secure connection (https) — this page may not be loading securely.';
+        case 'OverconstrainedError':
+        case 'AbortError':
+            return 'The microphone could not be started due to a device error — try again, or try a different microphone.';
+        default:
+            return 'Could not access the microphone — an unexpected error occurred. Check the browser console for details.';
+    }
+}
+
 interface MeetingRecorderProps {
     scope: RecordingScope;
     /** Only used when scope has no calendarEntryId — labels a general/brief-tied recording. */
@@ -86,8 +113,9 @@ export default function MeetingRecorder({ scope, title, onSaved }: MeetingRecord
             setSeconds(0);
             setPhase('recording');
             timerRef.current = setInterval(() => setSeconds(s => s + 1), 1000);
-        } catch {
-            setError('Microphone access was denied or is unavailable — check your browser/app permissions.');
+        } catch (err) {
+            console.error('[MeetingRecorder] getUserMedia failed:', err);
+            setError(micErrorMessage(err));
         }
     };
 
