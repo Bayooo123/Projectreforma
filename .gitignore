@@ -39,6 +39,7 @@ yarn-error.log*
 
 # local-only data for one-off scripts (may contain real names/contact info — this repo is public)
 *.local.json
+*.local.ts
 
 # env files (can opt-in for committing if needed)
 .env*
