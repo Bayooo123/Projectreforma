@@ -14,7 +14,7 @@ const QUIET_HOURS_END = 7;    // 7am WAT
 const MAX_NUDGES_PER_DAY = 5;
 const LAGOS_UTC_OFFSET_HOURS = 1; // WAT = UTC+1 year-round, no DST
 
-function lagosNow(): Date {
+export function lagosNow(): Date {
     return new Date(Date.now() + LAGOS_UTC_OFFSET_HOURS * 3600_000);
 }
 

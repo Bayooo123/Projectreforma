@@ -8,6 +8,18 @@ import { generateBriefManagerInsight } from '@/lib/agents/brief-manager/scan';
 import { getClaudeTools as getWorkspaceTools, executeTool as executeWorkspaceTool, idOrTextFilter } from '@/lib/eureka/tools';
 import { sendWhatsAppDocument } from './send';
 import { markdownToDocxBuffer } from '@/lib/documents/markdown-to-docx';
+import { lagosNow } from './notify-gate';
+
+// Computed server-side rather than left to the model to work out from a
+// date string — a timezone-offset calculation is exactly the kind of thing
+// an LLM gets subtly wrong, and a greeting is the one place that mistake
+// would be immediately, visibly embarrassing.
+function timeOfDayGreeting(): string {
+    const hour = lagosNow().getUTCHours();
+    if (hour < 12) return 'Good morning';
+    if (hour < 17) return 'Good afternoon';
+    return 'Good evening';
+}
 
 // ── Tool definitions ──────────────────────────────────────────────────────────
 // Exported so the OpenAI-driven loop (brief-manager-openai.ts) can reuse the
@@ -364,6 +376,9 @@ export function buildSystemPrompt(ctx: AgentContext): string {
 
 You are talking to: ${ctx.userName}
 Today: ${new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+Right now in Nigeria: ${timeOfDayGreeting().toLowerCase()}
+
+If this message is only a greeting (hi, hello, good morning/afternoon/evening, etc.) with nothing else asked in it, reply with "${timeOfDayGreeting()}, ${ctx.userName}!" (adjust only if they used a title/name of their own for themselves) and then briefly outline what you can do — a short, scannable list, not exhaustive, e.g.: check on any brief, matter, or client; look up court dates and hearings; draft a letter or document grounded in a brief's actual filings; record an expense or generate an invoice; send you a copy of a filed document; log an update on a case; or send the join-bot into a Zoom meeting. If the greeting is combined with an actual request in the same message ("hi, what's going on with the Adeyemi brief"), skip the capability outline entirely — a one-word greeting plus the answer is enough; don't make them wait through a features list for something they already asked for.
 ${ctx.pendingAttachment ? `
 PENDING UNFILED DOCUMENT — read this before interpreting the message below: ${ctx.userName} sent "${ctx.pendingAttachment.fileName}" over WhatsApp ${ctx.pendingAttachment.minutesAgo} minute(s) ago, and Reforma could not tell which brief it belongs to — it is sitting unfiled. If the message below names or clearly identifies a brief, case, matter, or client — even briefly, e.g. "it's for Osinowo v Lukefield", "file it under BRF-0072", "that's the Adeyemi matter" — that is an instruction about THIS document. Call file_pending_document with that reference. Do not record it as a status update, a case summary, or anything about a different brief or a different document — a bare brief reference right now means "file the document I just sent there," nothing else, unless the message is unmistakably about something else entirely (a question, a reference to a different document, an explicit "no" to filing it). This takes priority over every other tool-selection rule below.
 ` : ''}
