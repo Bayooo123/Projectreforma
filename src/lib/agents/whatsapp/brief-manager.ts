@@ -95,6 +95,17 @@ const WHATSAPP_TOOLS: Anthropic.Tool[] = [
         },
     },
     {
+        name: 'send_document',
+        description: 'Send an already-filed document to this WhatsApp number as a file attachment — use this whenever the user asks to be sent, shown, forwarded, or given a copy of a specific document that\'s already on Reforma (e.g. "send me the tenancy agreement for Osinowo", "share that affidavit", "forward the last letter from opposing counsel"). Look the document up first (get_brief_detail returns each document\'s id and name; search_brief_documents finds one by what it discusses) — do not guess a document_id.',
+        input_schema: {
+            type: 'object' as const,
+            properties: {
+                document_id: { type: 'string', description: 'The document ID from Reforma' },
+            },
+            required: ['document_id'],
+        },
+    },
+    {
         name: 'record_brief_update',
         description: 'Record a status update and/or next action on a specific brief — writes to the manual tracker (the "Status / Last Action" and "Next Action" fields visible on the Brief Tracker) and logs it to the brief\'s activity history. Use this once you know which brief the user means — from search_briefs/list_briefs, from the user naming it directly, or from the user picking a number off a list you showed them earlier in this conversation.',
         input_schema: {
@@ -229,6 +240,19 @@ async function filePendingDocument(ctx: AgentContext, ref: string | undefined) {
     return { success: true, fileName: ctx.pendingAttachment.fileName, briefId: resolved.id, briefName: resolved.name };
 }
 
+async function sendStoredDocument(ctx: AgentContext, documentId: string | undefined) {
+    if (!documentId) return { error: 'Which document? Look it up (get_brief_detail or search_brief_documents) first.' };
+
+    const doc = await prisma.document.findFirst({
+        where: { id: documentId, brief: { workspaceId: ctx.workspaceId } },
+        select: { name: true, url: true, brief: { select: { name: true } } },
+    });
+    if (!doc?.url) return { error: 'Document not found, or has no file attached.' };
+
+    await sendWhatsAppDocument(ctx.fromNumber, doc.url, doc.name, doc.brief.name);
+    return { success: true, sentAsDocument: true, fileName: doc.name };
+}
+
 async function searchBriefDocuments(briefId: string, workspaceId: string, query: string) {
     const resolved = await resolveBriefRef(briefId, workspaceId);
     if (!resolved.ok) return resolved.result;
@@ -272,6 +296,8 @@ export async function executeTool(name: string, input: Record<string, unknown>, 
             return searchBriefDocuments(input.brief_id as string, workspaceId, input.query as string);
         case 'analyze_brief':
             return analyzeBrief(input.brief_id as string, workspaceId);
+        case 'send_document':
+            return sendStoredDocument(ctx, input.document_id as string | undefined);
         case 'file_pending_document':
             return filePendingDocument(ctx, (input.brief_id as string | undefined) ?? (input.brief_title as string | undefined));
         case 'record_brief_update':
@@ -368,6 +394,7 @@ Choosing the right tool for a question about a brief:
 - "Draft/write a letter/reply/notice to X" → draft_document. It grounds the draft in the brief's actual filed documents via semantic search, not generic language. On WhatsApp the drafted text is automatically rendered as a real .docx file and sent to the user as a document attachment — don't paste the draft body into your reply as text, since they'll already have it as a file. Just confirm briefly (what the draft is, which brief it's grounded in) and make clear it's a draft for review: you have not sent, filed, or recorded anything by drafting it. If the user then says to file it or record it as the update, use record_brief_update or the document tools — drafting and filing are two separate steps, never combined automatically.
 - "Record/log an expense" (fees paid, disbursements, filing costs, etc.) → record_expense. Confirm briefly what was recorded and against which brief/matter/client once done.
 - "Create/generate/prepare an invoice/bill for X" → create_invoice. Needs the client and the line items (description + amount each); ask only for whichever of those isn't already clear from the conversation. It auto-selects the workspace's bank account and uses you (the calling lawyer) as signatory — don't ask the user to choose either. The generated invoice is rendered as a .docx and sent automatically as a document attachment, same as draft_document — confirm briefly (invoice number, client, total) rather than repeating the line items back as text.
+- "Send/share/forward/give me [a document]" → send_document. Resolve which document first — get_brief_detail lists every document on a brief with its id and name, or search_brief_documents if you only know what it discusses, not its name. Never ask the user for a document_id; look it up. If more than one document plausibly matches, ask which one (briefly list the candidates by name) rather than guessing.
 - Naming a brief/case right after sending a document that's still unfiled → file_pending_document (see the PENDING UNFILED DOCUMENT note above, when present) — never record_brief_update or anything else for this.
 - "Join/record/send the bot into a Zoom meeting [we're not hosting]" → join_zoom_meeting. Zoom links only — say so plainly if given a Meet/Teams link instead of quietly queuing it anyway. This only queues the request; it is not instant and depends on the local bot machine being on. Tell the user it's queued and the recording will land on the Recordings page once the bot has joined and the meeting has ended — don't imply it already joined.
 
