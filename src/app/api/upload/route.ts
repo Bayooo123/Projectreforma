@@ -45,6 +45,9 @@ export async function POST(request: Request): Promise<NextResponse> {
 
         // 4. Database Record (Only if linked to a brief)
         if (briefId) {
+            if (!blob.url?.trim()) {
+                return NextResponse.json({ error: 'Upload did not return a file URL' }, { status: 500 });
+            }
             const doc = await prisma.document.create({
                 data: {
                     name: filename,

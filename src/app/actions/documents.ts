@@ -48,6 +48,9 @@ export async function createDocument(data: {
     folderId?: string | null;
 }) {
     try {
+        if (!data.url?.trim()) {
+            return { success: false, error: 'Refusing to file this document with no file URL — every document must have a real file behind it.' };
+        }
         const document = await prisma.document.create({
             data: {
                 name: data.name,

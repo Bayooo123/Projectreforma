@@ -20,6 +20,9 @@ export class DocumentIngestionService {
      */
     static async ingest(options: IngestOptions) {
         const { name, buffer, contentType, size, briefId, folderId, url } = options;
+        if (!url?.trim()) {
+            throw new Error(`Refusing to file "${name}" under brief ${briefId} with no file URL — every document must have a real file behind it.`);
+        }
         const documentId = nanoid();
 
         // 1. Create document record (Pending state)
