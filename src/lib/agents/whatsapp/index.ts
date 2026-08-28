@@ -101,7 +101,27 @@ export async function handleWhatsAppMessage(fromNumber: string, text: string): P
         return;
     }
 
-    const ctx: AgentContext = { fromNumber, ...resolved };
+    const pending = await prisma.inboxAttachment.findFirst({
+        where: {
+            workspaceId: resolved.workspaceId,
+            whatsappFromNumber: fromNumber,
+            status: 'pending',
+            // Old enough that a much later, unrelated message shouldn't get
+            // bound to it — a lawyer confirming where something goes is
+            // almost always within minutes of sending it, not hours later.
+            createdAt: { gte: new Date(Date.now() - 6 * 3600_000) },
+        },
+        orderBy: { createdAt: 'desc' },
+        select: { id: true, fileName: true, createdAt: true },
+    });
+
+    const ctx: AgentContext = {
+        fromNumber,
+        ...resolved,
+        pendingAttachment: pending
+            ? { id: pending.id, fileName: pending.fileName, minutesAgo: Math.round((Date.now() - pending.createdAt.getTime()) / 60_000) }
+            : null,
+    };
 
     // Get or create session and load history
     const session = await getOrCreateSession(fromNumber, resolved.workspaceId);

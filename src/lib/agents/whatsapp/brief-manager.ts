@@ -83,6 +83,18 @@ const WHATSAPP_TOOLS: Anthropic.Tool[] = [
         },
     },
     {
+        name: 'file_pending_document',
+        description: 'File the most recent document this WhatsApp number sent that is still unfiled/pending (i.e. Reforma could not tell which brief it belonged to when it arrived) into a specific brief. Use this — not draft_document, not record_brief_update — whenever the user\'s message is naming where a document they just sent belongs, e.g. "file it under X", "that goes in the Adeyemi matter", "it\'s for Osinowo v Lukefield". Only call this when a pending document context has actually been given to you below; if none was given, there is nothing pending to file and you should treat the message as a normal instruction instead.',
+        input_schema: {
+            type: 'object' as const,
+            properties: {
+                brief_id: { type: 'string', description: 'The brief ID' },
+                brief_title: { type: 'string', description: 'Search by brief title, case name, or number if ID unknown' },
+            },
+            required: [],
+        },
+    },
+    {
         name: 'record_brief_update',
         description: 'Record a status update and/or next action on a specific brief — writes to the manual tracker (the "Status / Last Action" and "Next Action" fields visible on the Brief Tracker) and logs it to the brief\'s activity history. Use this once you know which brief the user means — from search_briefs/list_briefs, from the user naming it directly, or from the user picking a number off a list you showed them earlier in this conversation.',
         input_schema: {
@@ -197,6 +209,26 @@ async function recordBriefUpdate(
     return { success: true, briefId: resolved.id, briefName: resolved.name };
 }
 
+async function filePendingDocument(ctx: AgentContext, ref: string | undefined) {
+    if (!ctx.pendingAttachment) {
+        return { error: 'There is no unfiled document from you right now to file — did you mean to send the document again, or record a different kind of update?' };
+    }
+    if (!ref) return { error: 'Which brief/case does this go under?' };
+
+    const resolved = await resolveBriefRef(ref, ctx.workspaceId);
+    if (!resolved.ok) return resolved.result;
+
+    const { fileInboxAttachment } = await import('@/lib/services/inbox-attachments');
+    try {
+        await fileInboxAttachment(ctx.pendingAttachment.id, resolved.id);
+    } catch (err) {
+        console.error(`[WhatsApp Agent] Failed to file pending attachment ${ctx.pendingAttachment.id}:`, err);
+        return { error: 'Could not file that document — it may have already been filed. Check the Reforma Inbox.' };
+    }
+
+    return { success: true, fileName: ctx.pendingAttachment.fileName, briefId: resolved.id, briefName: resolved.name };
+}
+
 async function searchBriefDocuments(briefId: string, workspaceId: string, query: string) {
     const resolved = await resolveBriefRef(briefId, workspaceId);
     if (!resolved.ok) return resolved.result;
@@ -240,6 +272,8 @@ export async function executeTool(name: string, input: Record<string, unknown>, 
             return searchBriefDocuments(input.brief_id as string, workspaceId, input.query as string);
         case 'analyze_brief':
             return analyzeBrief(input.brief_id as string, workspaceId);
+        case 'file_pending_document':
+            return filePendingDocument(ctx, (input.brief_id as string | undefined) ?? (input.brief_title as string | undefined));
         case 'record_brief_update':
             return recordBriefUpdate(
                 input.brief_id as string,
@@ -304,7 +338,9 @@ export function buildSystemPrompt(ctx: AgentContext): string {
 
 You are talking to: ${ctx.userName}
 Today: ${new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
-
+${ctx.pendingAttachment ? `
+PENDING UNFILED DOCUMENT — read this before interpreting the message below: ${ctx.userName} sent "${ctx.pendingAttachment.fileName}" over WhatsApp ${ctx.pendingAttachment.minutesAgo} minute(s) ago, and Reforma could not tell which brief it belongs to — it is sitting unfiled. If the message below names or clearly identifies a brief, case, matter, or client — even briefly, e.g. "it's for Osinowo v Lukefield", "file it under BRF-0072", "that's the Adeyemi matter" — that is an instruction about THIS document. Call file_pending_document with that reference. Do not record it as a status update, a case summary, or anything about a different brief or a different document — a bare brief reference right now means "file the document I just sent there," nothing else, unless the message is unmistakably about something else entirely (a question, a reference to a different document, an explicit "no" to filing it). This takes priority over every other tool-selection rule below.
+` : ''}
 Never refuse a question or say you can "only help with briefs and case information" — if it's about this firm's work, there is very likely a tool for it. Try the tool that fits before concluding you can't help, and if you're genuinely unsure which one applies, make your best attempt rather than deflecting.
 
 Rules for WhatsApp responses:
@@ -332,6 +368,7 @@ Choosing the right tool for a question about a brief:
 - "Draft/write a letter/reply/notice to X" → draft_document. It grounds the draft in the brief's actual filed documents via semantic search, not generic language. On WhatsApp the drafted text is automatically rendered as a real .docx file and sent to the user as a document attachment — don't paste the draft body into your reply as text, since they'll already have it as a file. Just confirm briefly (what the draft is, which brief it's grounded in) and make clear it's a draft for review: you have not sent, filed, or recorded anything by drafting it. If the user then says to file it or record it as the update, use record_brief_update or the document tools — drafting and filing are two separate steps, never combined automatically.
 - "Record/log an expense" (fees paid, disbursements, filing costs, etc.) → record_expense. Confirm briefly what was recorded and against which brief/matter/client once done.
 - "Create/generate/prepare an invoice/bill for X" → create_invoice. Needs the client and the line items (description + amount each); ask only for whichever of those isn't already clear from the conversation. It auto-selects the workspace's bank account and uses you (the calling lawyer) as signatory — don't ask the user to choose either. The generated invoice is rendered as a .docx and sent automatically as a document attachment, same as draft_document — confirm briefly (invoice number, client, total) rather than repeating the line items back as text.
+- Naming a brief/case right after sending a document that's still unfiled → file_pending_document (see the PENDING UNFILED DOCUMENT note above, when present) — never record_brief_update or anything else for this.
 - "Join/record/send the bot into a Zoom meeting [we're not hosting]" → join_zoom_meeting. Zoom links only — say so plainly if given a Meet/Teams link instead of quietly queuing it anyway. This only queues the request; it is not instant and depends on the local bot machine being on. Tell the user it's queued and the recording will land on the Recordings page once the bot has joined and the meeting has ended — don't imply it already joined.
 
 Everything beyond briefs — clients, matters, court dates, financials, deadlines, anomalies, emails — works the same way: search/list first if the target record isn't already clear from context, then call the specific tool. Don't ask the user for an ID you can look up yourself.
