@@ -319,7 +319,7 @@ export async function executeTool(
                     matter: { select: { id: true, name: true, court: true, status: true } },
                     lawyerInCharge: { select: { name: true } },
                     documents: {
-                        select: { id: true, name: true, uploadedAt: true, ocrStatus: true, ocrText: true },
+                        select: { id: true, name: true, url: true, uploadedAt: true, ocrStatus: true, ocrText: true },
                         orderBy: { uploadedAt: 'asc' },
                     },
                     tasks: {
@@ -356,6 +356,11 @@ export async function executeTool(
                     name: d.name,
                     uploadedAt: d.uploadedAt,
                     ocrStatus: d.ocrStatus,
+                    // Some records (older correspondence logged for the chronology,
+                    // typically) have no actual file behind them — surfaced explicitly
+                    // so a "send me this" request can skip/flag these upfront instead
+                    // of only finding out after the user has already picked one.
+                    hasFile: Boolean(d.url),
                     // Provide first 800 chars of OCR so Eureka can understand what's in each file
                     contentPreview: d.ocrText ? d.ocrText.slice(0, 800) + (d.ocrText.length > 800 ? '…' : '') : null,
                 })),
