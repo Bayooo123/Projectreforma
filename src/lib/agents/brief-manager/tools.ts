@@ -150,21 +150,33 @@ async function draftClientUpdate(briefId: string, insightData: BriefManagerInsig
     }
 }
 
-async function recordBriefUpdate(briefId: string, insightId: string, userId: string | undefined, statement: string) {
-    const [recentActivity, brief] = await Promise.all([
+async function recordBriefUpdate(briefId: string, workspaceId: string, insightId: string, userId: string | undefined, statement: string) {
+    const [recentActivity, brief, user] = await Promise.all([
         prisma.briefActivityLog.findMany({
             where: { briefId },
             orderBy: { timestamp: 'desc' },
             take: 20,
             select: { description: true },
         }),
-        prisma.brief.findUnique({ where: { id: briefId }, select: { aiSummaryProse: true } }),
+        prisma.brief.findUnique({ where: { id: briefId }, select: { name: true, briefNumber: true, aiSummaryProse: true } }),
+        userId ? prisma.user.findUnique({ where: { id: userId }, select: { name: true } }) : Promise.resolve(null),
     ]);
 
     const knownTexts = [...recentActivity.map(a => a.description), brief?.aiSummaryProse ?? ''].filter(Boolean);
     const likelyNew = !knownTexts.some(known => calculateTextSimilarity(known, statement) > SIMILAR_FACT_THRESHOLD);
 
     await addBriefActivity(briefId, 'agent_memory', statement, { source: 'brief_manager_chat', insightId, likelyNew }, userId);
+
+    // Same reasoning as the WhatsApp record_brief_update path: whoever answered
+    // already knows the answer — this is for teammates who weren't in this chat.
+    if (brief) {
+        const { broadcastToWorkspace } = await import('@/lib/agents/whatsapp/broadcast');
+        broadcastToWorkspace(
+            workspaceId,
+            `${brief.name}: ${user?.name ?? 'A colleague'} just updated this brief.\n${statement}\nThis is the current status.`,
+            { excludeUserId: userId, triggerType: 'brief_update_broadcast', resourceId: briefId, resourceName: brief.name },
+        ).catch(err => console.error('[BriefManager] Broadcast failed:', err));
+    }
 
     // The saved fact is what matters and must never be lost even if this fails —
     // regeneration only refreshes the board's cached view (status/next steps/
@@ -218,7 +230,7 @@ async function markClientUpdated(briefId: string, insightId: string, userId: str
 export async function executeBriefManagerTool(
     name: string,
     input: Record<string, unknown>,
-    ctx: { insightId: string; briefId: string; insightData: BriefManagerInsightData; userId?: string },
+    ctx: { insightId: string; briefId: string; workspaceId: string; insightData: BriefManagerInsightData; userId?: string },
 ) {
     switch (name) {
         case 'answer_from_brief_data':
@@ -231,7 +243,7 @@ export async function executeBriefManagerTool(
             return draftClientUpdate(ctx.briefId, ctx.insightData, typeof input.instruction === 'string' ? input.instruction : undefined);
 
         case 'record_brief_update':
-            return recordBriefUpdate(ctx.briefId, ctx.insightId, ctx.userId, String(input.statement ?? ''));
+            return recordBriefUpdate(ctx.briefId, ctx.workspaceId, ctx.insightId, ctx.userId, String(input.statement ?? ''));
 
         case 'mark_client_updated':
             return markClientUpdated(ctx.briefId, ctx.insightId, ctx.userId, ctx.insightData, typeof input.note === 'string' ? input.note : undefined);

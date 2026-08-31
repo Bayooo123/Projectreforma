@@ -63,6 +63,11 @@ const DORMANT_RECHECK_COOLDOWN_DAYS = 7;
 // (no documents, tasks, correspondence, or calendar activity) — this
 // catches that silence regardless of client-contact cadence.
 const GENERAL_DORMANCY_THRESHOLD_DAYS = 14;
+// Every active brief gets a check-in question at least this often, regardless
+// of whether anything currently looks actionable — a brief with nothing wrong
+// still gets asked "what are we doing right now on this?" rather than only
+// hearing from Reforma when something is flagged.
+const ROUTINE_CHECKIN_DAYS = 7;
 
 function getClient(): Anthropic | null {
     if (!config.ANTHROPIC_API_KEY) return null;
@@ -444,16 +449,40 @@ function isActionable(data: BriefManagerInsightData, daysSinceLastActivity: numb
         || daysSinceLastActivity > GENERAL_DORMANCY_THRESHOLD_DAYS;
 }
 
+// null means "never nudged for this brief" — treated as due immediately,
+// same as any interval this long having already elapsed.
+export async function daysSinceLastNudge(briefId: string): Promise<number | null> {
+    const last = await prisma.workspaceActivityLog.findFirst({
+        where: { resource: 'WHATSAPP_NUDGE', action: 'brief_manager', resourceId: briefId },
+        orderBy: { createdAt: 'desc' },
+        select: { createdAt: true },
+    });
+    if (!last) return null;
+    return Math.floor((Date.now() - last.createdAt.getTime()) / 86_400_000);
+}
+
+export function isRoutineCheckinDue(days: number | null): boolean {
+    return days === null || days >= ROUTINE_CHECKIN_DAYS;
+}
+
 function buildNudgeMessage(
     brief: { name: string; briefNumber: string },
     data: BriefManagerInsightData,
     lastSignalAt: Date,
     daysSinceLastActivity: number,
+    routineOnly = false,
 ): string {
     const isDormant = daysSinceLastActivity > GENERAL_DORMANCY_THRESHOLD_DAYS;
     const lines = [`${brief.name} (${brief.briefNumber})`];
 
-    if (isDormant) {
+    if (routineOnly) {
+        // Nothing is actually flagged — this is purely the standing "every
+        // brief gets asked periodically" rule, so the framing is neutral
+        // (a routine check-in) rather than implying something's wrong.
+        lines.push('Weekly check-in — here\'s what Reforma has on file:');
+        if (data.summary?.currentStatus) lines.push(`Last: ${data.summary.currentStatus}`);
+        lines.push('What are we doing right now on this?');
+    } else if (isDormant) {
         // The user's exact ask: state the last thing that happened and ask
         // what's next, rather than a generic "not found" style status line.
         const lastDate = lastSignalAt.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
@@ -480,9 +509,9 @@ function buildNudgeMessage(
         lines.push(`${label}: ${data.timeBoundDeadline.description} — has anything been done about this?`);
     }
 
-    // The dormancy message already asks its own question — avoid piling a
-    // second, less specific one on top of it.
-    const question = !isDormant ? data.questions?.[0] : undefined;
+    // The dormancy/routine messages already ask their own question — avoid
+    // piling a second, less specific one on top of either.
+    const question = (!isDormant && !routineOnly) ? data.questions?.[0] : undefined;
     if (question) lines.push(`Reforma asks: ${question}`);
 
     lines.push('Reply here to answer, update Brief Manager, or open Reforma for the full brief.');
@@ -491,7 +520,9 @@ function buildNudgeMessage(
 
 async function notifyResponsibleLawyer(workspaceId: string, brief: NotifiableBrief, data: BriefManagerInsightData, lastSignalAt: Date): Promise<void> {
     const daysSinceLastActivity = Math.floor((Date.now() - lastSignalAt.getTime()) / 86_400_000);
-    if (!isActionable(data, daysSinceLastActivity)) return;
+    const actionable = isActionable(data, daysSinceLastActivity);
+    const routineDue = !actionable && isRoutineCheckinDue(await daysSinceLastNudge(brief.id));
+    if (!actionable && !routineDue) return;
 
     const responsibleId = brief.lawyerInChargeId ?? brief.lawyerId;
     const user = await prisma.user.findUnique({ where: { id: responsibleId }, select: { phone: true } });
@@ -499,14 +530,15 @@ async function notifyResponsibleLawyer(workspaceId: string, brief: NotifiableBri
 
     // Overdue is the one condition here genuinely time-critical enough to bypass
     // quiet hours/the daily cap — everything else (dormancy, ball-in-court,
-    // documents needed, unclear representation) can wait for the next non-quiet window.
+    // documents needed, unclear representation, the routine check-in) can wait
+    // for the next non-quiet window.
     const urgent = data.timeBoundDeadline?.status === 'overdue';
 
     await sendGatedWhatsAppNudge({
         workspaceId,
         userId: responsibleId,
         phone: user.phone.replace(/\D/g, ''),
-        message: buildNudgeMessage(brief, data, lastSignalAt, daysSinceLastActivity),
+        message: buildNudgeMessage(brief, data, lastSignalAt, daysSinceLastActivity, routineDue),
         triggerType: 'brief_manager',
         resourceId: brief.id,
         resourceName: brief.name,
@@ -563,17 +595,24 @@ export async function scanBriefsForWorkspace(workspaceId: string): Promise<{ cre
             const daysSinceClientContact = await computeDaysSinceClientContact(brief.id, brief.createdAt);
             const daysSinceLastActivity = Math.floor((Date.now() - currentSignal.getTime()) / 86_400_000);
             const isDormant = daysSinceClientContact > CLIENT_UPDATE_THRESHOLD_DAYS || daysSinceLastActivity > GENERAL_DORMANCY_THRESHOLD_DAYS;
+            // Independent of dormancy — a brief with nothing wrong still needs
+            // the standing weekly touchpoint, so this alone can force a fresh
+            // look even when isDormant is false and the insight is otherwise
+            // still fresh.
+            const routineDue = isRoutineCheckinDue(await daysSinceLastNudge(brief.id));
 
-            if (!isDormant) {
+            if (!isDormant && !routineDue) {
                 skipped++;
                 continue;
             }
 
             // Once already reviewed recently, don't re-run the LLM every night
             // just because the silence continues — re-check on the same cooldown
-            // regardless of which kind of dormancy triggered it.
+            // regardless of which kind of dormancy triggered it. The routine
+            // check-in overrides this cooldown deliberately: it exists
+            // specifically to force a look even when nothing else would.
             const insightAgeDays = prior ? (Date.now() - prior.createdAt.getTime()) / 86_400_000 : Infinity;
-            if (prior && insightAgeDays < DORMANT_RECHECK_COOLDOWN_DAYS) {
+            if (prior && insightAgeDays < DORMANT_RECHECK_COOLDOWN_DAYS && !routineDue) {
                 skipped++;
                 continue;
             }

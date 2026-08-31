@@ -52,7 +52,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         { role: 'user' as const, content: message },
     ];
 
-    const toolCtx = { insightId: insight.id, briefId: insight.briefId, insightData: insight.data as Record<string, unknown>, userId: session.user.id };
+    const toolCtx = { insightId: insight.id, briefId: insight.briefId, workspaceId, insightData: insight.data as Record<string, unknown>, userId: session.user.id };
 
     let response = await client.messages.create({
         model: 'claude-haiku-4-5-20251001',

@@ -202,6 +202,7 @@ async function recordBriefUpdate(
     briefId: string,
     workspaceId: string,
     userId: string,
+    userName: string,
     statusUpdate?: string,
     nextAction?: string,
 ) {
@@ -228,6 +229,17 @@ async function recordBriefUpdate(
         { statusUpdate: statusUpdate ?? null, nextAction: nextAction ?? null, source: 'whatsapp' },
         userId,
     );
+
+    // Whoever answered a check-in question already knows the answer — this is
+    // for everyone else on the team, so a colleague can see "last thing that
+    // happened on X, here's where it stands now" without opening Reforma.
+    const { broadcastToWorkspace } = await import('./broadcast');
+    const statusLine = [statusUpdate, nextAction ? `Next: ${nextAction}` : null].filter(Boolean).join(' — ');
+    broadcastToWorkspace(
+        workspaceId,
+        `${resolved.name}: ${userName} just updated this brief.\n${statusLine}\nThis is the current status.`,
+        { excludeUserId: userId, triggerType: 'brief_update_broadcast', resourceId: resolved.id, resourceName: resolved.name },
+    ).catch(err => console.error('[WhatsApp Agent] Broadcast failed:', err));
 
     return { success: true, briefId: resolved.id, briefName: resolved.name };
 }
@@ -317,6 +329,7 @@ export async function executeTool(name: string, input: Record<string, unknown>, 
                 input.brief_id as string,
                 workspaceId,
                 ctx.userId,
+                ctx.userName,
                 input.status_update as string | undefined,
                 input.next_action as string | undefined,
             );

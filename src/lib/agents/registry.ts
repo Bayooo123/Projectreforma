@@ -11,7 +11,7 @@ export interface AgentInsightLike {
 
 export interface AgentDefinition {
     tools: Anthropic.Tool[];
-    executeTool: (name: string, input: Record<string, unknown>, ctx: { insightId: string; briefId: string; insightData: Record<string, unknown>; userId?: string }) => Promise<unknown>;
+    executeTool: (name: string, input: Record<string, unknown>, ctx: { insightId: string; briefId: string; workspaceId: string; insightData: Record<string, unknown>; userId?: string }) => Promise<unknown>;
     systemPrompt: (insight: AgentInsightLike) => string;
 }
 
