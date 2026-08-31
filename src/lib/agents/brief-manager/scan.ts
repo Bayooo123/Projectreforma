@@ -439,7 +439,7 @@ export async function upsertInsightForBrief(workspaceId: string, briefId: string
 // the push by itself.
 type NotifiableBrief = { id: string; name: string; briefNumber: string; lawyerId: string; lawyerInChargeId: string | null };
 
-function isActionable(data: BriefManagerInsightData, daysSinceLastActivity: number): boolean {
+export function isActionable(data: BriefManagerInsightData, daysSinceLastActivity: number): boolean {
     return data.ballInCourt?.status === 'us'
         || data.needsClientUpdate
         || data.needsDocuments
@@ -465,7 +465,7 @@ export function isRoutineCheckinDue(days: number | null): boolean {
     return days === null || days >= ROUTINE_CHECKIN_DAYS;
 }
 
-function buildNudgeMessage(
+export function buildNudgeMessage(
     brief: { name: string; briefNumber: string },
     data: BriefManagerInsightData,
     lastSignalAt: Date,
