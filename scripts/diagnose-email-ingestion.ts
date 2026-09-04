@@ -25,6 +25,22 @@ async function main() {
         }
     }
 
+    const webhookHits = await prisma.workspaceActivityLog.findMany({
+        where: { resource: 'EMAIL_WEBHOOK', action: 'zoho_hit' },
+        orderBy: { createdAt: 'desc' },
+        take: 10,
+        select: { createdAt: true, resourceName: true, metadata: true },
+    });
+    console.log('\nMost recent times Zoho actually called the zoho-email webhook (regardless of whether ingestion succeeded):');
+    if (webhookHits.length === 0) {
+        console.log('  None recorded — either Zoho has not called this URL since this logging was added, or it never has.');
+    } else {
+        for (const h of webhookHits) {
+            const from = (h.metadata as { from?: string } | null)?.from ?? 'unknown sender';
+            console.log(`  ${h.createdAt.toISOString()} — from ${from} — "${h.resourceName}"`);
+        }
+    }
+
     console.log('\nascolp@reforma.ng inbound config:');
     const emailConfig = await prisma.workspaceEmailConfig.findFirst({
         where: { emailAddress: { equals: 'ascolp@reforma.ng', mode: 'insensitive' } },

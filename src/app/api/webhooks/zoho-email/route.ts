@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
 
     try {
         const payload: ZohoEmailPayload = await req.json();
-        const { from, to, subject, body, receivedAt } = payload;
+        const { from, to, subject, body } = payload;
 
         console.log(`[Zoho Webhook] Received email from: ${from}, subject: ${subject}`);
 
@@ -58,12 +58,38 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ success: false, message: 'No workspace available' }, { status: 200 });
         }
 
+        // Permanent, queryable record that Zoho actually called this endpoint —
+        // independent of whether ingestion below succeeds, and independent of
+        // Vercel's short runtime-log retention. Without this, "has Zoho even
+        // been hitting this URL" was only answerable while logs happened to
+        // still be around; every future silence question now has a real
+        // answer via scripts/diagnose-email-ingestion.ts instead of a guess.
+        const workspace = await prisma.workspace.findUnique({ where: { id: workspaceId }, select: { ownerId: true } });
+        if (workspace) {
+            await prisma.workspaceActivityLog.create({
+                data: {
+                    workspaceId,
+                    userId: workspace.ownerId,
+                    resource: 'EMAIL_WEBHOOK',
+                    action: 'zoho_hit',
+                    resourceName: subject || '(No Subject)',
+                    metadata: { from: fromEmail, to: to ?? null },
+                },
+            }).catch(err => console.error('[Zoho Webhook] Failed to record hit log:', err));
+        }
+
         const result = await ingestInboundEmail({
             workspaceId,
             fromEmail,
             subject: subject || '(No Subject)',
             body: body || '',
-            messageId: receivedAt ? undefined : payload.messageId,
+            // Was previously backwards — "messageId: receivedAt ? undefined :
+            // payload.messageId" discarded the real Message-ID on every payload
+            // that included a receivedAt timestamp, which Zoho's payloads
+            // always do in practice. That silently starved ingestInboundEmail's
+            // primary dedup path (exact Message-ID match), leaving it always
+            // falling back to the narrower same-sender+subject+2-minute window.
+            messageId: payload.messageId,
             recipientRaw: to,
             attachments: [],
             source: 'zoho',
