@@ -16,7 +16,16 @@ jobs:
     steps:
       - name: Trigger sync endpoint
         run: |
-          curl -sS -f -X GET \
+          # -L/--location-trusted: this has been silently hitting a domain-level
+          # redirect (reforma.ng <-> www.reforma.ng — exact direction unconfirmed,
+          # see investigation notes) and stopping there, since curl doesn't
+          # follow redirects by default. That's why every run up to this fix
+          # reported "success" while never actually reaching the route at all —
+          # curl -f only fails on 4xx/5xx, not 3xx. --location-trusted (rather
+          # than plain -L) is required so the Authorization header survives the
+          # redirect to a different hostname — safe here since both hostnames
+          # are our own domain.
+          curl -sS -f -L --location-trusted -X GET \
             -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
             https://reforma.ng/api/cron/email-imap-sync -o response.json
           echo "Response:"
