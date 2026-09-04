@@ -18,4 +18,6 @@ jobs:
         run: |
           curl -sS -f -X GET \
             -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
-            https://reforma.ng/api/cron/email-imap-sync
+            https://reforma.ng/api/cron/email-imap-sync -o response.json
+          echo "Response:"
+          cat response.json
