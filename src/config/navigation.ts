@@ -15,6 +15,7 @@ import {
   Bot,
   CalendarClock,
   Mic,
+  FilePlus2,
 } from 'lucide-react';
 import { ComponentType } from 'react';
 
@@ -50,6 +51,7 @@ export const navigationGroups: NavGroup[] = [
     label: 'Practice',
     color: '#059669',
     items: [
+      { name: 'New Process', href: '/processes/new', icon: FilePlus2 },
       { name: 'Briefs', href: '/briefs', icon: FileText },
       { name: 'Inbox', href: '/inbox', icon: FolderInput },
       { name: 'Court & Calendar', href: '/calendar', icon: Gavel },

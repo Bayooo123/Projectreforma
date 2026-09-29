@@ -1,0 +1,402 @@
+.wizard {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
+
+.header {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0;
+}
+
+.subtitle {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    margin: 0;
+}
+
+.steps {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+.stepArrow {
+    color: var(--border);
+}
+
+.stepActive {
+    color: var(--primary);
+}
+
+.stepDone {
+    color: var(--text-primary);
+}
+
+.stepPending {
+    color: var(--text-secondary);
+    opacity: 0.6;
+}
+
+.panel {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    padding: 1.25rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background-color: var(--background);
+}
+
+.searchRow {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.searchBox {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.6rem 0.75rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+}
+
+.searchInput {
+    flex: 1;
+    border: none;
+    outline: none;
+    background: transparent;
+    font-size: 0.9rem;
+    color: var(--text-primary);
+}
+
+.newSuitBtn {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.6rem 0.9rem;
+    background-color: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--text-primary);
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.newSuitBtn:hover {
+    background-color: var(--primary-light);
+    border-color: var(--primary);
+}
+
+.matterList {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    max-height: 320px;
+    overflow-y: auto;
+}
+
+.matterRow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.65rem 0.85rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: none;
+    cursor: pointer;
+    text-align: left;
+    width: 100%;
+}
+
+.matterRow:hover {
+    background-color: var(--surface);
+    border-color: var(--primary);
+}
+
+.matterName {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--text-primary);
+}
+
+.matterMeta {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    margin-top: 0.15rem;
+}
+
+.emptyHint {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    text-align: center;
+    padding: 1rem 0;
+}
+
+.newSuitForm {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.formGroup {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.row {
+    display: flex;
+    gap: 0.75rem;
+}
+
+.row .formGroup {
+    flex: 1;
+}
+
+.label {
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--text-primary);
+}
+
+.input {
+    padding: 0.6rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    font-family: inherit;
+    font-size: 0.9rem;
+    background-color: var(--background);
+    color: var(--text-primary);
+}
+
+.input:focus {
+    outline: none;
+    border-color: var(--primary);
+}
+
+.errorText {
+    font-size: 0.8rem;
+    color: #dc2626;
+    margin: 0;
+}
+
+.formActions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+}
+
+.cancelBtn {
+    padding: 0.6rem 1.1rem;
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    font-weight: 500;
+    cursor: pointer;
+    color: var(--text-primary);
+}
+
+.cancelBtn:hover:not(:disabled) {
+    background-color: var(--surface);
+}
+
+.primaryBtn {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.6rem 1.1rem;
+    background-color: var(--primary);
+    color: white;
+    border: none;
+    border-radius: var(--radius-md);
+    font-weight: 500;
+    cursor: pointer;
+}
+
+.primaryBtn:hover:not(:disabled) {
+    background-color: var(--primary-dark);
+}
+
+.primaryBtn:disabled,
+.cancelBtn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.spin {
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.selectedSuitBanner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.6rem 0.85rem;
+    background-color: var(--surface);
+    border-radius: var(--radius-md);
+    font-size: 0.85rem;
+    color: var(--text-primary);
+}
+
+.changeSuitBtn {
+    background: none;
+    border: none;
+    color: var(--primary);
+    font-size: 0.8rem;
+    font-weight: 500;
+    cursor: pointer;
+    text-decoration: underline;
+}
+
+.dropzone,
+.dropzoneActive {
+    border: 1.5px dashed var(--border);
+    border-radius: var(--radius-md);
+    padding: 1.5rem;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.4rem;
+    background-color: var(--surface);
+}
+
+.dropzoneActive {
+    border-color: var(--primary);
+    background-color: var(--primary-light);
+}
+
+.dropHint {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    margin: 0;
+}
+
+.dropTypes {
+    font-size: 0.7rem;
+    color: var(--text-secondary);
+    margin: 0;
+}
+
+.selectFilesBtn {
+    display: inline-flex;
+    padding: 0.5rem 1rem;
+    border-radius: var(--radius-md);
+    background-color: var(--primary);
+    color: white;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.fileQueue {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    width: 100%;
+    text-align: left;
+}
+
+.fileRow,
+.docRow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.5rem 0.7rem;
+    border-radius: var(--radius-sm);
+    background-color: var(--background);
+    border: 1px solid var(--border);
+}
+
+.fileRowLeft {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    min-width: 0;
+}
+
+.fileName {
+    font-size: 0.8rem;
+    color: var(--text-primary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.addMoreLabel {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-size: 0.78rem;
+    color: var(--primary);
+    cursor: pointer;
+    margin-top: 0.25rem;
+}
+
+.resultHeader {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+}
+
+.resultTitle {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.docResults {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
+.badgeType,
+.badgeAffidavit {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.2rem 0.55rem;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.badgeType {
+    background-color: var(--surface);
+    color: var(--text-secondary);
+}
+
+.badgeAffidavit {
+    background-color: #fdebd3;
+    color: #8a5a00;
+}
+
+.affidavitNote {
+    font-size: 0.8rem;
+    color: #8a5a00;
+    background-color: #fdebd3;
+    border-radius: var(--radius-md);
+    padding: 0.6rem 0.8rem;
+    margin: 0;
+}
