@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/prisma';
 import type { ExpenseCategory } from '@prisma/client';
 import { getCaseChronology, searchBriefsByQuery, type BriefSearchResult } from '@/lib/ai-context/brief-context';
+import { getBriefSnapshot } from '@/lib/ai-context/brief-snapshot';
 import { generateBriefNumber } from '@/lib/briefs';
 import { config } from '@/lib/config';
 import { DraftingService } from '@/lib/drafting/drafting-service';
@@ -93,7 +94,7 @@ export function getClaudeTools() {
             matter_title: { type: 'string', description: 'Filter by matter title' },
             limit: { type: 'number', description: 'Max results (default 10)' },
         }),
-        tool('get_brief_detail', 'Get a complete picture of a specific brief: metadata, all tasks (pending and completed), all documents with their OCR text, and all linked court dates. Use this to understand what has happened on a brief and what is still pending.', {
+        tool('get_brief_detail', 'Get a complete picture of a specific brief: metadata, the latest Brief Manager assessment (status, ball in court, next steps, open questions), recent correspondence, the next hearing, all tasks (pending and completed), and all documents with their OCR text. Use this to understand what has happened on a brief and what is still pending.', {
             brief_id: { type: 'string', description: 'The brief ID' },
             brief_title: { type: 'string', description: 'Search by brief title or number if ID unknown' },
         }),
@@ -335,9 +336,24 @@ export async function executeTool(
                     : { error: 'No brief found matching that reference.' };
             }
 
+            // Shared with Brief Manager's scan (src/lib/ai-context/brief-snapshot.ts):
+            // the agent's latest structured assessment plus recent correspondence
+            // and the next hearing, so this answer and the Pulse board agree.
+            const snapshot = await getBriefSnapshot(brief.id, { chronology: 0, correspondence: 8, tasks: 0, lawyerNotes: 0, documents: 0 });
+
             return {
                 id: brief.id,
                 title: brief.name,
+                agentAssessment: snapshot?.assessment
+                    ? {
+                        summary: snapshot.assessment.summary,
+                        assessedAt: snapshot.assessment.assessedAt,
+                        basedOnActivityUpTo: snapshot.assessment.basedOnActivityUpTo,
+                        ...snapshot.assessment.data,
+                    }
+                    : null,
+                nextHearing: snapshot?.nextHearing ?? null,
+                recentCorrespondence: snapshot?.correspondence ?? [],
                 briefNumber: brief.briefNumber,
                 category: brief.category,
                 status: brief.status,

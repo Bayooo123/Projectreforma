@@ -1,6 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
+import { getBriefSnapshot } from '@/lib/ai-context/brief-snapshot';
 import { config } from '@/lib/config';
 import { sendGatedWhatsAppNudge } from '@/lib/agents/whatsapp/notify-gate';
 
@@ -229,62 +230,17 @@ export async function generateBriefManagerInsight(briefId: string): Promise<Insi
     const client = getClient();
     if (!client) return { success: false, reason: 'AI is not configured for this workspace (missing API key).' };
 
-    const brief = await prisma.brief.findUnique({
-        where: { id: briefId, deletedAt: null },
-        select: {
-            name: true, briefNumber: true, category: true, status: true, dueDate: true,
-            createdAt: true, aiSummaryProse: true,
-            client: { select: { name: true } },
-            lawyerInCharge: { select: { name: true } },
-            lawyer: { select: { name: true } },
-            matter: {
-                select: {
-                    opponentName: true, opponentCounsel: true,
-                    nextCourtDate: true, lastClientContact: true,
-                },
-            },
-        },
+    const snapshot = await getBriefSnapshot(briefId, {
+        chronology: MAX_CHRONOLOGY_ROWS,
+        correspondence: MAX_PULSE_EVENTS,
+        tasks: MAX_TASKS,
+        lawyerNotes: MAX_MEMORY_ENTRIES,
+        documents: MAX_RECENT_DOCS,
+        documentChars: MAX_DOC_CHARS,
     });
-    if (!brief) return { success: false, reason: 'Brief not found.' };
+    if (!snapshot) return { success: false, reason: 'Brief not found.' };
+    const { brief, chronology: chronologyRows, correspondence: pulseEvents, openTasks, nextHearing, lawyerNotes: memoryEntries, recentDocuments: recentDocs } = snapshot;
     if (brief.status !== 'active') return { success: false, reason: `Brief status is "${brief.status}", not active — Brief Manager only reviews active briefs.` };
-
-    const [chronologyRows, pulseEvents, openTasks, nextHearing, memoryEntries, recentDocs] = await Promise.all([
-        prisma.documentTimelineEvent.findMany({
-            where: { briefId },
-            orderBy: { eventDate: 'desc' },
-            take: MAX_CHRONOLOGY_ROWS,
-            select: { eventDateRaw: true, description: true },
-        }),
-        prisma.pulseEvent.findMany({
-            where: { briefId },
-            orderBy: { createdAt: 'desc' },
-            take: MAX_PULSE_EVENTS,
-            select: { createdAt: true, senderType: true, senderName: true, intent: true, summary: true },
-        }),
-        prisma.task.findMany({
-            where: { briefId, status: { not: 'completed' } },
-            orderBy: { dueDate: 'asc' },
-            take: MAX_TASKS,
-            select: { title: true, dueDate: true, status: true },
-        }),
-        prisma.calendarEntry.findFirst({
-            where: { briefId, date: { gte: new Date() } },
-            orderBy: { date: 'asc' },
-            select: { date: true, adjournedFor: true, court: true },
-        }),
-        prisma.briefActivityLog.findMany({
-            where: { briefId, activityType: { in: ['agent_memory', 'status_changed'] } },
-            orderBy: { timestamp: 'desc' },
-            take: MAX_MEMORY_ENTRIES,
-            select: { timestamp: true, description: true },
-        }),
-        prisma.document.findMany({
-            where: { briefId, ocrText: { not: null } },
-            orderBy: { uploadedAt: 'desc' },
-            take: MAX_RECENT_DOCS,
-            select: { name: true, ocrText: true },
-        }),
-    ]);
 
     const lastSignalAt = await computeLastSignalAt(briefId, brief.createdAt);
     const daysSinceClientContact = await computeDaysSinceClientContact(briefId, brief.createdAt);
@@ -297,7 +253,7 @@ export async function generateBriefManagerInsight(briefId: string): Promise<Insi
             status: brief.status,
             dueDate: brief.dueDate?.toISOString().slice(0, 10) ?? null,
             client: brief.client?.name ?? null,
-            lawyerInCharge: brief.lawyerInCharge?.name ?? brief.lawyer?.name ?? null,
+            lawyerInCharge: brief.lawyerInChargeName,
             matter: brief.matter ? {
                 opponentName: brief.matter.opponentName,
                 opponentCounsel: brief.matter.opponentCounsel,
@@ -315,7 +271,7 @@ export async function generateBriefManagerInsight(briefId: string): Promise<Insi
             ? `${nextHearing.date.toISOString().slice(0, 10)}${nextHearing.court ? ` at ${nextHearing.court}` : ''}${nextHearing.adjournedFor ? ` — ${nextHearing.adjournedFor}` : ''}`
             : '',
         recordedByLawyers: memoryEntries.map(m => `- ${m.timestamp.toISOString().slice(0, 10)}: ${m.description}`).join('\n'),
-        recentDocuments: recentDocs.map(d => `--- ${d.name} ---\n${(d.ocrText ?? '').slice(0, MAX_DOC_CHARS)}`).join('\n\n'),
+        recentDocuments: recentDocs.map(d => `--- ${d.name} ---\n${d.text}`).join('\n\n'),
         daysSinceClientContact,
         today: new Date().toISOString().slice(0, 10),
     });

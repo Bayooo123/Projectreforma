@@ -4,7 +4,7 @@ import { config } from '@/lib/config';
 import { AgentContext, HistoryMessage } from './types';
 import { searchBriefsByQuery, getUpcomingHearingsForWorkspace, type BriefSearchResult } from '@/lib/ai-context/brief-context';
 import { DraftingService } from '@/lib/drafting/drafting-service';
-import { generateBriefManagerInsight } from '@/lib/agents/brief-manager/scan';
+import { generateBriefManagerInsight, upsertInsightForBrief } from '@/lib/agents/brief-manager/scan';
 import { getClaudeTools as getWorkspaceTools, executeTool as executeWorkspaceTool, idOrTextFilter } from '@/lib/eureka/tools';
 import { sendWhatsAppDocument } from './send';
 import { markdownToDocxBuffer } from '@/lib/documents/markdown-to-docx';
@@ -301,6 +301,12 @@ async function analyzeBrief(briefId: string, workspaceId: string) {
 
     const result = await generateBriefManagerInsight(briefId);
     if (!result.success) return { error: result.reason };
+
+    // Saved like a Pulse scan result, so what was worked out over WhatsApp shows
+    // on the Agent board and in Eureka instead of vanishing with the chat.
+    await upsertInsightForBrief(workspaceId, briefId, result.insight).catch(err =>
+        console.error(`[WhatsApp Agent] Failed to save insight for brief ${briefId}:`, err)
+    );
 
     return { headline: result.insight.summary, ...result.insight.data };
 }
