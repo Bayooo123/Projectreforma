@@ -6,8 +6,10 @@ import { logActivity } from '@/lib/log-activity';
 import { prisma } from '@/lib/prisma';
 import { Prisma } from '@prisma/client';
 import { applyTitleCaseToFields } from '@/lib/sentence-case';
-import { createNotification } from '@/app/actions/notifications';
+import { notifyWorkspace } from '@/lib/notifications';
 import { ClientService } from '@/lib/services/clients/client-service';
+import { assertWorkspaceMember } from '@/lib/workspace-guard';
+import { canManageWorkspacePins, checkWorkspacePin, hashPin, PIN_CHECK_ERRORS } from '@/lib/workspace-pins';
 
 export type GetClientsParams = {
     page?: number;
@@ -74,7 +76,7 @@ export async function createClient(data: CreateClientData) {
         const result = await ClientService.create(data);
         if (!result.success) return result;
 
-        await createNotification({
+        await notifyWorkspace({
             workspaceId: data.workspaceId,
             title: 'New client added',
             message: `${result.data.name}${result.data.company ? ` (${result.data.company})` : ''} has been onboarded as a client.`,
@@ -152,12 +154,9 @@ export async function getClientStats(workspaceId: string) {
 export async function validateRevenuePin(workspaceId: string, pin: string) {
     await requireAuth();
     try {
-        const workspace = await prisma.workspace.findUnique({
-            where: { id: workspaceId },
-            select: { revenuePin: true },
-        });
-        if (!workspace?.revenuePin) return { success: false, error: 'No PIN set' };
-        if (workspace.revenuePin !== pin) return { success: false, error: 'Invalid PIN' };
+        const userId = await assertWorkspaceMember(workspaceId);
+        const result = await checkWorkspacePin(workspaceId, 'revenuePin', pin, userId);
+        if (result !== 'valid') return { success: false, error: PIN_CHECK_ERRORS[result] };
 
         const revenueData = await prisma.payment.aggregate({
             where: { client: { workspaceId } },
@@ -173,8 +172,12 @@ export async function validateRevenuePin(workspaceId: string, pin: string) {
 export async function setRevenuePin(workspaceId: string, pin: string) {
     await requireAuth();
     try {
+        const userId = await assertWorkspaceMember(workspaceId);
+        if (!(await canManageWorkspacePins(workspaceId, userId))) {
+            return { success: false, error: 'Only the owner, Practice Manager, or Head of Chamber and above can set this PIN' };
+        }
         if (!/^\d{5}$/.test(pin)) return { success: false, error: 'PIN must be exactly 5 digits' };
-        await prisma.workspace.update({ where: { id: workspaceId }, data: { revenuePin: pin } });
+        await prisma.workspace.update({ where: { id: workspaceId }, data: { revenuePin: await hashPin(pin) } });
         return { success: true };
     } catch (error) {
         console.error('Error setting PIN:', error);

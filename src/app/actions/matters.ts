@@ -4,10 +4,17 @@ import { revalidatePath } from 'next/cache';
 import { prisma } from '@/lib/prisma';
 import { requireAuth, requirePermission } from '@/lib/auth-utils';
 import { logActivity } from '@/lib/log-activity';
-import { createNotification } from '@/app/actions/notifications';
+import { notifyWorkspace } from '@/lib/notifications';
 import { scheduleCourtReminders } from '@/lib/courtReminders';
 import { initializeMilestonesForMatter } from '@/app/actions/litigation-milestones';
 import { MatterService } from '@/lib/services/matters/matter-service';
+import { checkWorkspacePin, PIN_CHECK_ERRORS } from '@/lib/workspace-pins';
+
+export async function isLitigationPinSet(workspaceId: string): Promise<boolean> {
+    await assertWorkspaceMembership(workspaceId);
+    const workspace = await prisma.workspace.findUnique({ where: { id: workspaceId }, select: { litigationPin: true } });
+    return !!workspace?.litigationPin;
+}
 
 async function assertWorkspaceMembership(workspaceId: string) {
     const user = await requireAuth();
@@ -119,7 +126,7 @@ export async function createMatter(input: {
         // Initialize the civil litigation milestone timeline for this matter
         initializeMilestonesForMatter(matter.id, input.workspaceId).catch(() => {});
 
-        await createNotification({
+        await notifyWorkspace({
             workspaceId: input.workspaceId,
             title: 'New matter recorded',
             message: `"${input.name}" has been added to the calendar${input.court ? ` at ${input.court}` : ''}.`,
@@ -171,16 +178,26 @@ export async function recordProceeding(input: {
     adjournedFor?: string;
     adjournedTo?: Date;
     appearingLawyerIds: string[];
-    userId: string;
+    /** Ignored — the submitter is always the signed-in user. Kept for callers. */
+    userId?: string;
+    /** Required when the workspace has a litigation PIN set. */
+    pin?: string;
 }) {
     try {
-        await requireAuth();
+        const user = await requireAuth();
 
         const matter = await prisma.matter.findUnique({
             where: { id: input.matterId },
             select: { workspaceId: true, name: true, court: true, judge: true, lawyerInChargeId: true },
         });
         if (!matter) return { success: false, error: 'Matter not found' };
+        await assertWorkspaceMembership(matter.workspaceId);
+        const userId = user.id!;
+
+        const pinCheck = await checkWorkspacePin(matter.workspaceId, 'litigationPin', input.pin ?? '', userId);
+        if (pinCheck !== 'valid' && pinCheck !== 'not_set') {
+            return { success: false, pinRequired: true, error: input.pin ? PIN_CHECK_ERRORS[pinCheck] : 'Enter the litigation PIN to record proceedings' };
+        }
 
         await prisma.$transaction(async tx => {
             // Always create a new entry — each sitting is its own record
@@ -192,7 +209,7 @@ export async function recordProceeding(input: {
                     title: input.adjournedFor || 'Court Sitting',
                     court: matter.court || null,
                     judge: matter.judge || null,
-                    submittingLawyerId: input.userId,
+                    submittingLawyerId: userId,
                     proceedings: input.proceedings,
                     outcome: input.outcome || null,
                     adjournedFor: input.adjournedFor || null,
@@ -218,12 +235,12 @@ export async function recordProceeding(input: {
                         title: input.adjournedFor || 'Next Sitting',
                         court: matter.court || null,
                         judge: matter.judge || null,
-                        submittingLawyerId: input.userId,
+                        submittingLawyerId: userId,
                         adjournedFor: input.adjournedFor || null,
                     },
                 });
 
-                const recipientIds = [input.userId, matter.lawyerInChargeId].filter(Boolean) as string[];
+                const recipientIds = [userId, matter.lawyerInChargeId].filter(Boolean) as string[];
                 await scheduleCourtReminders(tx, nextEntry.id, input.adjournedTo, input.matterId, recipientIds);
             }
         });
@@ -232,7 +249,7 @@ export async function recordProceeding(input: {
             ? input.adjournedTo.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
             : null;
 
-        await createNotification({
+        await notifyWorkspace({
             workspaceId: matter.workspaceId,
             title: 'Proceeding recorded',
             message: dateStr
@@ -284,7 +301,7 @@ export async function scheduleMeeting(input: {
             ? { userIds: input.participantIds }
             : 'ALL' as const;
 
-        await createNotification({
+        await notifyWorkspace({
             workspaceId: input.workspaceId,
             title: 'Meeting scheduled',
             message: `"${input.title}" is scheduled for ${dateStr}${input.location ? ` at ${input.location}` : ''}.`,
@@ -396,7 +413,7 @@ export async function adjournMatter(
 
         if (matter) {
             const dateStr = newDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
-            await createNotification({
+            await notifyWorkspace({
                 workspaceId: matter.workspaceId,
                 title: 'Matter adjourned',
                 message: `"${matter.name}" adjourned to ${dateStr}${adjournedFor ? ` — ${adjournedFor}` : ''}.`,

@@ -5,6 +5,8 @@ import { revalidatePath } from 'next/cache';
 import { Prisma } from '@prisma/client';
 import { auth } from '@/auth';
 import { logActivity } from '@/lib/log-activity';
+import { assertWorkspaceMember } from '@/lib/workspace-guard';
+import { InvoiceService } from '@/lib/services/invoices/invoice-service';
 
 interface RecordPaymentData {
     invoiceId?: string;
@@ -18,6 +20,12 @@ interface RecordPaymentData {
 export async function createPayment(data: RecordPaymentData) {
     try {
         const session = await auth();
+        if (!session?.user?.id) return { success: false, error: 'Unauthorized' };
+
+        const clientRecord = await prisma.client.findUnique({ where: { id: data.clientId }, select: { workspaceId: true } });
+        if (!clientRecord) return { success: false, error: 'Client not found' };
+        const workspaceId = clientRecord.workspaceId;
+        await assertWorkspaceMember(workspaceId);
 
         // 1. Fetch Invoice to validate amount
         let invoice = null;
@@ -29,6 +37,9 @@ export async function createPayment(data: RecordPaymentData) {
 
             if (!invoice) {
                 return { success: false, error: 'Invoice not found' };
+            }
+            if (invoice.clientId !== data.clientId) {
+                return { success: false, error: 'Invoice does not belong to this client' };
             }
 
             const totalPaidSoFar = invoice.payments.reduce(
@@ -42,38 +53,21 @@ export async function createPayment(data: RecordPaymentData) {
             }
         }
 
-        // 2. Create Payment Record
-        const payment = await prisma.payment.create({
-            data: {
-                invoiceId: data.invoiceId,
-                clientId: data.clientId,
-                amount: data.amount as any,
-                method: data.method,
-                reference: data.reference,
-                date: data.date || new Date(),
-            },
-        });
-
-        // 3. Update Invoice Status if linked
-        if (invoice && data.invoiceId) {
-            const totalPaidSoFar = invoice.payments.reduce(
-                (sum, p) => sum.plus(new Prisma.Decimal(p.amount as any)), 
-                new Prisma.Decimal(0)
-            );
-            const newTotalPaid = totalPaidSoFar.plus(new Prisma.Decimal(data.amount));
-            let newStatus = 'pending';
-
-            if (newTotalPaid.gte(new Prisma.Decimal(invoice.totalAmount as any))) {
-                newStatus = 'paid';
-            } else if (newTotalPaid.gt(0)) {
-                newStatus = 'partially_paid';
-            }
-
-            await prisma.invoice.update({
-                where: { id: data.invoiceId },
-                data: { status: newStatus },
+        // 2. Create Payment Record and update the invoice status together
+        const payment = await prisma.$transaction(async (tx) => {
+            const payment = await tx.payment.create({
+                data: {
+                    invoiceId: data.invoiceId,
+                    clientId: data.clientId,
+                    amount: data.amount as any,
+                    method: data.method,
+                    reference: data.reference,
+                    date: data.date || new Date(),
+                },
             });
-        }
+            if (data.invoiceId) await InvoiceService.syncStatusFromPayments(data.invoiceId, tx);
+            return payment;
+        });
 
         revalidatePath('/management/clients');
 
@@ -82,15 +76,12 @@ export async function createPayment(data: RecordPaymentData) {
             // Use Decimal for safe formatting
             const displayAmount = new Prisma.Decimal(data.amount).toNumber().toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-            const clientRecord = await prisma.client.findUnique({ where: { id: data.clientId }, select: { workspaceId: true } });
-            const workspaceId = clientRecord?.workspaceId || '';
-
-            if (workspaceId && session?.user?.id) {
+            if (session?.user?.id) {
                 logActivity({ workspaceId, userId: session.user.id, resource: 'PAYMENT', action: 'CREATED', resourceId: payment.id, resourceName: `₦${displayAmount} via ${data.method}` }).catch(() => {});
             }
 
-            const { createNotification } = await import('@/app/actions/notifications');
-            await createNotification({
+            const { notifyWorkspace } = await import('@/lib/notifications');
+            await notifyWorkspace({
                 workspaceId,
                 title: 'Payment Received',
                 message: `Payment of ₦${displayAmount} received from ${invoice ? invoice.invoiceNumber : 'Client'} via ${data.method}.`,
@@ -111,6 +102,9 @@ export async function createPayment(data: RecordPaymentData) {
 
 export async function getPaymentsByClient(clientId: string) {
     try {
+        const client = await prisma.client.findUnique({ where: { id: clientId }, select: { workspaceId: true } });
+        if (!client) return { success: false, error: 'Client not found' };
+        await assertWorkspaceMember(client.workspaceId);
         const payments = await prisma.payment.findMany({
             where: { clientId },
             include: {
@@ -132,6 +126,7 @@ export async function getPaymentsByClient(clientId: string) {
 
 export async function getAllPayments(workspaceId: string) {
     try {
+        await assertWorkspaceMember(workspaceId);
         const payments = await prisma.payment.findMany({
             where: {
                 client: {

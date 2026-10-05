@@ -1,7 +1,7 @@
 'use server';
 
 import { prisma } from '@/lib/prisma';
-import { verifyPin } from '@/lib/rbac';
+import { checkWorkspacePin, hashPin, PIN_CHECK_ERRORS } from '@/lib/workspace-pins';
 import { auth } from '@/auth';
 import { getRoleSeniority } from '@/lib/roles';
 
@@ -10,27 +10,13 @@ const PIN_MANAGER_MIN_SENIORITY = 5;
 
 export async function verifyWorkspacePin(workspaceId: string, pin: string): Promise<{ success: boolean; error?: string }> {
     try {
-        const workspace = await prisma.workspace.findUnique({
-            where: { id: workspaceId },
-            select: { adminCode: true }
-        });
+        const session = await auth();
+        if (!session?.user?.id) return { success: false, error: 'Unauthorized' };
 
-        if (!workspace) {
-            return { success: false, error: 'Workspace not found' };
-        }
-
-        if (!workspace.adminCode) {
-            // If no PIN is configured, we allow access by default (optional PIN logic)
-            return { success: true };
-        }
-
-        const isValid = verifyPin(pin, workspace.adminCode);
-
-        if (isValid) {
-            return { success: true };
-        } else {
-            return { success: false, error: 'Invalid PIN' };
-        }
+        const result = await checkWorkspacePin(workspaceId, 'adminCode', pin, session.user.id);
+        // If no PIN is configured, we allow access by default (optional PIN logic)
+        if (result === 'valid' || result === 'not_set') return { success: true };
+        return { success: false, error: PIN_CHECK_ERRORS[result] };
     } catch (error) {
         console.error('Error verifying PIN:', error);
         return { success: false, error: 'Internal server error' };
@@ -67,8 +53,7 @@ export async function updateAdminPin(workspaceId: string, pin: string): Promise<
             return { success: false, error: 'PIN must be exactly 4 digits' };
         }
 
-        const { hashPin } = await import('@/lib/rbac');
-        const hashedPin = hashPin(pin);
+        const hashedPin = await hashPin(pin);
 
         await prisma.workspace.update({
             where: { id: workspaceId },

@@ -1,5 +1,4 @@
 
-import { createHash } from 'crypto';
 
 // Default PIN is '0987'
 // SHA-256 hash of '0987'
@@ -55,21 +54,7 @@ export const PERMISSIONS_LEGACY = {
     MANAGE_OFFICE: [UserRole.PRACTICE_MANAGER],
 };
 
-/**
- * Hashes a PIN using SHA-256
- */
-export function hashPin(pin: string): string {
-    return createHash('sha256').update(pin).digest('hex');
-}
-
-/**
- * Verifies if a PIN matches the stored hash
- */
-export function verifyPin(inputPin: string, storedHash: string | null): boolean {
-    if (!storedHash) return false;
-    const inputHash = hashPin(inputPin);
-    return inputHash === storedHash;
-}
+// PIN hashing/verification lives in '@/lib/workspace-pins'.
 
 /**
  * Checks if a user has the required role for an action

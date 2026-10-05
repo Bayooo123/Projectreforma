@@ -4,7 +4,7 @@ import { useState, useEffect, useTransition } from 'react';
 import { X, Gavel, FileText, Users, Check, Loader, ChevronDown } from 'lucide-react';
 import styles from './EventModal.module.css';
 import litStyles from './LitigationForm.module.css';
-import { getMattersForWorkspace, recordProceeding } from '@/app/actions/matters';
+import { getMattersForWorkspace, isLitigationPinSet, recordProceeding } from '@/app/actions/matters';
 import { getLawyersForWorkspace } from '@/lib/briefs';
 
 interface Lawyer { id: string; name: string | null; email: string | null }
@@ -42,6 +42,8 @@ export default function RecordProceedingModal({ isOpen, onClose, workspaceId, us
     const [adjournedTo, setAdjournedTo] = useState('');
     const [selectedLawyerIds, setSelectedLawyerIds] = useState<Set<string>>(new Set());
     const [error, setError] = useState('');
+    const [pinRequired, setPinRequired] = useState(false);
+    const [pin, setPin] = useState('');
     const [isPending, startTransition] = useTransition();
 
     useEffect(() => {
@@ -50,16 +52,18 @@ export default function RecordProceedingModal({ isOpen, onClose, workspaceId, us
         Promise.all([
             getMattersForWorkspace(workspaceId),
             getLawyersForWorkspace(workspaceId),
-        ]).then(([m, l]) => {
+            isLitigationPinSet(workspaceId).catch(() => false),
+        ]).then(([m, l, pinSet]) => {
             setMatters(m as Matter[]);
             setLawyers(l as Lawyer[]);
+            setPinRequired(pinSet);
         }).catch(console.error).finally(() => setLoadingData(false));
     }, [isOpen, workspaceId]);
 
     function reset() {
         setSelectedMatterId(''); setSittingDate('');
         setProceedings(''); setOutcome(''); setAdjournedFor(''); setAdjournedTo('');
-        setSelectedLawyerIds(new Set()); setError('');
+        setSelectedLawyerIds(new Set()); setError(''); setPin('');
     }
 
     function handleClose() { reset(); onClose(); }
@@ -78,6 +82,7 @@ export default function RecordProceedingModal({ isOpen, onClose, workspaceId, us
         if (!selectedMatterId) { setError('Please select a matter.'); return; }
         if (!sittingDate) { setError('Please enter the date of this sitting.'); return; }
         if (!proceedings.trim()) { setError('Please describe what happened in court.'); return; }
+        if (pinRequired && !/^\d{5}$/.test(pin)) { setError('Enter the 5-digit litigation PIN.'); return; }
         setError('');
 
         startTransition(async () => {
@@ -90,12 +95,14 @@ export default function RecordProceedingModal({ isOpen, onClose, workspaceId, us
                 adjournedTo: adjournedTo ? new Date(adjournedTo) : undefined,
                 appearingLawyerIds: Array.from(selectedLawyerIds),
                 userId,
+                pin: pin || undefined,
             });
 
             if (result.success) {
                 onSuccess?.();
                 handleClose();
             } else {
+                if ('pinRequired' in result && result.pinRequired) { setPinRequired(true); setPin(''); }
                 setError(result.error || 'Failed to save. Please try again.');
             }
         });
@@ -212,6 +219,23 @@ export default function RecordProceedingModal({ isOpen, onClose, workspaceId, us
                                             );
                                         })}
                                     </div>
+                                </div>
+                            )}
+
+                            {pinRequired && (
+                                <div style={{ marginTop: '1.25rem', maxWidth: 200 }}>
+                                    <label style={lbl} htmlFor="litigation-pin">Litigation PIN *</label>
+                                    <input
+                                        id="litigation-pin"
+                                        type="password"
+                                        inputMode="numeric"
+                                        autoComplete="off"
+                                        maxLength={5}
+                                        value={pin}
+                                        onChange={e => setPin(e.target.value.replace(/\D/g, ''))}
+                                        placeholder="-----"
+                                        style={{ ...sel, textAlign: 'center', letterSpacing: '0.3rem' }}
+                                    />
                                 </div>
                             )}
 

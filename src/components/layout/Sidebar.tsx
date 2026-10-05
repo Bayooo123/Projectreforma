@@ -9,7 +9,6 @@ import {
 import styles from './Sidebar.module.css';
 import { signOut } from 'next-auth/react'; // Use client-side signOut
 import { useEffect } from 'react';
-import { checkOverdueInvoices } from '@/app/actions/notifications';
 import { navigationGroups, todayItem, agentItems } from '@/config/navigation';
 
 interface SidebarProps {
@@ -32,17 +31,6 @@ const Sidebar = ({ user, workspace }: SidebarProps) => {
   const searchParams = useSearchParams();
   const currentAgent = searchParams.get('agent');
 
-  useEffect(() => {
-    const timer = setTimeout(async () => {
-      try {
-        await checkOverdueInvoices();
-      } catch (e) {
-        console.error(e);
-      }
-    }, 2000);
-
-    return () => clearTimeout(timer);
-  }, []);
 
   const isAdminOrOwner = user?.role === 'admin' || user?.role === 'owner';
 

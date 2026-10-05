@@ -5,6 +5,11 @@ import { notifyExpenseRecorded } from '@/lib/notifications';
 import { categorizeExpense } from '@/lib/services/expense-classification';
 import { ExpenseCategory, Prisma } from '@prisma/client';
 import { logActivity } from '@/lib/log-activity';
+import { assertWorkspaceMember } from '@/lib/workspace-guard';
+
+function forbidden() {
+    return NextResponse.json({ success: false, error: 'You are not a member of this workspace' }, { status: 403 });
+}
 
 // GET /api/expenses - Fetch expenses with optional filtering
 export async function GET(request: NextRequest) {
@@ -22,6 +27,7 @@ export async function GET(request: NextRequest) {
                 { status: 400 }
             );
         }
+        try { await assertWorkspaceMember(workspaceId); } catch { return forbidden(); }
 
         let dateFilter: any = {};
 
@@ -149,6 +155,8 @@ export async function POST(request: NextRequest) {
                 { status: 400 }
             );
         }
+        let actorId: string;
+        try { actorId = await assertWorkspaceMember(workspaceId); } catch { return forbidden(); }
 
         // Handle batch creation
         if (expenses && Array.isArray(expenses)) {
@@ -161,7 +169,7 @@ export async function POST(request: NextRequest) {
 
             // Create all expenses in a transaction
             const result = await prisma.$transaction(
-                expenses.map((expense: any) => {
+                (expenses as any[]).map((expense) => {
                     // Auto-categorize if category is missing or invalid
                     let finalCategory = expense.category as ExpenseCategory;
                     if (!Object.values(ExpenseCategory).includes(finalCategory)) {
@@ -183,6 +191,10 @@ export async function POST(request: NextRequest) {
                     });
                 })
             );
+
+            await prisma.expenseAuditLog.createMany({
+                data: result.map(row => ({ expenseId: row.id, action: 'CREATE', changedBy: actorId, newData: row as any })),
+            });
 
             // Notify Partners for each expense
             result.forEach(exp => {
@@ -220,15 +232,21 @@ export async function POST(request: NextRequest) {
             });
         }
 
-        const expense = await prisma.expense.create({
-            data: {
-                workspaceId,
-                category: finalCategory,
-                amount: new Prisma.Decimal(amount), // Direct Decimal initialization
-                description: description || null,
-                date: date ? new Date(date) : new Date(),
-                reference: reference || null,
-            },
+        const expense = await prisma.$transaction(async (tx) => {
+            const row = await tx.expense.create({
+                data: {
+                    workspaceId,
+                    category: finalCategory,
+                    amount: new Prisma.Decimal(amount), // Direct Decimal initialization
+                    description: description || null,
+                    date: date ? new Date(date) : new Date(),
+                    reference: reference || null,
+                },
+            });
+            await tx.expenseAuditLog.create({
+                data: { expenseId: row.id, action: 'CREATE', changedBy: actorId, newData: row as any },
+            });
+            return row;
         });
 
         notifyExpenseRecorded(expense, workspaceId)
@@ -285,7 +303,7 @@ export async function PATCH(request: NextRequest) {
             where: { id }
         });
 
-        if (!existingExpense) {
+        if (!existingExpense || existingExpense.workspaceId !== workspaceId) {
             return NextResponse.json(
                 { success: false, error: 'Expense not found' },
                 { status: 404 }
@@ -372,7 +390,7 @@ export async function DELETE(request: NextRequest) {
             where: { id }
         });
 
-        if (!existingExpense) {
+        if (!existingExpense || existingExpense.workspaceId !== workspaceId) {
             return NextResponse.json(
                 { success: false, error: 'Expense not found' },
                 { status: 404 }

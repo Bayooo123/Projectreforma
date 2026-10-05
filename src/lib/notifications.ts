@@ -1,39 +1,56 @@
 import { prisma } from '@/lib/prisma';
 import { Prisma } from '@prisma/client';
 
+// The one place Notification rows are written. Everything else — server
+// actions, crons, agents — calls into here. This is a plain server module,
+// not a 'use server' file, so it can't be invoked from the browser.
+
 export type NotificationType = 'alert' | 'info' | 'success' | 'warning' | 'critical' | 'adjournment_reminder' | 'compliance_reminder';
-export type RecipientType = 'lawyer' | 'client' | 'partner' | 'staff';
+export type RecipientType = 'lawyer' | 'client' | 'partner' | 'staff' | 'user';
 export type Priority = 'low' | 'medium' | 'high' | 'critical';
 
-interface CreateNotificationParams {
+interface NotificationContent {
     title: string;
     message: string;
-    recipientId: string;
-    recipientType: RecipientType;
     type?: NotificationType;
     priority?: Priority;
-    relatedMatterId?: string;
-    relatedBriefId?: string;
-    relatedComplianceTaskId?: string;
+    relatedMatterId?: string | null;
+    relatedBriefId?: string | null;
+    relatedComplianceTaskId?: string | null;
+    relatedInvoiceId?: string | null;
+    relatedPaymentId?: string | null;
+    metadata?: Prisma.InputJsonValue;
     channels?: string[]; // ['in-app', 'email']
+}
+
+interface CreateNotificationParams extends NotificationContent {
+    recipientId: string;
+    recipientType: RecipientType;
+}
+
+function toRow(content: NotificationContent, recipientId: string, recipientType: string): Prisma.NotificationCreateManyInput {
+    return {
+        title: content.title,
+        message: content.message,
+        recipientId,
+        recipientType,
+        type: content.type || 'info',
+        priority: content.priority || 'medium',
+        relatedMatterId: content.relatedMatterId ?? undefined,
+        relatedBriefId: content.relatedBriefId ?? undefined,
+        relatedComplianceTaskId: content.relatedComplianceTaskId ?? undefined,
+        relatedInvoiceId: content.relatedInvoiceId ?? undefined,
+        relatedPaymentId: content.relatedPaymentId ?? undefined,
+        metadata: content.metadata,
+        channels: JSON.stringify(content.channels || ['in-app']),
+        status: 'unread',
+    };
 }
 
 export async function createNotification(params: CreateNotificationParams) {
     try {
         const notification = await prisma.notification.create({
-            data: {
-                title: params.title,
-                message: params.message,
-                recipientId: params.recipientId,
-                recipientType: params.recipientType,
-                type: params.type || 'info',
-                priority: params.priority || 'medium',
-                relatedMatterId: params.relatedMatterId,
-                relatedBriefId: params.relatedBriefId,
-                relatedComplianceTaskId: params.relatedComplianceTaskId,
-                channels: JSON.stringify(params.channels || ['in-app']),
-                status: 'unread',
-            },
+            data: toRow(params, params.recipientId, params.recipientType),
         });
         return { success: true, notification };
     } catch (error) {
@@ -42,58 +59,75 @@ export async function createNotification(params: CreateNotificationParams) {
     }
 }
 
-// ... existing functions ...
+// Older call sites target 'owner' / 'partner' / 'admin', which are not values
+// WorkspaceMember.role ever holds (roles are 'Managing Partner', 'Practice
+// Manager', …) — so those notifications used to reach nobody. They are mapped
+// onto the real roles here.
+const ROLE_ALIASES: Record<string, string[]> = {
+    partner: ['partner', 'principal partner', 'managing partner'],
+    admin: ['practice manager', 'head of chamber', 'head of chambers'],
+};
 
-export async function notifyWorkspaceMembers(params: {
-    workspaceId: string,
-    title: string,
-    message: string,
-    type?: NotificationType,
-    priority?: Priority,
-    roles?: string[],
-    designations?: string[],
-    relatedMatterId?: string,
-    relatedBriefId?: string,
-    relatedComplianceTaskId?: string
-}) {
+export type NotificationRecipients =
+    | 'ALL'
+    | { userIds: string[] }
+    | { role: string[] };
+
+async function resolveRecipients(workspaceId: string, recipients: NotificationRecipients): Promise<string[]> {
+    if (recipients !== 'ALL' && 'userIds' in recipients) return [...new Set(recipients.userIds)];
+
     const members = await prisma.workspaceMember.findMany({
-        where: {
-            workspaceId: params.workspaceId,
-            status: 'active',
-            OR: [
-                params.roles ? { role: { in: params.roles } } : undefined,
-                params.designations ? { designation: { in: params.designations } } : undefined
-            ].filter((cond): cond is any => cond !== undefined)
-        }
+        where: { workspaceId, status: 'active' },
+        select: { userId: true, role: true, designation: true },
     });
+    if (recipients === 'ALL') return members.map(m => m.userId);
 
-    // Fallback to workspace owner if no specific targets found
-    if (members.length === 0) {
-        const workspace = await prisma.workspace.findUnique({
-            where: { id: params.workspaceId },
-            select: { ownerId: true }
-        });
-        if (workspace) {
-            await createNotification({
-                ...params,
-                recipientId: workspace.ownerId,
-                recipientType: 'staff' // Default
-            });
-        }
-        return;
+    const wanted = new Set(recipients.role.flatMap(r => ROLE_ALIASES[r.toLowerCase()] ?? [r.toLowerCase()]));
+    const ids = members
+        .filter(m => wanted.has(m.role.toLowerCase()) || (m.designation && wanted.has(m.designation.toLowerCase())))
+        .map(m => m.userId);
+
+    if (recipients.role.some(r => r.toLowerCase() === 'owner') || ids.length === 0) {
+        // 'owner' means the workspace owner; and a role-targeted alert with no
+        // matching members still reaches someone rather than nobody.
+        const workspace = await prisma.workspace.findUnique({ where: { id: workspaceId }, select: { ownerId: true } });
+        if (workspace) ids.push(workspace.ownerId);
     }
-
-    const notifications = members.map(member => createNotification({
-        ...params,
-        recipientId: member.userId,
-        recipientType: member.role as RecipientType,
-    }));
-
-    await Promise.all(notifications);
+    return [...new Set(ids)];
 }
 
-export async function notifyBriefAssigned(brief: any) {
-    // Notify the assigned lawyer
+/**
+ * Notify a set of people in one workspace: everyone, specific users, or
+ * members by role/designation.
+ */
+export async function notifyWorkspace(params: NotificationContent & {
+    workspaceId: string;
+    recipients: NotificationRecipients;
+    excludeUserIds?: string[];
+}) {
+    try {
+        const exclude = new Set(params.excludeUserIds ?? []);
+        const recipientIds = (await resolveRecipients(params.workspaceId, params.recipients)).filter(id => !exclude.has(id));
+        if (recipientIds.length === 0) return { success: true, count: 0 };
+
+        await prisma.notification.createMany({ data: recipientIds.map(id => toRow(params, id, 'user')) });
+        return { success: true, count: recipientIds.length };
+    } catch (error) {
+        console.error('Failed to create notifications:', error);
+        return { success: false, error: 'Internal Notification Error' };
+    }
+}
+
+export async function notifyWorkspaceMembers(params: NotificationContent & {
+    workspaceId: string;
+    roles?: string[];
+    designations?: string[];
+}) {
+    const { roles = [], designations = [], ...rest } = params;
+    await notifyWorkspace({ ...rest, recipients: { role: [...roles, ...designations] } });
+}
+
+export async function notifyBriefAssigned(brief: { id: string; lawyerId?: string | null; briefNumber: string; name: string }) {
     if (!brief.lawyerId) return;
 
     await createNotification({
@@ -107,50 +141,26 @@ export async function notifyBriefAssigned(brief: any) {
     });
 }
 
-export async function notifyMatterUpdate(matter: any, description: string, performedByUserId: string) {
-    // Notify all workspace members (simplified "everyone" logic)
-    // In a real app, we might filter by those assigned to the matter
-    // For now, we'll notify the assigned lawyer (if not the performer) and the workspace owner
-
-    const workspace = await prisma.workspace.findUnique({
-        where: { id: matter.workspaceId },
-        include: { members: true }
+export async function notifyMatterUpdate(matter: { id: string; workspaceId: string; caseNumber?: string | null }, description: string, performedByUserId: string) {
+    await notifyWorkspace({
+        workspaceId: matter.workspaceId,
+        recipients: 'ALL',
+        excludeUserIds: [performedByUserId],
+        title: 'Litigation Update',
+        message: `${matter.caseNumber}: ${description}`,
+        type: 'info',
+        relatedMatterId: matter.id,
     });
-
-    if (!workspace) return;
-
-    const notifications = workspace.members
-        .filter(member => member.userId !== performedByUserId) // Don't notify self
-        .map(member => createNotification({
-            title: 'Litigation Update',
-            message: `${matter.caseNumber}: ${description}`,
-            recipientId: member.userId,
-            recipientType: member.role as RecipientType,
-            type: 'info',
-            relatedMatterId: matter.id,
-        }));
-
-    await Promise.all(notifications);
 }
 
-export async function notifyExpenseRecorded(expense: any, workspaceId: string) {
-    // Notify Managing Partners
-    const partners = await prisma.workspaceMember.findMany({
-        where: {
-            workspaceId,
-            role: { in: ['owner', 'partner'] }
-        }
-    });
-
-    const notifications = partners.map(partner => createNotification({
+export async function notifyExpenseRecorded(expense: { description?: string | null; amount: Prisma.Decimal | number | string }, workspaceId: string) {
+    const amount = new Prisma.Decimal(expense.amount as Prisma.Decimal.Value).toNumber()
+        .toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    await notifyWorkspace({
+        workspaceId,
+        recipients: { role: ['owner', 'partner'] },
         title: 'New Expense Recorded',
-        message: `Expense: ${expense.description} - ₦${new Prisma.Decimal(expense.amount as any).toNumber().toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
-        recipientId: partner.userId,
-        recipientType: 'partner',
+        message: `Expense: ${expense.description} - ₦${amount}`,
         type: 'warning', // Money out is usually a warning/alert
-    }));
-
-    await Promise.all(notifications);
+    });
 }
-
-// notifyWorkspaceMembers is already defined above with compliance support

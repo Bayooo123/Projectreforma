@@ -2,9 +2,17 @@
 
 import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
+import { after } from 'next/server';
 import { auth } from '@/auth';
 import { requireAuth, requirePermission } from '@/lib/auth-utils';
 import { logActivity } from '@/lib/log-activity';
+import { assertWorkspaceMember } from '@/lib/workspace-guard';
+
+async function assertBriefAccess(briefId: string) {
+    const brief = await prisma.brief.findUnique({ where: { id: briefId }, select: { workspaceId: true } });
+    if (!brief) throw new Error('Brief not found');
+    await assertWorkspaceMember(brief.workspaceId);
+}
 
 export async function logDocumentDownload(documentId: string) {
     try {
@@ -21,6 +29,7 @@ export async function logDocumentDownload(documentId: string) {
 
 export async function getDocuments(briefId: string, folderId?: string | null) {
     try {
+        await assertBriefAccess(briefId);
         const whereClause: any = { briefId };
         if (folderId !== undefined) {
             whereClause.folderId = folderId; // Can be null for root documents
@@ -51,6 +60,7 @@ export async function createDocument(data: {
         if (!data.url?.trim()) {
             return { success: false, error: 'Refusing to file this document with no file URL — every document must have a real file behind it.' };
         }
+        await assertBriefAccess(data.briefId);
         const document = await prisma.document.create({
             data: {
                 name: data.name,
@@ -59,7 +69,16 @@ export async function createDocument(data: {
                 size: data.size,
                 briefId: data.briefId,
                 folderId: data.folderId || null,
+                ocrStatus: 'pending',
             },
+        });
+        // The file is already in Blob storage; run OCR/classification/embedding
+        // after the response so the upload UI isn't held up by it.
+        after(async () => {
+            const { DocumentIngestionService } = await import('@/lib/services/ingestion');
+            await DocumentIngestionService.processFromUrl(document.id).catch(e =>
+                console.error('[createDocument] Ingestion failed:', e)
+            );
         });
         revalidatePath(`/briefs/${data.briefId}`);
         revalidatePath('/briefs');

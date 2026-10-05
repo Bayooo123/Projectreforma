@@ -196,8 +196,8 @@ export async function createBrief(data: {
         revalidatePath('/briefs');
 
         try {
-            const { createNotification } = await import('@/app/actions/notifications');
-            await createNotification({
+            const { notifyWorkspace } = await import('@/lib/notifications');
+            await notifyWorkspace({
                 workspaceId: data.workspaceId,
                 title: 'New Brief Created',
                 message: `Brief "${data.name}" (${data.briefNumber}) has been created.`,

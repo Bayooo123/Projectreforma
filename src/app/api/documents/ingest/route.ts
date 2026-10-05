@@ -1,10 +1,8 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { nanoid } from 'nanoid';
 import { put } from '@vercel/blob';
-import { classifyDocumentContent } from '@/lib/services/legal-heuristics';
-import { isVersionOf } from '@/lib/services/ocr-versioning';
+import { assertWorkspaceMember } from '@/lib/workspace-guard';
 
 // Max file size 10MB
 const MAX_SIZE = 10 * 1024 * 1024;
@@ -17,6 +15,16 @@ export async function POST(req: NextRequest) {
 
         if (!file || !briefId) {
             return NextResponse.json({ error: 'File and Brief ID required' }, { status: 400 });
+        }
+
+        const brief = await prisma.brief.findUnique({ where: { id: briefId }, select: { workspaceId: true } });
+        if (!brief) {
+            return NextResponse.json({ error: 'Brief not found' }, { status: 404 });
+        }
+        try {
+            await assertWorkspaceMember(brief.workspaceId);
+        } catch {
+            return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
         }
 
         if (file.size > MAX_SIZE) {

@@ -33,10 +33,10 @@ export async function createInvoice(data: Parameters<typeof InvoiceService.creat
         }
 
         try {
-            const { createNotification } = await import('@/app/actions/notifications');
+            const { notifyWorkspace } = await import('@/lib/notifications');
             const total = (invoice as any).totalAmount;
             const totalNum = typeof total?.toNumber === 'function' ? total.toNumber() : Number(total);
-            await createNotification({
+            await notifyWorkspace({
                 workspaceId,
                 title: 'New Invoice Issued',
                 message: `Invoice #${invoice.invoiceNumber} for ${invoice.client.name} has been created. Total: ₦${totalNum.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,

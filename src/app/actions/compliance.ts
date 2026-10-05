@@ -6,6 +6,15 @@ import { revalidatePath } from 'next/cache';
 import { logActivity } from '@/lib/log-activity';
 import { getNextCycleDueDate, getNextCyclePeriodLabel } from '@/lib/compliance-utils';
 import { z } from 'zod';
+import { assertWorkspaceMember } from '@/lib/workspace-guard';
+
+// Task-id based actions receive only the id from the client, so check the
+// task's own workspace rather than trusting any workspaceId the caller sends.
+async function assertTaskAccess(taskId: string) {
+    const task = await prisma.complianceTask.findUnique({ where: { id: taskId }, select: { workspaceId: true } });
+    if (!task) throw new Error('Task not found');
+    await assertWorkspaceMember(task.workspaceId);
+}
 
 export interface ComplianceObligation {
     id: string;
@@ -61,6 +70,7 @@ export async function getComplianceTasks(workspaceId: string, tier?: string): Pr
     try {
         const session = await auth();
         if (!session?.user?.id) return { success: false, error: 'Unauthorized' };
+        await assertWorkspaceMember(workspaceId);
 
         const tasks = await prisma.complianceTask.findMany({
             where: {
@@ -88,6 +98,7 @@ export async function getComplianceSummary(workspaceId: string): Promise<ActionR
     try {
         const session = await auth();
         if (!session?.user?.id) return { success: false, error: 'Unauthorized' };
+        await assertWorkspaceMember(workspaceId);
 
         const tasks = await prisma.complianceTask.findMany({
             where: { workspaceId },
@@ -138,6 +149,7 @@ export async function uploadEvidence(taskId: string, evidenceUrl: string): Promi
     try {
         const session = await auth();
         if (!session?.user?.id) return { success: false, error: 'Unauthorized' };
+        await assertTaskAccess(taskId);
 
         const task = await prisma.complianceTask.update({
             where: { id: taskId },
@@ -203,7 +215,33 @@ export async function uploadEvidence(taskId: string, evidenceUrl: string): Promi
 }
 
 export async function acknowledgeComplianceTask(taskId: string): Promise<ActionResult<ComplianceTask>> {
-    return { success: true, data: {} as any };
+    try {
+        const session = await auth();
+        if (!session?.user?.id) return { success: false, error: 'Unauthorized' };
+        await assertTaskAccess(taskId);
+
+        const task = await prisma.complianceTask.update({
+            where: { id: taskId },
+            data: {
+                acknowledgedAt: new Date(),
+                acknowledgedBy: session.user.id,
+                history: {
+                    create: {
+                        action: 'acknowledged',
+                        description: `Task acknowledged by ${session.user.name || session.user.email}`,
+                        performedBy: session.user.id
+                    }
+                }
+            },
+            include: { obligation: true, user: { select: { name: true, email: true } } }
+        });
+
+        revalidatePath('/management/compliance');
+        return { success: true, data: task as unknown as ComplianceTask };
+    } catch (error: any) {
+        console.error('Failed to acknowledge compliance task:', error);
+        return { success: false, error: error.message || 'Failed to acknowledge' };
+    }
 }
 
 export async function markAsComplied(taskId: string): Promise<ActionResult<ComplianceTask>> {
@@ -229,6 +267,7 @@ export async function updateComplianceTask(formData: FormData): Promise<ActionRe
         if (!session?.user?.id) return { success: false, error: 'Unauthorized' };
 
         const taskId = formData.get('taskId') as string;
+        await assertTaskAccess(taskId);
         const data = obligationSchema.parse({
             actionRequired: formData.get('actionRequired'),
             regulatoryBody: formData.get('regulatoryBody'),
@@ -283,6 +322,7 @@ export async function createComplianceObligation(workspaceId: string, tier: stri
     try {
         const session = await auth();
         if (!session?.user?.id) return { success: false, error: 'Unauthorized' };
+        await assertWorkspaceMember(workspaceId);
 
         const data = obligationSchema.parse({
             actionRequired: formData.get('actionRequired'),

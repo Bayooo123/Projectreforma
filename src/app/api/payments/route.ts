@@ -1,6 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { Prisma } from '@prisma/client';
+import { assertWorkspaceMember } from '@/lib/workspace-guard';
+import { InvoiceService } from '@/lib/services/invoices/invoice-service';
+
+// Resolves the client's workspace and checks the caller belongs to it, so a
+// clientId from the request body can't reach another firm's ledger.
+async function assertClientAccess(clientId: string): Promise<NextResponse | null> {
+    const client = await prisma.client.findUnique({ where: { id: clientId }, select: { workspaceId: true } });
+    if (!client) return NextResponse.json({ error: 'Client not found' }, { status: 404 });
+    try {
+        await assertWorkspaceMember(client.workspaceId);
+        return null;
+    } catch {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+}
 
 // GET /api/payments - List payments for a client
 export async function GET(request: NextRequest) {
@@ -11,6 +26,8 @@ export async function GET(request: NextRequest) {
         if (!clientId) {
             return NextResponse.json({ error: 'clientId is required' }, { status: 400 });
         }
+        const denied = await assertClientAccess(clientId);
+        if (denied) return denied;
 
         const payments = await prisma.payment.findMany({
             where: { clientId },
@@ -45,41 +62,34 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        const payment = await prisma.payment.create({
-            data: {
-                clientId,
-                invoiceId,
-                amount: new Prisma.Decimal(amount),
-                method,
-                reference,
-            },
-            include: {
-                client: {
-                    select: { name: true, email: true },
-                },
-            },
-        });
+        const denied = await assertClientAccess(clientId);
+        if (denied) return denied;
 
-        // If payment is linked to an invoice, update invoice status
         if (invoiceId) {
-            const invoice = await prisma.invoice.findUnique({
-                where: { id: invoiceId },
-                include: { payments: true },
-            });
-
-            if (invoice) {
-                const totalPaid = invoice.payments.reduce(
-                    (sum, p) => sum.plus(p.amount),
-                    new Prisma.Decimal(0)
-                );
-                const newStatus = totalPaid.greaterThanOrEqualTo(invoice.totalAmount) ? 'paid' : 'pending';
-
-                await prisma.invoice.update({
-                    where: { id: invoiceId },
-                    data: { status: newStatus },
-                });
+            const invoice = await prisma.invoice.findUnique({ where: { id: invoiceId }, select: { clientId: true } });
+            if (!invoice || invoice.clientId !== clientId) {
+                return NextResponse.json({ error: 'Invoice not found for this client' }, { status: 400 });
             }
         }
+
+        const payment = await prisma.$transaction(async (tx) => {
+            const payment = await tx.payment.create({
+                data: {
+                    clientId,
+                    invoiceId,
+                    amount: new Prisma.Decimal(amount),
+                    method,
+                    reference,
+                },
+                include: {
+                    client: {
+                        select: { name: true, email: true },
+                    },
+                },
+            });
+            if (invoiceId) await InvoiceService.syncStatusFromPayments(invoiceId, tx);
+            return payment;
+        });
 
         return NextResponse.json(payment, { status: 201 });
     } catch (error) {

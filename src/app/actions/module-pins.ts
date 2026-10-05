@@ -1,7 +1,8 @@
 'use server';
 
 import { prisma } from '@/lib/prisma';
-import { hashPin, verifyPin } from '@/lib/rbac';
+import { checkWorkspacePin, hashPin, PIN_CHECK_ERRORS } from '@/lib/workspace-pins';
+import { assertWorkspaceMember } from '@/lib/workspace-guard';
 import { requireAuth } from '@/lib/auth-utils';
 import { mailService } from '@/lib/services/mail/mail';
 import { revalidatePath } from 'next/cache';
@@ -71,20 +72,10 @@ export async function verifyModulePin(
     pin: string
 ): Promise<{ success: boolean; error?: string }> {
     try {
-        const field = MODULE_PIN_FIELD[module];
-        const workspace = await prisma.workspace.findUnique({
-            where: { id: workspaceId },
-            select: { [field]: true },
-        });
-
-        if (!workspace) return { success: false, error: 'Workspace not found' };
-
-        const storedHash = (workspace as any)[field] as string | null;
-        if (!storedHash) return { success: true }; // No PIN set → open access
-
-        return verifyPin(pin, storedHash)
-            ? { success: true }
-            : { success: false, error: 'Incorrect PIN' };
+        const userId = await assertWorkspaceMember(workspaceId);
+        const result = await checkWorkspacePin(workspaceId, MODULE_PIN_FIELD[module], pin, userId);
+        if (result === 'valid' || result === 'not_set') return { success: true }; // No PIN set → open access
+        return { success: false, error: PIN_CHECK_ERRORS[result] };
     } catch {
         return { success: false, error: 'Verification failed' };
     }
@@ -105,7 +96,7 @@ export async function setModulePin(
         const field = MODULE_PIN_FIELD[module];
         await prisma.workspace.update({
             where: { id: workspaceId },
-            data: { [field]: hashPin(pin) },
+            data: { [field]: await hashPin(pin) },
         });
 
         revalidatePath('/settings');
@@ -202,7 +193,7 @@ export async function consumeModulePinReset(
         await prisma.$transaction([
             prisma.workspace.update({
                 where: { id: record.workspaceId },
-                data: { [field]: hashPin(newPin) },
+                data: { [field]: await hashPin(newPin) },
             }),
             prisma.modulePinReset.update({
                 where: { token },

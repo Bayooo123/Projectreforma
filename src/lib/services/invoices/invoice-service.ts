@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/prisma';
 import { Prisma } from '@prisma/client';
+import { outstandingReceivables } from '@/lib/metrics/finance';
 
 export interface InvoiceLineItem {
     description: string;
@@ -237,7 +238,7 @@ export class InvoiceService {
             overdueInvoices,
             totalBilled,
             totalPaid,
-            totalOutstanding: totalBilled - totalPaid,
+            totalOutstanding: await outstandingReceivables(workspaceId),
         };
     }
 
@@ -269,6 +270,33 @@ export class InvoiceService {
         });
     }
 
+    /**
+     * The single rule for an invoice's payment status, shared by every place
+     * that records a payment. Draft/cancelled invoices are left alone; an
+     * invoice with no payments keeps its status unless a removed payment had
+     * moved it to paid/partially_paid.
+     */
+    static async syncStatusFromPayments(invoiceId: string, db: Prisma.TransactionClient = prisma) {
+        const invoice = await db.invoice.findUnique({
+            where: { id: invoiceId },
+            select: { status: true, totalAmount: true },
+        });
+        if (!invoice || ['draft', 'cancelled'].includes(invoice.status)) return invoice?.status ?? null;
+
+        const { _sum } = await db.payment.aggregate({ where: { invoiceId }, _sum: { amount: true } });
+        const totalPaid = new Prisma.Decimal((_sum.amount as any) ?? 0);
+
+        let status = invoice.status;
+        if (totalPaid.gte(new Prisma.Decimal(invoice.totalAmount as any))) status = 'paid';
+        else if (totalPaid.gt(0)) status = 'partially_paid';
+        else if (status === 'paid' || status === 'partially_paid') status = 'pending';
+
+        if (status !== invoice.status) {
+            await db.invoice.update({ where: { id: invoiceId }, data: { status } });
+        }
+        return status;
+    }
+
     static async recordPayment(
         invoiceId: string,
         workspaceId: string,
@@ -282,15 +310,19 @@ export class InvoiceService {
         if (data.amount <= 0)
             return { success: false as const, error: 'Amount must be positive' };
 
-        const payment = await prisma.payment.create({
-            data: {
-                invoiceId: invoice.id,
-                clientId: invoice.clientId,
-                amount: data.amount,
-                method: data.method ?? 'bank_transfer',
-                reference: data.reference,
-                date: data.date ? new Date(data.date) : new Date(),
-            },
+        const { payment, status: newStatus } = await prisma.$transaction(async (tx) => {
+            const payment = await tx.payment.create({
+                data: {
+                    invoiceId: invoice.id,
+                    clientId: invoice.clientId,
+                    amount: data.amount,
+                    method: data.method ?? 'bank_transfer',
+                    reference: data.reference,
+                    date: data.date ? new Date(data.date) : new Date(),
+                },
+            });
+            const status = await InvoiceService.syncStatusFromPayments(invoice.id, tx);
+            return { payment, status };
         });
 
         const prevPaid = invoice.payments.reduce(
@@ -299,11 +331,6 @@ export class InvoiceService {
         );
         const totalPaid = prevPaid.plus(new Prisma.Decimal(data.amount));
         const outstanding = new Prisma.Decimal(invoice.totalAmount as any).minus(totalPaid);
-
-        const newStatus = outstanding.lte(0) ? 'paid' : invoice.status;
-        if (outstanding.lte(0)) {
-            await prisma.invoice.update({ where: { id: invoice.id }, data: { status: 'paid' } });
-        }
 
         return {
             success: true as const,

@@ -2,6 +2,7 @@ import { auth } from '@/auth';
 import { redirect } from 'next/navigation';
 import { prisma } from '@/lib/prisma';
 import FinanceClient from './FinanceClient';
+import { collectedBetween, outstandingReceivables } from '@/lib/metrics/finance';
 
 export const dynamic = 'force-dynamic';
 
@@ -29,17 +30,14 @@ async function getFinanceSummary(workspaceId: string) {
         }).catch(() => [] as any[]),
     ]);
 
-    const outstanding = invoices
-        .filter(i => i.status !== 'paid' && i.status !== 'PAID')
-        .reduce((s, i) => s + Number(i.totalAmount || 0), 0);
-
-    const collectedMTD = payments
-        .filter(p => new Date(p.createdAt) >= startOfMonth)
-        .reduce((s, p) => s + Number(p.amount || 0), 0);
-
-    const expensesMTD = (expenses as any[])
-        .filter(e => new Date(e.date || e.createdAt) >= startOfMonth)
-        .reduce((s: number, e: any) => s + Number(e.amount || 0), 0);
+    // Totals come from the shared metrics (src/lib/metrics/finance.ts) — the
+    // lists above are capped at 50 for display only.
+    const [outstanding, collectedMTD, spent] = await Promise.all([
+        outstandingReceivables(workspaceId),
+        collectedBetween(workspaceId, startOfMonth, now),
+        prisma.expense.aggregate({ where: { workspaceId, date: { gte: startOfMonth } }, _sum: { amount: true } }).catch(() => null),
+    ]);
+    const expensesMTD = Number(spent?._sum.amount ?? 0);
 
     return { invoices, payments, expenses, outstanding, collectedMTD, expensesMTD };
 }

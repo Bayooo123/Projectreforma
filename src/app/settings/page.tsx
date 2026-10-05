@@ -311,6 +311,8 @@ export default function SettingsPage() {
             setLetterheadUrl(editLetterheadUrl);
             setBrandColor(editBrandColor);
             alert('Firm settings saved! Reload the page to see theme changes.');
+        } else {
+            alert(result.error || 'Failed to save firm settings.');
         }
         setIsSaving(false);
     };

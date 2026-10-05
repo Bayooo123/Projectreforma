@@ -14,6 +14,19 @@ export interface IngestOptions {
     url: string; // The URL where the file is already stored (Blob Storage)
 }
 
+const MIME_BY_EXTENSION: Record<string, string> = {
+    pdf: 'application/pdf',
+    docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    png: 'image/png',
+    jpg: 'image/jpeg',
+    jpeg: 'image/jpeg',
+    txt: 'text/plain',
+};
+
+function mimeFromName(name: string): string {
+    return MIME_BY_EXTENSION[name.split('.').pop()?.toLowerCase() ?? ''] ?? 'application/octet-stream';
+}
+
 export class DocumentIngestionService {
     /**
      * Standardized ingestion pipeline for documents from any source (web UI, email, etc.)
@@ -26,7 +39,7 @@ export class DocumentIngestionService {
         const documentId = nanoid();
 
         // 1. Create document record (Pending state)
-        const document = await prisma.document.create({
+        await prisma.document.create({
             data: {
                 id: documentId,
                 name,
@@ -39,6 +52,17 @@ export class DocumentIngestionService {
             }
         });
 
+        return this.process(documentId, { name, buffer, contentType, briefId, url });
+    }
+
+    /**
+     * Runs text extraction, classification, version detection, timeline
+     * extraction and embedding for a Document row that already exists.
+     */
+    static async process(
+        documentId: string,
+        { name, buffer, contentType, briefId, url }: Pick<IngestOptions, 'name' | 'buffer' | 'contentType' | 'briefId' | 'url'>
+    ) {
         // 2. Perform Processing (Text extraction, classification, versioning)
         try {
             const { TextExtractor } = await import('@/lib/ingestion/text-extractor');
@@ -102,6 +126,35 @@ export class DocumentIngestionService {
 
             return { success: true, documentId, error: 'Processing failed' };
         }
+    }
+
+    /**
+     * For documents whose file went straight to Blob storage from the browser
+     * (the brief upload UI): download it and run the same pipeline the email
+     * and WhatsApp paths get. Without this, hand-uploaded documents never get
+     * OCR text, a docType, version links or embeddings.
+     */
+    static async processFromUrl(documentId: string) {
+        const doc = await prisma.document.findUnique({
+            where: { id: documentId },
+            select: { name: true, url: true, briefId: true },
+        });
+        if (!doc?.url || !doc.briefId) return;
+
+        let buffer: Buffer;
+        let contentType: string;
+        try {
+            const res = await fetch(doc.url);
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            buffer = Buffer.from(await res.arrayBuffer());
+            contentType = res.headers.get('content-type')?.split(';')[0].trim() || mimeFromName(doc.name);
+        } catch (error) {
+            console.error(`[IngestionService] Could not download ${documentId} for processing:`, error);
+            await prisma.document.update({ where: { id: documentId }, data: { ocrStatus: 'failed' } });
+            return;
+        }
+
+        return this.process(documentId, { name: doc.name, buffer, contentType, briefId: doc.briefId, url: doc.url });
     }
 
     /**

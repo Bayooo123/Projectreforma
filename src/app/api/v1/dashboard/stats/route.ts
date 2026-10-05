@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { withApiAuth, successResponse, errorResponse } from '@/lib/api-auth';
-import { Prisma } from '@prisma/client';
+import { collectedBetween, outstandingReceivables } from '@/lib/metrics/finance';
 
 export const dynamic = 'force-dynamic';
 
@@ -56,21 +56,9 @@ export async function GET(request: NextRequest) {
                 where: { workspaceId, status: 'active' },
             }),
             // This month's payments (revenue)
-            prisma.payment.aggregate({
-                where: {
-                    client: { workspaceId },
-                    date: { gte: startOfMonth },
-                },
-                _sum: { amount: true },
-            }),
-            // Outstanding invoices
-            prisma.invoice.aggregate({
-                where: {
-                    client: { workspaceId },
-                    status: { in: ['pending', 'overdue'] },
-                },
-                _sum: { totalAmount: true },
-            }),
+            collectedBetween(workspaceId, startOfMonth, today),
+            // Open invoices less what has been paid against them
+            outstandingReceivables(workspaceId),
             // Court dates this week
             prisma.matter.findMany({
                 where: {
@@ -95,24 +83,14 @@ export async function GET(request: NextRequest) {
             }
         });
 
-        // Calculate outstanding (total invoiced - total paid)
-        const totalPaid = await prisma.payment.aggregate({
-            where: { client: { workspaceId } },
-            _sum: { amount: true },
-        });
-
-        const totalInvoicedValue = new Prisma.Decimal((outstandingInvoices._sum.totalAmount || 0) as any);
-        const totalPaidValue = new Prisma.Decimal((totalPaid._sum.amount || 0) as any);
-        const outstandingAmount = totalInvoicedValue.minus(totalPaidValue);
-
         return successResponse({
             pendingTasks,
             upcomingCourtDates,
             activeBriefs,
             totalClients,
             totalMatters,
-            thisMonthRevenue: new Prisma.Decimal((monthlyPayments._sum.amount || 0) as any).toNumber(),
-            outstandingAmount: Math.max(0, outstandingAmount.toNumber()),
+            thisMonthRevenue: monthlyPayments,
+            outstandingAmount: outstandingInvoices,
             courtDatesThisWeek: Object.entries(courtDatesByDay).map(([date, count]) => ({
                 date,
                 count,

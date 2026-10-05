@@ -3,6 +3,8 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
+import { assertWorkspaceMember } from "@/lib/workspace-guard";
+import { collectedBetween, monthlyCollections } from "@/lib/metrics/finance";
 
 function getDateRange(filter: string) {
     const today = new Date();
@@ -26,6 +28,7 @@ function getDateRange(filter: string) {
 
 export async function getAnalyticsMetrics(workspaceId: string, filter: string = 'this-month') {
     if (!workspaceId) return null;
+    await assertWorkspaceMember(workspaceId);
 
 
     const today = new Date();
@@ -48,14 +51,8 @@ export async function getAnalyticsMetrics(workspaceId: string, filter: string = 
         expenseCount,
         pendingCourtDates,
     ] = await Promise.all([
-        prisma.payment.aggregate({
-            where: { client: { workspaceId }, date: { gte: startDate, lte: endDate } },
-            _sum: { amount: true },
-        }),
-        prisma.payment.aggregate({
-            where: { client: { workspaceId }, date: { gte: startOfLastMonth, lte: endOfLastMonth } },
-            _sum: { amount: true },
-        }),
+        collectedBetween(workspaceId, startDate, endDate),
+        collectedBetween(workspaceId, startOfLastMonth, endOfLastMonth),
         prisma.matter.count({
             where: { workspaceId, status: { notIn: ['closed', 'completed', 'archived'] } },
         }),
@@ -74,8 +71,8 @@ export async function getAnalyticsMetrics(workspaceId: string, filter: string = 
         }),
     ]);
 
-    const thisMonthRevenue = Number(revenueAgg._sum.amount ?? 0);
-    const lastMonthRevenue = Number(lastMonthRevenueAgg._sum.amount ?? 0);
+    const thisMonthRevenue = revenueAgg;
+    const lastMonthRevenue = lastMonthRevenueAgg;
     const totalExpenses = Number(expensesAgg._sum.amount ?? 0);
 
     let revenueGrowth = 0;
@@ -107,42 +104,12 @@ export async function getAnalyticsMetrics(workspaceId: string, filter: string = 
 }
 
 export async function getRevenueTrend(workspaceId: string) {
-    const today = new Date();
-    const sixMonthsAgo = new Date(today.getFullYear(), today.getMonth() - 5, 1);
-
-    const payments = await prisma.payment.findMany({
-        where: {
-            client: { workspaceId },
-            date: { gte: sixMonthsAgo }
-        },
-        select: { amount: true, date: true },
-        take: 5000,
-    });
-
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    const trendData = new Map<string, number>();
-
-    for (let i = 5; i >= 0; i--) {
-        const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
-        const monthKey = months[d.getMonth()];
-        trendData.set(monthKey, 0);
-    }
-
-    payments.forEach(p => {
-        const monthKey = months[p.date.getMonth()];
-        if (trendData.has(monthKey)) {
-            const currentAmount = trendData.get(monthKey) || 0;
-            trendData.set(monthKey, currentAmount + (new Prisma.Decimal(p.amount).toNumber()));
-        }
-    });
-
-    return Array.from(trendData.entries()).map(([month, amount]) => ({
-        month,
-        amount: Math.max(0, amount)
-    }));
+    await assertWorkspaceMember(workspaceId);
+    return monthlyCollections(workspaceId, 6);
 }
 
 export async function getTopClients(workspaceId: string, filter: string = 'this-month', limit: number = 5) {
+    await assertWorkspaceMember(workspaceId);
     const { startDate, endDate } = getDateRange(filter);
 
     const clients = await prisma.client.findMany({
@@ -198,6 +165,7 @@ export async function getTopClients(workspaceId: string, filter: string = 'this-
 }
 
 export async function getLawyerStats(workspaceId: string) {
+    await assertWorkspaceMember(workspaceId);
     const members = await prisma.workspaceMember.findMany({
         where: { workspaceId },
         include: { user: { select: { id: true, name: true, email: true } } }
@@ -259,6 +227,7 @@ export async function getLawyerStats(workspaceId: string) {
 }
 
 export async function getMatterDistribution(workspaceId: string) {
+    await assertWorkspaceMember(workspaceId);
     const groups = await prisma.matter.groupBy({
         by: ['status'],
         where: { workspaceId, deletedAt: null },
@@ -269,6 +238,7 @@ export async function getMatterDistribution(workspaceId: string) {
 }
 
 export async function getCourtVisits(workspaceId: string, filter: string = 'this-month') {
+    await assertWorkspaceMember(workspaceId);
     const { startDate, endDate } = getDateRange(filter);
 
     // Only type=COURT entries; read court from CalendarEntry.court first, fall back to matter.court
@@ -298,6 +268,7 @@ export async function getCourtVisits(workspaceId: string, filter: string = 'this
 }
 
 export async function getExpenseDistribution(workspaceId: string, filter: string = 'this-month') {
+    await assertWorkspaceMember(workspaceId);
     const { startDate, endDate } = getDateRange(filter);
 
     const groups = await prisma.expense.groupBy({

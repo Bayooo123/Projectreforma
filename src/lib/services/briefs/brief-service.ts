@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma';
+import { createNotification } from '@/lib/notifications';
 import { Prisma } from '@prisma/client';
 
 export interface CreateBriefInput {
@@ -187,20 +188,17 @@ export class BriefService {
             },
         });
 
-        await prisma.notification.create({
-            data: {
-                type: 'info',
-                title: 'New Brief Assignment',
-                message: brief.matter
-                    ? `You have been assigned brief "${brief.name}" (${brief.briefNumber}). This corresponds to matter "${brief.matter.name}" (${brief.matter.caseNumber}). Check the litigation tracker for the report on the case.`
-                    : `You have been assigned brief "${brief.name}" (${brief.briefNumber}). Please review the brief details.`,
-                recipientId: lawyerId,
-                recipientType: 'lawyer',
-                relatedBriefId: brief.id,
-                relatedMatterId: brief.matterId,
-                priority: 'medium',
-                channels: JSON.stringify(['in-app']),
-            },
+        await createNotification({
+            type: 'info',
+            title: 'New Brief Assignment',
+            message: brief.matter
+                ? `You have been assigned brief "${brief.name}" (${brief.briefNumber}). This corresponds to matter "${brief.matter.name}" (${brief.matter.caseNumber}). Check the litigation tracker for the report on the case.`
+                : `You have been assigned brief "${brief.name}" (${brief.briefNumber}). Please review the brief details.`,
+            recipientId: lawyerId,
+            recipientType: 'lawyer',
+            relatedBriefId: brief.id,
+            relatedMatterId: brief.matterId,
+            priority: 'medium',
         });
 
         return { success: true as const, data: brief };

@@ -4,6 +4,7 @@ import bcrypt from 'bcryptjs';
 import { revalidatePath } from 'next/cache';
 import { prisma } from '@/lib/prisma';
 import { requireAuth } from '@/lib/auth-utils';
+import { canManageWorkspacePins, hashPin } from '@/lib/workspace-pins';
 
 const isValidHexColor = (c: string) => /^#[0-9a-fA-F]{3,8}$/.test(c);
 
@@ -34,12 +35,13 @@ async function assertWorkspaceAccess(workspaceId: string) {
             workspaceId,
             user: { email: user.email! },
         },
-        select: { id: true },
+        select: { id: true, userId: true },
     });
 
     if (!membership) {
         throw new Error('Unauthorized: You are not a member of this workspace');
     }
+    return membership.userId;
 }
 
 export async function getWorkspaceSettings(workspaceId: string) {
@@ -70,11 +72,13 @@ export async function getWorkspaceSettings(workspaceId: string) {
             return { success: false, error: 'Workspace not found' };
         }
 
+        const { litigationPin, ...rest } = workspace;
         return {
             success: true,
             workspace: {
-                ...workspace,
+                ...rest,
                 joinPassword: undefined,
+                litigationPinSet: !!litigationPin,
             },
         };
     } catch (error: any) {
@@ -89,7 +93,20 @@ export async function updateWorkspaceSettings(workspaceId: string, settings: Wor
             return { success: false, error: 'Workspace ID is required' };
         }
 
-        await assertWorkspaceAccess(workspaceId);
+        const userId = await assertWorkspaceAccess(workspaceId);
+
+        // Branding is open to any member; access credentials are not.
+        // The settings form always resends firmCode, so only a changed value counts.
+        const current = settings.firmCode !== undefined
+            ? await prisma.workspace.findUnique({ where: { id: workspaceId }, select: { firmCode: true } })
+            : null;
+        const touchesCredentials =
+            settings.litigationPin !== undefined ||
+            !!settings.joinPassword ||
+            (settings.firmCode !== undefined && (settings.firmCode || null) !== (current?.firmCode ?? null));
+        if (touchesCredentials && !(await canManageWorkspacePins(workspaceId, userId))) {
+            return { success: false, error: 'Only the owner, Practice Manager, or Head of Chamber and above can change PINs, the firm code or the join password' };
+        }
 
         const data: WorkspaceSettingsUpdate & { joinPassword?: string } = {};
 
@@ -99,7 +116,12 @@ export async function updateWorkspaceSettings(workspaceId: string, settings: Wor
         if (settings.secondaryColor !== undefined) data.secondaryColor = settings.secondaryColor;
         if (settings.accentColor !== undefined) data.accentColor = settings.accentColor;
         if (settings.brandingCompleted !== undefined) data.brandingCompleted = settings.brandingCompleted;
-        if (settings.litigationPin !== undefined) data.litigationPin = settings.litigationPin;
+        if (settings.litigationPin !== undefined) {
+            if (settings.litigationPin && !/^\d{5}$/.test(settings.litigationPin)) {
+                return { success: false, error: 'PIN must be exactly 5 digits' };
+            }
+            data.litigationPin = settings.litigationPin ? await hashPin(settings.litigationPin) : null;
+        }
 
         if (settings.joinPassword) {
             data.joinPassword = await bcrypt.hash(settings.joinPassword, 10);
@@ -116,7 +138,6 @@ export async function updateWorkspaceSettings(workspaceId: string, settings: Wor
                 secondaryColor: true,
                 accentColor: true,
                 brandingCompleted: true,
-                litigationPin: true,
             },
         });
 
