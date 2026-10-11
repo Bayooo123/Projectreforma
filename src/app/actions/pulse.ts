@@ -257,7 +257,7 @@ export async function getPulseFeedFirmwide(workspaceId: string): Promise<PulseIt
                 title: `Escalation unresolved — ${relatedTo || task.title}`,
                 description: `"${task.title}" assigned to ${task.assignedTo?.name || 'a team member'} has received no update in ${daysPast} day${daysPast !== 1 ? 's' : ''}.${relatedTo ? ` Related to: ${relatedTo}.` : ''} ${daysPast > 2 ? 'Now escalated to managing partner.' : 'Action required.'}`,
                 timeLabel: daysPast === 1 ? '1 day ago' : `${daysPast} days ago`,
-                categories: ['matter', 'firm'], ctaLabel: 'Review escalation', ctaHref: '/management/office',
+                categories: ['matter', 'firm'], ctaLabel: 'Review escalation', ctaHref: task.brief?.id ? `/briefs/${task.brief.id}` : '/briefs',
             });
         }
 
@@ -268,7 +268,7 @@ export async function getPulseFeedFirmwide(workspaceId: string): Promise<PulseIt
                 id: `inv-${inv.id}`, severity: 'urgent', section: 'urgent', iconType: 'invoice',
                 title: `Invoice overdue — ${inv.client.name}`,
                 description: `Invoice #${inv.invoiceNumber} for ${formatNaira(Number(inv.totalAmount))} sent on ${inv.date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} remains unpaid. ${daysOverdue} day${daysOverdue !== 1 ? 's' : ''} overdue.`,
-                timeLabel: `${daysOverdue}d ago`, categories: ['billing', 'firm'], ctaLabel: 'Send reminder', ctaHref: '/management/office',
+                timeLabel: `${daysOverdue}d ago`, categories: ['billing', 'firm'], ctaLabel: 'Send reminder', ctaHref: `/finance/invoices/${inv.id}`,
             });
         }
 
@@ -531,7 +531,7 @@ export async function getPulseFeedUser(workspaceId: string): Promise<PulseItem[]
                 id: `my-task-${task.id}`, severity: 'urgent', section: 'urgent', iconType: 'calendar',
                 title: `Overdue task — ${task.title}`,
                 description: `"${task.title}" was due ${daysPast} day${daysPast !== 1 ? 's' : ''} ago.${relatedName ? ` Related to: ${relatedName}.` : ''} Action required.`,
-                timeLabel: 'Today', categories: ['calendar', 'user'], ctaLabel: 'Open task', ctaHref: '/management/office',
+                timeLabel: 'Today', categories: ['calendar', 'user'], ctaLabel: 'Open task', ctaHref: task.brief?.id ? `/briefs/${task.brief.id}` : '/briefs',
             });
         }
 

@@ -91,7 +91,7 @@ const BottomNavigation = ({ user }: BottomNavigationProps) => {
     },
     {
       name: 'Log Expense',
-      href: '/management/office',
+      href: '/finance?tab=expenses',
       icon: TrendingDown,
       color: '#dc2626',
       bg: '#FEF2F2',

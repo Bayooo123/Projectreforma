@@ -3,7 +3,9 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { DollarSign, Receipt, CreditCard, TrendingDown, Plus } from 'lucide-react';
+import { Receipt, CreditCard, Plus } from 'lucide-react';
+import FinancialLog from '@/components/management/FinancialLog';
+import { PinProtection } from '@/components/auth/PinProtection';
 import styles from './Finance.module.css';
 
 type Tab = 'invoices' | 'payments' | 'expenses';
@@ -30,15 +32,22 @@ function statusPill(status: string) {
 }
 
 interface Props {
+    workspaceId: string;
     invoices: any[];
     payments: any[];
     expenses: any[];
+    expenseSummaries: any[];
+    userRole: string;
+    isOwner: boolean;
     outstanding: number;
     collectedMTD: number;
     expensesMTD: number;
 }
 
-export default function FinanceClient({ invoices, payments, expenses, outstanding, collectedMTD, expensesMTD }: Props) {
+export default function FinanceClient({
+    workspaceId, invoices, payments, expenses, expenseSummaries, userRole, isOwner,
+    outstanding, collectedMTD, expensesMTD,
+}: Props) {
     const searchParams = useSearchParams();
     const [tab, setTab] = useState<Tab>('invoices');
 
@@ -143,27 +152,15 @@ export default function FinanceClient({ invoices, payments, expenses, outstandin
             )}
 
             {tab === 'expenses' && (
-                <div className={styles.list}>
-                    {expenses.length === 0 && <div className={styles.empty}>No expenses recorded</div>}
-                    {(expenses as any[]).map((e: any) => (
-                        <div key={e.id} className={styles.card}>
-                            <div className={styles.cardIcon} style={{ background: '#FEF2F2' }}>
-                                <TrendingDown size={18} color="#EF4444" />
-                            </div>
-                            <div className={styles.cardBody}>
-                                <div className={styles.cardName}>{e.description || e.category || 'Expense'}</div>
-                                <div className={styles.cardSub}>
-                                    {e.category || ''} · {fmtDate(e.date || e.createdAt)}
-                                </div>
-                            </div>
-                            <div className={styles.cardTrail}>
-                                <div className={`${styles.cardAmount} ${styles.cardAmountNeg}`}>
-                                    -{fmt(Number(e.amount || 0))}
-                                </div>
-                            </div>
-                        </div>
-                    ))}
-                </div>
+                <PinProtection workspaceId={workspaceId} featureId="office" module="office" variant="office">
+                    <FinancialLog
+                        workspaceId={workspaceId}
+                        initialExpenses={expenses}
+                        initialSummaries={expenseSummaries}
+                        userRole={userRole}
+                        isOwner={isOwner}
+                    />
+                </PinProtection>
             )}
 
             {/* New Invoice FAB */}

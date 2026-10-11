@@ -3,7 +3,6 @@ import {
   FileText,
   Gavel,
   Users,
-  Briefcase,
   BarChart2,
   ShieldCheck,
   Terminal,
@@ -72,7 +71,6 @@ export const navigationGroups: NavGroup[] = [
     label: 'Workspace',
     color: '#0369a1',
     items: [
-      { name: 'Office Manager', href: '/management/office', icon: Briefcase },
       { name: 'Email Inbox', href: '/emails', icon: Inbox },
       { name: 'Notifications', href: '/notifications', icon: Bell },
       { name: 'Settings', href: '/settings', icon: Settings },
