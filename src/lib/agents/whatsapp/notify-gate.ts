@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/prisma';
 import { sendWhatsAppMessage } from './send';
+import { lagosNow, isQuietHours, hasReachedDailyCap } from '@/lib/notify/gate-core';
 
 // Shared gate for every PROACTIVE WhatsApp nudge (cron/scan-triggered — not
 // replies to an inbound message, which are never gated). Without this,
@@ -8,33 +9,14 @@ import { sendWhatsAppMessage } from './send';
 // added to the anomaly detector, meeting scan, or brief manager should route
 // its WhatsApp send through here rather than calling sendWhatsAppMessage
 // directly.
+//
+// Quiet-hours/daily-cap primitives live in @/lib/notify/gate-core, shared
+// with the email nudge gate — only the resource name, cap, and send call
+// are WhatsApp-specific here.
 
-const QUIET_HOURS_START = 21; // 9pm WAT
-const QUIET_HOURS_END = 7;    // 7am WAT
+export { lagosNow };
+
 const MAX_NUDGES_PER_DAY = 5;
-const LAGOS_UTC_OFFSET_HOURS = 1; // WAT = UTC+1 year-round, no DST
-
-export function lagosNow(): Date {
-    return new Date(Date.now() + LAGOS_UTC_OFFSET_HOURS * 3600_000);
-}
-
-export function isQuietHours(): boolean {
-    const hour = lagosNow().getUTCHours();
-    return hour >= QUIET_HOURS_START || hour < QUIET_HOURS_END;
-}
-
-function startOfTodayLagos(): Date {
-    const now = lagosNow();
-    const startOfDayUTCClock = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
-    return new Date(startOfDayUTCClock - LAGOS_UTC_OFFSET_HOURS * 3600_000);
-}
-
-async function hasReachedDailyCap(userId: string): Promise<boolean> {
-    const count = await prisma.workspaceActivityLog.count({
-        where: { userId, resource: 'WHATSAPP_NUDGE', createdAt: { gte: startOfTodayLagos() } },
-    });
-    return count >= MAX_NUDGES_PER_DAY;
-}
 
 interface GatedNudgeParams {
     workspaceId: string;
@@ -53,7 +35,7 @@ interface GatedNudgeParams {
 export async function sendGatedWhatsAppNudge(params: GatedNudgeParams): Promise<boolean> {
     if (!params.urgent) {
         if (isQuietHours()) return false;
-        if (await hasReachedDailyCap(params.userId)) return false;
+        if (await hasReachedDailyCap(params.userId, 'WHATSAPP_NUDGE', MAX_NUDGES_PER_DAY)) return false;
     }
 
     await sendWhatsAppMessage(params.phone, params.message);
