@@ -405,6 +405,7 @@ model Matter {
   matterQuestions       MatterQuestion[]
   litigationMilestones  LitigationMilestone[]
   pulseEvents           PulseEvent[]
+  clientUpdateDrafts    ClientUpdateDraft[]
 
   @@index([workspaceId])
   @@index([status])
@@ -461,6 +462,7 @@ model CalendarEntry {
   appearances            User[]                  @relation("CalendarAppearances")
   matterQuestions        MatterQuestion[]
   recordings             MeetingRecording[]
+  clientUpdateDrafts     ClientUpdateDraft[]
 
   @@index([briefId], map: "CourtDate_briefId_idx")
   @@index([clientId], map: "CourtDate_clientId_idx")
@@ -522,6 +524,31 @@ model ClientCommunication {
   @@index([matterId])
   @@index([clientId])
   @@index([sentAt])
+}
+
+// First Draft — a client-update draft generated when a court attendance is
+// logged against a matter (recordProceeding/adjournMatter). Persisted so a
+// lawyer can review/edit before it sends (never auto-sent) and so finalText
+// vs draftText becomes a reusable signal for how much lawyers edit these.
+model ClientUpdateDraft {
+  id              String    @id @default(cuid())
+  workspaceId     String
+  matterId        String
+  calendarEntryId String
+  draftText       String
+  finalText       String?
+  status          String    @default("pending") // pending | approved | sent | discarded
+  approvedById    String?
+  createdAt       DateTime  @default(now())
+  approvedAt      DateTime?
+  sentAt          DateTime?
+
+  matter        Matter        @relation(fields: [matterId], references: [id], onDelete: Cascade)
+  calendarEntry CalendarEntry @relation(fields: [calendarEntryId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, status])
+  @@index([matterId])
+  @@index([calendarEntryId])
 }
 
 model Brief {

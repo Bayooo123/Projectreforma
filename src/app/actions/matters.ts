@@ -1,6 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import { after } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { requireAuth, requirePermission } from '@/lib/auth-utils';
 import { logActivity } from '@/lib/log-activity';
@@ -8,6 +9,7 @@ import { createNotification } from '@/app/actions/notifications';
 import { scheduleCourtReminders } from '@/lib/courtReminders';
 import { initializeMilestonesForMatter } from '@/app/actions/litigation-milestones';
 import { MatterService } from '@/lib/services/matters/matter-service';
+import { triggerFirstDraftForCourtEvent } from '@/lib/first-draft/trigger';
 
 async function assertWorkspaceMembership(workspaceId: string) {
     const user = await requireAuth();
@@ -182,9 +184,9 @@ export async function recordProceeding(input: {
         });
         if (!matter) return { success: false, error: 'Matter not found' };
 
-        await prisma.$transaction(async tx => {
+        const sittingEntry = await prisma.$transaction(async tx => {
             // Always create a new entry — each sitting is its own record
-            await tx.calendarEntry.create({
+            const entry = await tx.calendarEntry.create({
                 data: {
                     matterId: input.matterId,
                     date: input.date,
@@ -226,7 +228,19 @@ export async function recordProceeding(input: {
                 const recipientIds = [input.userId, matter.lawyerInChargeId].filter(Boolean) as string[];
                 await scheduleCourtReminders(tx, nextEntry.id, input.adjournedTo, input.matterId, recipientIds);
             }
+
+            return entry;
         });
+
+        // First Draft: generate the client update after the response is sent,
+        // not inline — drafting is an LLM call and must never delay or fail
+        // the write the lawyer is actually waiting on.
+        after(() => triggerFirstDraftForCourtEvent({
+            workspaceId: matter.workspaceId,
+            matterId: input.matterId,
+            calendarEntryId: sittingEntry.id,
+            userId: input.userId,
+        }));
 
         const dateStr = input.adjournedTo
             ? input.adjournedTo.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
@@ -365,7 +379,7 @@ export async function adjournMatter(
             },
         });
 
-        await prisma.$transaction(async tx => {
+        const sittingEntry = await prisma.$transaction(async tx => {
             await tx.matter.update({
                 where: { id: matterId },
                 data: { nextCourtDate: newDate },
@@ -392,6 +406,8 @@ export async function adjournMatter(
             ].filter(Boolean) as string[];
 
             await scheduleCourtReminders(tx, entry.id, newDate, matterId, recipientIds);
+
+            return entry;
         });
 
         if (matter) {
@@ -405,6 +421,13 @@ export async function adjournMatter(
                 recipients: 'ALL',
                 relatedMatterId: matterId,
             }).catch(() => {});
+
+            after(() => triggerFirstDraftForCourtEvent({
+                workspaceId: matter.workspaceId,
+                matterId,
+                calendarEntryId: sittingEntry.id,
+                userId,
+            }));
         }
 
         revalidatePath('/calendar');

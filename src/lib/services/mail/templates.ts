@@ -176,6 +176,19 @@ export const getPasswordResetEmail = (url: string) => {
     });
 };
 
+export const getFirstDraftReadyEmail = (matterName: string, url: string) => {
+    return sharedLayout({
+        title: 'A client update is ready for review',
+        previewTextText: `First Draft prepared a client update for ${matterName}`,
+        content: `
+      <p>A client update for <strong>${matterName}</strong> is ready for your review.</p>
+      <p>Nothing has been sent — review the draft, edit anything that needs it, and send from there.</p>
+    `,
+        ctaText: 'Review Draft',
+        ctaUrl: url
+    });
+};
+
 export const getGuestWelcomeEmail = (guestName: string, workspaceName: string, designation: string, setPasswordUrl: string) => {
     return sharedLayout({
         title: `You've been added to ${workspaceName}`,

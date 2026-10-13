@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation';
 import { getCurrentUserWithWorkspace } from '@/lib/workspace';
-import { FileEdit } from 'lucide-react';
-import styles from './page.module.css';
+import { getPendingDrafts } from '@/app/actions/first-draft';
+import FirstDraftClient from './FirstDraftClient';
 
 export default async function FirstDraftPage() {
     const data = await getCurrentUserWithWorkspace();
@@ -17,18 +17,7 @@ export default async function FirstDraftPage() {
         );
     }
 
-    return (
-        <div className={styles.page}>
-            <div className={styles.icon}>
-                <FileEdit size={28} />
-            </div>
-            <h1 className={styles.title}>First Draft</h1>
-            <p className={styles.lead}>
-                When a court attendance is logged against a matter, First Draft will assemble what happened,
-                the next date, and what the client was last told, then prepare a client update for a lawyer
-                to review and send — no page to remember to visit, no blank page to start from.
-            </p>
-            <div className={styles.status}>In development — nothing drafted here yet.</div>
-        </div>
-    );
+    const drafts = await getPendingDrafts(data.workspace.id);
+
+    return <FirstDraftClient initialDrafts={drafts as any} />;
 }
