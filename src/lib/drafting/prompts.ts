@@ -49,6 +49,23 @@ Your role is to draft high-fidelity legal documents based on specific facts and 
 - Do not invent facts not present in the Brief — if something is uncertain, phrase it generally rather than fabricating specifics.
 `,
 
+    FILING_STRUCTURAL_REVIEW: `
+**Task:** Proofread the following Nigerian court filing document before it is filed. You are checking for defects, not reviewing its legal merits or arguing its strength.
+
+**Document type:** {{DOC_TYPE}}
+
+**Text:**
+{{TEXT}}
+
+**Check for, and report only what you actually find — do not invent issues to fill out the list:**
+1. American English where British English is the firm's standard (e.g. "color" instead of "colour", "-ize" instead of "-ise", "realize" instead of "realise", "defense" instead of "defence").
+2. Grammatical errors: dangling or incomplete sentences, subject-verb disagreement, doubled punctuation (e.g. two full stops together), a sentence that trails off mid-clause.
+3. Structural defects: numbered paragraphs with no content (an orphaned list marker), unfilled template placeholders (a blank amount, an ellipsis or underscore left where a figure or date belongs, a bracketed instruction left in), a section that is clearly meant to list several items but lists none.
+4. If this is a Motion: confirm the party or subject the motion is brought against is actually named, and named consistently, wherever it is referenced.
+
+**Output format:** A short plain-text list. For each issue: its type (british_english / grammar / structural / motion_party), a short exact quote of the problem text, and one sentence on what's wrong. If you find nothing, say plainly "No issues found." — do not pad the list with stylistic opinions or legal commentary.
+`,
+
     REVIEW_CRITIQUE: `
 **Task:** Review the following legal text and provide a critique based on the Brief.
 
