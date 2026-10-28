@@ -1647,3 +1647,19 @@ model InboxAttachment {
   @@index([source])
   @@index([inboundEmailId])
 }
+
+/// Ojogbon (academic writing supervisor): one row per paper a user is writing.
+/// The whole paper (phases, notes, library points, research) is kept as JSON,
+/// mirroring the client's project object, so the studio can evolve without
+/// a migration for every new field. Not related to Workspace: Ojogbon users
+/// are individuals and usually have no law-firm workspace.
+model OjogbonPaper {
+  id        String   @id
+  userId    String
+  title     String
+  data      Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, updatedAt])
+}

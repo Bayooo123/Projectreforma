@@ -56,6 +56,10 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+    // Ojogbon's studio page is read from disk by its route handler.
+    outputFileTracingIncludes: {
+        '/ojogbon/app': ['./public/ojogbon-studio/app.html'],
+    },
     experimental: {
         optimizePackageImports: ['lucide-react'],
     },

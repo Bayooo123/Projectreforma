@@ -1,0 +1,660 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Ojogbon Studio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&family=Literata:opsz,wght@7..72,400;7..72,600&family=JetBrains+Mono:wght@500&display=swap">
+<script src="/ojogbon-studio/vendor/mammoth.browser.min.js"></script>
+<script src="/ojogbon-studio/vendor/pdf.min.js"></script>
+<style>
+/* Layout: writing studio. Phase rail on the left, the brief + notepad in the centre, Ojogbon's notes on the right. Stacks on phones. */
+:root{
+  --bg:#eef0f6; --surface:#ffffff; --paper:#fffdf7; --ink:#1b2140; --muted:#5d6385; --line:#d9dce9; --rule:#e9e4d4;
+  --pen:#2f45c4; --pen-soft:#e4e8fb; --hl:#ffe36b; --hl-ink:#1b2140;
+  --ok:#167a6b; --ok-bg:#ddf3ee; --warn:#9a5b00; --warn-bg:#fcefd6; --bad:#b42318; --bad-bg:#fde4e1;
+  --display:"Bricolage Grotesque","Segoe UI",system-ui,sans-serif;
+  --body:"Atkinson Hyperlegible",system-ui,sans-serif;
+  --write:"Literata",Georgia,serif;
+  --mono:"JetBrains Mono",ui-monospace,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#11142a; --surface:#1a1e3a; --paper:#181b33; --ink:#e8eaf6; --muted:#a3a8c8; --line:#2c3157; --rule:#252945;
+  --pen:#8c9cff; --pen-soft:#252c5c; --hl:#f2d24b; --hl-ink:#14172e;
+  --ok:#5fd3bf; --ok-bg:#173a36; --warn:#f0b866; --warn-bg:#3a2c14; --bad:#ff8a7a; --bad-bg:#3f1f1c; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#11142a; --surface:#1a1e3a; --paper:#181b33; --ink:#e8eaf6; --muted:#a3a8c8; --line:#2c3157; --rule:#252945;
+  --pen:#8c9cff; --pen-soft:#252c5c; --hl:#f2d24b; --hl-ink:#14172e;
+  --ok:#5fd3bf; --ok-bg:#173a36; --warn:#f0b866; --warn-bg:#3a2c14; --bad:#ff8a7a; --bad-bg:#3f1f1c; color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.5;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:18px 48px}
+h1,h2,h3,h4{font-family:var(--display);margin:0;text-wrap:balance}
+button{font:inherit;cursor:pointer;border-radius:999px;border:1.5px solid var(--ink);background:transparent;color:var(--ink);padding:7px 14px;font-weight:700;font-size:14px}
+button:hover:not(:disabled){background:var(--pen-soft)}
+button.solid{background:var(--ink);color:var(--bg)}
+button.solid:hover:not(:disabled){background:var(--pen);border-color:var(--pen)}
+button.quiet{border-color:var(--line)}
+button:disabled{opacity:.45;cursor:default}
+button:focus-visible,textarea:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--pen);outline-offset:2px}
+input,select,textarea{font:inherit;color:var(--ink);background:var(--surface);border:1.5px solid var(--line);border-radius:10px;padding:8px 10px}
+label.f{display:flex;flex-direction:column;gap:6px;font-weight:700;font-size:14px}
+label.f span.h{font-weight:400;color:var(--muted);font-size:13px}
+
+.app{max-width:1440px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+.bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.bar h1{font-size:22px;font-weight:800;margin-right:auto;display:flex;align-items:baseline;gap:10px}
+.bar h1 small{font-family:var(--body);font-weight:400;font-size:13px;color:var(--muted)}
+.bar select{max-width:340px;min-width:0}
+.save{font-size:12px;color:var(--muted);font-family:var(--mono)}
+
+.cols{display:grid;grid-template-columns:240px minmax(0,1fr) 360px;gap:14px;align-items:start}
+@media (max-width:1180px){.cols{grid-template-columns:220px minmax(0,1fr)}.notes{grid-column:1/-1}}
+@media (max-width:760px){.cols{grid-template-columns:1fr}}
+
+/* rail */
+.rail{background:var(--surface);border:1.5px solid var(--line);border-radius:14px;padding:10px;display:flex;flex-direction:column;gap:4px;position:sticky;top:calc(10px + env(safe-area-inset-top,0px))}
+.rail .topic{padding:6px 8px 10px;border-bottom:1px solid var(--line);margin-bottom:4px}
+.rail .topic b{display:block;font-family:var(--display);font-size:15px;line-height:1.2}
+.rail .topic span{font-size:12px;color:var(--muted)}
+.ph{display:flex;gap:10px;align-items:flex-start;text-align:left;border:0;border-radius:10px;padding:8px;font-weight:400;width:100%}
+.ph:hover{background:var(--pen-soft)}
+.ph.on{background:var(--ink);color:var(--bg)}
+.ph .n{font-family:var(--mono);font-size:12px;min-width:1.6em;padding-top:2px}
+.ph .t{flex:1;min-width:0;line-height:1.3;font-weight:700;font-size:14px}
+.ph .d{width:10px;height:10px;border-radius:50%;border:2px solid var(--muted);margin-top:4px;flex:none}
+.ph .d.draft{border-color:var(--pen);background:var(--pen-soft)}
+.ph .d.stale{border-color:var(--warn);background:var(--warn-bg)}
+.ph .d.done{border-color:var(--ok);background:var(--ok)}
+.ph.on .d{border-color:var(--bg)}
+.ph.final{margin-top:6px;border-top:1px solid var(--line);border-radius:0 0 10px 10px;padding-top:12px}
+.legend{font-size:12px;color:var(--muted);padding:8px;display:flex;flex-direction:column;gap:3px}
+.legend i{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;vertical-align:middle;border:2px solid}
+@media (max-width:760px){.rail{position:static;flex-direction:row;overflow-x:auto;gap:6px}.rail .topic,.legend{display:none}.ph{width:auto;min-width:150px}}
+
+/* centre */
+.main{display:flex;flex-direction:column;gap:14px;min-width:0}
+.brief{background:var(--surface);border:1.5px solid var(--line);border-radius:14px;padding:16px 18px;display:flex;flex-direction:column;gap:10px}
+.brief .eye{font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);display:flex;gap:10px;flex-wrap:wrap}
+.brief h2{font-size:clamp(20px,2.6vw,26px);font-weight:800}
+.brief p{margin:0;max-width:72ch}
+.brief .goal{font-weight:700}
+details.read{border-top:1px dashed var(--line);padding-top:8px}
+details.read summary{cursor:pointer;font-weight:700;font-size:14px;color:var(--pen)}
+.reads{list-style:none;padding:0;margin:8px 0 0;display:flex;flex-direction:column;gap:8px}
+.reads li{display:grid;grid-template-columns:auto 1fr;gap:2px 10px;font-size:14px}
+.reads .who{font-weight:700}
+.reads .why{grid-column:2;color:var(--muted)}
+.tag{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.04em;border-radius:5px;padding:1px 6px;text-transform:uppercase}
+.tag.library{background:var(--ink);color:var(--bg)}
+/* library */
+.libadd{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.libadd>*{min-width:0}
+@media (max-width:760px){.libadd{grid-template-columns:1fr}}
+.libbox{border:1.5px dashed var(--muted);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:8px;font-size:14px}
+.libbox b{font-size:15px}
+.libbox .row{display:flex;gap:8px;flex-wrap:wrap}
+.libbox input[type=text]{flex:1;min-width:0}
+.srclist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
+.srcitem{border:1.5px solid var(--line);border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:6px;font-size:14px}
+.srcitem .hd{display:flex;gap:10px;justify-content:space-between;align-items:flex-start}
+.srcitem .ti{font-weight:700;font-size:15px}
+.srcitem .m{color:var(--muted);font-size:13px}
+.srcitem .x{padding:2px 10px;font-size:13px}
+.st{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;border-radius:5px;padding:1px 6px;white-space:nowrap}
+.st.supports{background:var(--ok-bg);color:var(--ok)} .st.contradicts{background:var(--bad-bg);color:var(--bad)} .st.complicates{background:var(--warn-bg);color:var(--warn)} .st.neutral,.st.context{background:var(--pen-soft);color:var(--pen)}
+.st.reading{background:var(--pen-soft);color:var(--pen)} .st.error{background:var(--bad-bg);color:var(--bad)}
+.claims{list-style:none;margin:6px 0 0;padding:0;display:flex;flex-direction:column;gap:8px}
+.claims li{border-left:3px solid var(--line);padding:2px 0 2px 10px;display:flex;flex-direction:column;gap:3px}
+.claims li.supports{border-color:var(--ok)} .claims li.contradicts{border-color:var(--bad)} .claims li.complicates{border-color:var(--warn)}
+.claims q{font-family:var(--write);color:var(--muted);font-size:14px}
+.claims .use{font-size:13px}
+.claims .src{font-size:12px;color:var(--muted);font-family:var(--mono)}
+details.plib{border-top:1px dashed var(--line);padding-top:8px}
+details.plib summary{cursor:pointer;font-weight:700;font-size:14px;color:var(--ink)}
+.plib .none{font-size:14px;color:var(--muted);margin:6px 0 0}
+.tag.case{background:var(--pen-soft);color:var(--pen)} .tag.law{background:var(--ok-bg);color:var(--ok)} .tag.book,.tag.article{background:var(--warn-bg);color:var(--warn)} .tag.mine{background:var(--hl);color:var(--hl-ink)} .tag.study{background:var(--bad-bg);color:var(--bad)}
+
+.pad{background:var(--paper);border:1.5px solid var(--line);border-radius:14px;overflow:hidden;display:flex;flex-direction:column}
+.pad textarea{border:0;border-radius:0;background:transparent;font-family:var(--write);font-size:17px;line-height:32px;padding:16px 22px;min-height:460px;resize:vertical;
+  background-image:linear-gradient(transparent 31px,var(--rule) 31px);background-size:100% 32px;background-attachment:local;background-position:0 16px}
+.pad textarea:focus-visible{outline:none}
+.pad .tools{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:10px 12px;border-top:1.5px solid var(--line);background:var(--surface)}
+.wc{font-family:var(--mono);font-size:12px;color:var(--muted);margin-right:auto;display:flex;align-items:center;gap:8px}
+.wc .m{width:80px;height:6px;background:var(--line);border-radius:3px;overflow:hidden}
+.wc .m i{display:block;height:100%;background:var(--pen)}
+
+/* notes */
+.notes{background:var(--surface);border:1.5px solid var(--line);border-radius:14px;padding:14px 16px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.notes h3{font-size:18px;font-weight:800}
+.notes .empty{color:var(--muted);font-size:14px;margin:0}
+.sum{margin:0;font-size:14px}
+.stale-note{background:var(--warn-bg);color:var(--warn);border-radius:8px;padding:8px 10px;font-size:13px}
+.note{border:1.5px solid var(--line);border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:6px}
+.note .k{display:flex;gap:8px;align-items:center;justify-content:space-between}
+.kind{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;border-radius:5px;padding:2px 7px}
+.kind.reference{background:var(--hl);color:var(--hl-ink)} .kind.argument{background:var(--bad-bg);color:var(--bad)} .kind.accuracy{background:var(--bad-bg);color:var(--bad)}
+.kind.clarity,.kind.structure{background:var(--pen-soft);color:var(--pen)} .kind.style{background:var(--ok-bg);color:var(--ok)} .kind.strength{background:var(--ok-bg);color:var(--ok)}
+.note blockquote{margin:0;border-left:3px solid var(--hl);padding:2px 0 2px 10px;font-family:var(--write);font-size:14px;color:var(--muted);cursor:pointer}
+.note blockquote:hover{color:var(--ink)}
+.note p{margin:0;font-size:14px}
+.note .fix{font-size:14px}
+.note .fix b{font-weight:700}
+.srcs{list-style:none;margin:4px 0 0;padding:8px 10px;background:var(--bg);border-radius:8px;display:flex;flex-direction:column;gap:6px;font-size:13px}
+.srcs .why{color:var(--muted)}
+.next{background:var(--pen-soft);border-radius:10px;padding:10px 12px;font-size:14px}
+.next b{color:var(--pen)}
+.verify{font-size:12px;color:var(--muted)}
+.scores{display:flex;flex-direction:column;gap:8px}
+.score{display:grid;grid-template-columns:1fr auto;gap:2px 10px;font-size:14px}
+.score .bar5{grid-column:1/-1;height:6px;background:var(--line);border-radius:3px;overflow:hidden}
+.score .bar5 i{display:block;height:100%;background:var(--pen)}
+.score .c{grid-column:1/-1;color:var(--muted);font-size:13px}
+.score b{font-family:var(--mono)}
+.spin{display:inline-block;width:14px;height:14px;border:2px solid var(--line);border-top-color:var(--pen);border-radius:50%;animation:sp 0.8s linear infinite;vertical-align:-2px;margin-right:6px}
+@keyframes sp{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.spin{animation:none}}
+
+/* setup panel */
+.setup{background:var(--surface);border:2px solid var(--ink);border-radius:16px;padding:20px;display:flex;flex-direction:column;gap:14px;box-shadow:6px 6px 0 var(--ink)}
+.setup h2{font-size:24px;font-weight:800}
+.setup .row{display:grid;grid-template-columns:2fr 1fr;gap:12px}
+@media (max-width:640px){.setup .row{grid-template-columns:1fr}}
+.setup textarea{min-height:140px;resize:vertical}
+.setup .acts{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.drop{border:1.5px dashed var(--muted);border-radius:10px;padding:12px;font-size:14px;color:var(--muted);display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.msg{font-size:14px;color:var(--muted)}
+.msg.err{color:var(--bad)}
+.toast{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:9px 16px;border-radius:999px;font-weight:700;font-size:14px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:20;max-width:calc(100% - 32px);text-align:center}
+.toast.show{opacity:1}
+.offline{background:var(--warn-bg);color:var(--warn);border-radius:10px;padding:8px 12px;font-size:13px}
+a{color:var(--pen);font-weight:700;text-underline-offset:2px}
+.lk{display:inline-flex;gap:10px;flex-wrap:wrap;font-size:13px;margin-top:2px}
+
+/* research progress */
+.progress{background:var(--surface);border:2px solid var(--ink);border-radius:16px;padding:18px 20px;display:flex;flex-direction:column;gap:12px;box-shadow:6px 6px 0 var(--ink)}
+.progress h2{font-size:20px;font-weight:800}
+.progress .pbar{height:8px;border-radius:4px;background:var(--line);overflow:hidden}
+.progress .pbar i{display:block;height:100%;background:var(--pen);transition:width .4s}
+.steps{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.steps li{display:grid;grid-template-columns:22px 1fr;gap:2px 10px;align-items:start}
+.steps .ic{width:18px;height:18px;border-radius:50%;border:2px solid var(--line);margin-top:2px;display:grid;place-items:center;font-size:11px;font-weight:700}
+.steps li.run .ic{border-color:var(--line);border-top-color:var(--pen);animation:sp .8s linear infinite}
+.steps li.done .ic{background:var(--ok);border-color:var(--ok);color:var(--bg)}
+.steps li.skip .ic,.steps li.fail .ic{border-style:dashed;border-color:var(--muted)}
+.steps .lb{font-weight:700}
+.steps li.wait .lb,.steps li.skip .lb{color:var(--muted)}
+.steps .dt{grid-column:2;font-size:13px;color:var(--muted)}
+.progress .acts{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+
+/* literature view */
+.lit{display:flex;flex-direction:column;gap:18px}
+.lit h3{font-size:18px;font-weight:800;margin-bottom:8px}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px}
+.lc{border:1.5px solid var(--line);border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:6px;font-size:14px;min-width:0}
+.lc b{font-size:15px}
+.lc p{margin:0}
+.lc .m{color:var(--muted);font-size:13px}
+.pp{display:inline-flex;flex-wrap:wrap;gap:6px}
+.pp a{font-size:12px;background:var(--pen-soft);border-radius:5px;padding:1px 6px;text-decoration:none}
+.lib{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:10px}
+.lib li{border-bottom:1px solid var(--line);padding-bottom:10px;font-size:14px}
+.lib .ttl{font-weight:700}
+.lib .m{color:var(--muted);font-size:13px}
+.lib details{font-size:13px;color:var(--muted);margin-top:4px}
+.lib summary{cursor:pointer}
+.locked{border:1.5px dashed var(--muted);border-radius:12px;padding:12px;color:var(--muted);font-size:14px}
+.str{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;border-radius:5px;padding:1px 6px}
+.str.strong{background:var(--bad-bg);color:var(--bad)} .str.moderate{background:var(--warn-bg);color:var(--warn)} .str.weak{background:var(--ok-bg);color:var(--ok)}
+.rel{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;background:var(--pen-soft);color:var(--pen);border-radius:5px;padding:1px 6px}
+</style>
+</head>
+<body>
+
+
+<div class="app">
+  <div class="bar">
+    <h1><a href="/ojogbon" style="color:inherit;text-decoration:none">Ojogbon</a> <small id="saveState" class="save"></small></h1>
+    <label for="projSel" class="save">Paper</label>
+    <select id="projSel" aria-label="Choose a paper"></select>
+    <button class="quiet" id="bNew">New paper</button>
+    <button class="quiet" id="bExport">Export</button>
+    <span class="save" id="who"></span>
+    <form method="post" action="/ojogbon/logout" style="margin:0"><button class="quiet" type="submit">Log out</button></form>
+  </div>
+  <div class="offline" id="aiOff" hidden>Ojogbon's notes aren't available right now. You can keep writing; your work is saved.</div>
+
+  <section class="progress" id="progress" hidden aria-live="polite"></section>
+
+  <section class="setup" id="setup" hidden>
+    <h2>Start a new paper</h2>
+    <p class="msg">Give the topic, and optionally a draft or outline. Ojogbon breaks it into phases, each with a brief and what to read before you write.</p>
+    <div class="row">
+      <label class="f" for="nTopic">Topic or working title<input id="nTopic" placeholder="e.g. Platform workers and employee status in Nigeria"></label>
+      <label class="f" for="nKind">Kind of paper<select id="nKind"><option>Journal article</option><option>Conference paper</option><option>Book chapter</option><option>Essay competition entry</option><option>Policy brief</option></select></label>
+    </div>
+    <label class="f" for="nCtx">Draft, outline or notes <span class="h">Paste here or upload a .docx, .md or .txt. Leave empty to start from the topic alone.</span><textarea id="nCtx"></textarea></label>
+    <div class="drop"><input type="file" id="nFile" accept=".docx,.md,.txt" aria-label="Upload a draft or outline"><span id="fileMsg">Uploading fills the box above.</span></div>
+    <label class="f" for="nMine">Your other work to draw on <span class="h">One per line. Ojogbon points you to these when they're relevant.</span><textarea id="nMine" style="min-height:100px"></textarea></label>
+    <p class="msg">With only a topic, Ojogbon prepares an outline and pulls references. With a solid draft (about 1,000 words or more) it also finds gaps in the literature, places your work within it and lists likely rebuttals.</p>
+    <div class="acts"><button class="solid" id="bBreak">Break it into phases</button><button class="quiet" id="bCancel">Cancel</button><span class="msg" id="setupMsg"></span></div>
+  </section>
+
+  <div class="cols" id="work">
+    <nav class="rail" id="rail" aria-label="Phases"></nav>
+
+    <div class="main">
+      <section class="brief" id="brief"></section>
+      <section class="pad" id="padWrap">
+        <textarea id="pad" aria-label="Your writing for this phase" placeholder="Write rough. Ojogbon can check it when you're ready."></textarea>
+        <div class="tools">
+          <span class="wc"><span id="wc">0 words</span><span class="m"><i id="wcm"></i></span></span>
+          <button class="quiet" id="bRef" title="Select a sentence first">Find a reference</button>
+          <button class="solid" id="bEval">Evaluate this phase</button>
+          <button id="bNext">Next phase</button>
+        </div>
+      </section>
+    </div>
+
+    <aside class="notes" id="notes" aria-live="polite"></aside>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const words=t=>(t.trim().match(/\S+/g)||[]).length;
+const uid=()=>Math.random().toString(36).slice(2,10);
+
+const MY_WORK="";
+
+/* ---------- state + storage ---------- */
+let S={projects:{},cur:null,ph:0};
+let serverStore=false,sample=null,downloads=null,mcp=true,dirty=new Set(),saveT=null;
+let LS="ojogbon-studio";
+async function api(path,opts={}){
+  const r=await fetch("/api/ojogbon/"+path,{method:opts.method||"GET",headers:{"Content-Type":"application/json"},body:opts.body?JSON.stringify(opts.body):undefined,credentials:"same-origin"});
+  if(r.status===401){location.href="/ojogbon/login";throw{code:"unauthorized"}}
+  const j=await r.json().catch(()=>({}));
+  if(!r.ok)throw{code:j.code||"error",message:j.error||"Something went wrong."};
+  return j}
+function lsLoad(){try{const d=JSON.parse(localStorage.getItem(LS)||"null");if(d&&d.projects)return d}catch(e){}return null}
+function lsSave(){try{localStorage.setItem(LS,JSON.stringify({projects:S.projects,cur:S.cur,ph:S.ph}))}catch(e){}}
+function P(){return S.projects[S.cur]}
+function setSave(t){$("saveState").textContent=t}
+function touch(){const p=P();if(!p)return;p.updated=Date.now();dirty.add(p.id);lsSave();setSave("Saving…");clearTimeout(saveT);saveT=setTimeout(flush,1500)}
+async function flush(){
+  if(!serverStore){setSave("Saved in this browser");dirty.clear();return}
+  const ids=[...dirty];dirty.clear();
+  try{for(const id of ids){const p=S.projects[id];if(p)await api("papers",{method:"PUT",body:{id,data:p}})}setSave("Saved")}
+  catch(e){ids.forEach(i=>dirty.add(i));setSave(e&&e.code==="too_large"?"Too large to save online; saved in this browser":"Couldn't save online; saved in this browser");clearTimeout(saveT);saveT=setTimeout(flush,15000)}
+}
+window.addEventListener("beforeunload",e=>{if(dirty.size&&serverStore){flush();e.preventDefault()}});
+
+/* ---------- rendering ---------- */
+function status(ph){if(!ph.text.trim())return"";if(ph.fb)return ph.fb.len===ph.text.length?"done":"stale";return"draft"}
+function renderProjects(){const s=$("projSel");s.innerHTML="";Object.values(S.projects).sort((a,b)=>(b.updated||0)-(a.updated||0)).forEach(p=>{const o=document.createElement("option");o.value=p.id;o.textContent=p.topic;if(p.id===S.cur)o.selected=true;s.appendChild(o)})}
+function renderRail(){
+  const p=P(),r=$("rail");r.innerHTML=`<div class="topic"><b>${esc(p.topic)}</b><span>${esc(p.kind)}</span></div>`;
+  p.phases.forEach((ph,i)=>{const b=document.createElement("button");b.className="ph"+(S.ph===i?" on":"");
+    b.innerHTML=`<span class="n">${String(i+1).padStart(2,"0")}</span><span class="t">${esc(ph.title)}</span><span class="d ${status(ph)}"></span>`;
+    b.onclick=()=>{S.ph=i;lsSave();renderAll()};r.appendChild(b)});
+  const lib=libOf(p),nReady=lib.sources.filter(s=>s.status==="ready").length;
+  const B=document.createElement("button");B.className="ph final"+(S.ph==="lib"?" on":"");
+  B.innerHTML=`<span class="n">▤</span><span class="t">Library${lib.sources.length?` (${lib.sources.length})`:""}</span><span class="d ${lib.sources.some(s=>s.status==="reading")?"draft":nReady?"done":""}"></span>`;B.onclick=()=>{S.ph="lib";lsSave();renderAll()};r.appendChild(B);
+  const L=document.createElement("button");L.className="ph"+(S.ph==="lit"?" on":"");
+  L.innerHTML=`<span class="n">◎</span><span class="t">Literature map</span><span class="d ${p.lit?(p.lit.solid?"done":"draft"):""}"></span>`;L.onclick=()=>{S.ph="lit";lsSave();renderAll()};r.appendChild(L);
+  const f=document.createElement("button");f.className="ph"+(S.ph==="final"?" on":"");
+  f.innerHTML=`<span class="n">✓</span><span class="t">Whole-paper review</span><span class="d ${p.final?"done":""}"></span>`;f.onclick=()=>{S.ph="final";lsSave();renderAll()};r.appendChild(f);
+  const lg=document.createElement("div");lg.className="legend";
+  lg.innerHTML=`<span><i style="border-color:var(--muted)"></i>Not started</span><span><i style="border-color:var(--pen);background:var(--pen-soft)"></i>Drafting</span><span><i style="border-color:var(--warn);background:var(--warn-bg)"></i>Changed since review</span><span><i style="border-color:var(--ok);background:var(--ok)"></i>Reviewed</span>`;r.appendChild(lg);
+}
+const A=(href,t)=>`<a href="${esc(href)}" target="_blank" rel="noopener">${t}</a>`;
+function linksFor(x){
+  if(x.url)return A(x.url,"Open paper");
+  if(x.type==="mine")return"";
+  const q=encodeURIComponent(((x.who||"")+" "+(x.what||"")).slice(0,200));
+  const gs=A("https://scholar.google.com/scholar?q="+q,"Search Google Scholar");
+  if(x.type==="case"||x.type==="law")return A("https://nigerialii.org/search/?q="+encodeURIComponent((x.who||"").slice(0,150)),"Search NigeriaLII")+gs;
+  return gs}
+function readsHTML(list){if(!list||!list.length)return"";
+  const linked=list.filter(x=>x.url).length;
+  return `<details class="read" open><summary>Read or check before you write (${list.length})</summary><ul class="reads">${list.map(x=>`<li><span class="tag ${esc(x.type||"article")}">${esc(x.type==="mine"?"yours":x.type||"source")}</span><span><span class="who">${esc(x.who)}</span>, ${esc(x.what)}</span><span class="why">${esc(x.why)}${linksFor(x)?`<br><span class="lk">${linksFor(x)}</span>`:""}</span></li>`).join("")}</ul><p class="verify">${linked?`${linked} paper${linked>1?"s":""} found in scholarly databases with direct links. `:""}Other suggestions come from Ojogbon: use the search links to find and check them before citing.</p></details>`}
+function renderBrief(){
+  const p=P(),b=$("brief");
+  if(S.ph==="lit"){$("padWrap").hidden=true;b.innerHTML=litHTML(p);wireLit();return}
+  if(S.ph==="lib"){$("padWrap").hidden=true;b.innerHTML=libViewHTML(p);wireLib();return}
+  if(S.ph==="final"){
+    const all=p.phases.reduce((a,x)=>a+words(x.text),0),target=p.phases.reduce((a,x)=>a+(x.words||0),0);
+    b.innerHTML=`<div class="eye"><span>Final step</span><span>${all.toLocaleString()} of ~${target.toLocaleString()} words</span></div><h2>Whole-paper review</h2><p>Ojogbon reads every phase together and checks the argument end to end: does each part earn its place, are claims referenced, does the conclusion follow, and is it ready to submit?</p><p class="goal">Thesis: ${esc(p.thesis||"")}</p>`;
+    $("padWrap").hidden=true;return}
+  $("padWrap").hidden=false;
+  const ph=p.phases[S.ph];
+  b.innerHTML=`<div class="eye"><span>Phase ${S.ph+1} of ${p.phases.length}</span><span>Aim for ~${ph.words} words</span></div><h2>${esc(ph.title)}</h2><p class="goal">${esc(ph.goal)}</p><p>${esc(ph.brief)}</p>${phaseLibHTML(p,S.ph)}${readsHTML(ph.read)}`;wireLib();
+  const pad=$("pad");if(pad.value!==ph.text)pad.value=ph.text;updWC();
+  $("bNext").textContent=S.ph<p.phases.length-1?"Next phase":"Go to whole-paper review";
+}
+function paperRef(lit,id){const x=(lit.papers||[]).find(q=>q.id===id);return x?A(x.url,esc(id)+": "+esc((x.authors||"").split(/,| et al/)[0])+" "+esc(x.year||"")):""}
+function refsChips(lit,ids){const h=(ids||[]).map(i=>paperRef(lit,i)).filter(Boolean);return h.length?`<span class="pp">${h.join("")}</span>`:""}
+function litHTML(p){
+  const l=p.lit;
+  let h=`<div class="eye"><span>Research</span>${l?`<span>${(l.papers||[]).length} papers · updated ${new Date(l.at).toLocaleDateString()}</span>`:""}</div><h2>Literature map</h2>`;
+  if(!l)return h+`<p>Pull references for this paper, then, once you have a solid draft, find the gaps in the literature, place your work within it and prepare for rebuttals.</p><p class="msg">Use the button in the notes panel to start.</p>`;
+  h+=`<div class="lit">`;
+  if(!l.solid)h+=`<div class="locked">Gaps, positioning and rebuttals unlock with a solid draft: about 1,000 words across your phases, or an uploaded draft. You have ${l.draftWords||0} words so far. Write more, then refresh the research.</div>`;
+  if(l.position){h+=`<section><h3>Where your work sits</h3><p>${esc(l.position)}</p>${(l.relations||[]).length?`<div class="cards" style="margin-top:10px">${l.relations.map(r=>`<div class="lc"><span><span class="rel">${esc(r.relation)}</span></span><p>${esc(r.note)}</p>${refsChips(l,[r.paper])}</div>`).join("")}</div>`:""}</section>`}
+  if((l.gaps||[]).length)h+=`<section><h3>Gaps in the existing literature</h3><div class="cards">${l.gaps.map(g=>`<div class="lc"><b>${esc(g.gap)}</b><p>${esc(g.how)}</p>${refsChips(l,g.papers)}</div>`).join("")}</div></section>`;
+  if((l.rebuttals||[]).length)h+=`<section><h3>Rebuttals to prepare for</h3><div class="cards">${l.rebuttals.map(r=>`<div class="lc"><span><span class="str ${esc(r.strength)}">${esc(r.strength)}</span></span><b>${esc(r.objection)}</b><p class="m">How to answer: ${esc(r.response)}</p>${refsChips(l,r.papers)}</div>`).join("")}</div></section>`;
+  if((l.papers||[]).length){
+    h+=`<section><h3>Reference library</h3><ul class="lib">${l.papers.map(x=>{const phs=p.phases.map((ph,i)=>ph.read&&ph.read.some(r=>r.url===x.url)?i:-1).filter(i=>i>=0);
+      return `<li><span class="sec">${esc(x.id)}</span> ${A(x.url,`<span class="ttl">${esc(x.title)}</span>`)}<div class="m">${esc([x.authors,x.year,x.journal].filter(Boolean).join(" · "))}${x.cites?` · ${esc(x.cites)}`:""}</div>${phs.length?`<div class="pp" style="margin-top:4px">${phs.map(i=>`<a href="#" data-ph="${i}">Phase ${i+1}: ${esc(p.phases[i].title)}</a>`).join("")}</div>`:""}${x.abstract?`<details><summary>Abstract</summary>${esc(x.abstract)}</details>`:""}</li>`}).join("")}</ul><p class="verify">Found in scholarly databases (OpenAlex). Links open the paper's record or publisher page.</p></section>`}
+  else h+=`<p class="msg">${l.consensusOff?"Paper search wasn't available, so no papers with links were pulled. Each phase still lists suggested sources with search links.":"No papers found yet."}</p>`;
+  return h+`</div>`}
+function wireLit(){document.querySelectorAll("#brief a[data-ph]").forEach(a=>a.onclick=e=>{e.preventDefault();S.ph=+a.dataset.ph;lsSave();renderAll()})}
+function updWC(){const p=P();if(typeof S.ph==="string")return;const ph=p.phases[S.ph],w=words($("pad").value);
+  $("wc").textContent=`${w} / ~${ph.words} words`;$("wcm").style.width=Math.min(100,100*w/(ph.words||1))+"%"}
+function srcList(s){if(!s||!s.length)return"";return `<ul class="srcs">${s.map(x=>`<li><span class="tag ${esc(x.type||"article")}">${esc(x.type==="mine"?"yours":x.type||"source")}</span> <b>${esc(x.who)}</b>, ${esc(x.what)}${x.why?`<div class="why">${esc(x.why)}</div>`:""}${linksFor(x)?`<div class="lk">${linksFor(x)}</div>`:""}</li>`).join("")}</ul>`}
+function noteHTML(n){return `<div class="note"><div class="k"><span class="kind ${esc(n.kind)}">${esc(n.kind==="reference"?"needs a reference":n.kind)}</span></div>${n.quote?`<blockquote data-q="${esc(n.quote)}" title="Show in your text">“${esc(n.quote)}”</blockquote>`:""}<p>${esc(n.note)}</p>${n.fix?`<p class="fix"><b>Try:</b> ${esc(n.fix)}</p>`:""}${srcList(n.sources)}</div>`}
+function renderNotes(){
+  const p=P(),el=$("notes");
+  if(S.ph==="lib"){el.innerHTML=beyondHTML(p);wireLib();return}
+  if(S.ph==="lit"){
+    const dw=draftOf(p).w;
+    el.innerHTML=`<h3>Research</h3><p class="empty">${p.lit?"Refresh after you've written more. Gaps, positioning and rebuttals use everything you've written so far.":"Pulls papers with links from scholarly databases and matches them to your phases."}</p><p class="empty">You have ${dw.toLocaleString()} words written. ${dw>=SOLID?"That's enough for the full analysis.":`The full analysis starts at about ${SOLID.toLocaleString()}.`}</p><button class="solid" id="bLit"${sample&&!busy?"":" disabled"}>${p.lit?"Refresh research":"Run research"}</button>`;
+    $("bLit").onclick=()=>runResearch("refresh");return}
+  if(S.ph==="final"){
+    const f=p.final;
+    if(busy==="final"){el.innerHTML=`<h3>Ojogbon's notes</h3><p class="empty"><span class="spin"></span>Reading the whole paper…</p>`;return}
+    if(!f){el.innerHTML=`<h3>Ojogbon's notes</h3><p class="empty">When most phases have a draft, run the review. You get scores, the biggest problems, missing references and a verdict on whether it's ready.</p><button class="solid" id="bFinal"${sample?"":" disabled"}>Review the whole paper</button>`;$("bFinal").onclick=evalFinal;return}
+    el.innerHTML=`<h3>Whole-paper review</h3><p class="sum">${esc(f.verdict)}</p><div class="scores">${(f.scores||[]).map(s=>`<div class="score"><span>${esc(s.criterion)}</span><b>${esc(s.score)}/5</b><span class="bar5"><i style="width:${20*(+s.score||0)}%"></i></span><span class="c">${esc(s.comment)}</span></div>`).join("")}</div>
+      ${(f.issues||[]).map(noteHTML).join("")}${f.next?`<div class="next"><b>Do next:</b> ${esc(f.next)}</div>`:""}<button class="quiet" id="bFinal">Run the review again</button>`;
+    $("bFinal").onclick=evalFinal;return}
+  const ph=p.phases[S.ph],fb=ph.fb;
+  if(busy==="eval"){el.innerHTML=`<h3>Ojogbon's notes</h3><p class="empty"><span class="spin"></span>Reading this phase…</p>`;return}
+  let h=`<h3>Ojogbon's notes</h3>`;
+  if(refRes)h+=`<div class="note"><div class="k"><span class="kind reference">References for your selection</span><button class="quiet" id="xRef" style="padding:2px 10px">Close</button></div>${refRes.quote?`<blockquote data-q="${esc(refRes.quote)}">“${esc(refRes.quote)}”</blockquote>`:""}${refRes.note?`<p>${esc(refRes.note)}</p>`:""}${(refRes.papers||[]).length?`<p class="verify" style="margin-top:4px">Papers from scholarly databases:</p>${srcList(refRes.papers.map(x=>({who:[x.authors,x.year].filter(Boolean).join(", "),what:x.title,type:"study",url:x.url,why:x.journal})))}`:""}${(refRes.sources||[]).length?`<p class="verify" style="margin-top:4px">Suggested by Ojogbon:</p>`:""}${srcList(refRes.sources)}${refRes.search?`<p class="verify">Search terms: ${esc(refRes.search)}</p>`:""}<p class="verify">Check every citation before you rely on it.</p></div>`;
+  if(busy==="ref")h+=`<p class="empty"><span class="spin"></span>Looking for references…</p>`;
+  if(!fb){h+=`<p class="empty">Write something, then press <b>Evaluate this phase</b>. Ojogbon flags claims that need a reference, gaps in the argument and unclear passages, and points you to sources and your own work.</p><p class="empty">Select a sentence and press <b>Find a reference</b> for help with one claim.</p>`;el.innerHTML=h;wireNotes();return}
+  if(fb.len!==ph.text.length)h+=`<div class="stale-note">You've changed this phase since the last review.</div>`;
+  h+=`<p class="sum">${esc(fb.summary)}</p>`;
+  (fb.strengths||[]).forEach(s=>h+=noteHTML({kind:"strength",note:s}));
+  (fb.notes||[]).forEach(n=>h+=noteHTML(n));
+  if(fb.next)h+=`<div class="next"><b>Do next:</b> ${esc(fb.next)}</div>`;
+  el.innerHTML=h;wireNotes();
+}
+function wireNotes(){
+  document.querySelectorAll("#notes blockquote[data-q]").forEach(q=>q.onclick=()=>{const t=$("pad"),s=q.dataset.q,i=t.value.indexOf(s.slice(0,60));if(i<0){toast("That passage has changed");return}t.focus();t.setSelectionRange(i,i+s.length);
+    const lines=t.value.slice(0,i).split("\n").length;t.scrollTop=Math.max(0,(lines-3)*32)});
+  const x=$("xRef");if(x)x.onclick=()=>{refRes=null;renderNotes()};
+}
+function renderButtons(){const ai=!!sample;$("bEval").disabled=!ai||!!busy;$("bRef").disabled=!ai||!!busy;$("bBreak").disabled=!ai;$("aiOff").hidden=ai||!aiChecked}
+function renderAll(){renderProjects();$("projSel").hidden=!P();document.querySelector("label[for=projSel]").hidden=!P();if(run){$("setup").hidden=true;$("work").hidden=!P()}if(!P()){if(!run){$("work").hidden=true;$("setup").hidden=false;$("bCancel").hidden=true}$("bExport").hidden=true;renderButtons();return}$("bExport").hidden=false;renderRail();renderBrief();renderNotes();renderButtons()}
+function toast(t){const e=$("toast");e.textContent=t;e.classList.add("show");clearTimeout(e._t);e._t=setTimeout(()=>e.classList.remove("show"),2600)}
+
+/* ---------- Ojogbon ---------- */
+let busy=null,refRes=null,aiChecked=false;
+const SRC_SHAPE=`{"who":"author, case name or statute","what":"title / citation / year","why":"one line on why it helps","type":"case|law|book|article|study|mine|library"}`;
+const RULES=`Rules: Only name sources you are confident exist (real authors, real cases, real statutes). Prefer Nigerian authorities where relevant. Use type "mine" only for items from the author's own work list. Never invent page numbers or law report citations you are unsure of; give the case name and year instead. Write feedback plainly and directly, addressed to the author as "you". Reply with JSON only.`;
+function ctx(p){return `PAPER: "${p.topic}" (${p.kind})\nTHESIS: ${p.thesis||"(not yet stated)"}\nPHASES: ${p.phases.map((x,i)=>`${i+1}. ${x.title}`).join("; ")}\nAUTHOR'S OWN OTHER WORK:\n${p.mine||"(none listed)"}`}
+function aiErr(e){busy=null;const c=e&&e.code;toast(c==="rate_limited"?"Ojogbon is busy or you've hit a usage limit. Try again later.":c==="not_granted"?"Ojogbon access wasn't allowed for this page.":c==="cancelled"?"Cancelled":"Ojogbon couldn't answer. Try again.");if(c==="not_granted"){sample=null}renderAll()}
+
+async function evalPhase(){
+  const p=P(),ph=p.phases[S.ph],text=$("pad").value;if(!text.trim()){toast("Write something first");return}
+  ph.text=text;busy="eval";refRes=null;renderAll();
+  const prompt=`You are a demanding but encouraging supervisor for a Nigerian legal scholar writing an academic paper. Evaluate ONE section.\n\n${ctx(p)}\n\nTHIS SECTION: "${ph.title}"\nGoal: ${ph.goal}\nBrief: ${ph.brief}\nTarget length: ~${ph.words} words (current ${words(text)}).\n${libPromptFor(p,S.ph)}\nSECTION TEXT:\n"""\n${text}\n"""\n\nReturn JSON: {"summary":"2-3 sentences: how well it meets the goal","strengths":["up to 2 short strengths"],"notes":[{"kind":"reference|argument|accuracy|clarity|structure|style","quote":"exact short excerpt copied verbatim from the text (max 25 words)","note":"what's wrong or missing","fix":"a concrete suggestion","sources":[${SRC_SHAPE}]}],"next":"the single most useful next step"}.\nGive 3-8 notes, most important first. For every factual or legal claim that lacks support, add a "reference" note with 1-3 sources, including the author's own work where it genuinely fits. Flag phrasing that reads as machine-written or padded under "style". When a point from the author's library (listed above) would support or challenge a claim, cite it as a source with type "library", the paper's author and year as "who", and the page as part of "what"; flag any library point that contradicts the section and is not addressed. ${RULES}`;
+  try{const r=await sample.json(prompt,{modelTier:"complex",cache:false});ph.fb={...r,len:text.length,at:Date.now()};busy=null;touch();renderAll();toast("Notes ready")}
+  catch(e){aiErr(e)}
+}
+async function findRef(){
+  const t=$("pad"),sel=t.value.slice(t.selectionStart,t.selectionEnd).trim();
+  if(!sel){toast("Select the sentence that needs a reference first");return}
+  const p=P(),ph=p.phases[S.ph];busy="ref";refRes=null;renderAll();
+  const prompt=`A Nigerian legal scholar needs support for one claim in their paper.\n\n${ctx(p)}\nSECTION: ${ph.title}\n\nCLAIM:\n"""${sel}"""\n\nReturn JSON: {"note":"one or two sentences: what kind of authority this claim needs, and whether it's overstated","sources":[${SRC_SHAPE}],"search":"3-5 search terms for law reports or Google Scholar"}. Give 2-5 sources; include the author's own work when it fits. ${RULES}`;
+  try{const [r,papers]=await Promise.all([sample.json(prompt,{modelTier:"default",cache:false}),searchPapers(sel.slice(0,300)).catch(()=>[])]);
+    refRes={...r,papers:papers.slice(0,5),quote:sel};busy=null;renderAll()}catch(e){aiErr(e)}
+}
+async function evalFinal(){
+  const p=P();const has=p.phases.filter(x=>x.text.trim());if(!has.length){toast("Write at least one phase first");return}
+  busy="final";renderAll();
+  const body=p.phases.map((x,i)=>`## ${i+1}. ${x.title}\n${x.text.trim()||"[NOT YET WRITTEN]"}`).join("\n\n");
+  const prompt=`You are reviewing a complete draft academic paper by a Nigerian legal scholar, as a journal peer reviewer would.\n\n${ctx(p)}\n\nFULL DRAFT:\n"""\n${body}\n"""\n\nReturn JSON: {"verdict":"3-4 sentences: overall assessment and whether it is ready to submit","scores":[{"criterion":"Argument and thesis","score":1-5,"comment":"..."},{"criterion":"Use of authority and references","score":1-5,"comment":"..."},{"criterion":"Originality","score":1-5,"comment":"..."},{"criterion":"Structure and flow","score":1-5,"comment":"..."},{"criterion":"Evidence","score":1-5,"comment":"..."},{"criterion":"Writing","score":1-5,"comment":"..."}],"issues":[{"kind":"reference|argument|accuracy|clarity|structure|style","quote":"verbatim excerpt or empty","note":"...","fix":"...","sources":[${SRC_SHAPE}]}],"next":"the most important revision to make next"}. Give 4-10 issues across the whole paper, most important first; include inconsistencies between sections and unwritten sections. ${RULES}`;
+  try{const r=await sample.json(prompt,{modelTier:"complex",cache:false});p.final={...r,at:Date.now()};busy=null;touch();renderAll();toast("Review ready")}catch(e){aiErr(e)}
+}
+/* ---------- research pipeline ---------- */
+const SOLID=1000;
+const STEP={understand:"Understanding the topic",outline:"Preparing an outline",refs:"Pulling potential references",gaps:"Identifying gaps in the existing literature",situate:"Situating your work within the existing literature",rebut:"Identifying rebuttals to your arguments"};
+let run=null;
+function draftOf(p){const t=[p.source||"",...p.phases.map(x=>x.text?`## ${x.title}\n${x.text}`:"")].filter(Boolean).join("\n\n").trim();return{t,w:words(t)}}
+function renderProgress(){
+  const el=$("progress");if(!run){el.hidden=true;return}el.hidden=false;
+  const n=run.steps.length,d=run.steps.filter(s=>s.state==="done"||s.state==="skip"||s.state==="fail").length;
+  el.innerHTML=`<h2>${run.finished?(run.error?"Stopped":"Research complete"):esc(run.title)}</h2><div class="pbar"><i style="width:${100*d/n}%"></i></div>
+   <ol class="steps">${run.steps.map(s=>`<li class="${s.state}"><span class="ic">${s.state==="done"?"✓":""}</span><span class="lb">${esc(s.label)}</span>${s.detail?`<span class="dt">${esc(s.detail)}</span>`:""}</li>`).join("")}</ol>
+   ${run.finished?`<div class="acts">${run.error?`<span class="msg err">${esc(run.error)}</span>`:""}<button class="solid" id="bRunDone">${run.error?"Close":"Start writing"}</button>${!run.error&&P()&&P().lit?`<button class="quiet" id="bRunLit">See the literature map</button>`:""}</div>`:""}`;
+  if(run.finished){$("bRunDone").onclick=()=>{run=null;renderProgress()};const b=$("bRunLit");if(b)b.onclick=()=>{run=null;S.ph="lit";lsSave();renderProgress();renderAll()}}
+}
+function step(k,state,detail){const s=run.steps.find(x=>x.key===k);if(s){s.state=state;if(detail!==undefined)s.detail=detail}renderProgress()}
+
+function parseConsensus(res){
+  const txt=(res&&res.content||[]).filter(b=>b&&b.type==="text").map(b=>b.text).join("\n")||(typeof res?.payload==="string"?res.payload:"");
+  const out=[];const re=/\[(\d+)\]\s*\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)\s*\(([^)]*)\)\s*\n([\s\S]*?)(?=\n\s*\[\d+\]\s*\[|\n\s*IMPORTANT|\n\s*Upgrade|$)/g;let m;
+  while((m=re.exec(txt))){const meta=m[4].split(/,\s*/);const year=(m[4].match(/\b(19|20)\d{2}\b/)||[""])[0];
+    const cites=meta.find(s=>/citation/.test(s))||"";const authors=meta[0]||"";const journal=meta.filter(s=>s!==authors&&s!==year&&s!==cites).join(", ");
+    out.push({title:m[2].trim(),url:m[3],authors,year,journal,cites,abstract:m[5].replace(/\s+/g," ").trim().slice(0,700)})}
+  return out}
+async function searchPapers(q){const j=await api("search",{method:"POST",body:{query:q}});return (j.papers||[]).map(x=>({...x,abstract:x.abstract||""}))}
+
+async function runResearch(mode){
+  if(busy)return;
+  let p,draft,kind,topic,mine;
+  if(mode==="new"){
+    topic=$("nTopic").value.trim();if(!topic){$("setupMsg").textContent="Add a topic first.";$("setupMsg").className="msg err";return}
+    kind=$("nKind").value;mine=$("nMine").value.trim();draft=$("nCtx").value.trim();
+  }else{p=P();topic=p.topic;kind=p.kind;mine=p.mine;draft=draftOf(p).t}
+  const dw=words(draft);let solid=dw>=SOLID;
+  const keys=["understand",...(mode==="new"?["outline"]:[]),"refs","gaps","situate","rebut"];
+  run={title:mode==="new"?"Setting up your paper":"Refreshing your research",steps:keys.map(k=>({key:k,label:STEP[k],state:"wait",detail:(["gaps","situate","rebut"].includes(k)&&!solid)?"Needs a solid draft":""}))};
+  busy="run";if(mode==="new"){$("setup").hidden=true;$("work").hidden=false}renderAll();renderProgress();window.scrollTo({top:0,behavior:"smooth"});
+  const fail=(msg)=>{run.steps.filter(s=>s.state==="run"||s.state==="wait").forEach(s=>s.state="fail");run.finished=true;run.error=msg;busy=null;renderProgress();renderAll();if(mode==="new"&&!p){$("setup").hidden=false;$("work").hidden=true}};
+  const msgOf=e=>e&&e.code==="rate_limited"?"Ojogbon is busy or you've hit a usage limit. Try again later.":e&&e.code==="not_granted"?"Ojogbon access wasn't allowed for this page.":"Ojogbon couldn't finish this step. Try again.";
+  try{
+    // 1. understand
+    step("understand","run","Reading your "+(dw?`draft (${dw.toLocaleString()} words)`:"topic"));
+    const u=await sample.json(`You are helping a Nigerian legal scholar start a ${kind}.\nTOPIC: ${topic}\nAUTHOR'S OWN OTHER WORK:\n${mine||"(none)"}\n${draft?`DRAFT / OUTLINE:\n"""\n${draft.slice(0,150000)}\n"""\n`:""}\nReturn JSON: {"thesis":"one-sentence working thesis (taken from the draft if there is one)","angle":"one sentence on what is distinctive about this paper","claims":["the draft's main arguments, max 8; empty if no draft"],"queries":["4 short English search queries for an academic paper database (economics, law and development, management, policy), each a different angle on the topic"],"solid":true|false (true only if the draft develops an actual argument with several claims)}. Reply with JSON only.`,{modelTier:"complex",cache:false});
+    solid=solid&&u.solid!==false;
+    step("understand","done",u.angle||u.thesis||"");
+    if(!solid)["gaps","situate","rebut"].forEach(k=>step(k,"skip",dw?`Your draft has ${dw.toLocaleString()} words. These unlock at about ${SOLID.toLocaleString()} words of developed argument.`:"Upload or write a draft to unlock this."));
+    // 2. outline
+    if(mode==="new"){
+      step("outline","run","Breaking the paper into phases");
+      const o=await sample.json(`Plan an academic paper for a Nigerian legal scholar, to be written from scratch in phases.\nTOPIC: ${topic}\nKIND: ${kind}\nWORKING THESIS: ${u.thesis}\nAUTHOR'S OWN OTHER WORK:\n${mine||"(none)"}\n${draft?`DRAFT / OUTLINE:\n"""\n${draft.slice(0,120000)}\n"""\n`:""}\nReturn JSON: {"phases":[{"title":"short section title","words":number,"goal":"one sentence","brief":"3-5 sentences telling the author exactly what to write in this phase, using their draft's ideas where given","read":[${SRC_SHAPE}]}]}. 7-11 phases ending with a conclusion. In "read", list 1-4 legal authorities (cases, statutes, books) or the author's own work per phase; journal articles will be added separately. ${RULES}`,{modelTier:"complex",cache:false});
+      if(!o.phases||!o.phases.length)throw{code:"empty"};
+      const id=uid();p={id,topic,kind,thesis:u.thesis||"",mine,source:draft.slice(0,60000),phases:o.phases.map(x=>({id:uid(),title:x.title,words:+x.words||800,goal:x.goal||"",brief:x.brief||"",read:x.read||[],text:"",fb:null})),final:null,lit:null};
+      S.projects[id]=p;S.cur=id;S.ph=0;touch();renderAll();
+      step("outline","done",`${p.phases.length} phases`);
+    }else if(u.thesis&&!p.thesis){p.thesis=u.thesis}
+    // 3. references
+    step("refs","run","Searching scholarly databases");
+    let papers=[],consensusOff=false;
+    for(const q of (u.queries||[]).slice(0,4)){
+      try{step("refs","run",`Searching: ${q}`);const r=await searchPapers(q);r.forEach(x=>{if(!papers.some(y=>y.url===x.url))papers.push(x)})}
+      catch(e){if(["no_mcp","server_not_connected","not_in_manifest","needs_reauth","blocked_by_policy","selection_required"].includes(e&&e.code)){consensusOff=true;break}}
+    }
+    papers=papers.slice(0,20).map((x,i)=>({...x,id:"P"+(i+1)}));
+    const plist=papers.map(x=>`${x.id}. ${x.title} (${[x.authors,x.year,x.journal].filter(Boolean).join(", ")}): ${x.abstract.slice(0,350)}`).join("\n");
+    p.phases.forEach(ph=>{ph.read=(ph.read||[]).filter(r=>!r.lit)});
+    if(papers.length){
+      step("refs","run",`Found ${papers.length} papers. Matching them to your phases`);
+      const m=await sample.json(`Match academic papers to the sections of a paper they would support.\nPAPER: ${topic}\nSECTIONS:\n${p.phases.map((x,i)=>`${i+1}. ${x.title}: ${x.goal}`).join("\n")}\nCANDIDATE PAPERS:\n${plist}\n\nReturn JSON: {"links":[{"paper":"P1","phase":1,"why":"one line on how it helps that section"}]}. Only include genuinely relevant matches; a paper may match up to two sections; skip irrelevant papers. Reply with JSON only.`,{modelTier:"default",cache:false});
+      (m.links||[]).forEach(l=>{const x=papers.find(q=>q.id===l.paper),ph=p.phases[(+l.phase)-1];if(x&&ph&&!ph.read.some(r=>r.url===x.url))ph.read.push({who:[x.authors,x.year].filter(Boolean).join(", "),what:x.title+(x.journal?", "+x.journal:""),why:l.why||"",type:"study",url:x.url,lit:true})});
+      step("refs","done",`${papers.length} papers with links, matched to your phases`);
+    }else step("refs","done",consensusOff?"Paper search is unavailable right now, so each phase keeps suggested sources with search links":"No matching papers found; phases keep Ojogbon's suggestions with search links");
+    p.lit={papers,at:Date.now(),solid,draftWords:dw,consensusOff,gaps:[],relations:[],position:"",rebuttals:[]};touch();renderAll();
+    // 4-6 deeper analysis
+    if(solid){
+      const libLines=libOf(p).sources.filter(s=>s.status==="ready").map(s=>`- ${s.authors} (${s.year}) ${s.title} [${s.stance}]: ${s.summary}`).join("\n");
+      const base=`PAPER: ${topic}\nTHESIS: ${u.thesis}\n${libLines?`SOURCES THE AUTHOR HAS ALREADY READ (their library):\n${libLines}\n`:""}MAIN CLAIMS:\n${(u.claims||[]).map(c=>"- "+c).join("\n")}\nAUTHOR'S OWN OTHER WORK:\n${mine||"(none)"}\nLITERATURE FOUND:\n${plist||"(none found; rely on well-known literature you are sure exists)"}\nDRAFT EXCERPT:\n"""\n${draft.slice(0,60000)}\n"""\n`;
+      step("gaps","run","Comparing your argument with what's been published");
+      const g=await sample.json(base+`\nIdentify gaps in the existing literature this paper can fill. Return JSON: {"gaps":[{"gap":"the gap, one sentence","how":"how this paper fills it, one or two sentences","papers":["P ids that show the gap"]}]}. 3-5 gaps. Only cite P ids from the list. ${RULES}`,{modelTier:"complex",cache:false});
+      p.lit.gaps=g.gaps||[];touch();step("gaps","done",`${p.lit.gaps.length} gaps found`);
+      step("situate","run","Placing your work among the papers found");
+      const s=await sample.json(base+`\nSituate this paper within the literature. Return JSON: {"position":"a paragraph (4-6 sentences) the author could adapt for their literature review, saying where the paper sits and what it adds","relations":[{"paper":"P id","relation":"builds on|extends|challenges|contrasts with|applies","note":"one sentence"}]}. 3-8 relations, P ids from the list only. ${RULES}`,{modelTier:"complex",cache:false});
+      p.lit.position=s.position||"";p.lit.relations=s.relations||[];touch();step("situate","done",`${p.lit.relations.length} papers placed against your argument`);
+      step("rebut","run","Looking for the strongest counter-arguments");
+      const r=await sample.json(base+`\nAct as a hostile peer reviewer. Return JSON: {"rebuttals":[{"objection":"the counter-argument, one or two sentences","strength":"strong|moderate|weak","papers":["P ids that support the objection"],"response":"how the author can answer it"}]}. 4-6 rebuttals, strongest first, P ids from the list only. ${RULES}`,{modelTier:"complex",cache:false});
+      p.lit.rebuttals=r.rebuttals||[];touch();step("rebut","done",`${p.lit.rebuttals.length} rebuttals to prepare for`);
+    }
+    run.finished=true;busy=null;renderProgress();renderAll();toast("Research ready");
+  }catch(e){fail(msgOf(e))}
+}
+const breakDown=()=>runResearch("new");
+
+/* ---------- library ---------- */
+// The library is separate from the draft: the draft says where the argument is going,
+// the library holds what the papers you've read actually say, mapped to your phases.
+const STANCE={supports:"Supports your thesis",contradicts:"Challenges your thesis",complicates:"Complicates it",neutral:"Background",context:"Background"};
+let libSearch=null,libBusy=0,beyondBusy=false;
+function libOf(p){if(!p.library)p.library={sources:[],beyond:null};return p.library}
+if(window.pdfjsLib){try{pdfjsLib.GlobalWorkerOptions.workerSrc="/ojogbon-studio/vendor/pdf.worker.min.js"}catch(e){}}
+async function fileText(f){
+  if(/\.pdf$/i.test(f.name)){
+    if(!window.pdfjsLib)throw new Error("PDF reader didn't load");
+    const pdf=await pdfjsLib.getDocument({data:new Uint8Array(await f.arrayBuffer())}).promise;
+    let t="";const n=Math.min(pdf.numPages,120);
+    for(let i=1;i<=n;i++){const pg=await pdf.getPage(i);const c=await pg.getTextContent();t+=`\n[p. ${i}]\n`+c.items.map(x=>x.str).join(" ")}
+    return {text:t,pages:pdf.numPages}}
+  if(/\.docx$/i.test(f.name)){if(!window.mammoth)throw new Error("Word reader didn't load");return {text:(await mammoth.extractRawText({arrayBuffer:await f.arrayBuffer()})).value}}
+  return {text:await f.text()}}
+const CLAIM_SHAPE=`{"point":"the claim, finding or argument in one or two sentences, in your own words","quote":"a short supporting quote copied verbatim from the text (max 40 words)","page":"page number from the nearest [p. N] marker, or null","stance":"supports|contradicts|complicates|neutral (relative to the author's thesis)","phases":[phase numbers where it is useful],"use":"one line on how the author could use it there (e.g. evidence for the opening claim, a counterpoint to address in the objections)"}`;
+async function readSource(p,src,text,abstractOnly){
+  src.status="reading";src.error="";touch();renderAll();libBusy++;
+  try{
+    const cap=150000,trunc=text.length>cap;
+    const r=await sample.json(`You are helping a Nigerian legal scholar use a source they have read. Read the source and pull out what is useful for THEIR paper. Do not write any of their paper.\n\n${ctx(p)}\nPHASE GOALS:\n${p.phases.map((x,i)=>`${i+1}. ${x.title}: ${x.goal}`).join("\n")}\n\nSOURCE${abstractOnly?" (abstract only)":""}${trunc?" (truncated)":""}:\n"""\n${text.slice(0,cap)}\n"""\n\nReturn JSON: {"title":"the source's title","authors":"authors as cited, e.g. 'Campos, Goldstein & McKenzie'","year":"year or empty","summary":"2-3 sentences on what the source argues or finds","stance":"supports|contradicts|complicates|neutral (overall, relative to the thesis)","claims":[${CLAIM_SHAPE}]}. Give ${abstractOnly?"2-4":"5-12"} claims, most useful first. Quotes must be copied exactly from the source text; if you cannot find an exact quote, use an empty string. Reply with JSON only.`,{modelTier:"complex",cache:false});
+    Object.assign(src,{title:r.title||src.title,authors:r.authors||src.authors||"",year:r.year||src.year||"",summary:r.summary||"",stance:r.stance||"neutral",
+      claims:(r.claims||[]).map(c=>({id:uid(),point:c.point,quote:c.quote||"",page:c.page,stance:c.stance||"neutral",phases:(c.phases||[]).map(Number).filter(n=>n>=1&&n<=p.phases.length),use:c.use||""})),
+      status:"ready",truncated:trunc,abstractOnly:!!abstractOnly,read:Date.now()});
+  }catch(e){src.status="error";src.error=e&&e.code==="rate_limited"?"Ojogbon is busy or you've hit a usage limit. Try again later.":"Ojogbon couldn't read this source. Try again."}
+  libBusy--;p.updated=Date.now();dirty.add(p.id);touch();renderAll();
+}
+async function addFiles(files){
+  const p=P(),lib=libOf(p);if(!sample){toast("Ojogbon isn't available in this view");return}
+  for(const f of files){
+    const src={id:uid(),kind:"file",title:f.name.replace(/\.[^.]+$/,""),fileName:f.name,status:"reading",claims:[],added:Date.now()};
+    lib.sources.unshift(src);renderAll();
+    let t;try{t=await fileText(f)}catch(e){src.status="error";src.error="Couldn't open this file. Try a PDF, Word or text file.";touch();renderAll();continue}
+    if(words(t.text)<150){src.status="error";src.error=/\.pdf$/i.test(f.name)?"No text found. This PDF looks scanned; upload a text-based PDF or a Word copy.":"This file has almost no text.";touch();renderAll();continue}
+    src.pages=t.pages||null;src.words=words(t.text);
+    await readSource(p,src,t.text,false);
+  }
+}
+async function addPaper(x){
+  const p=P(),lib=libOf(p);if(lib.sources.some(s=>s.url&&s.url===x.url)){toast("Already in your library");return}
+  const src={id:uid(),kind:"ref",title:x.title,authors:x.authors||"",year:x.year||"",url:x.url,journal:x.journal||"",status:"reading",claims:[],added:Date.now()};
+  lib.sources.unshift(src);toast("Added. Reading the abstract…");
+  await readSource(p,src,`${x.title}\n${x.authors||""} (${x.year||""}) ${x.journal||""}\n\n${x.abstract||""}`,true);
+}
+function claimsHTML(cl,src,showPhases,p){return `<ul class="claims">${cl.map(c=>`<li class="${esc(c.stance)}"><span><span class="st ${esc(c.stance)}">${esc(STANCE[c.stance]||c.stance)}</span> ${esc(c.point)}</span>${c.quote?`<q>${esc(c.quote)}</q>`:""}${c.use?`<span class="use"><b>Use:</b> ${esc(c.use)}</span>`:""}<span class="src">${src?esc([src.authors,src.year].filter(Boolean).join(" ")||src.title)+(c.page?`, p. ${esc(c.page)}`:""):(c.page?`p. ${esc(c.page)}`:"")}${showPhases&&c.phases&&c.phases.length?` · ${c.phases.map(n=>`<a href="#" data-goph="${n-1}">Phase ${n}</a>`).join(", ")}`:""}</span></li>`).join("")}</ul>`}
+function phaseLibHTML(p,i){
+  const lib=libOf(p),ready=lib.sources.filter(s=>s.status==="ready");
+  if(!lib.sources.length)return `<details class="plib"><summary>From your library</summary><p class="none">Add the papers you're reading to your <a href="#" data-golib="1">library</a>, and Ojogbon will show here what each one says that's useful for this phase.</p></details>`;
+  const items=[];ready.forEach(s=>(s.claims||[]).forEach(c=>{if((c.phases||[]).includes(i+1))items.push({c,s})}));
+  const order={contradicts:0,supports:1,complicates:2,neutral:3,context:3};items.sort((a,b)=>(order[a.c.stance]??4)-(order[b.c.stance]??4));
+  const contra=items.filter(x=>x.c.stance==="contradicts").length;
+  return `<details class="plib" open><summary>From your library (${items.length})${contra?` · ${contra} to address`:""}</summary>${items.length?`<ul class="claims">${items.slice(0,8).map(({c,s})=>claimsHTML([c],s,false,p).replace(/^<ul class="claims">|<\/ul>$/g,"")).join("")}</ul>`:`<p class="none">None of the ${ready.length} source${ready.length===1?"":"s"} in your library speak directly to this phase.${lib.sources.some(s=>s.status==="reading")?" Some are still being read.":""}</p>`}</details>`;
+}
+function libPromptFor(p,i){
+  const ready=libOf(p).sources.filter(s=>s.status==="ready");if(!ready.length)return"";
+  const here=[];ready.forEach(s=>(s.claims||[]).forEach(c=>{if((c.phases||[]).includes(i+1))here.push(`- ${s.authors||s.title} (${s.year||"n.d."})${c.page?`, p. ${c.page}`:""} [${c.stance}]: ${c.point}${c.quote?` Quote: "${c.quote}"`:""}`)}));
+  return `\nAUTHOR'S LIBRARY (papers they have read):\n${ready.map(s=>`- ${s.authors||""} (${s.year||"n.d."}) ${s.title}: ${s.summary||""}`).join("\n").slice(0,8000)}\nLIBRARY POINTS MAPPED TO THIS SECTION:\n${here.join("\n").slice(0,8000)||"(none)"}\n`;
+}
+function libViewHTML(p){
+  const lib=libOf(p),n=lib.sources.length;
+  let h=`<div class="eye"><span>Your sources</span>${n?`<span>${n} source${n>1?"s":""}</span>`:""}</div><h2>Library</h2><p>Add the papers you're reading. Ojogbon reads each one, pulls out the points that matter for your paper, says whether each supports or challenges your thesis, and shows them in the right phase as you write.</p>
+  <div class="libadd">
+    <div class="libbox"><b>Upload papers</b><span class="msg">PDF, Word or text. Text-based PDFs only; scanned pages can't be read yet.</span><input type="file" id="libFiles" multiple accept=".pdf,.docx,.txt,.md" aria-label="Upload papers to your library"${sample?"":" disabled"}></div>
+    <div class="libbox"><b>Find a paper by title or DOI</b><span class="msg">Searches scholarly databases. Paywalled papers are read from their abstract; upload the PDF for the full text.</span><div class="row"><input type="text" id="libQ" aria-label="Title, DOI or topic" placeholder="e.g. Campos registration Malawi"><button class="quiet" id="libGo">Search</button></div></div>
+  </div>`;
+  if(libSearch){h+=`<div class="libbox" style="border-style:solid">${libSearch.loading?`<span><span class="spin"></span>Searching…</span>`:libSearch.error?`<span class="msg err">${esc(libSearch.error)}</span>`:!libSearch.results.length?`<span class="msg">No papers found. Try different words.</span>`:`<b>Results</b>${libSearch.results.map((x,k)=>`<div class="srcitem"><div class="hd"><span><span class="ti">${A(x.url,esc(x.title))}</span><br><span class="m">${esc([x.authors,x.year,x.journal].filter(Boolean).join(" · "))}</span></span><button class="quiet x" data-addres="${k}">Add</button></div></div>`).join("")}`}<button class="quiet x" id="libX" style="align-self:flex-start">Close results</button></div>`}
+  if(!n)return h+`<p class="msg">Your library is empty. Start with the papers you've already read for this topic.</p>`;
+  h+=`<ul class="srclist">${lib.sources.map(s=>`<li class="srcitem"><div class="hd"><span><span class="ti">${s.url?A(s.url,esc(s.title)):esc(s.title)}</span><br><span class="m">${esc([s.authors,s.year,s.journal].filter(Boolean).join(" · "))}${s.kind==="file"?` · ${esc(s.fileName||"")}`:""}${s.abstractOnly?" · abstract only":""}${s.truncated?" · long paper, read in part":""}</span></span><span style="display:flex;gap:6px;align-items:center">${s.status==="reading"?`<span class="st reading"><span class="spin"></span>Reading</span>`:s.status==="error"?`<span class="st error">Not read</span>`:`<span class="st ${esc(s.stance)}">${esc(STANCE[s.stance]||s.stance)}</span>`}<button class="quiet x" data-rm="${esc(s.id)}" aria-label="Remove ${esc(s.title)}">Remove</button></span></div>${s.error?`<span class="msg err">${esc(s.error)}</span>`:""}${s.summary?`<p style="margin:0">${esc(s.summary)}</p>`:""}${(s.claims||[]).length?`<details><summary class="m" style="cursor:pointer">${s.claims.length} point${s.claims.length===1?"":"s"} for your paper</summary>${claimsHTML(s.claims,null,true,p)}</details>`:""}</li>`).join("")}</ul><p class="verify">Points and quotes are pulled by Ojogbon. Check each quote against the page before you cite it.</p>`;
+  return h}
+function beyondHTML(p){
+  const lib=libOf(p),ready=lib.sources.filter(s=>s.status==="ready").length,b=lib.beyond;
+  let h=`<h3>Beyond your library</h3><p class="empty">Ojogbon compares your library with your thesis and the field, then suggests important papers or perspectives you haven't covered.</p>`;
+  if(beyondBusy)return h+`<p class="empty"><span class="spin"></span>Checking what's missing…</p>`;
+  h+=`<button class="solid" id="bBeyond"${sample&&ready?"":" disabled"}>${b?"Check again":"What am I missing?"}</button>${ready?"":`<p class="empty">Add and read at least one source first.</p>`}`;
+  if(b){h+=`<p class="sum">${esc(b.assessment)}</p>`+(b.items||[]).map((m,k)=>`<div class="note"><div class="k"><span class="kind reference">${m.phase?`Phase ${esc(m.phase)}`:"Missing perspective"}</span></div><p><b>${esc(m.perspective)}</b></p><p>${esc(m.why)}</p>${(m.papers||[]).length?`<ul class="srcs">${m.papers.map((x,j)=>`<li><b>${A(x.url,esc(x.title))}</b><div class="why">${esc([x.authors,x.year,x.journal].filter(Boolean).join(" · "))}</div><button class="quiet x" data-addb="${k}:${j}" style="margin-top:4px">Add to library</button></li>`).join("")}</ul>`:""}${srcList(m.known)}</div>`).join("")+`<p class="verify">Papers come from scholarly databases with links. Names under “Suggested by Ojogbon” need checking.</p>`}
+  return h}
+async function beyondLibrary(){
+  const p=P(),lib=libOf(p),ready=lib.sources.filter(s=>s.status==="ready");if(!ready.length)return;
+  beyondBusy=true;renderAll();
+  try{
+    const r=await sample.json(`A Nigerian legal scholar is writing a paper and has built a library of sources. Judge what is missing.\n\n${ctx(p)}\n\nLIBRARY:\n${ready.map(s=>`- ${s.authors} (${s.year}) ${s.title} [${s.stance}]: ${s.summary}`).join("\n")}\n\nReturn JSON: {"assessment":"2-3 sentences: how well the library covers the paper's needs, including whether it leans one way","items":[{"perspective":"a missing body of work, counter-argument or kind of evidence","why":"why this paper needs it","phase":phase number where it matters most,"query":"a short English search query for an academic paper database","known":[${SRC_SHAPE}]}]}. 3-6 items, most important first; include at least one item that would challenge the thesis. In "known", name 0-2 well-known works you are sure exist. ${RULES}`,{modelTier:"complex",cache:false});
+    const have=new Set(lib.sources.map(s=>(s.url||"")+"|"+(s.title||"").toLowerCase()));
+    for(const m of (r.items||[])){m.papers=[];if(m.query&&mcp){try{m.papers=(await searchPapers(m.query)).filter(x=>![...have].some(h=>h.startsWith(x.url+"|")||h.endsWith("|"+x.title.toLowerCase()))).slice(0,3)}catch(e){}}}
+    lib.beyond={assessment:r.assessment||"",items:r.items||[],at:Date.now()};touch();
+  }catch(e){toast(e&&e.code==="rate_limited"?"Ojogbon is busy or you've hit a usage limit.":"Couldn't check your library. Try again.")}
+  beyondBusy=false;renderAll();
+}
+function wireLib(){
+  const p=P(),lib=libOf(p);
+  document.querySelectorAll("[data-golib]").forEach(a=>a.onclick=e=>{e.preventDefault();S.ph="lib";lsSave();renderAll()});
+  document.querySelectorAll("[data-goph]").forEach(a=>a.onclick=e=>{e.preventDefault();S.ph=+a.dataset.goph;lsSave();renderAll()});
+  const f=$("libFiles");if(f)f.onchange=e=>{const fs=[...e.target.files];e.target.value="";if(fs.length)addFiles(fs)};
+  const go=$("libGo"),q=$("libQ");
+  const run=async()=>{const v=q.value.trim();if(!v)return;if(!mcp){libSearch={error:"Paper search is unavailable right now.",results:[]};renderBrief();return}
+    libSearch={loading:true,results:[],q:v};renderBrief();
+    try{libSearch={results:(await searchPapers(v)).slice(0,6),q:v}}catch(e){libSearch={error:"Search failed. Try again.",results:[],q:v}}renderBrief()};
+  if(go){go.onclick=run;q.onkeydown=e=>{if(e.key==="Enter"){e.preventDefault();run()}};if(libSearch&&libSearch.q)q.value=libSearch.q}
+  const lx=$("libX");if(lx)lx.onclick=()=>{libSearch=null;renderBrief()};
+  document.querySelectorAll("[data-addres]").forEach(b=>b.onclick=()=>{const x=libSearch.results[+b.dataset.addres];libSearch.results.splice(+b.dataset.addres,1);addPaper(x)});
+  document.querySelectorAll("[data-rm]").forEach(b=>b.onclick=()=>{const i=lib.sources.findIndex(s=>s.id===b.dataset.rm);if(i>=0&&lib.sources[i].status!=="reading"){lib.sources.splice(i,1);touch();renderAll()}});
+  const bb=$("bBeyond");if(bb)bb.onclick=beyondLibrary;
+  document.querySelectorAll("[data-addb]").forEach(b=>b.onclick=()=>{const [k,j]=b.dataset.addb.split(":").map(Number);const x=lib.beyond.items[k].papers.splice(j,1)[0];touch();addPaper(x)});
+}
+
+/* ---------- export ---------- */
+async function exportPaper(){
+  const p=P();const md=`# ${p.topic}\n\n`+p.phases.map(x=>`## ${x.title}\n\n${x.text.trim()}`).join("\n\n")+"\n";
+  try{const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([md],{type:"text/markdown"}));a.download=(p.topic.replace(/[^\w\- ]+/g,"").slice(0,60).trim()||"paper")+".md";document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),2000);return}catch(e){}
+  try{await navigator.clipboard.writeText(md);toast("Whole paper copied to the clipboard")}catch(e){toast("Couldn't export from this view")}
+}
+
+/* ---------- events ---------- */
+$("pad").addEventListener("input",()=>{const p=P();if(typeof S.ph==="string")return;p.phases[S.ph].text=$("pad").value;updWC();touch();
+  const d=document.querySelector(".ph.on .d");if(d)d.className="d "+status(p.phases[S.ph])});
+$("bEval").onclick=evalPhase;$("bRef").onclick=findRef;
+$("bNext").onclick=()=>{const p=P();S.ph=S.ph<p.phases.length-1?S.ph+1:"final";refRes=null;lsSave();renderAll();window.scrollTo({top:0,behavior:"smooth"})};
+$("projSel").onchange=e=>{S.cur=e.target.value;S.ph=0;refRes=null;lsSave();renderAll()};
+$("bNew").onclick=()=>{$("setup").hidden=false;$("work").hidden=true;$("nMine").value=P()?.mine||"";$("bCancel").hidden=!P();$("nTopic").focus()};
+$("bCancel").onclick=()=>{$("setup").hidden=true;$("work").hidden=false};
+$("bBreak").onclick=breakDown;$("bExport").onclick=exportPaper;
+$("nFile").onchange=async e=>{const f=e.target.files[0];if(!f)return;$("fileMsg").textContent="Reading "+f.name+"…";
+  try{let t;if(/\.docx$/i.test(f.name)){if(!window.mammoth)throw 0;t=(await mammoth.extractRawText({arrayBuffer:await f.arrayBuffer()})).value}else t=await f.text();
+    $("nCtx").value=t.trim();$("fileMsg").textContent=f.name+" loaded ("+words(t).toLocaleString()+" words).";
+    if(!$("nTopic").value){const first=t.trim().split("\n").find(l=>l.trim().length>8);if(first)$("nTopic").value=first.trim().slice(0,140)}}
+  catch(err){$("fileMsg").textContent="Couldn't read that file. Paste the text instead."}};
+
+/* ---------- boot ---------- */
+(async function boot(){
+  sample={json:async(prompt,o)=>(await api("ai",{method:"POST",body:{prompt,tier:o&&o.modelTier==="complex"?"complex":"quick"}})).json};
+  aiChecked=true;setSave("Loading…");
+  let data;try{data=await api("papers")}catch(e){if(e.code==="unauthorized")return;data={available:false,papers:[],user:null}}
+  if(data.user){LS="ojogbon-studio:"+data.user.id;$("who").textContent=data.user.name||""}
+  const local=lsLoad();if(local)S=Object.assign(S,local);
+  serverStore=!!data.available;
+  (data.papers||[]).forEach(row=>{const v=row.data;if(!v||!v.id)return;const loc=S.projects[v.id];if(!loc||(v.updated||0)>=(loc.updated||0))S.projects[v.id]=v});
+  if(serverStore)Object.values(S.projects).forEach(p=>{if(p.updated&&!(data.papers||[]).some(r=>r.id===p.id))dirty.add(p.id)});
+  if(!S.projects[S.cur])S.cur=Object.keys(S.projects)[0]||null;
+  if(P()&&!["final","lit","lib"].includes(S.ph)&&!(S.ph<P().phases.length))S.ph=0;
+  lsSave();renderAll();
+  if(dirty.size)flush();else setSave(serverStore?"Saved":"Saved in this browser");
+})();
+</script>
+
+</body>
+</html>

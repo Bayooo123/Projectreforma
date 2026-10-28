@@ -86,7 +86,8 @@ export default async function RootLayout({
   const PUBLIC_ROUTES = ['/', '/login', '/register', '/forgot-password', '/join', '/landing', '/ojogbon'];
   const isPublicRoute =
     PUBLIC_ROUTES.includes(pathname) ||
-    pathname.startsWith('/join/');
+    pathname.startsWith('/join/') ||
+    pathname.startsWith('/ojogbon/'); // Ojogbon has its own chrome-free pages
 
   // Routes that are authenticated but intentionally chrome-free (no sidebar/header shell)
   const CHROMELESS_ROUTES: string[] = [];
