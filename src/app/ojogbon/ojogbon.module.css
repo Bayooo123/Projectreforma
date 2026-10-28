@@ -284,3 +284,6 @@
     flex-wrap: wrap;
 }
 .wordmarkSmall { font-family: var(--display); font-weight: 800; color: var(--paper); font-size: 18px; }
+.navLogin { color: var(--paper) !important; text-decoration: none; font-weight: 700; font-size: 15px; }
+.navLogin:hover { color: var(--hl) !important; }
+.formDone a:not(.btnPrimary) { color: var(--pen); font-weight: 700; }

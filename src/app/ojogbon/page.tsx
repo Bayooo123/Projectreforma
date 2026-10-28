@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useState, useTransition } from 'react';
+import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { ArrowRight, Check, Link2, PenLine, BookOpen, ShieldCheck, FileClock, ScrollText, ChevronDown } from 'lucide-react';
 import SiteTracker from '@/components/analytics/SiteTracker';
-import { joinOjogbonPilot, type PilotResult } from '../actions/ojogbon-waitlist';
 import styles from './ojogbon.module.css';
 
 const STEPS_TOPIC = ['Understanding the topic', 'Preparing an outline', 'Pulling potential references'];
@@ -85,7 +85,7 @@ const FAQS = [
     },
     {
         q: 'What does it cost?',
-        a: 'Pilot users get free access. Pricing for students, scholars and institutions will be set with the pilot group.',
+        a: 'Ojogbon is free while in early access. Plans for students, scholars and institutions will follow, and early users will hear first.',
     },
 ];
 
@@ -163,66 +163,6 @@ function ProductMock() {
     );
 }
 
-function PilotForm() {
-    const [pending, startTransition] = useTransition();
-    const [result, setResult] = useState<PilotResult | null>(null);
-    const errors = result && 'error' in result ? result.error : {};
-
-    if (result && result.success) {
-        return (
-            <div className={styles.formDone} role="status">
-                <Check size={28} aria-hidden="true" />
-                <p>{result.message}</p>
-            </div>
-        );
-    }
-
-    return (
-        <form
-            className={styles.form}
-            onSubmit={e => {
-                e.preventDefault();
-                const data = new FormData(e.currentTarget);
-                startTransition(async () => setResult(await joinOjogbonPilot(data)));
-            }}
-            noValidate
-        >
-            <div className={styles.field}>
-                <label htmlFor="oj-name">Your name</label>
-                <input id="oj-name" name="name" autoComplete="name" required />
-                {errors.name && <span className={styles.err}>{errors.name[0]}</span>}
-            </div>
-            <div className={styles.field}>
-                <label htmlFor="oj-email">Email</label>
-                <input id="oj-email" name="email" type="email" autoComplete="email" required />
-                {errors.email && <span className={styles.err}>{errors.email[0]}</span>}
-            </div>
-            <div className={styles.field}>
-                <label htmlFor="oj-role">What describes you best?</label>
-                <select id="oj-role" name="role" defaultValue="" required>
-                    <option value="" disabled>
-                        Choose one
-                    </option>
-                    <option value="student">Undergraduate student</option>
-                    <option value="postgraduate">LL.M, master’s or PhD candidate</option>
-                    <option value="supervisor">Lecturer or supervisor</option>
-                    <option value="institution">Faculty or institution</option>
-                </select>
-                {errors.role && <span className={styles.err}>{errors.role[0]}</span>}
-            </div>
-            <div className={styles.field}>
-                <label htmlFor="oj-inst">University or institution</label>
-                <input id="oj-inst" name="institution" autoComplete="organization" required />
-                {errors.institution && <span className={styles.err}>{errors.institution[0]}</span>}
-            </div>
-            <button type="submit" className={styles.btnPrimary} disabled={pending}>
-                {pending ? 'Joining…' : 'Join the pilot'}
-                {!pending && <ArrowRight size={18} aria-hidden="true" />}
-            </button>
-        </form>
-    );
-}
-
 export default function OjogbonPage() {
     const [open, setOpen] = useState<number | null>(0);
 
@@ -240,9 +180,12 @@ export default function OjogbonPage() {
                         <a href="#ethics">Ethical AI</a>
                         <a href="#faq">FAQ</a>
                     </nav>
-                    <a href="#pilot" className={styles.navCta}>
-                        Join the pilot
-                    </a>
+                    <Link href="/ojogbon/login" className={styles.navLogin}>
+                        Log in
+                    </Link>
+                    <Link href="/ojogbon/signup" className={styles.navCta}>
+                        Start writing
+                    </Link>
                 </div>
             </header>
 
@@ -260,9 +203,9 @@ export default function OjogbonPage() {
                                 checks your work as you go. It never writes it for you.
                             </p>
                             <div className={styles.heroCtas}>
-                                <a href="#pilot" className={styles.btnPrimary}>
-                                    Join the pilot <ArrowRight size={18} aria-hidden="true" />
-                                </a>
+                                <Link href="/ojogbon/signup" className={styles.btnPrimary}>
+                                    Start writing free <ArrowRight size={18} aria-hidden="true" />
+                                </Link>
                                 <a href="#how" className={styles.btnGhost}>
                                     See how it works
                                 </a>
@@ -401,29 +344,37 @@ export default function OjogbonPage() {
                     </div>
                 </section>
 
-                {/* Pilot */}
-                <section className={styles.pilot} id="pilot">
+                {/* Sign up */}
+                <section className={styles.pilot} id="start">
                     <div className={`${styles.inner} ${styles.split}`}>
                         <div>
-                            <p className={styles.eyebrowLight}>The pilot</p>
-                            <h2 className={styles.h2}>Help us put a professor beside every student.</h2>
+                            <p className={styles.eyebrowLight}>Early access</p>
+                            <h2 className={styles.h2}>Put a professor beside you for your next paper.</h2>
                             <p className={styles.bodyLight}>
-                                We’re opening Ojogbon to a small group of students, scholars and supervisors, starting
-                                with law. Pilot users get free access and a direct line to shape the product.
+                                Create an account and go straight to the writing studio. Bring a topic, an outline or a
+                                draft, and add the papers you’re reading.
                             </p>
                             <ul className={styles.pilotList}>
                                 <li>
-                                    <ShieldCheck size={20} aria-hidden="true" /> Free during the pilot
+                                    <ShieldCheck size={20} aria-hidden="true" /> Free while in early access
                                 </li>
                                 <li>
-                                    <ShieldCheck size={20} aria-hidden="true" /> Starting with law faculties
+                                    <ShieldCheck size={20} aria-hidden="true" /> Your drafts stay private to your account
                                 </li>
                                 <li>
-                                    <ShieldCheck size={20} aria-hidden="true" /> Supervisors welcome to trial it with a class
+                                    <ShieldCheck size={20} aria-hidden="true" /> Built first for law, open to every subject
                                 </li>
                             </ul>
                         </div>
-                        <PilotForm />
+                        <div className={styles.formDone} style={{ flexDirection: 'column', alignItems: 'flex-start', gap: 16 }}>
+                            <p>Ready when you are.</p>
+                            <Link href="/ojogbon/signup" className={styles.btnPrimary}>
+                                Create your account <ArrowRight size={18} aria-hidden="true" />
+                            </Link>
+                            <p style={{ fontSize: 15, fontWeight: 400 }}>
+                                Already have one? <Link href="/ojogbon/login">Log in</Link>
+                            </p>
+                        </div>
                     </div>
                 </section>
             </main>
