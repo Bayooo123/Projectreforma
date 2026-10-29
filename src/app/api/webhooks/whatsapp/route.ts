@@ -1,9 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { after } from 'next/server';
+import { createHmac, timingSafeEqual } from 'crypto';
 import { config } from '@/lib/config';
 import { handleWhatsAppMessage } from '@/lib/agents/whatsapp';
 import { handleWhatsAppDocument, type IncomingWhatsAppDocument } from '@/lib/agents/whatsapp/documents';
 import { sendWhatsAppMessage } from '@/lib/agents/whatsapp/send';
+
+// Verifies Meta's X-Hub-Signature-256 header (HMAC-SHA256 of the raw body,
+// keyed by the App Secret) — same fail-closed pattern as the Zoom webhook's
+// verifySignature. Without this, anyone who learns this URL could POST
+// fabricated messages that the agent would act on as if they came from a
+// real client over WhatsApp.
+function verifySignature(rawBody: string, signatureHeader: string | null): boolean {
+    if (!config.WHATSAPP_APP_SECRET) return false;
+    if (!signatureHeader || !signatureHeader.startsWith('sha256=')) return false;
+    const expected = 'sha256=' + createHmac('sha256', config.WHATSAPP_APP_SECRET).update(rawBody).digest('hex');
+    const a = Buffer.from(expected);
+    const b = Buffer.from(signatureHeader);
+    return a.length === b.length && timingSafeEqual(a, b);
+}
 
 // A message type we recognise but can't act on yet (voice notes, video,
 // stickers, shared locations/contacts) used to be silently dropped — no
@@ -51,9 +66,16 @@ export async function GET(req: NextRequest) {
 
 // ── POST: Incoming messages ──────────────────────────────────────────────────
 export async function POST(req: NextRequest) {
+    const rawBody = await req.text();
+
+    if (!verifySignature(rawBody, req.headers.get('x-hub-signature-256'))) {
+        console.warn('[WhatsApp] Rejected webhook: signature missing or invalid');
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     let body: Record<string, unknown>;
     try {
-        body = await req.json();
+        body = JSON.parse(rawBody);
     } catch {
         return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
     }
