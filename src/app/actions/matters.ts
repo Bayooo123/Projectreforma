@@ -9,7 +9,8 @@ import { createNotification } from '@/app/actions/notifications';
 import { scheduleCourtReminders } from '@/lib/courtReminders';
 import { initializeMilestonesForMatter } from '@/app/actions/litigation-milestones';
 import { MatterService } from '@/lib/services/matters/matter-service';
-import { triggerFirstDraftForCourtEvent } from '@/lib/first-draft/trigger';
+import { enqueueProcessingJob } from '@/lib/jobs/queue';
+import { runJobFastPath } from '@/lib/jobs/handlers';
 
 async function assertWorkspaceMembership(workspaceId: string) {
     const user = await requireAuth();
@@ -184,7 +185,7 @@ export async function recordProceeding(input: {
         });
         if (!matter) return { success: false, error: 'Matter not found' };
 
-        const sittingEntry = await prisma.$transaction(async tx => {
+        const { sittingEntry, firstDraftJob } = await prisma.$transaction(async tx => {
             // Always create a new entry — each sitting is its own record
             const entry = await tx.calendarEntry.create({
                 data: {
@@ -229,18 +230,24 @@ export async function recordProceeding(input: {
                 await scheduleCourtReminders(tx, nextEntry.id, input.adjournedTo, input.matterId, recipientIds);
             }
 
-            return entry;
+            // Enqueued inside the transaction — the job row exists before the
+            // response is even sent, so it survives a crash between here and
+            // the fast path below running.
+            const job = await enqueueProcessingJob('first_draft_court_event', matter.workspaceId, {
+                workspaceId: matter.workspaceId,
+                matterId: input.matterId,
+                calendarEntryId: entry.id,
+                userId: input.userId,
+            }, { tx });
+
+            return { sittingEntry: entry, firstDraftJob: job };
         });
 
-        // First Draft: generate the client update after the response is sent,
-        // not inline — drafting is an LLM call and must never delay or fail
-        // the write the lawyer is actually waiting on.
-        after(() => triggerFirstDraftForCourtEvent({
-            workspaceId: matter.workspaceId,
-            matterId: input.matterId,
-            calendarEntryId: sittingEntry.id,
-            userId: input.userId,
-        }));
+        // First Draft: process the queued job after the response is sent —
+        // drafting is an LLM call and must never delay or fail the write the
+        // lawyer is actually waiting on. The job row from above is what makes
+        // this safe to retry if this fast path doesn't finish.
+        after(() => runJobFastPath(firstDraftJob.id));
 
         const dateStr = input.adjournedTo
             ? input.adjournedTo.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
@@ -422,12 +429,18 @@ export async function adjournMatter(
                 relatedMatterId: matterId,
             }).catch(() => {});
 
-            after(() => triggerFirstDraftForCourtEvent({
+            // Not inside the $transaction above — matter's non-null check
+            // only happens here, after it. A narrower durability window than
+            // recordProceeding's (a crash between the transaction committing
+            // and this enqueue call would still lose the job), but still a
+            // real durable row from here on, unlike the direct call before.
+            const job = await enqueueProcessingJob('first_draft_court_event', matter.workspaceId, {
                 workspaceId: matter.workspaceId,
                 matterId,
                 calendarEntryId: sittingEntry.id,
                 userId,
-            }));
+            });
+            after(() => runJobFastPath(job.id));
         }
 
         revalidatePath('/calendar');
