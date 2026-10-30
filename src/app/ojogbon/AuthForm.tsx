@@ -77,7 +77,7 @@ export default function AuthForm({ mode }: { mode: 'signup' | 'login' }) {
                     </p>
                     {!signup && (
                         <p className={styles.switch}>
-                            <Link href="/forgot-password">Forgot your password?</Link>
+                            <Link href="/ojogbon/forgot-password">Forgot your password?</Link>
                         </p>
                     )}
                 </form>

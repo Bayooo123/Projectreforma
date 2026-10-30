@@ -112,11 +112,18 @@ export default async function RootLayout({
     }
   `;
 
+  // globals.css sets html/body to overflow-y: hidden, on the assumption that
+  // the authenticated shell's .contentContainer (AppLayout.module.css) is the
+  // page's sole scroll root. Chrome-free public routes (login, ojogbon, …)
+  // render with no such container, so without this override they have no
+  // scroll root at all — the page just can't scroll, however long it is.
+  const scrollStyle = showShell ? undefined : { overflowY: 'auto' as const };
+
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning style={scrollStyle}>
       <body
         className={`${ibmPlexSans.variable} ${sourceSerif4.variable}`}
-        style={{ minHeight: '100%' }}
+        style={{ minHeight: '100%', ...scrollStyle }}
       >
         {/* Workspace colour overrides — injected per-request from DB, targets :root */}
         <style dangerouslySetInnerHTML={{ __html: workspaceColorStyle }} />

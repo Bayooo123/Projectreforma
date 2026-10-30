@@ -189,6 +189,34 @@ export const getFirstDraftReadyEmail = (matterName: string, url: string) => {
     });
 };
 
+export const getOjogbonWelcomeEmail = (name: string) => {
+    return sharedLayout({
+        title: 'Welcome to Ojogbon',
+        previewTextText: 'Your Ojogbon account is ready — start your first paper',
+        content: `
+      <p>Hi ${name},</p>
+      <p>Your Ojogbon account is ready. Ojogbon is the writing supervisor that breaks your paper into phases, tells you what to write and read in each, and checks your work as you go — it never writes it for you.</p>
+      <p>Bring a topic, an outline or a draft, and go straight into the writing studio.</p>
+    `,
+        ctaText: 'Open the writing studio',
+        ctaUrl: `${config.NEXT_PUBLIC_APP_URL}/ojogbon/app`,
+    });
+};
+
+export const getOjogbonPasswordResetEmail = (url: string) => {
+    return sharedLayout({
+        title: 'Reset your Ojogbon password',
+        previewTextText: 'Securely reset your Ojogbon password',
+        content: `
+      <p>We received a request to reset the password for your Ojogbon account.</p>
+      <p>Click the button below to set a new password. This link will expire in 1 hour and can only be used once.</p>
+      <p>If you did not request this, you can safely ignore this email.</p>
+    `,
+        ctaText: 'Reset Password',
+        ctaUrl: url,
+    });
+};
+
 export const getGuestWelcomeEmail = (guestName: string, workspaceName: string, designation: string, setPasswordUrl: string) => {
     return sharedLayout({
         title: `You've been added to ${workspaceName}`,
