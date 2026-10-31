@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Contact | Heze Legal Advisory</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="Contact Heze Legal Advisory at 9 Engr. George Enenmoh Crescent, Lekki Phase 1, Lagos.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400;0,6..96,500;1,6..96,400&family=Montserrat:wght@300;400;500;600&display=swap">
+<link rel="stylesheet" href="assets/site.css">
+</head>
+<body>
+<header class="site-head" id="site-head">
+  <div class="wrap bar">
+    <a class="home" href="index.html" aria-label="Heze Legal Advisory, home"><span class="logo" role="img" aria-label="Heze Legal"></span></a>
+    <button class="menu-btn" id="menu-btn" type="button" aria-expanded="false" aria-controls="site-nav">Menu <i aria-hidden="true"></i></button>
+    <nav class="nav" id="site-nav" aria-label="Primary"><a href="index.html">Home</a><a href="about.html">About Us</a><a href="expertise.html">Our Expertise</a><a href="people.html">Our People</a><a href="insights.html">Insights</a><a href="contact.html" class="cta" aria-current="page">Contact</a></nav>
+  </div>
+</header>
+<main><section class="contact dark sec" id="contact"><span class="logo mono" aria-hidden="true"></span>
+  <div class="wrap">
+    <div class="eyebrow">Contact and office location</div>
+    <h1 class="h2 big">Bring us the <em>problem.</em></h1>
+    <div class="cgrid">
+      <div><p>Whether you face a commercial dispute, an insolvency, or a question about the future of your estate, we will give you a clear view of your position and the way forward.</p><ul class="matters" style="margin-top:28px"><li>Commercial Dispute Resolution</li><li>Litigation</li><li>Arbitration</li><li>Insolvency</li><li>Wills & Estate Planning</li></ul></div>
+      <div><div class="eyebrow">Our office</div><address id="address">9 Engr. George Enenmoh Crescent,<br>Lekki Phase 1, Lagos State,<br>Nigeria</address>
+        <div class="links"><button class="copy" id="copyAddr" type="button">Copy address</button><a class="dir" href="https://www.google.com/maps/search/?api=1&query=9+Engr.+George+Enenmoh+Crescent%2C+Lekki+Phase+1%2C+Lagos" target="_blank" rel="noopener">Get directions ↗</a></div></div>
+      <div class="btns"><a class="btn fill" href="https://www.google.com/maps/search/?api=1&query=9+Engr.+George+Enenmoh+Crescent%2C+Lekki+Phase+1%2C+Lagos" target="_blank" rel="noopener">Open in Maps <span class="ar">↗</span></a></div>
+    </div>
+  </div>
+</section></main><footer class="site-foot">
+  <div class="wrap fgrid">
+    <div><span class="logo" role="img" aria-label="Heze Legal"></span><p>Strategic thinking and legal expertise, delivering practical, commercially driven solutions to complex legal and business challenges.</p></div>
+    <div><h4>The Firm</h4><ul><li><a href="about.html">About Us</a></li><li><a href="people.html">Our People</a></li><li><a href="insights.html">Insights</a></li><li><a href="contact.html">Contact</a></li></ul></div>
+    <div><h4>Expertise</h4><ul><li><a href="expertise.html#commercial-dispute-resolution">Commercial Dispute Resolution</a></li><li><a href="expertise.html#litigation">Litigation</a></li><li><a href="expertise.html#arbitration">Arbitration</a></li><li><a href="expertise.html#insolvency">Insolvency</a></li><li><a href="expertise.html#wills-and-estate-planning">Wills & Estate Planning</a></li></ul></div>
+    <div><h4>Office</h4><ul><li><a href="https://www.google.com/maps/search/?api=1&query=9+Engr.+George+Enenmoh+Crescent%2C+Lekki+Phase+1%2C+Lagos" target="_blank" rel="noopener">9 Engr. George Enenmoh Crescent,<br>Lekki Phase 1, Lagos State, Nigeria</a></li></ul></div>
+  </div>
+  <div class="wrap legal"><span>© 2026 Heze Legal Advisory. All rights reserved.</span><p>The content of this website is for general information only and does not constitute legal advice. Please contact us for advice on your specific circumstances.</p></div>
+</footer>
+<script>
+(function(){
+  var h=document.getElementById('site-head'),b=document.getElementById('menu-btn');
+  b.addEventListener('click',function(){var o=h.classList.toggle('open');b.setAttribute('aria-expanded',o?'true':'false')});
+  document.querySelectorAll('#site-nav a').forEach(function(a){a.addEventListener('click',function(){h.classList.remove('open');b.setAttribute('aria-expanded','false')})});
+  var c=document.getElementById('copyAddr'),ad=document.getElementById('address');
+  if(c&&ad)c.addEventListener('click',function(){
+    var t=ad.innerText.replace(/\n/g,' ');
+    function done(){c.textContent='Copied';setTimeout(function(){c.textContent='Copy address'},1800)}
+    function sel(){var r=document.createRange();r.selectNodeContents(ad);var s=getSelection();s.removeAllRanges();s.addRange(r);c.textContent='Selected'}
+    try{navigator.clipboard.writeText(t).then(done,sel)}catch(e){sel()}
+  });
+  var chips=document.querySelectorAll('.chip');
+  chips.forEach(function(ch){ch.addEventListener('click',function(){
+    var k=ch.getAttribute('data-cat');
+    chips.forEach(function(x){x.setAttribute('aria-pressed',x===ch?'true':'false')});
+    document.querySelectorAll('[data-card]').forEach(function(card){card.hidden=!(k==='all'||card.getAttribute('data-card')===k)});
+  })});
+})();
+</script>
+
+</body>
+</html>
