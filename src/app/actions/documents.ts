@@ -2,9 +2,11 @@
 
 import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
+import { after } from 'next/server';
 import { auth } from '@/auth';
 import { requireAuth, requirePermission } from '@/lib/auth-utils';
 import { logActivity } from '@/lib/log-activity';
+import { scanAndNotifyBrief } from '@/lib/agents/brief-manager/scan';
 
 export async function logDocumentDownload(documentId: string) {
     try {
@@ -60,7 +62,18 @@ export async function createDocument(data: {
                 briefId: data.briefId,
                 folderId: data.folderId || null,
             },
+            include: { brief: { select: { workspaceId: true } } },
         });
+
+        // Same reaction a document arriving over WhatsApp already gets (see
+        // src/lib/agents/whatsapp/documents.ts) — a document landing is exactly
+        // the kind of signal Brief Manager should react to immediately rather
+        // than waiting for the nightly scan. Fire-and-forget: never blocks the
+        // upload response, and any resulting question/obligation surfaces as
+        // its own update shortly after.
+        after(() => scanAndNotifyBrief(document.brief.workspaceId, data.briefId)
+            .catch(err => console.error(`[Documents] On-demand rescan failed for brief ${data.briefId}:`, err)));
+
         revalidatePath(`/briefs/${data.briefId}`);
         revalidatePath('/briefs');
         return { success: true, document };

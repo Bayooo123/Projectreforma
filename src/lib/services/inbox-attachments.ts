@@ -105,6 +105,14 @@ export async function fileInboxAttachment(id: string, briefId: string) {
         url: item.blobUrl,
     });
 
+    // Same on-arrival reaction as every other document path (see
+    // src/lib/agents/brief-manager/scan.ts) — confirming a pending
+    // email/WhatsApp attachment into a brief is exactly this kind of signal.
+    // Fire-and-forget: never blocks the filing confirmation.
+    const { scanAndNotifyBrief } = await import('@/lib/agents/brief-manager/scan');
+    scanAndNotifyBrief(item.workspaceId, briefId)
+        .catch(err => console.error(`[InboxAttachments] On-demand rescan failed for brief ${briefId}:`, err));
+
     return prisma.inboxAttachment.update({
         where: { id },
         data: {

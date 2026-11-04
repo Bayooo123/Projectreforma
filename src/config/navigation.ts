@@ -16,6 +16,7 @@ import {
   Mic,
   FilePlus2,
   FileEdit,
+  MessageSquare,
 } from 'lucide-react';
 import { ComponentType } from 'react';
 
@@ -31,6 +32,16 @@ export interface NavGroup {
   color: string;
   items: NavItem[];
 }
+
+// The primary landing experience being built out (see /context): a sidebar of
+// every brief/matter "context" with a persistent, always-available chat on
+// the selected one — rather than a scan-gated insight board. Pinned first,
+// ahead of Today, while it proves itself out alongside the existing pages.
+export const contextItem: NavItem = {
+  name: 'Context',
+  href: '/context',
+  icon: MessageSquare,
+};
 
 export const todayItem: NavItem = {
   name: 'Today',

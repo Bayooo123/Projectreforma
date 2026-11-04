@@ -10,7 +10,7 @@ import styles from './Sidebar.module.css';
 import { signOut } from 'next-auth/react'; // Use client-side signOut
 import { useEffect } from 'react';
 import { checkOverdueInvoices } from '@/app/actions/notifications';
-import { navigationGroups, todayItem, agentItems } from '@/config/navigation';
+import { navigationGroups, todayItem, agentItems, contextItem } from '@/config/navigation';
 
 interface SidebarProps {
   user?: {
@@ -72,6 +72,17 @@ const Sidebar = ({ user, workspace }: SidebarProps) => {
 
       <nav className={styles.nav}>
         <ul className={styles.navList}>
+          <li key={contextItem.name}>
+            <Link
+              href={contextItem.href}
+              prefetch={true}
+              className={`${styles.navLink} ${isActive(contextItem.href) ? styles.active : ''}`}
+            >
+              <contextItem.icon size={20} className={styles.navIcon} />
+              <span className={styles.navText}>{contextItem.name}</span>
+            </Link>
+          </li>
+
           <li key={todayItem.name}>
             <Link
               href={todayItem.href}
