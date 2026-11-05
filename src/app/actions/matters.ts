@@ -1,6 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import { after } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { requireAuth, requirePermission } from '@/lib/auth-utils';
 import { logActivity } from '@/lib/log-activity';
@@ -8,6 +9,8 @@ import { createNotification } from '@/app/actions/notifications';
 import { scheduleCourtReminders } from '@/lib/courtReminders';
 import { initializeMilestonesForMatter } from '@/app/actions/litigation-milestones';
 import { MatterService } from '@/lib/services/matters/matter-service';
+import { enqueueProcessingJob } from '@/lib/jobs/queue';
+import { runJobFastPath } from '@/lib/jobs/handlers';
 
 async function assertWorkspaceMembership(workspaceId: string) {
     const user = await requireAuth();
@@ -182,9 +185,9 @@ export async function recordProceeding(input: {
         });
         if (!matter) return { success: false, error: 'Matter not found' };
 
-        await prisma.$transaction(async tx => {
+        const { sittingEntry, firstDraftJob } = await prisma.$transaction(async tx => {
             // Always create a new entry — each sitting is its own record
-            await tx.calendarEntry.create({
+            const entry = await tx.calendarEntry.create({
                 data: {
                     matterId: input.matterId,
                     date: input.date,
@@ -226,7 +229,25 @@ export async function recordProceeding(input: {
                 const recipientIds = [input.userId, matter.lawyerInChargeId].filter(Boolean) as string[];
                 await scheduleCourtReminders(tx, nextEntry.id, input.adjournedTo, input.matterId, recipientIds);
             }
+
+            // Enqueued inside the transaction — the job row exists before the
+            // response is even sent, so it survives a crash between here and
+            // the fast path below running.
+            const job = await enqueueProcessingJob('first_draft_court_event', matter.workspaceId, {
+                workspaceId: matter.workspaceId,
+                matterId: input.matterId,
+                calendarEntryId: entry.id,
+                userId: input.userId,
+            }, { tx });
+
+            return { sittingEntry: entry, firstDraftJob: job };
         });
+
+        // First Draft: process the queued job after the response is sent —
+        // drafting is an LLM call and must never delay or fail the write the
+        // lawyer is actually waiting on. The job row from above is what makes
+        // this safe to retry if this fast path doesn't finish.
+        after(() => runJobFastPath(firstDraftJob.id));
 
         const dateStr = input.adjournedTo
             ? input.adjournedTo.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
@@ -365,7 +386,7 @@ export async function adjournMatter(
             },
         });
 
-        await prisma.$transaction(async tx => {
+        const sittingEntry = await prisma.$transaction(async tx => {
             await tx.matter.update({
                 where: { id: matterId },
                 data: { nextCourtDate: newDate },
@@ -392,6 +413,8 @@ export async function adjournMatter(
             ].filter(Boolean) as string[];
 
             await scheduleCourtReminders(tx, entry.id, newDate, matterId, recipientIds);
+
+            return entry;
         });
 
         if (matter) {
@@ -405,6 +428,19 @@ export async function adjournMatter(
                 recipients: 'ALL',
                 relatedMatterId: matterId,
             }).catch(() => {});
+
+            // Not inside the $transaction above — matter's non-null check
+            // only happens here, after it. A narrower durability window than
+            // recordProceeding's (a crash between the transaction committing
+            // and this enqueue call would still lose the job), but still a
+            // real durable row from here on, unlike the direct call before.
+            const job = await enqueueProcessingJob('first_draft_court_event', matter.workspaceId, {
+                workspaceId: matter.workspaceId,
+                matterId,
+                calendarEntryId: sittingEntry.id,
+                userId,
+            });
+            after(() => runJobFastPath(job.id));
         }
 
         revalidatePath('/calendar');

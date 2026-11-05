@@ -1,0 +1,28 @@
+name: Process jobs sweep
+
+# Reconciliation sweep for the ProcessingJob queue (ReformaOS Durable Queue
+# design doc). Runs here rather than as a Vercel Cron for the same reason as
+# email-imap-sync.yml: Vercel's Hobby plan only allows once-daily crons, far
+# too infrequent for catching a failed job within minutes rather than within
+# a day. GitHub Actions' schedule trigger is best-effort (can slip a few
+# minutes under load), which is fine for a sweep whose job is to catch what
+# the fast path (after()) already mostly handles.
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch: {}
+
+jobs:
+  sweep:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger process-jobs endpoint
+        run: |
+          # -L/--location-trusted: see email-imap-sync.yml's note on why this
+          # is required rather than plain -L (Authorization header needs to
+          # survive a same-domain redirect).
+          curl -sS -f -L --location-trusted -X GET \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            https://reforma.ng/api/cron/process-jobs -o response.json
+          echo "Response:"
+          cat response.json

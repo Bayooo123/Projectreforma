@@ -5,6 +5,8 @@ import { auth } from '@/auth';
 import { revalidatePath } from 'next/cache';
 import { generateBriefNumber } from '@/lib/briefs';
 import { DocumentIngestionService } from '@/lib/services/ingestion';
+import { evaluateCompleteness, type CompletenessResult } from '@/lib/filing-checklist/checklist';
+import { reviewFilingDocument } from '@/lib/filing-checklist/review';
 
 async function getSession() {
     const session = await auth();
@@ -24,6 +26,11 @@ export interface ProcessDocumentResult {
     fileName: string;
     docType: string;
     isAffidavit: boolean;
+}
+
+export interface FilingReviewResult {
+    fileName: string;
+    issues: string;
 }
 
 // Separate from DocumentIngestionService.getOrCreateCorrespondenceFolder,
@@ -130,6 +137,40 @@ export async function createProcess(input: {
         }
     }
 
+    // Filing checklist — completeness + structural/grammar review. Reads the
+    // OCR text ingest() already extracted and stored; no separate
+    // extraction step needed. Purpose is hardcoded to 'fresh_matter' for
+    // now — that's the only checklist scoped so far (see checklist.ts);
+    // responsive filings deliberately aren't guessed at yet.
+    const ingestedIds = results.filter(r => r.documentId).map(r => r.documentId);
+    const ingestedDocs = ingestedIds.length
+        ? await prisma.document.findMany({
+            where: { id: { in: ingestedIds } },
+            select: { id: true, ocrText: true, docType: true },
+        })
+        : [];
+
+    const completeness: CompletenessResult = evaluateCompleteness(
+        'fresh_matter',
+        ingestedDocs.map(d => d.ocrText || ''),
+    );
+
+    const reviews: FilingReviewResult[] = (await Promise.all(
+        results
+            .filter(r => r.documentId)
+            .map(async r => {
+                const doc = ingestedDocs.find(d => d.id === r.documentId);
+                if (!doc?.ocrText) return null;
+                try {
+                    const issues = await reviewFilingDocument(doc.ocrText, doc.docType || r.docType);
+                    return { fileName: r.fileName, issues };
+                } catch (error) {
+                    console.error('[createProcess] Filing review failed for', r.fileName, error);
+                    return null;
+                }
+            }),
+    )).filter((r): r is FilingReviewResult => r !== null);
+
     revalidatePath('/briefs');
     revalidatePath('/calendar');
 
@@ -141,5 +182,7 @@ export async function createProcess(input: {
         matterName: matter.name,
         documents: results,
         affidavitCount: results.filter(r => r.isAffidavit).length,
+        completeness,
+        reviews,
     };
 }

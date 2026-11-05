@@ -7,6 +7,11 @@ import { AuthError } from 'next-auth';
 import { signIn, signOut } from '@/auth';
 import { prisma } from '@/lib/prisma';
 import { checkRateLimit, getClientIp } from '@/lib/services/auth/ratelimit';
+import { createPasswordResetToken } from '@/lib/services/auth/tokens';
+import { mailService } from '@/lib/services/mail/mail';
+import { getOjogbonWelcomeEmail, getOjogbonPasswordResetEmail } from '@/lib/services/mail/templates';
+import { logSecurityEvent, SecurityEvent } from '@/lib/services/auth/audit';
+import { config } from '@/lib/config';
 
 /**
  * Ojogbon accounts reuse Reforma's User table and NextAuth credentials login,
@@ -61,9 +66,63 @@ export async function ojogbonSignUp(
         return { message: 'We couldn’t create your account. Please try again.' };
     }
 
+    // Best-effort — a failed welcome email shouldn't block account creation.
+    mailService
+        .send({ to: email, subject: 'Welcome to Ojogbon', html: getOjogbonWelcomeEmail(name) })
+        .catch(err => console.error('Ojogbon welcome email failed:', err));
+
     // Log in immediately; signIn throws the redirect on success.
     await signIn('credentials', { email, password, redirectTo: '/ojogbon/app' });
     return {};
+}
+
+export type OjogbonForgotPasswordState = { success?: boolean; message?: string; error?: string };
+
+/**
+ * Ojogbon's own forgot-password request — same token/rate-limit machinery as
+ * the firm product's resetPassword action (src/app/actions/reset-password.ts),
+ * but pointed at /ojogbon/reset-password and sent with Ojogbon's own email
+ * copy, so a student lands back in the studio's branding, not the firm app's.
+ */
+export async function ojogbonForgotPassword(
+    _prev: OjogbonForgotPasswordState | undefined,
+    formData: FormData,
+): Promise<OjogbonForgotPasswordState> {
+    const email = String(formData.get('email') ?? '').trim().toLowerCase();
+    if (!email) return { error: 'Enter your email address.' };
+
+    const genericMessage = 'If an account exists with that email, a reset link has been sent.';
+
+    const ip = getClientIp(await headers());
+    const rl = await checkRateLimit({ key: `ojogbon-forgot-password:${email}:${ip}`, limit: 5, windowSeconds: 15 * 60 });
+    if (!rl.success) return { error: 'Too many requests. Please try again later.' };
+
+    try {
+        const user = await prisma.user.findUnique({ where: { email } });
+        if (!user) {
+            await logSecurityEvent({
+                event: SecurityEvent.PASSWORD_RESET_REQUEST,
+                description: `Ojogbon password reset requested for non-existent email: ${email}`,
+                metadata: { email, ip },
+            });
+            return { success: true, message: genericMessage };
+        }
+
+        const token = await createPasswordResetToken(user.id);
+        const resetUrl = `${config.NEXT_PUBLIC_APP_URL}/ojogbon/reset-password?token=${token}`;
+        await mailService.send({ to: user.email, subject: 'Reset your Ojogbon password', html: getOjogbonPasswordResetEmail(resetUrl) });
+
+        await logSecurityEvent({
+            userId: user.id,
+            event: SecurityEvent.PASSWORD_RESET_REQUEST,
+            description: `Ojogbon password reset link sent to ${user.email}`,
+            metadata: { ip },
+        });
+        return { success: true, message: genericMessage };
+    } catch (error) {
+        console.error('Ojogbon forgot-password error:', error);
+        return { error: 'Something went wrong. Please try again.' };
+    }
 }
 
 export async function ojogbonLogIn(

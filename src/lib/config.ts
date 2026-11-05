@@ -55,6 +55,10 @@ const envSchema = z.object({
     WHATSAPP_VERIFY_TOKEN: z.string().optional(),
     WHATSAPP_TOKEN: z.string().optional(),
     WHATSAPP_PHONE_NUMBER_ID: z.string().optional(),
+    // Meta App Secret (App Dashboard → Settings → Basic → App Secret) — used to
+    // verify the X-Hub-Signature-256 header on incoming webhook POSTs. Distinct
+    // from WHATSAPP_VERIFY_TOKEN, which only covers Meta's one-time GET challenge.
+    WHATSAPP_APP_SECRET: z.string().optional(),
 
     // BICA Integration
     BICA_PLATFORM_ID: z.string().default('reforma_os'),

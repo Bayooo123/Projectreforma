@@ -49,4 +49,30 @@ export class DraftingService {
         if (!text) throw new Error('No draft returned from Claude.');
         return text;
     }
+
+    /**
+     * Drafts a client-facing status update from structured matter context
+     * (what happened, next date, what the client was last told) rather than
+     * semantic search over documents — used by First Draft's post-court
+     * trigger, where the facts come from the matter record, not a brief.
+     */
+    static async generateClientUpdateDraft(context: string, instruction?: string): Promise<string> {
+        const apiKey = config.ANTHROPIC_API_KEY;
+        if (!apiKey) throw new Error('ANTHROPIC_API_KEY is not configured.');
+
+        let prompt = SYSTEM_PROMPTS.SENIOR_ASSOCIATE + '\n\n' + SYSTEM_PROMPTS.CLIENT_UPDATE_INSTRUCTION;
+        prompt = prompt.replace('{{CONTEXT}}', context);
+        prompt = prompt.replace('{{INSTRUCTION}}', instruction || 'None — use your judgment on tone and detail.');
+
+        const client = new Anthropic({ apiKey });
+        const response = await client.messages.create({
+            model: 'claude-sonnet-5',
+            max_tokens: 1024,
+            messages: [{ role: 'user', content: prompt }],
+        });
+
+        const text = response.content[0]?.type === 'text' ? response.content[0].text : '';
+        if (!text) throw new Error('No draft returned from Claude.');
+        return text;
+    }
 }

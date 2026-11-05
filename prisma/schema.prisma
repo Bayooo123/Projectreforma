@@ -74,6 +74,7 @@ model Workspace {
   inboxAttachments      InboxAttachment[]
   meetingRecordings     MeetingRecording[]
   meetingBotRequests    MeetingBotRequest[]
+  processingJobs        ProcessingJob[]
 
   @@index([slug])
   @@index([firmCode])
@@ -405,6 +406,7 @@ model Matter {
   matterQuestions       MatterQuestion[]
   litigationMilestones  LitigationMilestone[]
   pulseEvents           PulseEvent[]
+  clientUpdateDrafts    ClientUpdateDraft[]
 
   @@index([workspaceId])
   @@index([status])
@@ -461,6 +463,7 @@ model CalendarEntry {
   appearances            User[]                  @relation("CalendarAppearances")
   matterQuestions        MatterQuestion[]
   recordings             MeetingRecording[]
+  clientUpdateDrafts     ClientUpdateDraft[]
 
   @@index([briefId], map: "CourtDate_briefId_idx")
   @@index([clientId], map: "CourtDate_clientId_idx")
@@ -522,6 +525,31 @@ model ClientCommunication {
   @@index([matterId])
   @@index([clientId])
   @@index([sentAt])
+}
+
+// First Draft — a client-update draft generated when a court attendance is
+// logged against a matter (recordProceeding/adjournMatter). Persisted so a
+// lawyer can review/edit before it sends (never auto-sent) and so finalText
+// vs draftText becomes a reusable signal for how much lawyers edit these.
+model ClientUpdateDraft {
+  id              String    @id @default(cuid())
+  workspaceId     String
+  matterId        String
+  calendarEntryId String
+  draftText       String
+  finalText       String?
+  status          String    @default("pending") // pending | approved | sent | discarded
+  approvedById    String?
+  createdAt       DateTime  @default(now())
+  approvedAt      DateTime?
+  sentAt          DateTime?
+
+  matter        Matter        @relation(fields: [matterId], references: [id], onDelete: Cascade)
+  calendarEntry CalendarEntry @relation(fields: [calendarEntryId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, status])
+  @@index([matterId])
+  @@index([calendarEntryId])
 }
 
 model Brief {
@@ -1602,6 +1630,36 @@ model MeetingBotRequest {
 
   @@index([workspaceId])
   @@index([status])
+}
+
+// Generalizes MeetingBotRequest's claim/complete/fail shape into a queue any
+// deferred work can use. Durability comes from enqueueProcessingJob being
+// called inside the same transaction as the triggering mutation — the row
+// exists before the HTTP response is sent, so a mid-request crash loses
+// nothing. after() is still used as an optimistic fast path right after
+// enqueueing; this table is what makes that safe to retry instead of
+// fire-and-forget. type is a plain string, not an enum, so a new job type
+// doesn't need a migration — each handler validates its own payload shape.
+model ProcessingJob {
+  id          String    @id @default(cuid())
+  workspaceId String
+  type        String
+  payload     Json
+  status      String    @default("pending") // pending | claimed | completed | failed | dead_letter
+  attempts    Int       @default(0)
+  maxAttempts Int       @default(3)
+  availableAt DateTime  @default(now())
+  claimedAt   DateTime?
+  claimedBy   String?
+  completedAt DateTime?
+  lastError   String?
+  createdAt   DateTime  @default(now())
+
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([status, availableAt])
+  @@index([workspaceId])
+  @@index([type, status])
 }
 
 // Every document that arrives via email or WhatsApp lands here, whether the

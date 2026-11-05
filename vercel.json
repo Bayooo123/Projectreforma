@@ -1,5 +1,5 @@
 {
-    "buildCommand": "next build --webpack",
+    "buildCommand": "npx prisma migrate deploy && next build --webpack",
     "crons": [
         {
             "path": "/api/cron/process-notifications",

@@ -51,7 +51,7 @@ export async function clockIn(workspaceId: string, lat?: number, lng?: number) {
         update: {},
     });
 
-    revalidatePath('/management/office');
+    revalidatePath('/finance');
     return { success: true, data: record, alreadyClockedIn: record.createdAt < new Date(Date.now() - 5000) };
 }
 
@@ -66,7 +66,7 @@ export async function clockOut(workspaceId: string) {
             where: { userId_workspaceId_date: { userId: session.user.id, workspaceId, date: today } },
             data: { clockOut: new Date() },
         });
-        revalidatePath('/management/office');
+        revalidatePath('/finance');
         return { success: true, data: record };
     } catch {
         return { success: false, error: 'No clock-in record found for today' };
@@ -124,7 +124,7 @@ export async function adminClockIn(workspaceId: string, targetUserId: string, cl
         update: { clockIn: recordedTime },
     });
 
-    revalidatePath('/management/office');
+    revalidatePath('/finance');
     return { success: true, data: record };
 }
 

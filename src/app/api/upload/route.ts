@@ -1,8 +1,9 @@
 import { put } from '@vercel/blob';
-import { NextResponse } from 'next/server';
+import { NextResponse, after } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { requireAuth } from '@/lib/auth-utils';
 import { logActivity } from '@/lib/log-activity';
+import { scanAndNotifyBrief } from '@/lib/agents/brief-manager/scan';
 
 export async function POST(request: Request): Promise<NextResponse> {
     try {
@@ -61,6 +62,14 @@ export async function POST(request: Request): Promise<NextResponse> {
 
             if (authUser?.id && doc.brief?.workspaceId) {
                 logActivity({ workspaceId: doc.brief.workspaceId, userId: authUser.id, resource: 'DOCUMENT', action: 'UPLOADED', resourceId: doc.id, resourceName: filename }).catch(() => {});
+            }
+
+            // Same on-arrival reaction as the WhatsApp and createDocument paths
+            // (see src/lib/agents/brief-manager/scan.ts) — never blocks the
+            // upload response.
+            if (doc.brief?.workspaceId) {
+                after(() => scanAndNotifyBrief(doc.brief!.workspaceId, briefId)
+                    .catch(err => console.error(`[Upload] On-demand rescan failed for brief ${briefId}:`, err)));
             }
         }
 

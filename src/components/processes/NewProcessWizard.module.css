@@ -400,3 +400,76 @@
     padding: 0.6rem 0.8rem;
     margin: 0;
 }
+
+.checklistSection {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 0.85rem 1rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background-color: var(--surface);
+}
+
+.checklistHeader {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.checklistComplete {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.82rem;
+    color: var(--text-secondary);
+    margin: 0;
+}
+
+.checklistMissingList {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.checklistMissingItem {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.82rem;
+    color: #dc2626;
+}
+
+.reviewBlock {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    padding-top: 0.4rem;
+    border-top: 1px solid var(--border);
+}
+
+.reviewBlock:first-of-type {
+    border-top: none;
+    padding-top: 0;
+}
+
+.reviewFileName {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.reviewIssues {
+    font-family: inherit;
+    font-size: 0.8rem;
+    line-height: 1.5;
+    color: var(--text-secondary);
+    white-space: pre-wrap;
+    margin: 0;
+}

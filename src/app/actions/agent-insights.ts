@@ -30,6 +30,8 @@ export interface BriefBoardRow {
     client: string | null;
     lawyerInCharge: string | null;
     dueDate: Date | null;
+    isLitigationDerived: boolean;
+    matterId: string | null;
     insight: {
         id: string;
         summary: string;
@@ -57,6 +59,7 @@ export async function getBriefManagerBoard(workspaceId: string, scope: 'firm' | 
             },
             select: {
                 id: true, name: true, briefNumber: true, dueDate: true,
+                isLitigationDerived: true, matterId: true,
                 client: { select: { name: true } },
                 lawyerInCharge: { select: { name: true } },
                 lawyer: { select: { name: true } },
@@ -87,6 +90,8 @@ export async function getBriefManagerBoard(workspaceId: string, scope: 'firm' | 
             client: b.client?.name ?? null,
             lawyerInCharge: b.lawyerInCharge?.name ?? b.lawyer?.name ?? null,
             dueDate: b.dueDate,
+            isLitigationDerived: b.isLitigationDerived,
+            matterId: b.matterId,
             insight: insight ? {
                 id: insight.id,
                 summary: insight.summary,

@@ -2,10 +2,11 @@
 
 import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { Upload, FileText, Loader, CheckCircle, AlertCircle, Search, Plus, ArrowRight, ScrollText } from 'lucide-react';
+import { Upload, FileText, Loader, CheckCircle, AlertCircle, Search, Plus, ArrowRight, ScrollText, ClipboardList, XCircle } from 'lucide-react';
 import styles from './NewProcessWizard.module.css';
 import { createMatter, getMattersForWorkspace } from '@/app/actions/matters';
-import { createProcess, type ProcessDocumentResult } from '@/app/actions/processes';
+import { createProcess, type ProcessDocumentResult, type FilingReviewResult } from '@/app/actions/processes';
+import type { CompletenessResult } from '@/lib/filing-checklist/checklist';
 
 type MatterSummary = Awaited<ReturnType<typeof getMattersForWorkspace>>[number];
 
@@ -47,7 +48,11 @@ export default function NewProcessWizard({ workspaceId, userId, initialMatters }
     // Step 3 — proceed / result
     const [proceeding, setProceeding] = useState(false);
     const [proceedError, setProceedError] = useState('');
-    const [result, setResult] = useState<{ briefId: string; briefNumber: string; matterName: string; documents: ProcessDocumentResult[]; affidavitCount: number } | null>(null);
+    const [result, setResult] = useState<{
+        briefId: string; briefNumber: string; matterName: string;
+        documents: ProcessDocumentResult[]; affidavitCount: number;
+        completeness: CompletenessResult; reviews: FilingReviewResult[];
+    } | null>(null);
 
     const filteredMatters = useMemo(() => {
         if (!search.trim()) return matters;
@@ -331,6 +336,41 @@ export default function NewProcessWizard({ workspaceId, userId, initialMatters }
                         <p className={styles.affidavitNote}>
                             {result.affidavitCount} document{result.affidavitCount === 1 ? '' : 's'} recognised as {result.affidavitCount === 1 ? 'an affidavit' : 'affidavits'} — routing to Oathlify for notarization isn&apos;t wired up yet, so these stay here until that integration ships.
                         </p>
+                    )}
+
+                    <div className={styles.checklistSection}>
+                        <div className={styles.checklistHeader}>
+                            <ClipboardList size={15} color="var(--text-secondary)" />
+                            <span>Filing checklist — fresh matter</span>
+                        </div>
+                        {result.completeness.missing.length === 0 ? (
+                            <p className={styles.checklistComplete}>
+                                <CheckCircle size={13} color="#059669" /> All required components found in this bundle.
+                            </p>
+                        ) : (
+                            <ul className={styles.checklistMissingList}>
+                                {result.completeness.missing.map(m => (
+                                    <li key={m.key} className={styles.checklistMissingItem}>
+                                        <XCircle size={13} color="#dc2626" /> {m.label} — not found in the bundle
+                                    </li>
+                                ))}
+                            </ul>
+                        )}
+                    </div>
+
+                    {result.reviews.length > 0 && (
+                        <div className={styles.checklistSection}>
+                            <div className={styles.checklistHeader}>
+                                <ScrollText size={15} color="var(--text-secondary)" />
+                                <span>Structural &amp; grammar review</span>
+                            </div>
+                            {result.reviews.map((r, i) => (
+                                <div key={i} className={styles.reviewBlock}>
+                                    <div className={styles.reviewFileName}>{r.fileName}</div>
+                                    <pre className={styles.reviewIssues}>{r.issues}</pre>
+                                </div>
+                            ))}
+                        </div>
                     )}
 
                     <div className={styles.formActions}>

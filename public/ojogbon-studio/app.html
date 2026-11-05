@@ -38,6 +38,11 @@ button.solid{background:var(--ink);color:var(--bg)}
 button.solid:hover:not(:disabled){background:var(--pen);border-color:var(--pen)}
 button.quiet{border-color:var(--line)}
 button:disabled{opacity:.45;cursor:default}
+a.quiet,a.solid{display:inline-flex;align-items:center;text-decoration:none;font:inherit;cursor:pointer;border-radius:999px;border:1.5px solid var(--ink);background:transparent;color:var(--ink);padding:7px 14px;font-weight:700;font-size:14px}
+a.solid{background:var(--ink);color:var(--bg)}
+a.solid:hover{background:var(--pen);border-color:var(--pen)}
+a.quiet{border-color:var(--line)}
+a.quiet:hover{background:var(--pen-soft)}
 button:focus-visible,textarea:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--pen);outline-offset:2px}
 input,select,textarea{font:inherit;color:var(--ink);background:var(--surface);border:1.5px solid var(--line);border-radius:10px;padding:8px 10px}
 label.f{display:flex;flex-direction:column;gap:6px;font-weight:700;font-size:14px}
@@ -125,6 +130,17 @@ details.plib summary{cursor:pointer;font-weight:700;font-size:14px;color:var(--i
 .wc{font-family:var(--mono);font-size:12px;color:var(--muted);margin-right:auto;display:flex;align-items:center;gap:8px}
 .wc .m{width:80px;height:6px;background:var(--line);border-radius:3px;overflow:hidden}
 .wc .m i{display:block;height:100%;background:var(--pen)}
+
+/* voice notes */
+.voice{background:var(--surface);border:1.5px solid var(--line);border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;gap:8px}
+.voice .hd{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.voice h3{font-size:15px;font-weight:800}
+.voice .hint{margin:0;font-size:13px;color:var(--muted)}
+.vnote{border:1.5px solid var(--line);border-radius:10px;padding:8px 10px;font-size:13px;display:flex;flex-direction:column;gap:4px}
+.vnote .m{color:var(--muted);font-size:12px}
+.recbtn.on{border-color:#b42318;color:#b42318}
+.recdot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#b42318;margin-right:6px;animation:pulse 1s infinite}
+@keyframes pulse{50%{opacity:.3}}
 
 /* notes */
 .notes{background:var(--surface);border:1.5px solid var(--line);border-radius:14px;padding:14px 16px;display:flex;flex-direction:column;gap:12px;min-width:0}
@@ -219,6 +235,7 @@ a{color:var(--pen);font-weight:700;text-underline-offset:2px}
     <h1><a href="/ojogbon" style="color:inherit;text-decoration:none">Ojogbon</a> <small id="saveState" class="save"></small></h1>
     <label for="projSel" class="save">Paper</label>
     <select id="projSel" aria-label="Choose a paper"></select>
+    <a class="quiet" href="/ojogbon/papers">My papers</a>
     <button class="quiet" id="bNew">New paper</button>
     <button class="quiet" id="bExport">Export</button>
     <span class="save" id="who"></span>
@@ -233,10 +250,10 @@ a{color:var(--pen);font-weight:700;text-underline-offset:2px}
     <p class="msg">Give the topic, and optionally a draft or outline. Ojogbon breaks it into phases, each with a brief and what to read before you write.</p>
     <div class="row">
       <label class="f" for="nTopic">Topic or working title<input id="nTopic" placeholder="e.g. Platform workers and employee status in Nigeria"></label>
-      <label class="f" for="nKind">Kind of paper<select id="nKind"><option>Journal article</option><option>Conference paper</option><option>Book chapter</option><option>Essay competition entry</option><option>Policy brief</option></select></label>
+      <label class="f" for="nKind">Kind of paper<select id="nKind"><option>Journal article</option><option>Undergraduate project</option><option>Monograph</option><option>Conference paper</option><option>Book chapter</option><option>Essay competition entry</option><option>Policy brief</option></select></label>
     </div>
     <label class="f" for="nCtx">Draft, outline or notes <span class="h">Paste here or upload a .docx, .md or .txt. Leave empty to start from the topic alone.</span><textarea id="nCtx"></textarea></label>
-    <div class="drop"><input type="file" id="nFile" accept=".docx,.md,.txt" aria-label="Upload a draft or outline"><span id="fileMsg">Uploading fills the box above.</span></div>
+    <div class="drop"><input type="file" id="nFile" accept=".docx,.md,.txt" aria-label="Upload a draft or outline"><span id="fileMsg">Uploading fills the box above.</span><button class="quiet" id="bSetupRec" type="button">Record your voice instead</button></div>
     <label class="f" for="nMine">Your other work to draw on <span class="h">One per line. Ojogbon points you to these when they're relevant.</span><textarea id="nMine" style="min-height:100px"></textarea></label>
     <p class="msg">With only a topic, Ojogbon prepares an outline and pulls references. With a solid draft (about 1,000 words or more) it also finds gaps in the literature, places your work within it and lists likely rebuttals.</p>
     <div class="acts"><button class="solid" id="bBreak">Break it into phases</button><button class="quiet" id="bCancel">Cancel</button><span class="msg" id="setupMsg"></span></div>
@@ -247,6 +264,7 @@ a{color:var(--pen);font-weight:700;text-underline-offset:2px}
 
     <div class="main">
       <section class="brief" id="brief"></section>
+      <section class="voice" id="voice"></section>
       <section class="pad" id="padWrap">
         <textarea id="pad" aria-label="Your writing for this phase" placeholder="Write rough. Ojogbon can check it when you're ready."></textarea>
         <div class="tools">
@@ -391,7 +409,7 @@ function wireNotes(){
   const x=$("xRef");if(x)x.onclick=()=>{refRes=null;renderNotes()};
 }
 function renderButtons(){const ai=!!sample;$("bEval").disabled=!ai||!!busy;$("bRef").disabled=!ai||!!busy;$("bBreak").disabled=!ai;$("aiOff").hidden=ai||!aiChecked}
-function renderAll(){renderProjects();$("projSel").hidden=!P();document.querySelector("label[for=projSel]").hidden=!P();if(run){$("setup").hidden=true;$("work").hidden=!P()}if(!P()){if(!run){$("work").hidden=true;$("setup").hidden=false;$("bCancel").hidden=true}$("bExport").hidden=true;renderButtons();return}$("bExport").hidden=false;renderRail();renderBrief();renderNotes();renderButtons()}
+function renderAll(){renderProjects();$("projSel").hidden=!P();document.querySelector("label[for=projSel]").hidden=!P();if(run){$("setup").hidden=true;$("work").hidden=!P()}if(!P()){if(!run){$("work").hidden=true;$("setup").hidden=false;$("bCancel").hidden=true}$("bExport").hidden=true;renderButtons();return}$("bExport").hidden=false;renderRail();renderBrief();renderVoice();renderNotes();renderButtons()}
 function toast(t){const e=$("toast");e.textContent=t;e.classList.add("show");clearTimeout(e._t);e._t=setTimeout(()=>e.classList.remove("show"),2600)}
 
 /* ---------- Ojogbon ---------- */
@@ -617,6 +635,75 @@ function wireLib(){
   document.querySelectorAll("[data-addb]").forEach(b=>b.onclick=()=>{const [k,j]=b.dataset.addb.split(":").map(Number);const x=lib.beyond.items[k].papers.splice(j,1)[0];touch();addPaper(x)});
 }
 
+/* ---------- voice notes ---------- */
+// Perpetual: visible whichever phase (or Library/Literature/final review) the
+// student is on, so recording a thought about the paper is never blocked on
+// being in the "right" place for it. Transcribed via Whisper server-side and
+// kept on the paper itself (p.voiceNotes), so it's there to reread later.
+let rec=null,recChunks=[],recBusy=false;
+function voiceNotesOf(p){if(!p.voiceNotes)p.voiceNotes=[];return p.voiceNotes}
+function renderVoice(){
+  const p=P();if(!p){$("voice").innerHTML="";return}
+  const notes=voiceNotesOf(p);
+  let h=`<div class="hd"><h3>Voice notes</h3><button class="quiet recbtn${rec?" on":""}" id="bRec"${recBusy?" disabled":""}>${rec?`<span class="recdot"></span>Stop recording`:"Record a voice note"}</button></div>`;
+  h+=`<p class="hint">Say what's on your mind about this paper — Ojogbon transcribes it so you always have it to refer back to.</p>`;
+  if(recBusy)h+=`<p class="hint"><span class="spin"></span>Transcribing…</p>`;
+  notes.slice().reverse().forEach(n=>{
+    h+=`<div class="vnote"><span class="m">${new Date(n.at).toLocaleString()}</span>${n.transcript?`<p style="margin:0">${esc(n.transcript)}</p>`:`<p class="m" style="margin:0">${esc(n.note||"No transcript available.")}</p>`}<span class="lk">${A(n.url,"Play recording")}</span></div>`;
+  });
+  $("voice").innerHTML=h;
+  const b=$("bRec");if(b)b.onclick=rec?stopRecording:startRecording;
+}
+async function startRecording(){
+  if(!navigator.mediaDevices||!window.MediaRecorder){toast("Voice recording isn't supported in this browser");return}
+  try{
+    const stream=await navigator.mediaDevices.getUserMedia({audio:true});
+    recChunks=[];rec=new MediaRecorder(stream);
+    rec.ondataavailable=e=>{if(e.data.size)recChunks.push(e.data)};
+    rec.onstop=()=>{stream.getTracks().forEach(t=>t.stop());finishRecording()};
+    rec.start();renderVoice();
+  }catch(e){toast("Couldn't access your microphone")}
+}
+function stopRecording(){if(rec&&rec.state!=="inactive")rec.stop();rec=null;renderVoice()}
+async function finishRecording(){
+  const p=P();if(!p||!recChunks.length)return;
+  const blob=new Blob(recChunks,{type:recChunks[0].type||"audio/webm"});
+  recBusy=true;renderVoice();
+  try{
+    const r=await fetch("/api/ojogbon/voice-note",{method:"POST",headers:{"Content-Type":blob.type||"audio/webm"},body:blob,credentials:"same-origin"});
+    const j=await r.json().catch(()=>({}));
+    if(!r.ok)throw 0;
+    voiceNotesOf(p).push({id:uid(),url:j.url,transcript:j.transcript||"",note:j.note||"",at:Date.now()});
+    touch();toast(j.transcript?"Voice note transcribed":"Saved, but couldn't transcribe it")
+  }catch(e){toast("Couldn't save that recording")}
+  recBusy=false;renderVoice();
+}
+/* Setup-panel recorder: an alternative to typing or uploading a draft when
+   starting a new paper — the transcript is appended straight into nCtx. */
+let setupRec=null,setupChunks=[];
+async function toggleSetupRec(){
+  if(setupRec){if(setupRec.state!=="inactive")setupRec.stop();return}
+  if(!navigator.mediaDevices||!window.MediaRecorder){toast("Voice recording isn't supported in this browser");return}
+  try{
+    const stream=await navigator.mediaDevices.getUserMedia({audio:true});
+    setupChunks=[];setupRec=new MediaRecorder(stream);
+    setupRec.ondataavailable=e=>{if(e.data.size)setupChunks.push(e.data)};
+    setupRec.onstop=async()=>{
+      stream.getTracks().forEach(t=>t.stop());setupRec=null;$("bSetupRec").textContent="Record your voice instead";
+      const blob=new Blob(setupChunks,{type:setupChunks[0]&&setupChunks[0].type||"audio/webm"});
+      $("fileMsg").textContent="Transcribing your recording…";
+      try{
+        const r=await fetch("/api/ojogbon/voice-note",{method:"POST",headers:{"Content-Type":blob.type||"audio/webm"},body:blob,credentials:"same-origin"});
+        const j=await r.json().catch(()=>({}));
+        if(r.ok&&j.transcript){$("nCtx").value=($("nCtx").value?$("nCtx").value+"\n\n":"")+j.transcript;$("fileMsg").textContent="Added your recording's transcript."}
+        else $("fileMsg").textContent="Couldn't transcribe that recording."
+      }catch(e){$("fileMsg").textContent="Couldn't transcribe that recording."}
+    };
+    setupRec.start();$("bSetupRec").textContent="Stop recording"
+  }catch(e){toast("Couldn't access your microphone")}
+}
+$("bSetupRec").onclick=toggleSetupRec;
+
 /* ---------- export ---------- */
 async function exportPaper(){
   const p=P();const md=`# ${p.topic}\n\n`+p.phases.map(x=>`## ${x.title}\n\n${x.text.trim()}`).join("\n\n")+"\n";
@@ -649,6 +736,8 @@ $("nFile").onchange=async e=>{const f=e.target.files[0];if(!f)return;$("fileMsg"
   serverStore=!!data.available;
   (data.papers||[]).forEach(row=>{const v=row.data;if(!v||!v.id)return;const loc=S.projects[v.id];if(!loc||(v.updated||0)>=(loc.updated||0))S.projects[v.id]=v});
   if(serverStore)Object.values(S.projects).forEach(p=>{if(p.updated&&!(data.papers||[]).some(r=>r.id===p.id))dirty.add(p.id)});
+  const urlPaper=new URLSearchParams(location.search).get("paper");
+  if(urlPaper&&S.projects[urlPaper]){S.cur=urlPaper;S.ph=0;history.replaceState(null,"",location.pathname)}
   if(!S.projects[S.cur])S.cur=Object.keys(S.projects)[0]||null;
   if(P()&&!["final","lit","lib"].includes(S.ph)&&!(S.ph<P().phases.length))S.ph=0;
   lsSave();renderAll();

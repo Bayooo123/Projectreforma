@@ -38,21 +38,23 @@ async function checkIdempotency(operationId: string) {
     const existing = await prisma.securityAuditLog.findFirst({
         where: { event: 'BICA_EXECUTE', description: operationId },
     });
-    return existing?.metadata || null;
+    const metadata = existing?.metadata as { result?: unknown } | null;
+    return metadata ? metadata.result ?? null : null;
 }
 
-async function logIdempotency(entityId: string, operationId: string, resultData: any) {
-    // Temporarily disabled due to foreign key constraint violation (entityId vs userId)
-    /*
+// entityId is the resolved platform entity's id (a Client, Matter, Workspace,
+// etc. — whatever platformEntityType resolved to), not necessarily a User id,
+// so it can't be written to SecurityAuditLog.userId (a real FK to User) —
+// that's the "entityId vs userId" constraint violation this used to hit.
+// Keeping it in metadata instead, alongside the result checkIdempotency reads back.
+async function logIdempotency(entityId: string, entityType: string, operationId: string, resultData: any) {
     await prisma.securityAuditLog.create({
         data: {
-            userId: entityId, 
             event: 'BICA_EXECUTE',
             description: operationId,
-            metadata: resultData as any,
+            metadata: { entityId, entityType, result: resultData } as any,
         },
     });
-    */
 }
 
 // ---------------------------------------------------------------------------
@@ -64,23 +66,23 @@ export async function POST(req: NextRequest) {
         const rawBody = await req.text();
 
         // 1. Signature Verification
-        // if (!(await verifySignature(req, rawBody))) {
-        //     return NextResponse.json(
-        //         { status: 'failed', data: null, error: { code: 'UNAUTHORIZED', message: 'Invalid signature.' } },
-        //         { status: 401 }
-        //     );
-        // }
+        if (!(await verifySignature(req, rawBody))) {
+            return NextResponse.json(
+                { status: 'failed', data: null, error: { code: 'UNAUTHORIZED', message: 'Invalid signature.' } },
+                { status: 401 }
+            );
+        }
 
         const body = JSON.parse(rawBody);
         const { operation_type, operation_id, payload, user_context, timestamp } = body;
 
         // 2. Replay Protection
-        // if (!DANGEROUSLY_DISABLE_HMAC && (!timestamp || !validateTimestamp(timestamp))) {
-        //     return NextResponse.json(
-        //         { status: 'failed', data: null, error: { code: 'UNAUTHORIZED', message: 'Stale request.' } },
-        //         { status: 401 }
-        //     );
-        // }
+        if (!DANGEROUSLY_DISABLE_HMAC && (!timestamp || !validateTimestamp(timestamp))) {
+            return NextResponse.json(
+                { status: 'failed', data: null, error: { code: 'UNAUTHORIZED', message: 'Stale request.' } },
+                { status: 401 }
+            );
+        }
 
         // 3. Resolve Actor Entity
         const platformEntityType: string = user_context?.platform_entity_type;
@@ -126,7 +128,7 @@ export async function POST(req: NextRequest) {
 
         // 6. Persistence & Response
         if (operation_id && !body.test_mode) {
-            await logIdempotency(platformEntityId, operation_id, resultData);
+            await logIdempotency(platformEntityId, platformEntityType, operation_id, resultData);
         }
 
         return NextResponse.json({ status: 'success', data: resultData, error: null });
