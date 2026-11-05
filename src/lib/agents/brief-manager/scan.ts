@@ -1,8 +1,7 @@
-import Anthropic from '@anthropic-ai/sdk';
 import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
-import { config } from '@/lib/config';
 import { sendGatedWhatsAppNudge } from '@/lib/agents/whatsapp/notify-gate';
+import { pickAgentProvider, completeJSON } from '@/lib/agents/ai-client';
 
 export type BallInCourtStatus = 'us' | 'opposing_counsel' | 'court' | 'unclear';
 export type RepresentationConfidence = 'confirmed' | 'inferred' | 'unclear';
@@ -68,11 +67,6 @@ const GENERAL_DORMANCY_THRESHOLD_DAYS = 14;
 // still gets asked "what are we doing right now on this?" rather than only
 // hearing from Reforma when something is flagged.
 const ROUTINE_CHECKIN_DAYS = 7;
-
-function getClient(): Anthropic | null {
-    if (!config.ANTHROPIC_API_KEY) return null;
-    return new Anthropic({ apiKey: config.ANTHROPIC_API_KEY });
-}
 
 function parseJSON<T>(text: string): T | null {
     try {
@@ -226,8 +220,7 @@ Rules:
 }
 
 export async function generateBriefManagerInsight(briefId: string): Promise<InsightGenerationResult> {
-    const client = getClient();
-    if (!client) return { success: false, reason: 'AI is not configured for this workspace (missing API key).' };
+    if (!pickAgentProvider()) return { success: false, reason: 'AI is not configured for this workspace (missing API key).' };
 
     const brief = await prisma.brief.findUnique({
         where: { id: briefId, deletedAt: null },
@@ -323,17 +316,17 @@ export async function generateBriefManagerInsight(briefId: string): Promise<Insi
     let data: BriefManagerInsightData | null = null;
     let rawText = '';
     try {
-        const response = await client.messages.create({
-            model: 'claude-sonnet-5',
-            // Raised from 1024: the executive-summary schema (4-part summary plus
-            // nextSteps/ballInCourt/representing/questions) can run the model's
-            // JSON output long enough on a correspondence-heavy brief to get cut
-            // off mid-response, which then silently fails to parse below.
-            max_tokens: 2048,
+        // tier 'complex': the executive-summary schema (4-part summary plus
+        // nextSteps/ballInCourt/representing/questions) needs the stronger
+        // model, and can run long enough on a correspondence-heavy brief to
+        // get cut off mid-response on a low token cap, which then silently
+        // fails to parse below.
+        rawText = await completeJSON({
             system: 'You are a meticulous legal case manager. Return only valid JSON — no markdown, no explanation.',
-            messages: [{ role: 'user', content: prompt }],
+            prompt,
+            tier: 'complex',
+            maxTokens: 2048,
         });
-        rawText = response.content[0]?.type === 'text' ? response.content[0].text : '';
         data = parseJSON<BriefManagerInsightData>(rawText);
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Unknown error';
