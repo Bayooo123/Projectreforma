@@ -24,7 +24,7 @@ export default async function ITManagementPage() {
         ['admin', 'owner'].includes(member.role) || workspace?.ownerId === session.user.id
     ));
 
-    if (!member) redirect('/briefs');
+    if (!member) redirect('/context');
 
     return (
         <div className="p-8">

@@ -197,7 +197,7 @@ function LoginForm() {
                                         return;
                                     }
                                     const { signIn } = await import('next-auth/react');
-                                    await signIn('resend', { email, callbackUrl: '/briefs' });
+                                    await signIn('resend', { email, callbackUrl: '/context' });
                                 }}
                                 className={styles.submitButton}
                                 style={{ background: '#fff', color: '#121826', border: '1px solid #e2e8f0' }}

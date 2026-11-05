@@ -12,7 +12,7 @@ export default async function AdminLayout({ children }: AdminLayoutProps) {
     const session = await auth();
 
     if (!session?.user?.isPlatformAdmin) {
-        redirect('/briefs');
+        redirect('/context');
     }
 
     return (
