@@ -264,6 +264,11 @@ async function filePendingDocument(ctx: AgentContext, ref: string | undefined) {
     return { success: true, fileName: ctx.pendingAttachment.fileName, briefId: resolved.id, briefName: resolved.name };
 }
 
+async function getWorkspaceLetterhead(workspaceId: string): Promise<string | null> {
+    const workspace = await prisma.workspace.findUnique({ where: { id: workspaceId }, select: { letterheadUrl: true } });
+    return workspace?.letterheadUrl ?? null;
+}
+
 async function sendStoredDocument(ctx: AgentContext, documentId: string | undefined) {
     if (!documentId) return { error: 'Which document? Look it up (get_brief_detail or search_brief_documents) first.' };
 
@@ -344,7 +349,8 @@ export async function executeTool(name: string, input: Record<string, unknown>, 
             const { brief, draft } = result as { brief: string; draft: string };
 
             try {
-                const buffer = await markdownToDocxBuffer(draft, brief);
+                const letterheadUrl = await getWorkspaceLetterhead(workspaceId);
+                const buffer = await markdownToDocxBuffer(draft, brief, letterheadUrl);
                 const { put } = await import('@vercel/blob');
                 const safeName = (brief || 'Draft').replace(/[^a-zA-Z0-9 _-]/g, '').trim().slice(0, 60) || 'Draft';
                 const filename = `${safeName}.docx`;
@@ -356,6 +362,32 @@ export async function executeTool(name: string, input: Record<string, unknown>, 
                 return { success: true, sentAsDocument: true, filename, brief };
             } catch (err) {
                 console.error('[WhatsApp Agent] Failed to render/send draft document:', err);
+                return { success: true, draft, note: 'Could not send this as a file — here is the draft text instead.' };
+            }
+        }
+        case 'list_standard_document_types':
+            return executeWorkspaceTool('list_standard_document_types', input, workspaceId, ctx.userId);
+        case 'draft_standard_document': {
+            // Same reasoning as draft_document above — hand over the actual
+            // .docx, letterhead and all, instead of a wall of text.
+            const result = await executeWorkspaceTool('draft_standard_document', input, workspaceId, ctx.userId);
+            if (!result || typeof result !== 'object' || 'error' in result || 'missingFields' in result) return result;
+            const { documentName, draft } = result as { documentName: string; draft: string };
+
+            try {
+                const letterheadUrl = await getWorkspaceLetterhead(workspaceId);
+                const buffer = await markdownToDocxBuffer(draft, documentName, letterheadUrl);
+                const { put } = await import('@vercel/blob');
+                const safeName = (documentName || 'Draft').replace(/[^a-zA-Z0-9 _-]/g, '').trim().slice(0, 60) || 'Draft';
+                const filename = `${safeName}.docx`;
+                const blob = await put(`whatsapp-drafts/${workspaceId}/${Date.now()}-${filename}`, buffer, {
+                    access: 'public',
+                    contentType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                });
+                await sendWhatsAppDocument(ctx.fromNumber, blob.url, filename, `${documentName} — review before use.`);
+                return { success: true, sentAsDocument: true, filename, documentName };
+            } catch (err) {
+                console.error('[WhatsApp Agent] Failed to render/send standard document:', err);
                 return { success: true, draft, note: 'Could not send this as a file — here is the draft text instead.' };
             }
         }
@@ -391,7 +423,7 @@ You are talking to: ${ctx.userName}
 Today: ${new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
 Right now in Nigeria: ${timeOfDayGreeting().toLowerCase()}
 
-If this message is only a greeting (hi, hello, good morning/afternoon/evening, etc.) with nothing else asked in it, reply with "${timeOfDayGreeting()}, ${ctx.userName}!" (adjust only if they used a title/name of their own for themselves) and then briefly outline what you can do — a short, scannable list, not exhaustive, e.g.: check on any brief, matter, or client; look up court dates and hearings; draft a letter or document grounded in a brief's actual filings; record an expense or generate an invoice; send you a copy of a filed document; log an update on a case; or send the join-bot into a Zoom meeting. If the greeting is combined with an actual request in the same message ("hi, what's going on with the Adeyemi brief"), skip the capability outline entirely — a one-word greeting plus the answer is enough; don't make them wait through a features list for something they already asked for.
+If this message is only a greeting (hi, hello, good morning/afternoon/evening, etc.) with nothing else asked in it, reply with "${timeOfDayGreeting()}, ${ctx.userName}!" (adjust only if they used a title/name of their own for themselves) and then briefly outline what you can do — a short, scannable list, not exhaustive, e.g.: check on any brief, matter, or client; look up court dates and hearings; draft a letter or document grounded in a brief's actual filings; draft one of the firm's standard documents (CTC application, enrolment of order, search application, deed of lease/sublease, tenancy agreement) from just the facts; record an expense or generate an invoice; send you a copy of a filed document; log an update on a case; or send the join-bot into a Zoom meeting. If the greeting is combined with an actual request in the same message ("hi, what's going on with the Adeyemi brief"), skip the capability outline entirely — a one-word greeting plus the answer is enough; don't make them wait through a features list for something they already asked for.
 ${ctx.pendingAttachment ? `
 PENDING UNFILED DOCUMENT — read this before interpreting the message below: ${ctx.userName} sent "${ctx.pendingAttachment.fileName}" over WhatsApp ${ctx.pendingAttachment.minutesAgo} minute(s) ago, and Reforma could not tell which brief it belongs to — it is sitting unfiled. If the message below names or clearly identifies a brief, case, matter, or client — even briefly, e.g. "it's for Osinowo v Lukefield", "file it under BRF-0072", "that's the Adeyemi matter" — that is an instruction about THIS document. Call file_pending_document with that reference. Do not record it as a status update, a case summary, or anything about a different brief or a different document — a bare brief reference right now means "file the document I just sent there," nothing else, unless the message is unmistakably about something else entirely (a question, a reference to a different document, an explicit "no" to filing it). This takes priority over every other tool-selection rule below.
 ` : ''}
