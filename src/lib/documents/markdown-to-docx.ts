@@ -1,4 +1,4 @@
-import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType } from 'docx';
+import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, Header, ImageRun } from 'docx';
 
 // Renders the Markdown DraftingService.generateDraft produces (see
 // src/lib/drafting/prompts.ts: "#" titles, "##" section headers, "1. 2. 3."
@@ -31,7 +31,25 @@ function parseInline(line: string): TextRun[] {
     return runs.length > 0 ? runs : [new TextRun('')];
 }
 
-export async function markdownToDocxBuffer(markdown: string, title?: string): Promise<Buffer> {
+// Fetches the workspace's letterhead image server-side (no DOM/Image
+// available in a serverless function — see invoice-docx.ts, which this
+// mirrors) so a WhatsApp-generated draft carries the firm's branding the
+// same way an invoice does. Any fetch/format failure just means no header,
+// never a failed draft.
+async function loadLetterheadImage(letterheadUrl: string | null | undefined): Promise<ArrayBuffer | null> {
+    if (!letterheadUrl || !letterheadUrl.match(/\.(jpeg|jpg|png|gif)$/i)) return null;
+    try {
+        const response = await fetch(letterheadUrl);
+        if (!response.ok) return null;
+        return await response.arrayBuffer();
+    } catch (error) {
+        console.warn('[markdownToDocxBuffer] Failed to load letterhead', error);
+        return null;
+    }
+}
+
+export async function markdownToDocxBuffer(markdown: string, title?: string, letterheadUrl?: string | null): Promise<Buffer> {
+    const letterheadImage = await loadLetterheadImage(letterheadUrl);
     const lines = markdown.split('\n');
     const children: Paragraph[] = [];
 
@@ -53,6 +71,12 @@ export async function markdownToDocxBuffer(markdown: string, title?: string): Pr
             }));
         } else if (line.trim().length === 0) {
             children.push(new Paragraph({ children: [], spacing: { after: 150 } }));
+        } else if (/^[-*]\s+/.test(line)) {
+            children.push(new Paragraph({
+                children: parseInline(line.replace(/^[-*]\s+/, '')),
+                bullet: { level: 0 },
+                spacing: { after: 100 },
+            }));
         } else {
             children.push(new Paragraph({
                 children: parseInline(line),
@@ -64,6 +88,14 @@ export async function markdownToDocxBuffer(markdown: string, title?: string): Pr
     const doc = new Document({
         sections: [{
             properties: { page: { margin: { top: 1000, right: 1000, bottom: 1000, left: 1000 } } },
+            headers: letterheadImage ? {
+                default: new Header({
+                    children: [new Paragraph({
+                        children: [new ImageRun({ data: letterheadImage, transformation: { width: 600, height: 100 }, type: 'png' })],
+                        alignment: AlignmentType.CENTER,
+                    })],
+                }),
+            } : undefined,
             children: children.length > 0 ? children : [new Paragraph('')],
         }],
         title,

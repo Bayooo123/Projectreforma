@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/prisma';
-import { sendWhatsAppMessage } from './send';
+import { sendWhatsAppMessage, sendWhatsAppDocument } from './send';
 import { lagosNow, isQuietHours, hasReachedDailyCap } from '@/lib/notify/gate-core';
 
 // Shared gate for every PROACTIVE WhatsApp nudge (cron/scan-triggered — not
@@ -50,6 +50,43 @@ export async function sendGatedWhatsAppNudge(params: GatedNudgeParams): Promise<
             resourceName: params.resourceName,
         },
     }).catch(err => console.error('[NotifyGate] Failed to record nudge log:', err));
+
+    return true;
+}
+
+interface GatedDocumentParams {
+    workspaceId: string;
+    userId: string;
+    phone: string;
+    url: string;
+    filename: string;
+    caption?: string;
+    triggerType: string;
+    resourceId?: string;
+    resourceName?: string;
+    /** Bypasses quiet hours and the daily cap — reserve for genuinely time-critical escalations, not every proactive document. */
+    urgent?: boolean;
+}
+
+/** Same gating as sendGatedWhatsAppNudge, for a document send rather than a text message. */
+export async function sendGatedWhatsAppDocument(params: GatedDocumentParams): Promise<boolean> {
+    if (!params.urgent) {
+        if (isQuietHours()) return false;
+        if (await hasReachedDailyCap(params.userId, 'WHATSAPP_NUDGE', MAX_NUDGES_PER_DAY)) return false;
+    }
+
+    await sendWhatsAppDocument(params.phone, params.url, params.filename, params.caption);
+
+    await prisma.workspaceActivityLog.create({
+        data: {
+            workspaceId: params.workspaceId,
+            userId: params.userId,
+            resource: 'WHATSAPP_NUDGE',
+            action: params.triggerType,
+            resourceId: params.resourceId,
+            resourceName: params.resourceName,
+        },
+    }).catch(err => console.error('[NotifyGate] Failed to record document-nudge log:', err));
 
     return true;
 }

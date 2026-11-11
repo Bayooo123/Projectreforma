@@ -4,6 +4,7 @@ import { getCaseChronology, searchBriefsByQuery, type BriefSearchResult } from '
 import { generateBriefNumber } from '@/lib/briefs';
 import { config } from '@/lib/config';
 import { DraftingService } from '@/lib/drafting/drafting-service';
+import { listStandardDocumentTypes, generateStandardDocument } from '@/lib/drafting/standard-documents';
 import { InvoiceService } from '@/lib/services/invoices/invoice-service';
 import { generateInvoiceDOCX } from '@/lib/invoice-docx';
 
@@ -139,6 +140,14 @@ export function getClaudeTools() {
             brief_title: { type: 'string', description: 'Search by brief title or number if ID unknown' },
             instruction: { type: 'string', description: 'What to draft, e.g. "a letter to opposing counsel demanding compliance with the settlement terms"' },
         }, ['instruction']),
+        tool('list_standard_document_types', 'List the firm\'s standard WhatsApp-draftable document types (CTC application, enrolment of order, search application, deed of lease, deed of sublease, tenancy agreement, etc.), each with the facts it needs and whether it\'s ready to use. Call this before draft_standard_document whenever it\'s unclear which type the user means, or to tell them what\'s available.', {}),
+        tool('draft_standard_document', 'Draft one of the firm\'s standard documents (see list_standard_document_types) from a handful of supplied facts — not from a brief\'s filed documents. Use this for short, standard-form instruments (CTC application, enrolment of order, search application, deed of lease/sublease, tenancy agreement) where the user gives you the key facts directly in their message rather than pointing at an existing case file. If required facts are missing, this returns which ones — ask the user for exactly those and call again. Always returns the draft for review — never sends or files it automatically.', {
+            document_type: { type: 'string', description: 'The document type\'s id or category from list_standard_document_types (e.g. "ctc_application"), or its name' },
+            facts: {
+                type: 'object',
+                description: 'The facts to fill the template with, keyed by the field names list_standard_document_types gave for this type (e.g. {"court": "Federal High Court, Lagos", "suit_number": "FHC/L/123/2026", ...})',
+            },
+        }, ['document_type', 'facts']),
         tool('join_zoom_meeting', 'Send the firm\'s Zoom join-bot into a meeting the firm is attending but not hosting (so it has no cloud recording of its own to pick up). Give it the Zoom meeting link and, once someone is actually free to run it, it joins, records the audio, and files the recording — tied to a brief if one is given, otherwise general. This only works for Zoom links, and only once the local bot machine is on and polling for jobs; it is not instant.', {
             meeting_link: { type: 'string', description: 'The full Zoom meeting URL (e.g. https://zoom.us/j/123456789?pwd=...)' },
             brief_id: { type: 'string', description: 'Brief to attach the recording to (optional)' },
@@ -847,6 +856,24 @@ export async function executeTool(
                 console.error(`[Eureka] draft_document failed for brief ${brief.id}:`, err);
                 return { error: 'Drafting failed. Try again in a moment.' };
             }
+        }
+
+        case 'list_standard_document_types': {
+            const types = await listStandardDocumentTypes(workspaceId, userId);
+            return { document_types: types };
+        }
+
+        case 'draft_standard_document': {
+            const documentType = input.document_type as string | undefined;
+            if (!documentType) return { error: 'Provide a document_type — see list_standard_document_types.' };
+            const facts = (input.facts && typeof input.facts === 'object' ? input.facts : {}) as Record<string, string>;
+
+            const result = await generateStandardDocument(workspaceId, documentType, facts);
+            if (result.error) return { error: result.error };
+            if (result.missingFields) {
+                return { missingFields: result.missingFields, documentName: result.documentName, note: 'Ask the user for these facts, then call draft_standard_document again with them included.' };
+            }
+            return { documentName: result.documentName, draft: result.text, note: 'This is a draft for review — it has not been sent, filed, or saved anywhere.' };
         }
 
         case 'get_anomalies': {

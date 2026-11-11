@@ -55,6 +55,36 @@ export async function completeJSON(opts: { system: string; prompt: string; tier?
     return res.content.filter((b): b is Anthropic.TextBlock => b.type === 'text').map(b => b.text).join('');
 }
 
+/** Plain free-text completion, no JSON mode, no tools — for prose like a client-update letter body. */
+export async function completeText(opts: { system: string; prompt: string; tier?: 'complex' | 'quick'; maxTokens?: number }): Promise<string> {
+    const provider = pickAgentProvider();
+    if (!provider) throw new Error('AI is not configured (no OPENAI_API_KEY or ANTHROPIC_API_KEY).');
+
+    if (provider === 'openai') {
+        const client = new OpenAI({ apiKey: config.OPENAI_API_KEY });
+        const model = opts.tier === 'quick' ? QUICK_OPENAI_MODEL : COMPLEX_OPENAI_MODEL;
+        const res = await client.chat.completions.create({
+            model,
+            max_tokens: opts.maxTokens,
+            messages: [
+                { role: 'system', content: opts.system },
+                { role: 'user', content: opts.prompt },
+            ],
+        });
+        return res.choices[0]?.message?.content ?? '';
+    }
+
+    const client = new Anthropic({ apiKey: config.ANTHROPIC_API_KEY });
+    const model = opts.tier === 'quick' ? ANTHROPIC_QUICK_MODEL : ANTHROPIC_COMPLEX_MODEL;
+    const res = await client.messages.create({
+        model,
+        max_tokens: opts.maxTokens ?? 2048,
+        system: opts.system,
+        messages: [{ role: 'user', content: opts.prompt }],
+    });
+    return res.content.filter((b): b is Anthropic.TextBlock => b.type === 'text').map(b => b.text).join('');
+}
+
 export interface ToolLoopHistoryMessage {
     role: 'user' | 'assistant';
     content: string;
