@@ -132,7 +132,7 @@ const WHATSAPP_TOOLS: Anthropic.Tool[] = [
     },
     {
         name: 'record_court_proceeding',
-        description: 'Record what happened at a court appearance/hearing for a brief AND automatically draft and send a client-update letter on the firm\'s letterhead over WhatsApp. Use this — not record_brief_update — whenever the message describes a court appearance, hearing, or sitting (who appeared, what happened, any adjournment), even an informal one the lawyer typed up themselves. Only works for a brief linked to a litigation matter; if it is not, this returns an error and you should fall back to record_brief_update for a plain status note instead.',
+        description: 'Record what happened at a court appearance/hearing for a brief AND automatically draft and send a client-update letter on the firm\'s letterhead over WhatsApp. Use this — not record_brief_update — whenever the message describes a court appearance, hearing, or sitting (who appeared, what happened, any adjournment), even an informal one the lawyer typed up themselves, and even for a brand-new brief with no litigation matter yet — one is created automatically from the court/judge given.',
         input_schema: {
             type: 'object' as const,
             properties: {
@@ -143,6 +143,8 @@ const WHATSAPP_TOOLS: Anthropic.Tool[] = [
                 outcome: { type: 'string', description: 'A short outcome label, if there is one (optional)' },
                 adjourned_for: { type: 'string', description: 'What the next date is for, e.g. "report of progress" (optional)' },
                 adjourned_to: { type: 'string', description: 'ISO date of the next hearing, if the matter was adjourned (optional)' },
+                court: { type: 'string', description: 'The court this was heard in, e.g. "Lagos State High Court" — used to create a matter if the brief doesn\'t have one linked yet (optional, but worth including whenever the message names the court)' },
+                judge: { type: 'string', description: 'The judge, if named (optional)' },
             },
             required: ['proceedings'],
         },
@@ -264,19 +266,40 @@ async function recordBriefUpdate(
 async function recordCourtProceeding(
     ctx: AgentContext,
     briefRef: string | undefined,
-    input: { date?: string; proceedings: string; outcome?: string; adjourned_for?: string; adjourned_to?: string },
+    input: { date?: string; proceedings: string; outcome?: string; adjourned_for?: string; adjourned_to?: string; court?: string; judge?: string },
 ) {
     const resolved = await resolveBriefRef(briefRef ?? '', ctx.workspaceId);
     if (!resolved.ok) return resolved.result;
 
-    const brief = await prisma.brief.findUnique({ where: { id: resolved.id }, select: { matterId: true } });
-    if (!brief?.matterId) {
-        return { error: `"${resolved.name}" isn't linked to a court matter, so a proceeding can't be recorded against it this way. Use record_brief_update for a plain status note instead.` };
+    const brief = await prisma.brief.findUnique({ where: { id: resolved.id }, select: { matterId: true, clientId: true } });
+    let matterId = brief?.matterId ?? null;
+
+    // A brief freshly created from a WhatsApp proceeding report has no
+    // matter yet — that used to be a dead end (an error pushing the model
+    // back to record_brief_update, silently skipping First Draft). A
+    // reported court proceeding IS a litigation matter by definition, so
+    // create a minimal one and link it instead of asking the lawyer to do
+    // a separate manual step first.
+    if (!matterId) {
+        const matter = await prisma.matter.create({
+            data: {
+                name: resolved.name,
+                workspaceId: ctx.workspaceId,
+                status: 'active',
+                clientId: brief?.clientId ?? undefined,
+                court: input.court ?? undefined,
+                judge: input.judge ?? undefined,
+                lawyerInChargeId: ctx.userId,
+            },
+            select: { id: true },
+        });
+        matterId = matter.id;
+        await prisma.brief.update({ where: { id: resolved.id }, data: { matterId, isLitigationDerived: true } });
     }
 
     const { recordProceedingCore } = await import('@/app/actions/matters');
     const result = await recordProceedingCore({
-        matterId: brief.matterId,
+        matterId,
         date: input.date ? new Date(input.date) : new Date(),
         proceedings: input.proceedings,
         outcome: input.outcome,
@@ -411,6 +434,8 @@ export async function executeTool(name: string, input: Record<string, unknown>, 
                     outcome: input.outcome as string | undefined,
                     adjourned_for: input.adjourned_for as string | undefined,
                     adjourned_to: input.adjourned_to as string | undefined,
+                    court: input.court as string | undefined,
+                    judge: input.judge as string | undefined,
                 },
             );
         case 'draft_document': {
