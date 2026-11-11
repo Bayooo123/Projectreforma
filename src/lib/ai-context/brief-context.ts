@@ -35,17 +35,24 @@ const SEARCH_STOP_WORDS = new Set(['v', 'vs', 'and', 'of', 'the', 'in', 're']);
 // tolerates exactly this kind of minor transcription drift — a real
 // duplicate brief was created in production because of it.
 function tokenize(query: string): string[] {
+    if (!query) return [];
     return query
         .split(/[^a-zA-Z0-9]+/)
         .map(w => w.trim())
         .filter(w => w.length > 1 && !SEARCH_STOP_WORDS.has(w.toLowerCase()));
 }
 
+// query can arrive undefined/empty at runtime even though the type says
+// string — a model's tool call can omit a required argument (OpenAI's
+// function-calling JSON doesn't always come back complete), and nothing
+// upstream of this validates it. Guarded here rather than trusting every
+// call site to have already checked.
 export async function searchBriefsByQuery(query: string, workspaceId: string, limit = 5): Promise<BriefSearchResult[]> {
-    const tokens = tokenize(query);
+    const tokens = tokenize(query ?? '');
     // Fall back to the raw query as a single token if it's all stop words /
     // too short to tokenize meaningfully (e.g. a bare brief number search).
-    const terms = tokens.length > 0 ? tokens : [query];
+    const terms = tokens.length > 0 ? tokens : (query ? [query] : []);
+    if (terms.length === 0) return [];
 
     const results = await prisma.brief.findMany({
         where: {
