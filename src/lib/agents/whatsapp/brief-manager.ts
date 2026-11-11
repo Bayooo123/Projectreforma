@@ -130,6 +130,23 @@ const WHATSAPP_TOOLS: Anthropic.Tool[] = [
             required: ['brief_id'],
         },
     },
+    {
+        name: 'record_court_proceeding',
+        description: 'Record what happened at a court appearance/hearing for a brief AND automatically draft and send a client-update letter on the firm\'s letterhead over WhatsApp. Use this — not record_brief_update — whenever the message describes a court appearance, hearing, or sitting (who appeared, what happened, any adjournment), even an informal one the lawyer typed up themselves. Only works for a brief linked to a litigation matter; if it is not, this returns an error and you should fall back to record_brief_update for a plain status note instead.',
+        input_schema: {
+            type: 'object' as const,
+            properties: {
+                brief_id: { type: 'string', description: 'The brief this proceeding belongs to' },
+                brief_title: { type: 'string', description: 'Search by brief title or number if ID unknown' },
+                date: { type: 'string', description: 'ISO date the proceeding happened (default: today)' },
+                proceedings: { type: 'string', description: 'What happened at the sitting — appearances, what was argued/ordered, the court\'s reasoning. Use the lawyer\'s own account close to verbatim; this is also what First Draft\'s letter is grounded in.' },
+                outcome: { type: 'string', description: 'A short outcome label, if there is one (optional)' },
+                adjourned_for: { type: 'string', description: 'What the next date is for, e.g. "report of progress" (optional)' },
+                adjourned_to: { type: 'string', description: 'ISO date of the next hearing, if the matter was adjourned (optional)' },
+            },
+            required: ['proceedings'],
+        },
+    },
 ];
 
 // The full merged tool set exposed to the model: Eureka's workspace-wide
@@ -244,6 +261,52 @@ async function recordBriefUpdate(
     return { success: true, briefId: resolved.id, briefName: resolved.name };
 }
 
+async function recordCourtProceeding(
+    ctx: AgentContext,
+    briefRef: string | undefined,
+    input: { date?: string; proceedings: string; outcome?: string; adjourned_for?: string; adjourned_to?: string },
+) {
+    const resolved = await resolveBriefRef(briefRef ?? '', ctx.workspaceId);
+    if (!resolved.ok) return resolved.result;
+
+    const brief = await prisma.brief.findUnique({ where: { id: resolved.id }, select: { matterId: true } });
+    if (!brief?.matterId) {
+        return { error: `"${resolved.name}" isn't linked to a court matter, so a proceeding can't be recorded against it this way. Use record_brief_update for a plain status note instead.` };
+    }
+
+    const { recordProceedingCore } = await import('@/app/actions/matters');
+    const result = await recordProceedingCore({
+        matterId: brief.matterId,
+        date: input.date ? new Date(input.date) : new Date(),
+        proceedings: input.proceedings,
+        outcome: input.outcome,
+        adjournedFor: input.adjourned_for,
+        adjournedTo: input.adjourned_to ? new Date(input.adjourned_to) : undefined,
+        appearingLawyerIds: [],
+        userId: ctx.userId,
+    });
+    if (!result.success) return { error: result.error };
+
+    // Also log it on the brief itself, same as record_brief_update, so Brief
+    // Tracker's activity history shows it — recordProceedingCore only
+    // touches the Matter/CalendarEntry side.
+    const { addBriefActivity } = await import('@/lib/briefs');
+    await addBriefActivity(
+        resolved.id,
+        'status_changed',
+        `📱 WhatsApp court update: ${input.outcome || input.proceedings.slice(0, 200)}`,
+        { source: 'whatsapp', proceedings: input.proceedings, outcome: input.outcome ?? null, adjournedFor: input.adjourned_for ?? null, adjournedTo: input.adjourned_to ?? null },
+        ctx.userId,
+    ).catch(err => console.error('[WhatsApp Agent] Failed to log brief activity for proceeding:', err));
+
+    return {
+        success: true,
+        briefId: resolved.id,
+        briefName: resolved.name,
+        note: 'Proceeding recorded. A client-update letter is being drafted and will follow shortly on WhatsApp for your review.',
+    };
+}
+
 async function filePendingDocument(ctx: AgentContext, ref: string | undefined) {
     if (!ctx.pendingAttachment) {
         return { error: 'There is no unfiled document from you right now to file — did you mean to send the document again, or record a different kind of update?' };
@@ -338,6 +401,18 @@ export async function executeTool(name: string, input: Record<string, unknown>, 
                 input.status_update as string | undefined,
                 input.next_action as string | undefined,
             );
+        case 'record_court_proceeding':
+            return recordCourtProceeding(
+                ctx,
+                (input.brief_id as string | undefined) ?? (input.brief_title as string | undefined),
+                {
+                    date: input.date as string | undefined,
+                    proceedings: input.proceedings as string,
+                    outcome: input.outcome as string | undefined,
+                    adjourned_for: input.adjourned_for as string | undefined,
+                    adjourned_to: input.adjourned_to as string | undefined,
+                },
+            );
         case 'draft_document': {
             // Eureka's version returns Markdown text — fine to read inline in
             // a web chat, but a wall of Markdown as a WhatsApp text message is
@@ -423,7 +498,7 @@ You are talking to: ${ctx.userName}
 Today: ${new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
 Right now in Nigeria: ${timeOfDayGreeting().toLowerCase()}
 
-If this message is only a greeting (hi, hello, good morning/afternoon/evening, etc.) with nothing else asked in it, reply with "${timeOfDayGreeting()}, ${ctx.userName}!" (adjust only if they used a title/name of their own for themselves) and then briefly outline what you can do — a short, scannable list, not exhaustive, e.g.: check on any brief, matter, or client; look up court dates and hearings; draft a letter or document grounded in a brief's actual filings; draft one of the firm's standard documents (CTC application, enrolment of order, search application, deed of lease/sublease, tenancy agreement) from just the facts; record an expense or generate an invoice; send you a copy of a filed document; log an update on a case; or send the join-bot into a Zoom meeting. If the greeting is combined with an actual request in the same message ("hi, what's going on with the Adeyemi brief"), skip the capability outline entirely — a one-word greeting plus the answer is enough; don't make them wait through a features list for something they already asked for.
+If this message is only a greeting (hi, hello, good morning/afternoon/evening, etc.) with nothing else asked in it, reply with "${timeOfDayGreeting()}, ${ctx.userName}!" (adjust only if they used a title/name of their own for themselves) and then briefly outline what you can do — a short, scannable list, not exhaustive, e.g.: check on any brief, matter, or client; look up court dates and hearings; draft a letter or document grounded in a brief's actual filings; draft one of the firm's standard documents (CTC application, enrolment of order, search application, deed of lease/sublease, tenancy agreement) from just the facts; record an expense or generate an invoice; send you a copy of a filed document; log an update on a case, or a court proceeding (which also drafts and sends a client-update letter automatically); or send the join-bot into a Zoom meeting. If the greeting is combined with an actual request in the same message ("hi, what's going on with the Adeyemi brief"), skip the capability outline entirely — a one-word greeting plus the answer is enough; don't make them wait through a features list for something they already asked for.
 ${ctx.pendingAttachment ? `
 PENDING UNFILED DOCUMENT — read this before interpreting the message below: ${ctx.userName} sent "${ctx.pendingAttachment.fileName}" over WhatsApp ${ctx.pendingAttachment.minutesAgo} minute(s) ago, and Reforma could not tell which brief it belongs to — it is sitting unfiled. If the message below names or clearly identifies a brief, case, matter, or client — even briefly, e.g. "it's for Osinowo v Lukefield", "file it under BRF-0072", "that's the Adeyemi matter" — that is an instruction about THIS document. Call file_pending_document with that reference. Do not record it as a status update, a case summary, or anything about a different brief or a different document — a bare brief reference right now means "file the document I just sent there," nothing else, unless the message is unmistakably about something else entirely (a question, a reference to a different document, an explicit "no" to filing it). This takes priority over every other tool-selection rule below.
 ` : ''}
