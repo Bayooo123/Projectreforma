@@ -890,7 +890,7 @@ export async function generateBriefSummary(briefId: string): Promise<{ success: 
                 lawyer:              brief.lawyerInCharge?.name ?? brief.lawyer?.name ?? null,
                 category:            brief.category,
                 status:              brief.status,
-                dueDate:             brief.dueDate?.toISOString().slice(0, 10) ?? null,
+                dueDate:             brief.dueDate ? brief.dueDate.toISOString().slice(0, 10) : null,
                 description:         brief.description ?? null,
                 isLitigationDerived: brief.isLitigationDerived,
                 matter:              brief.matter
