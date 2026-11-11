@@ -71,6 +71,12 @@ export async function markdownToDocxBuffer(markdown: string, title?: string, let
             }));
         } else if (line.trim().length === 0) {
             children.push(new Paragraph({ children: [], spacing: { after: 150 } }));
+        } else if (/^[-*]\s+/.test(line)) {
+            children.push(new Paragraph({
+                children: parseInline(line.replace(/^[-*]\s+/, '')),
+                bullet: { level: 0 },
+                spacing: { after: 100 },
+            }));
         } else {
             children.push(new Paragraph({
                 children: parseInline(line),

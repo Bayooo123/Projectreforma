@@ -49,6 +49,49 @@ Your role is to draft high-fidelity legal documents based on specific facts and 
 - Do not invent facts not present in the Brief — if something is uncertain, phrase it generally rather than fabricating specifics.
 `,
 
+    // Letter-body instructions for First Draft's post-court WhatsApp letter
+    // (src/lib/drafting/client-update-letter.ts). The date, address block,
+    // "RE:"/"SUBJECT:" line, and closing/signature are assembled mechanically
+    // from real records, never by the model — these two prompts produce ONLY
+    // the body: the narrative paragraphs and numbered sections, in ASCOLP's
+    // own house style as seen across its real update letters (formal letters
+    // to institutions/corporate clients use numbered sections like "1.0
+    // Steps Taken So Far" / "2.0 ... Required" / "3.0 Next Steps"; memos to
+    // individual/trustee clients use "1. Summary of Proceedings" / "2.
+    // Adjournment of Proceedings" / "3. Conclusion" — follow that numbering
+    // style, not a fixed section count).
+    CLIENT_UPDATE_LETTER_FORMAL: `
+**Task:** Write the BODY ONLY of a formal client-update letter to an institutional/corporate client, in the firm's house style. Do not write a date, address block, "Dear Sir/Madam," a "RE:" line, a sign-off, or a signature — those are added separately. Start directly with the opening paragraph.
+
+**Context (the matter):**
+{{CONTEXT}}
+
+**Additional instruction from the lawyer (optional):**
+{{INSTRUCTION}}
+
+**Output format:**
+- Open with one paragraph stating what the letter updates the client on and the current procedural posture (court, judge if known, what the last attendance was for, what happened).
+- Where there is more than one distinct thing to report (steps taken, documents needed, next steps), break them into numbered sections with bold headings in the style "**1.0** **Steps Taken So Far**", "**2.0** **Next Steps**" — only add a numbered section if there is real content for it.
+- Close with one short paragraph stating what happens next and by when.
+- Do not invent facts not present in the context — if something is uncertain, phrase it generally rather than fabricating specifics.
+- No markdown headers (#/##) — bold text and numbered sections only, as shown above.
+`,
+    CLIENT_UPDATE_LETTER_MEMO: `
+**Task:** Write the BODY ONLY of a client-update memo to an individual or trustee client, in the firm's house style. Do not write a date, "FROM/TO/SUBJECT" header, a sign-off, or a signature — those are added separately. Start directly with the opening paragraph.
+
+**Context (the matter):**
+{{CONTEXT}}
+
+**Additional instruction from the lawyer (optional):**
+{{INSTRUCTION}}
+
+**Output format:**
+- Open with one paragraph: "We write to formally update you on the outcome of the court proceedings of [date]..." in that register.
+- Break the update into short numbered sections with bold headings, in the style "**1.** **Summary of Proceedings**", "**2.** **Adjournment of Proceedings**" (only if there is a next date), ending with "**3.** **Conclusion**" — a short paragraph reassuring the client the firm remains committed to protecting their interests and will keep them informed, inviting them to contact the firm with questions.
+- Do not invent facts not present in the context — if something is uncertain, phrase it generally rather than fabricating specifics.
+- No markdown headers (#/##) — bold text and numbered sections only, as shown above.
+`,
+
     FILING_STRUCTURAL_REVIEW: `
 **Task:** Proofread the following Nigerian court filing document before it is filed. You are checking for defects, not reviewing its legal merits or arguing its strength.
 
