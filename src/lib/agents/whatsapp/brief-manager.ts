@@ -169,7 +169,7 @@ async function listBriefs(workspaceId: string, limit = 8) {
         status: b.status,
         client: b.client?.name ?? null,
         matter: b.matter?.name ?? null,
-        dueDate: b.dueDate?.toISOString().split('T')[0] ?? null,
+        dueDate: b.dueDate ? b.dueDate.toISOString().split('T')[0] : null,
     }));
 }
 

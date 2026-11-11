@@ -79,7 +79,7 @@ export async function searchBriefsByQuery(query: string, workspaceId: string, li
         status: b.status,
         client: b.client?.name ?? null,
         matter: b.matter?.name ?? null,
-        dueDate: b.dueDate?.toISOString().split('T')[0] ?? null,
+        dueDate: b.dueDate ? b.dueDate.toISOString().split('T')[0] : null,
     }));
 }
 
