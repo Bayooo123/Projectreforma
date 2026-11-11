@@ -178,7 +178,31 @@ export async function recordProceeding(input: {
 }) {
     try {
         await requireAuth();
+    } catch (error: any) {
+        return { success: false, error: error?.message || 'Unauthorized' };
+    }
+    return recordProceedingCore(input);
+}
 
+/**
+ * The actual proceeding-recording logic, with no session check — split out
+ * of recordProceeding so the WhatsApp agent's record_court_proceeding tool
+ * (src/lib/agents/whatsapp/brief-manager.ts) can call it directly with an
+ * already-trusted userId (resolved from the WhatsApp session, not a NextAuth
+ * cookie) instead of going through requireAuth(), which has nothing to read
+ * on a webhook request.
+ */
+export async function recordProceedingCore(input: {
+    matterId: string;
+    date: Date;
+    proceedings: string;
+    outcome?: string;
+    adjournedFor?: string;
+    adjournedTo?: Date;
+    appearingLawyerIds: string[];
+    userId: string;
+}) {
+    try {
         const matter = await prisma.matter.findUnique({
             where: { id: input.matterId },
             select: { workspaceId: true, name: true, court: true, judge: true, lawyerInChargeId: true },
@@ -268,7 +292,7 @@ export async function recordProceeding(input: {
         revalidatePath('/calendar');
         return { success: true };
     } catch (error: any) {
-        console.error('recordProceeding failed:', error);
+        console.error('recordProceedingCore failed:', error);
         return { success: false, error: error?.message || 'Failed to record proceeding' };
     }
 }
