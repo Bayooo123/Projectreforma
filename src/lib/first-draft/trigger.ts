@@ -87,5 +87,12 @@ export async function triggerFirstDraftForCourtEvent(params: TriggerParams): Pro
         triggerType: 'first_draft_ready',
         resourceId: draft.id,
         resourceName: matter.name,
+        // This isn't an ambient scan-triggered nudge the lawyer might be
+        // asleep for — it's the direct, immediate result of them reporting
+        // the proceeding themselves, right now. Quiet-hours gating would
+        // silently drop it with no retry (the job has already succeeded by
+        // this point), so it bypasses the gate rather than risk the letter
+        // just never arriving.
+        urgent: true,
     });
 }
