@@ -92,6 +92,20 @@ Your role is to draft high-fidelity legal documents based on specific facts and 
 - No markdown headers (#/##) — bold text and numbered sections only, as shown above.
 `,
 
+    // One leg of a consolidated (multi-matter) client update
+    // (src/lib/drafting/consolidated-update-letter.ts) — deliberately much
+    // lighter than the two prompts above: this is ONE numbered section of a
+    // longer letter, not a standalone letter in its own right, so it must
+    // not try to open, close, or sub-number itself.
+    CONSOLIDATED_UPDATE_LEG: `
+**Task:** Write ONE short paragraph (2–4 sentences) reporting the current status of this single matter, for inclusion as one numbered section of a longer letter that covers several matters for the same client. Do not write a heading (one is added separately), a greeting, a closing, or any numbered sub-sections of your own — just the paragraph(s) of substance.
+
+**Context (this matter):**
+{{CONTEXT}}
+
+Do not invent facts not present in the context — if something is uncertain, phrase it generally rather than fabricating specifics.
+`,
+
     FILING_STRUCTURAL_REVIEW: `
 **Task:** Proofread the following Nigerian court filing document before it is filed. You are checking for defects, not reviewing its legal merits or arguing its strength.
 

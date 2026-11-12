@@ -161,6 +161,30 @@ const WHATSAPP_TOOLS: Anthropic.Tool[] = [
             required: [],
         },
     },
+    {
+        name: 'send_consolidated_client_update',
+        description: 'Draft and send ONE client-update letter covering MULTIPLE matters for the same client in a single document — one numbered section ("leg") per matter, under one recipient and one closing. Use this whenever a message reports on more than one matter at once for the same client, instead of calling record_court_proceeding or draft_document separately for each — that would produce several separate letters, not one combined one.',
+        input_schema: {
+            type: 'object' as const,
+            properties: {
+                client_name: { type: 'string', description: 'The shared client these matters belong to, if it isn\'t already obvious from the briefs themselves (optional)' },
+                legs: {
+                    type: 'array',
+                    description: 'One entry per matter being reported on, in the order they should appear in the letter',
+                    items: {
+                        type: 'object',
+                        properties: {
+                            brief_id: { type: 'string', description: 'The brief this leg concerns' },
+                            brief_title: { type: 'string', description: 'Search by brief/matter title if ID unknown' },
+                            update: { type: 'string', description: 'What happened on this matter — the status to report in this leg' },
+                        },
+                        required: ['update'],
+                    },
+                },
+            },
+            required: ['legs'],
+        },
+    },
 ];
 
 // The full merged tool set exposed to the model: Eureka's workspace-wide
@@ -376,6 +400,96 @@ async function sendPendingClientUpdate(ctx: AgentContext, briefRef: string | und
     return { success: true, briefId: resolved.id, briefName: resolved.name, sentAsDocument: true };
 }
 
+interface ConsolidatedLegInput {
+    brief_id?: string;
+    brief_title?: string;
+    update: string;
+}
+
+async function sendConsolidatedClientUpdate(
+    ctx: AgentContext,
+    clientNameHint: string | undefined,
+    legsInput: ConsolidatedLegInput[],
+) {
+    if (!legsInput || legsInput.length === 0) {
+        return { error: 'Provide at least one leg — a brief_id/brief_title plus what happened on it.' };
+    }
+
+    const { assembleConsolidatedUpdateLetter } = await import('@/lib/drafting/consolidated-update-letter');
+
+    const resolvedLegs: { matterName: string; court: string | null; caseNumber: string | null; update: string }[] = [];
+    let sharedClient: { name: string; company: string | null } | null = null;
+    const briefIds: string[] = [];
+
+    for (const legInput of legsInput) {
+        const ref = legInput.brief_id ?? legInput.brief_title;
+        if (!ref) return { error: 'Each leg needs a brief_id or brief_title.' };
+        const resolved = await resolveBriefRef(ref, ctx.workspaceId);
+        if (!resolved.ok) return resolved.result;
+
+        const brief = await prisma.brief.findUnique({
+            where: { id: resolved.id },
+            select: {
+                client: { select: { name: true, company: true } },
+                matter: { select: { court: true, judge: true, caseNumber: true, name: true } },
+            },
+        });
+        if (!brief) return { error: `Could not load brief "${resolved.name}".` };
+
+        if (!sharedClient && brief.client) sharedClient = { name: brief.client.name, company: brief.client.company };
+
+        resolvedLegs.push({
+            matterName: brief.matter?.name ?? resolved.name,
+            court: brief.matter?.court ?? null,
+            caseNumber: brief.matter?.caseNumber ?? null,
+            update: legInput.update,
+        });
+        briefIds.push(resolved.id);
+    }
+
+    if (!sharedClient) sharedClient = { name: clientNameHint ?? 'the client', company: null };
+
+    const user = await prisma.user.findUnique({ where: { id: ctx.userId }, select: { name: true, jobTitle: true } });
+    const letter = await assembleConsolidatedUpdateLetter(
+        sharedClient,
+        resolvedLegs,
+        { name: user?.name ?? 'Counsel', jobTitle: user?.jobTitle },
+    );
+
+    const letterheadUrl = await getWorkspaceLetterhead(ctx.workspaceId);
+    const buffer = await markdownToDocxBuffer(letter.markdown, letter.title, letterheadUrl);
+    const { put } = await import('@vercel/blob');
+    const safeName = letter.title.replace(/[^a-zA-Z0-9 _-]/g, '').trim().slice(0, 60) || 'Consolidated Update';
+    const filename = `${safeName}.docx`;
+    const blob = await put(`first-draft/${ctx.workspaceId}/${Date.now()}-${filename}`, buffer, {
+        access: 'public',
+        contentType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    });
+
+    // Sent directly, not through the gated nudge — same reasoning as
+    // send_pending_client_update: an explicit request should never be held
+    // back by quiet hours.
+    await sendWhatsAppDocument(
+        ctx.fromNumber,
+        blob.url,
+        filename,
+        `Consolidated update for ${sharedClient.name} (${resolvedLegs.length} matters) — review before sending.`,
+    );
+
+    const { addBriefActivity } = await import('@/lib/briefs');
+    await Promise.all(briefIds.map((briefId, i) =>
+        addBriefActivity(
+            briefId,
+            'status_changed',
+            `📱 WhatsApp consolidated update: ${legsInput[i].update.slice(0, 200)}`,
+            { source: 'whatsapp', consolidated: true, legCount: resolvedLegs.length },
+            ctx.userId,
+        ).catch(err => console.error('[WhatsApp Agent] Failed to log consolidated update activity:', err))
+    ));
+
+    return { success: true, clientName: sharedClient.name, legCount: resolvedLegs.length, sentAsDocument: true };
+}
+
 async function filePendingDocument(ctx: AgentContext, ref: string | undefined) {
     if (!ctx.pendingAttachment) {
         return { error: 'There is no unfiled document from you right now to file — did you mean to send the document again, or record a different kind of update?' };
@@ -486,6 +600,12 @@ export async function executeTool(name: string, input: Record<string, unknown>, 
             );
         case 'send_pending_client_update':
             return sendPendingClientUpdate(ctx, (input.brief_id as string | undefined) ?? (input.brief_title as string | undefined));
+        case 'send_consolidated_client_update':
+            return sendConsolidatedClientUpdate(
+                ctx,
+                input.client_name as string | undefined,
+                (input.legs as ConsolidatedLegInput[]) ?? [],
+            );
         case 'draft_document': {
             // Eureka's version returns Markdown text — fine to read inline in
             // a web chat, but a wall of Markdown as a WhatsApp text message is
