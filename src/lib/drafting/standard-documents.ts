@@ -1,4 +1,7 @@
 import { prisma } from '@/lib/prisma';
+import { config } from '@/lib/config';
+import { completeJSON } from '@/lib/agents/ai-client';
+import { DraftingService } from './drafting-service';
 
 export interface StandardDocVariable {
     name: string;
@@ -170,17 +173,108 @@ interface GenerateResult {
     documentName?: string;
 }
 
+interface BriefRecordContext {
+    briefName: string;
+    matter: { court: string | null; judge: string | null; caseNumber: string | null; name: string } | null;
+}
+
+// Facts that already live on the Matter record (or are just the brief's own
+// name) — free, instant, no AI call. A lawyer should never be asked to
+// retype a suit number that's already in the system.
+const RECORD_FIELD_MAP: Record<string, (ctx: BriefRecordContext) => string | null | undefined> = {
+    court: ctx => ctx.matter?.court,
+    judge: ctx => ctx.matter?.judge,
+    suit_number: ctx => ctx.matter?.caseNumber,
+    case_title: ctx => ctx.matter?.name ?? ctx.briefName,
+};
+
+async function fillFromBriefRecord(
+    briefId: string,
+    missing: StandardDocVariable[],
+    facts: Record<string, string>,
+): Promise<Record<string, string>> {
+    const applicable = missing.filter(v => v.name in RECORD_FIELD_MAP);
+    if (applicable.length === 0) return facts;
+
+    const brief = await prisma.brief.findUnique({
+        where: { id: briefId },
+        select: { name: true, matter: { select: { court: true, judge: true, caseNumber: true, name: true } } },
+    });
+    if (!brief) return facts;
+
+    const ctx: BriefRecordContext = { briefName: brief.name, matter: brief.matter };
+    const filled = { ...facts };
+    for (const v of applicable) {
+        const value = RECORD_FIELD_MAP[v.name](ctx);
+        if (value) filled[v.name] = value;
+    }
+    return filled;
+}
+
+// Whatever's still missing after the record check has to come from inside
+// the brief's actual filed documents (a suit number only visible on a
+// scanned process, for instance) — one semantic search plus one extraction
+// call, never one call per field. Anything the model can't clearly find
+// stays missing rather than being guessed.
+async function fillFromFiledDocuments(
+    briefId: string,
+    missing: StandardDocVariable[],
+    facts: Record<string, string>,
+): Promise<Record<string, string>> {
+    if (!config.VOYAGE_API_KEY || missing.length === 0) return facts;
+
+    const query = missing.map(v => v.label).join('; ');
+    let context: string;
+    try {
+        context = await DraftingService.retrieveContext(briefId, query, 8);
+    } catch (err) {
+        console.error('[standard-documents] retrieveContext failed:', err);
+        return facts;
+    }
+    if (!context.trim()) return facts;
+
+    const keys = missing.map(v => v.name);
+    const prompt = `From the passages below (taken from documents filed on this matter), extract these facts if they are clearly present: ${missing.map(v => `${v.name} (${v.label})`).join('; ')}.\n\nPassages:\n${context}\n\nReturn ONLY a JSON object with exactly these keys: ${JSON.stringify(keys)}. Use null for any fact not clearly present — never guess or invent a value.`;
+
+    try {
+        const raw = await completeJSON({
+            system: 'You extract facts verbatim from legal documents. Never invent or guess a value you cannot find — use null.',
+            prompt,
+            tier: 'quick',
+            maxTokens: 512,
+        });
+        const extracted = JSON.parse(raw) as Record<string, unknown>;
+        const filled = { ...facts };
+        for (const key of keys) {
+            const value = extracted[key];
+            if (typeof value === 'string' && value.trim()) filled[key] = value.trim();
+        }
+        return filled;
+    } catch (err) {
+        console.error('[standard-documents] fact extraction failed:', err);
+        return facts;
+    }
+}
+
 /**
- * Pure merge, no AI call — deliberately. CTC/enrolment/search applications
- * and deeds are fill-in-the-blank once the firm's real precedent is in;
- * substituting facts into vetted text is faster and far more reliable than
- * asking an LLM to regenerate legal boilerplate from scratch on every
- * request.
+ * Pure merge, no AI call for the document itself — deliberately. CTC/
+ * enrolment/search applications and deeds are fill-in-the-blank once the
+ * firm's real precedent is in; substituting facts into vetted text is
+ * faster and far more reliable than asking an LLM to regenerate legal
+ * boilerplate from scratch on every request.
+ *
+ * Facts are filled in this order before anything is reported missing:
+ * 1. Whatever the caller already supplied.
+ * 2. The Matter record (court, judge, suit number, case title) — free.
+ * 3. The brief's filed documents, via semantic search + one extraction
+ *    call — only tried for whatever's still missing after step 2.
+ * Only what's left after all three is ever reported back as missing.
  */
 export async function generateStandardDocument(
     workspaceId: string,
     templateIdOrCategory: string,
     facts: Record<string, string>,
+    briefId?: string,
 ): Promise<GenerateResult> {
     const template = await prisma.draftingTemplate.findFirst({
         where: { workspaceId, OR: [{ id: templateIdOrCategory }, { category: templateIdOrCategory }] },
@@ -193,12 +287,24 @@ export async function generateStandardDocument(
         return { error: `"${template.name}" is not finalized yet — the firm hasn't supplied its precedent for this document. Ask them to add it before it can be drafted.` };
     }
 
-    const missing = template.variables.filter(v => v.required && !facts[v.name]?.trim()).map(v => v.label);
+    let filled = facts;
+    if (briefId) {
+        const missingBeforeFill = template.variables.filter(v => v.required && !filled[v.name]?.trim());
+        if (missingBeforeFill.length > 0) {
+            filled = await fillFromBriefRecord(briefId, missingBeforeFill, filled);
+            const stillMissing = template.variables.filter(v => v.required && !filled[v.name]?.trim());
+            if (stillMissing.length > 0) {
+                filled = await fillFromFiledDocuments(briefId, stillMissing, filled);
+            }
+        }
+    }
+
+    const missing = template.variables.filter(v => v.required && !filled[v.name]?.trim()).map(v => v.label);
     if (missing.length > 0) return { missingFields: missing, documentName: template.name };
 
     const contentNode = template.nodes[0];
     if (!contentNode) return { error: `"${template.name}" has no content configured.` };
 
-    const text = mergeTemplate(contentNode.content, facts);
+    const text = mergeTemplate(contentNode.content, filled);
     return { text, documentName: template.name };
 }
