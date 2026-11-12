@@ -149,6 +149,18 @@ const WHATSAPP_TOOLS: Anthropic.Tool[] = [
             required: ['proceedings'],
         },
     },
+    {
+        name: 'send_pending_client_update',
+        description: 'Send (or resend) the most recent client-update letter for a brief as a letterhead .docx on WhatsApp, right now — ignoring quiet hours, since the user is explicitly asking for it. Use this whenever the user says a draft/letter didn\'t arrive, asks for it again, or asks to be sent the update for a specific matter.',
+        input_schema: {
+            type: 'object' as const,
+            properties: {
+                brief_id: { type: 'string', description: 'The brief whose client-update letter to send' },
+                brief_title: { type: 'string', description: 'Search by brief title or number if ID unknown' },
+            },
+            required: [],
+        },
+    },
 ];
 
 // The full merged tool set exposed to the model: Eureka's workspace-wide
@@ -330,6 +342,40 @@ async function recordCourtProceeding(
     };
 }
 
+async function sendPendingClientUpdate(ctx: AgentContext, briefRef: string | undefined) {
+    const resolved = await resolveBriefRef(briefRef ?? '', ctx.workspaceId);
+    if (!resolved.ok) return resolved.result;
+
+    const brief = await prisma.brief.findUnique({ where: { id: resolved.id }, select: { matterId: true } });
+    if (!brief?.matterId) {
+        return { error: `"${resolved.name}" has no litigation matter, so there's no client-update letter on record for it.` };
+    }
+
+    const draft = await prisma.clientUpdateDraft.findFirst({
+        where: { matterId: brief.matterId },
+        orderBy: { createdAt: 'desc' },
+    });
+    if (!draft) {
+        return { error: `No client-update letter found for "${resolved.name}" yet — one is only created after a court proceeding is recorded.` };
+    }
+
+    const letterheadUrl = await getWorkspaceLetterhead(ctx.workspaceId);
+    const buffer = await markdownToDocxBuffer(draft.finalText ?? draft.draftText, resolved.name, letterheadUrl);
+    const { put } = await import('@vercel/blob');
+    const safeName = resolved.name.replace(/[^a-zA-Z0-9 _-]/g, '').trim().slice(0, 60) || 'Client Update';
+    const filename = `${safeName}.docx`;
+    const blob = await put(`first-draft/${ctx.workspaceId}/${Date.now()}-${filename}`, buffer, {
+        access: 'public',
+        contentType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    });
+
+    // Sent directly, not through the gated nudge — an explicit "send it to
+    // me" request should never be held back by quiet hours.
+    await sendWhatsAppDocument(ctx.fromNumber, blob.url, filename, `Client update draft for ${resolved.name} — review before sending.`);
+
+    return { success: true, briefId: resolved.id, briefName: resolved.name, sentAsDocument: true };
+}
+
 async function filePendingDocument(ctx: AgentContext, ref: string | undefined) {
     if (!ctx.pendingAttachment) {
         return { error: 'There is no unfiled document from you right now to file — did you mean to send the document again, or record a different kind of update?' };
@@ -438,6 +484,8 @@ export async function executeTool(name: string, input: Record<string, unknown>, 
                     judge: input.judge as string | undefined,
                 },
             );
+        case 'send_pending_client_update':
+            return sendPendingClientUpdate(ctx, (input.brief_id as string | undefined) ?? (input.brief_title as string | undefined));
         case 'draft_document': {
             // Eureka's version returns Markdown text — fine to read inline in
             // a web chat, but a wall of Markdown as a WhatsApp text message is
