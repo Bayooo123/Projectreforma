@@ -1,9 +1,9 @@
 import { prisma } from '@/lib/prisma';
 import { reviewFilingDocument } from '@/lib/filing-checklist/review';
 import { generateStandardDocument } from '@/lib/drafting/standard-documents';
-import { assembleClientUpdateLetter } from '@/lib/drafting/client-update-letter';
 import { guessDocumentCategory } from './document-category';
 import { recordLedgerEntries } from './ledger';
+import { findOrCreateOpenGap } from './gaps';
 import type { JuniorAgent } from './junior';
 import type { ResolvedBrief } from './resolve-brief';
 
@@ -14,73 +14,69 @@ interface DispatchContext {
     userId: string;
 }
 
-type DispatchResult =
-    | { success: true; title: string; markdown: string }
-    | { error: string };
+export type DispatchResult =
+    | { kind: 'text'; title: string; text: string }
+    | { kind: 'ledger'; items: { desc: string; cat: string; amt: number }[]; total: number }
+    | { kind: 'gap'; gapId: string; text: string; hint: string | null }
+    | { kind: 'error'; text: string };
 
 /**
- * Runs the specialist Junior routed to. Each case calls the real function
- * that already exists for that capability — nothing here is a mock. Where
- * a capability genuinely isn't built yet (Authority Search), it says so
+ * Runs the specialist Junior routed to, for everything except First Draft
+ * (which needs its own multi-step identify/confirm flow — see
+ * first-draft-flow.ts, driven directly from actions.ts). Each case calls
+ * the real function that already exists for that capability. Where a
+ * capability genuinely isn't built yet (Authority Search), it says so
  * plainly instead of faking a result.
  */
-export async function dispatchAgent(agent: JuniorAgent, ctx: DispatchContext): Promise<DispatchResult> {
+export async function dispatchAgent(agent: Exclude<JuniorAgent, 'first_draft'>, ctx: DispatchContext): Promise<DispatchResult> {
     try {
         switch (agent) {
-            case 'first_draft': {
-                if (!ctx.brief?.matter) {
-                    return { error: 'First Draft needs a matter to write to — give a brief reference first.' };
-                }
-                const user = await prisma.user.findUnique({ where: { id: ctx.userId }, select: { name: true, jobTitle: true } });
-                const letter = await assembleClientUpdateLetter(
-                    { name: ctx.brief.client?.name ?? 'the client', company: ctx.brief.client?.company ?? null },
-                    { name: ctx.brief.matter.name, caseNumber: ctx.brief.matter.caseNumber },
-                    { name: user?.name ?? 'Counsel', jobTitle: user?.jobTitle },
-                    ctx.input,
-                );
-                return { success: true, title: letter.title, markdown: letter.markdown };
-            }
-
             case 'proofread': {
-                const result = await reviewFilingDocument(ctx.input, 'Court Filing');
-                return { success: true, title: 'Proofread', markdown: result };
+                const text = await reviewFilingDocument(ctx.input, 'Court Filing');
+                return { kind: 'text', title: 'Proofread', text };
             }
 
             case 'standard_document': {
                 if (!ctx.brief) {
-                    return { error: 'Standard Documents needs a brief reference to pull facts from.' };
+                    return { kind: 'error', text: 'Standard Documents needs a brief reference to pull facts from.' };
                 }
                 const category = guessDocumentCategory(ctx.input);
                 if (!category) {
-                    return { error: 'Couldn\'t tell which document type this is — name it directly (e.g. "CTC application", "search application", "deed of lease", "tenancy agreement").' };
+                    return { kind: 'error', text: 'Couldn\'t tell which document type this is — name it directly (e.g. "CTC application", "search application", "deed of lease", "tenancy agreement").' };
                 }
                 const result = await generateStandardDocument(ctx.workspaceId, category, {}, ctx.brief.id);
-                if (result.error) return { error: result.error };
+                if (result.error) return { kind: 'error', text: result.error };
                 if (result.missingFields && result.missingFields.length > 0) {
-                    return { error: `${result.documentName ?? 'Document'}: still missing ${result.missingFields.join(', ')}.` };
+                    return { kind: 'error', text: `${result.documentName ?? 'Document'}: still missing ${result.missingFields.join(', ')}.` };
                 }
-                return { success: true, title: result.documentName ?? 'Standard Document', markdown: result.text ?? '' };
+                return { kind: 'text', title: result.documentName ?? 'Standard Document', text: result.text ?? '' };
             }
 
             case 'deadline_watch': {
                 if (!ctx.brief?.matter) {
-                    return { error: 'Deadline Watch needs a brief reference to look up.' };
+                    return { kind: 'error', text: 'Deadline Watch needs a brief reference to look up.' };
                 }
-                const entries = await prisma.calendarEntry.findMany({
+                const latest = await prisma.calendarEntry.findFirst({
                     where: { matterId: ctx.brief.matter.id, deletedAt: null },
                     orderBy: { date: 'desc' },
-                    take: 5,
                 });
-                if (entries.length === 0) {
-                    return { success: true, title: 'Deadline Watch', markdown: 'No calendar entries recorded for this matter yet.' };
+                if (!latest?.adjournedTo) {
+                    const gap = await findOrCreateOpenGap(
+                        ctx.workspaceId,
+                        ctx.brief.id,
+                        `No next date recorded for ${ctx.brief.matter.name}.`,
+                        'e.g. Adjourned to 4 December for hearing',
+                    );
+                    return { kind: 'gap', gapId: gap.id, text: gap.text, hint: gap.hint };
                 }
-                const lines = entries.map(e => {
-                    const date = e.date.toLocaleDateString('en-GB', { dateStyle: 'long' });
-                    const adjourned = e.adjournedTo ? ` — adjourned to ${e.adjournedTo.toLocaleDateString('en-GB', { dateStyle: 'long' })}` : '';
-                    const reason = e.adjournedFor ? ` (${e.adjournedFor})` : '';
-                    return `- ${date}${adjourned}${reason}`;
-                });
-                return { success: true, title: 'Deadline Watch', markdown: lines.join('\n') };
+                const lastReported = latest.date.toLocaleDateString('en-GB', { dateStyle: 'long' });
+                const adjourned = latest.adjournedTo.toLocaleDateString('en-GB', { dateStyle: 'long' });
+                const reason = latest.adjournedFor ? ` for ${latest.adjournedFor}` : '';
+                return {
+                    kind: 'text',
+                    title: 'Deadline Watch',
+                    text: `${ctx.brief.matter.name}\n\n${adjourned}${reason} (last reported ${lastReported}).`,
+                };
             }
 
             case 'ledger':
@@ -88,16 +84,16 @@ export async function dispatchAgent(agent: JuniorAgent, ctx: DispatchContext): P
 
             case 'authority_search':
                 return {
-                    success: true,
+                    kind: 'text',
                     title: 'Authority Search',
-                    markdown: 'Authority Search isn\'t live yet — it needs a licensed, offline case-law corpus, which hasn\'t been set up. Once that\'s in place, this agent searches it directly rather than querying the open internet, so client facts never leave the firm.',
+                    text: 'Authority Search isn\'t live yet — it needs a licensed, offline case-law corpus, which hasn\'t been set up. Once that\'s in place, this agent searches it directly rather than querying the open internet, so client facts never leave the firm.',
                 };
 
             default:
-                return { error: 'Junior couldn\'t tell which agent this belongs to — try being more specific.' };
+                return { kind: 'error', text: 'Junior couldn\'t tell which agent this belongs to — try being more specific.' };
         }
     } catch (err) {
         console.error(`[ai-native] ${agent} dispatch failed:`, err);
-        return { error: err instanceof Error ? err.message : 'Something went wrong running that agent.' };
+        return { kind: 'error', text: err instanceof Error ? err.message : 'Something went wrong running that agent.' };
     }
 }
