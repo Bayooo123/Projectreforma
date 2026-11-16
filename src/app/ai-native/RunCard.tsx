@@ -1,7 +1,7 @@
 'use client';
 
 import {
-    PenLine, SpellCheck, FileText, CalendarClock, Receipt, Scale, Loader, BookMarked,
+    PenLine, SpellCheck, FileText, CalendarClock, Receipt, Scale, Loader, BookMarked, FileSearch,
     Check, Minus, FolderPlus, Copy, Download, PencilLine, CircleAlert, SearchX, type LucideIcon,
 } from 'lucide-react';
 import styles from './page.module.css';
@@ -10,7 +10,7 @@ import { AGENT_LABELS, type AgentKey, type RunView, type RunStepView } from './t
 const AGENT_ICON: Record<string, LucideIcon> = {
     first_draft: PenLine, proofread: SpellCheck, standard_document: FileText,
     deadline_watch: CalendarClock, ledger: Receipt, authority_search: Scale,
-    unclear: Loader, instruction: BookMarked,
+    brief_status: FileSearch, unclear: Loader, instruction: BookMarked,
 };
 
 function naira(n: number) {

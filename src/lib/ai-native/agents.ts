@@ -82,6 +82,18 @@ export async function dispatchAgent(agent: Exclude<JuniorAgent, 'first_draft'>, 
             case 'ledger':
                 return recordLedgerEntries(ctx.workspaceId, ctx.input);
 
+            case 'brief_status': {
+                if (!ctx.brief) {
+                    return { kind: 'error', text: 'Brief Status needs a brief reference to scan.' };
+                }
+                const { generateBriefSummary } = await import('@/app/actions/briefs');
+                const result = await generateBriefSummary(ctx.brief.id);
+                if (!result.success || !result.data) {
+                    return { kind: 'error', text: result.error ?? 'Could not generate a summary for this brief.' };
+                }
+                return { kind: 'text', title: 'Brief Status', text: result.data.prose };
+            }
+
             case 'authority_search':
                 return {
                     kind: 'text',

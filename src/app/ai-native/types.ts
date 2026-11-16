@@ -1,4 +1,4 @@
-export type AgentKey = 'first_draft' | 'proofread' | 'standard_document' | 'deadline_watch' | 'ledger' | 'authority_search' | 'unclear' | 'instruction';
+export type AgentKey = 'first_draft' | 'proofread' | 'standard_document' | 'deadline_watch' | 'ledger' | 'authority_search' | 'brief_status' | 'unclear' | 'instruction';
 
 export const AGENT_LABELS: Record<AgentKey, string> = {
     first_draft: 'First Draft',
@@ -7,6 +7,7 @@ export const AGENT_LABELS: Record<AgentKey, string> = {
     deadline_watch: 'Deadline Watch',
     ledger: 'Ledger',
     authority_search: 'Authority Search',
+    brief_status: 'Brief Status',
     unclear: 'Junior',
     instruction: 'Instruction',
 };
