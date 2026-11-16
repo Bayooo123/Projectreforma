@@ -16,12 +16,12 @@ export async function recordLedgerEntries(workspaceId: string, input: string) {
         items = JSON.parse(raw).items ?? [];
     } catch (err) {
         console.error('[Ledger] extraction failed:', err);
-        return { error: "Couldn't parse any expenses from that — try one item per line, e.g. \"fuel 5000\"." };
+        return { kind: 'error' as const, text: "Couldn't parse any expenses from that — try one item per line, e.g. \"fuel 5000\"." };
     }
 
     items = items.filter(i => i?.description && Number.isFinite(i.amount) && i.amount > 0);
     if (items.length === 0) {
-        return { error: "Didn't find a recognisable expense in that message." };
+        return { kind: 'error' as const, text: "Didn't find a recognisable expense in that message." };
     }
 
     const created = await Promise.all(items.map(item =>
@@ -38,12 +38,8 @@ export async function recordLedgerEntries(workspaceId: string, input: string) {
 
     const total = created.reduce((sum, e) => sum + Number(e.amount), 0);
     return {
-        success: true as const,
-        title: 'Ledger',
-        markdown: [
-            `Recorded ${created.length} expense${created.length === 1 ? '' : 's'} totalling ₦${total.toLocaleString()}.`,
-            '',
-            ...created.map(e => `- ${e.description} — ₦${Number(e.amount).toLocaleString()} (${e.category})`),
-        ].join('\n'),
+        kind: 'ledger' as const,
+        items: created.map(e => ({ desc: e.description ?? '', cat: e.category, amt: Number(e.amount) })),
+        total,
     };
 }

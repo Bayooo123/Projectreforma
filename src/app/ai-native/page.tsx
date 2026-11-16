@@ -1,7 +1,11 @@
 import { redirect } from 'next/navigation';
 import { getCurrentUserWithWorkspace } from '@/lib/workspace';
-import { listRecentBriefs, getLedgerSummary } from '@/app/actions/ai-native';
+import {
+    listBriefsWithStatus, listRunsAction, listOpenGapsAction, listInstructionsAction,
+    getLedgerSummary, getKnowledgeStatusAction,
+} from '@/app/actions/ai-native';
 import AiNativeClient from './AiNativeClient';
+import type { RunView } from './types';
 
 export default async function AiNativePage() {
     const data = await getCurrentUserWithWorkspace();
@@ -16,7 +20,23 @@ export default async function AiNativePage() {
         );
     }
 
-    const [briefs, ledger] = await Promise.all([listRecentBriefs(), getLedgerSummary()]);
+    const [briefs, runs, gaps, instructions, ledger, knowledge] = await Promise.all([
+        listBriefsWithStatus(),
+        listRunsAction(null),
+        listOpenGapsAction(null),
+        listInstructionsAction(null),
+        getLedgerSummary(),
+        getKnowledgeStatusAction(),
+    ]);
 
-    return <AiNativeClient initialBriefs={briefs} initialLedger={ledger} />;
+    return (
+        <AiNativeClient
+            initialBriefs={briefs}
+            initialRuns={runs as unknown as RunView[]}
+            initialGaps={gaps}
+            initialInstructions={instructions}
+            initialLedger={ledger}
+            initialKnowledge={knowledge}
+        />
+    );
 }

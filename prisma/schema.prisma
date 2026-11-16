@@ -75,6 +75,9 @@ model Workspace {
   meetingRecordings     MeetingRecording[]
   meetingBotRequests    MeetingBotRequest[]
   processingJobs        ProcessingJob[]
+  juniorRuns            JuniorRun[]
+  knowledgeGaps         KnowledgeGap[]
+  instructions          Instruction[]
 
   @@index([slug])
   @@index([firmCode])
@@ -213,6 +216,8 @@ model User {
   createdMeetingRecordings     MeetingRecording[]     @relation("MeetingRecordingCreator")
   createdInboxAttachments      InboxAttachment[]      @relation("InboxAttachmentCreator")
   requestedMeetingBotRequests  MeetingBotRequest[]    @relation("MeetingBotRequester")
+  juniorRuns                   JuniorRun[]
+  instructionsCreated          Instruction[]
 
   // Personal theme overrides
   themeSource          String?  @default("workspace")
@@ -552,6 +557,73 @@ model ClientUpdateDraft {
   @@index([calendarEntryId])
 }
 
+/// One row per Junior run on /ai-native — persists the timeline so it
+/// survives a reload instead of living only in client state. `payload`
+/// carries whatever the result kind needs (facts for a confirm card, a
+/// draftId for a draft card, items for a ledger card, a gapId for a gap
+/// card) rather than a column per kind, since the shape genuinely differs.
+model JuniorRun {
+  id          String   @id @default(cuid())
+  workspaceId String
+  userId      String
+  briefId     String?
+  agent       String
+  reason      String?
+  input       String
+  kind        String // confirm | draft | ledger | text | error | gap | instruction
+  payload     Json?
+  steps       Json?
+  createdAt   DateTime @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id])
+  brief     Brief?    @relation(fields: [briefId], references: [id], onDelete: SetNull)
+
+  @@index([workspaceId, createdAt])
+  @@index([briefId])
+}
+
+/// Something Junior noticed is missing while looking at a brief (no next
+/// date on record, a cited document not on file, etc.) — surfaced in the
+/// Knowledge panel until a lawyer answers it, which also saves an
+/// Instruction so the same gap doesn't get raised again.
+model KnowledgeGap {
+  id          String    @id @default(cuid())
+  workspaceId String
+  briefId     String
+  text        String
+  hint        String?
+  status      String    @default("open") // open | closed
+  answer      String?
+  createdAt   DateTime  @default(now())
+  resolvedAt  DateTime?
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  brief     Brief     @relation(fields: [briefId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, status])
+  @@index([briefId, status])
+}
+
+/// Standing guidance a lawyer has given Junior — either firm-wide
+/// (briefId null) or scoped to one brief — fed into that agent's prompt
+/// context on every future run.
+model Instruction {
+  id          String   @id @default(cuid())
+  workspaceId String
+  briefId     String?
+  text        String
+  createdById String
+  createdAt   DateTime @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  brief     Brief?    @relation(fields: [briefId], references: [id], onDelete: Cascade)
+  createdBy User      @relation(fields: [createdById], references: [id])
+
+  @@index([workspaceId])
+  @@index([briefId])
+}
+
 model Brief {
   id                  String               @id @default(cuid())
   /// @searchable
@@ -610,6 +682,9 @@ model Brief {
   confirmedInboxAttachments    InboxAttachment[]    @relation("InboxAttachmentConfirmedBrief")
   meetingRecordings   MeetingRecording[]
   meetingBotRequests  MeetingBotRequest[]
+  juniorRuns          JuniorRun[]
+  knowledgeGaps       KnowledgeGap[]
+  instructions        Instruction[]
 
   @@index([lawyerId])
   @@index([lawyerInChargeId])
