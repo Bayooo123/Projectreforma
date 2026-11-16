@@ -90,7 +90,7 @@ export default async function RootLayout({
     pathname.startsWith('/ojogbon/'); // Ojogbon has its own chrome-free pages
 
   // Routes that are authenticated but intentionally chrome-free (no sidebar/header shell)
-  const CHROMELESS_ROUTES: string[] = [];
+  const CHROMELESS_ROUTES: string[] = ['/ai-native'];
   const isChromelessRoute =
     CHROMELESS_ROUTES.includes(pathname) ||
     CHROMELESS_ROUTES.some(r => pathname.startsWith(r + '/')) ||
