@@ -32,3 +32,22 @@ export async function resolveBrief(workspaceId: string, ref: string) {
 }
 
 export type ResolvedBrief = Awaited<ReturnType<typeof resolveBrief>>;
+
+/**
+ * Tries to find an existing brief from an extracted case title alone — for
+ * when a lawyer reports a proceeding without naming a brief reference
+ * explicitly. Falls back to the lead party's name (the usual distinctive
+ * token in a case title like "El-Bethel v. Shoname") if the full title
+ * doesn't match anything verbatim.
+ */
+export async function matchBriefByCaseTitle(workspaceId: string, caseTitle: string | null) {
+    if (!caseTitle?.trim()) return null;
+    const direct = await resolveBrief(workspaceId, caseTitle);
+    if (direct) return direct;
+
+    const leadParty = caseTitle.split(/\s+v\.?\s+/i)[0]?.trim();
+    if (leadParty && leadParty.toLowerCase() !== caseTitle.toLowerCase()) {
+        return resolveBrief(workspaceId, leadParty);
+    }
+    return null;
+}

@@ -1,7 +1,15 @@
 'use client';
 
 import { useState } from 'react';
-import { runJunior } from '@/app/actions/ai-native';
+import {
+    classifyInput,
+    executeAgent,
+    identifyBriefForDraft,
+    draftForMatchedBrief,
+    confirmCreateBriefAndDraft,
+    approveAiNativeDraft,
+    getLedgerSummary,
+} from '@/app/actions/ai-native';
 import styles from './page.module.css';
 
 interface Brief {
@@ -24,6 +32,33 @@ interface LedgerSummary {
     entries: LedgerEntry[];
 }
 
+interface ExtractedCaseFacts {
+    caseTitle: string | null;
+    court: string | null;
+    judge: string | null;
+    claimantName: string | null;
+    proceedings: string;
+    adjournedTo: string | null;
+}
+
+interface OtherResult {
+    agent?: string;
+    reason?: string;
+    success?: true;
+    title?: string;
+    markdown?: string;
+    error?: string;
+}
+
+interface DraftResult {
+    draftId?: string;
+    title?: string;
+    markdown?: string;
+    briefName?: string;
+    briefCreated?: boolean;
+    error?: string;
+}
+
 const AGENT_LABELS: Record<string, string> = {
     first_draft: 'First Draft',
     proofread: 'Proofread',
@@ -39,7 +74,7 @@ const AGENT_DESCRIPTIONS: [string, string][] = [
     ['Proofread', 'Paste a filing — get a structural check before it goes to court.'],
     ['Standard Documents', 'Name a document type — CTC, search, deed, tenancy — filled from the brief.'],
     ['Deadline Watch', "Ask what's next for a matter."],
-    ['Ledger', 'Drop in today\'s expenses — they\'re recorded and ready for a spreadsheet.'],
+    ['Ledger', "Drop in today's expenses — they're recorded and ready for a spreadsheet."],
     ['Authority Search', 'Ask for case law for or against a fact.'],
 ];
 
@@ -47,36 +82,104 @@ function fmtNaira(n: number) {
     return `₦${n.toLocaleString()}`;
 }
 
-interface JuniorResult {
-    agent?: string;
-    reason?: string;
-    briefName?: string | null;
-    success?: true;
-    title?: string;
-    markdown?: string;
-    error?: string;
-}
-
 export default function AiNativeClient({ initialBriefs, initialLedger }: { initialBriefs: Brief[]; initialLedger: LedgerSummary }) {
     const [briefRef, setBriefRef] = useState('');
     const [input, setInput] = useState('');
+    const [activeInput, setActiveInput] = useState('');
     const [busy, setBusy] = useState(false);
-    const [result, setResult] = useState<JuniorResult | null>(null);
+    const [status, setStatus] = useState<string | null>(null);
+    const [error, setError] = useState<string | null>(null);
+    const [agent, setAgent] = useState<string | null>(null);
+    const [pendingFacts, setPendingFacts] = useState<ExtractedCaseFacts | null>(null);
+    const [draft, setDraft] = useState<DraftResult | null>(null);
+    const [draftText, setDraftText] = useState('');
+    const [approved, setApproved] = useState(false);
+    const [otherResult, setOtherResult] = useState<OtherResult | null>(null);
     const [ledger, setLedger] = useState(initialLedger);
+
+    const resetResultState = () => {
+        setError(null);
+        setAgent(null);
+        setPendingFacts(null);
+        setDraft(null);
+        setDraftText('');
+        setApproved(false);
+        setOtherResult(null);
+    };
+
+    const refreshLedger = async () => setLedger(await getLedgerSummary());
+
+    const finishDraft = (res: DraftResult) => {
+        if (res.error || !res.draftId) {
+            setError(res.error ?? 'Something went wrong preparing the draft.');
+            setStatus(null);
+            return;
+        }
+        setDraft(res);
+        setDraftText(res.markdown ?? '');
+        setStatus('Draft ready for your review.');
+    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!input.trim() || busy) return;
-        setBusy(true);
-        setResult(null);
-        const res: JuniorResult = await runJunior(input, briefRef);
-        setResult(res);
-        setBusy(false);
-        if (res.agent === 'ledger' && res.success) {
-            const { getLedgerSummary } = await import('@/app/actions/ai-native');
-            setLedger(await getLedgerSummary());
-        }
+        const text = input;
+        setActiveInput(text);
         setInput('');
+        setBusy(true);
+        resetResultState();
+        setStatus('Reviewing message…');
+
+        const classified = await classifyInput(text);
+        if ('error' in classified) {
+            setError(classified.error as string);
+            setStatus(null);
+            setBusy(false);
+            return;
+        }
+        setAgent(classified.agent);
+
+        if (classified.agent === 'first_draft') {
+            setStatus('Identifying brief…');
+            const identified = await identifyBriefForDraft(text, briefRef);
+            if (identified.status === 'matched') {
+                setStatus('Preparing draft…');
+                const res = await draftForMatchedBrief(text, identified.brief.id, identified.facts);
+                finishDraft(res);
+            } else {
+                setPendingFacts(identified.facts);
+                setStatus(null);
+            }
+        } else {
+            setStatus(`Running ${AGENT_LABELS[classified.agent] ?? classified.agent}…`);
+            const res: OtherResult = await executeAgent(classified.agent, text, briefRef);
+            setOtherResult(res);
+            if (res.agent === 'ledger' && res.success) await refreshLedger();
+            setStatus(null);
+        }
+        setBusy(false);
+    };
+
+    const handleConfirm = async (yes: boolean) => {
+        if (!yes || !pendingFacts) {
+            setPendingFacts(null);
+            setStatus(null);
+            return;
+        }
+        setBusy(true);
+        setStatus('Creating brief and preparing draft…');
+        const res = await confirmCreateBriefAndDraft(activeInput, pendingFacts);
+        setPendingFacts(null);
+        finishDraft(res);
+        setBusy(false);
+    };
+
+    const handleApprove = async () => {
+        if (!draft?.draftId) return;
+        setBusy(true);
+        await approveAiNativeDraft(draft.draftId, draftText);
+        setApproved(true);
+        setBusy(false);
     };
 
     return (
@@ -98,7 +201,7 @@ export default function AiNativeClient({ initialBriefs, initialLedger }: { initi
             </div>
 
             <form className={styles.form} onSubmit={handleSubmit}>
-                <label className={styles.label} htmlFor="briefRef">Brief (optional — needed for First Draft, Standard Documents, Deadline Watch)</label>
+                <label className={styles.label} htmlFor="briefRef">Brief (optional — First Draft will find or create one if you leave this blank)</label>
                 <input
                     id="briefRef"
                     className={styles.input}
@@ -123,19 +226,73 @@ export default function AiNativeClient({ initialBriefs, initialLedger }: { initi
                 />
 
                 <button className={styles.submit} type="submit" disabled={busy}>
-                    {busy ? 'Junior is reading this…' : 'Send to Junior'}
+                    {busy ? (status ?? 'Working…') : 'Send to Junior'}
                 </button>
             </form>
 
-            {result && (
+            {status && !pendingFacts && !draft && (
                 <div className={styles.resultCard}>
-                    <span className={`${styles.resultBadge} ${result.error ? styles.resultError : ''}`}>
-                        {AGENT_LABELS[result.agent ?? 'unclear'] ?? 'Junior'}
-                    </span>
-                    {result.reason && <div className={styles.empty}>{result.reason}</div>}
+                    <span className={styles.resultBadge}>{AGENT_LABELS[agent ?? 'unclear'] ?? 'Junior'}</span>
+                    <div className={styles.resultBody}>{status}</div>
+                </div>
+            )}
+
+            {error && (
+                <div className={styles.resultCard}>
+                    <span className={`${styles.resultBadge} ${styles.resultError}`}>{AGENT_LABELS[agent ?? 'unclear'] ?? 'Junior'}</span>
+                    <div className={styles.resultBody}>{error}</div>
+                </div>
+            )}
+
+            {pendingFacts && (
+                <div className={styles.resultCard}>
+                    <span className={styles.resultBadge}>First Draft</span>
                     <div className={styles.resultBody}>
-                        {result.error ?? result.markdown}
+                        No existing brief found for {pendingFacts.caseTitle ? `“${pendingFacts.caseTitle}”` : 'this matter'}. Create one and continue?
                     </div>
+                    <div style={{ display: 'flex', gap: '0.6rem', marginTop: '0.9rem' }}>
+                        <button className={styles.submit} type="button" disabled={busy} onClick={() => handleConfirm(true)}>
+                            {busy ? 'Working…' : 'Yes, create it'}
+                        </button>
+                        <button className={styles.submit} type="button" disabled={busy} style={{ background: '#e4e1d3', color: '#122a23' }} onClick={() => handleConfirm(false)}>
+                            No
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {draft && (
+                <div className={styles.resultCard}>
+                    <span className={styles.resultBadge}>First Draft</span>
+                    <div className={styles.empty}>
+                        {draft.briefCreated ? `New brief created: ${draft.briefName}` : draft.briefName ? `Matter: ${draft.briefName}` : null}
+                        {' — '}{status}
+                    </div>
+                    <textarea
+                        className={styles.textarea}
+                        style={{ minHeight: '220px', marginTop: '0.6rem' }}
+                        value={draftText}
+                        onChange={e => setDraftText(e.target.value)}
+                        disabled={approved}
+                    />
+                    {!approved ? (
+                        <button className={styles.submit} type="button" disabled={busy} style={{ marginTop: '0.75rem' }} onClick={handleApprove}>
+                            {busy ? 'Saving…' : 'Approve'}
+                        </button>
+                    ) : (
+                        <div className={styles.empty} style={{ marginTop: '0.75rem' }}>
+                            Approved — any edit you made here is the training signal the next fine-tuning run will learn from.
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {otherResult && (
+                <div className={styles.resultCard}>
+                    <span className={`${styles.resultBadge} ${otherResult.error ? styles.resultError : ''}`}>
+                        {AGENT_LABELS[otherResult.agent ?? 'unclear'] ?? 'Junior'}
+                    </span>
+                    <div className={styles.resultBody}>{otherResult.error ?? otherResult.markdown}</div>
                 </div>
             )}
 
