@@ -12,10 +12,11 @@ export type JuniorAgent =
     | 'deadline_watch'
     | 'ledger'
     | 'authority_search'
+    | 'brief_status'
     | 'unclear';
 
 const AGENTS: JuniorAgent[] = [
-    'first_draft', 'proofread', 'standard_document', 'deadline_watch', 'ledger', 'authority_search',
+    'first_draft', 'proofread', 'standard_document', 'deadline_watch', 'ledger', 'authority_search', 'brief_status',
 ];
 
 const SYSTEM = `You are Junior, the entry point of a law firm's AI agent suite. Every new piece of information lands with you first. Read it and decide which ONE specialist it belongs to:
@@ -26,6 +27,7 @@ const SYSTEM = `You are Junior, the entry point of a law firm's AI agent suite. 
 - deadline_watch: asking what the next court date or deadline is for a matter.
 - ledger: reporting one or more expenses (money spent) to be recorded.
 - authority_search: asking for case law or authorities for or against a fact.
+- brief_status: asking what's happening on a brief, for a catch-up or status summary, or to have the knowledge base scanned for new developments — not reporting a new event, just asking to be told the current state.
 - unclear: none of the above fit, or there isn't enough information to tell.
 
 Respond with JSON only, no other text: {"agent": "<one of the above, exactly>", "reason": "<one short sentence explaining the routing>"}`;
