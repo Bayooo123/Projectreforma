@@ -1,0 +1,7 @@
+.venv/
+raw_export.jsonl
+dataset/
+adapters/
+gguf/
+__pycache__/
+*.pyc

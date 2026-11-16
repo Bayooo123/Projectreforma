@@ -1,0 +1,12 @@
+# Pin to versions known to work together for QLoRA fine-tuning on a single
+# consumer/laptop GPU. Install with: pip install -r requirements.txt
+# Requires CUDA (NVIDIA GPU, 16GB+ VRAM recommended).
+
+torch==2.5.1
+unsloth==2026.1.1
+transformers==4.47.1
+peft==0.14.0
+trl==0.13.0
+bitsandbytes==0.45.0
+accelerate==1.2.1
+datasets==3.2.0
