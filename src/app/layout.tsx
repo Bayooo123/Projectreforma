@@ -83,14 +83,14 @@ export default async function RootLayout({
   const rawPathname = headersList.get('x-pathname') || '';
   const pathname = rawPathname.replace(/\/$/, '') || '/'; // Normalize trailing slash
 
-  const PUBLIC_ROUTES = ['/', '/login', '/register', '/forgot-password', '/join', '/landing', '/ojogbon'];
+  const PUBLIC_ROUTES = ['/', '/login', '/register', '/forgot-password', '/join', '/landing', '/ojogbon', '/x/login', '/x/signup'];
   const isPublicRoute =
     PUBLIC_ROUTES.includes(pathname) ||
     pathname.startsWith('/join/') ||
     pathname.startsWith('/ojogbon/'); // Ojogbon has its own chrome-free pages
 
   // Routes that are authenticated but intentionally chrome-free (no sidebar/header shell)
-  const CHROMELESS_ROUTES: string[] = ['/ai-native'];
+  const CHROMELESS_ROUTES: string[] = ['/ai-native', '/x/onboarding'];
   const isChromelessRoute =
     CHROMELESS_ROUTES.includes(pathname) ||
     CHROMELESS_ROUTES.some(r => pathname.startsWith(r + '/')) ||

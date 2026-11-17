@@ -34,6 +34,10 @@ model Workspace {
   accentColor       String?               @default("#3182ce")
   brandColor        String?               @default("#121826")
   brandingCompleted Boolean               @default(false)
+  /// What the firm's practice looks like, captured once at onboarding —
+  /// LITIGATION_HEAVY | ACADEMIC_CAPACITY_BUILDING | CORPORATE_ADVISORY.
+  /// Null until the onboarding question has been answered.
+  practiceFocus     String?
   secondaryColor    String?               @default("#1e293b")
   geofenceEnabled   Boolean               @default(false)
   geofenceLat       Float?
@@ -169,6 +173,10 @@ model User {
   image                  String?
   jobTitle               String?
   lawyerToken            String?                @unique
+  /// Supreme Court enrollment number — captured at signup on Reforma X as
+  /// the lawyer's professional identity. Self-attested, not externally
+  /// verified against any registry (no such integration exists yet).
+  scn                    String?                @unique
   isPlatformAdmin        Boolean                @default(false)
   mfaEnabled             Boolean?               @default(false)
   mfaSecret              String?
