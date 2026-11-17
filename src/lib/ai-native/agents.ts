@@ -4,6 +4,8 @@ import { generateStandardDocument } from '@/lib/drafting/standard-documents';
 import { guessDocumentCategory } from './document-category';
 import { recordLedgerEntries } from './ledger';
 import { findOrCreateOpenGap } from './gaps';
+import { extractDocumentMeta, captureDocument } from './document-capture';
+import { matchBriefByCaseTitle } from './resolve-brief';
 import type { JuniorAgent } from './junior';
 import type { ResolvedBrief } from './resolve-brief';
 
@@ -18,6 +20,7 @@ export type DispatchResult =
     | { kind: 'text'; title: string; text: string }
     | { kind: 'ledger'; items: { desc: string; cat: string; amt: number }[]; total: number }
     | { kind: 'gap'; gapId: string; text: string; hint: string | null }
+    | { kind: 'document'; documentId: string; name: string; docType: string; briefName: string }
     | { kind: 'error'; text: string };
 
 /**
@@ -92,6 +95,20 @@ export async function dispatchAgent(agent: Exclude<JuniorAgent, 'first_draft'>, 
                     return { kind: 'error', text: result.error ?? 'Could not generate a summary for this brief.' };
                 }
                 return { kind: 'text', title: 'Brief Status', text: result.data.prose };
+            }
+
+            case 'document_capture': {
+                const meta = await extractDocumentMeta(ctx.input);
+                const targetBrief = ctx.brief ?? await matchBriefByCaseTitle(ctx.workspaceId, meta.caseTitle);
+                if (!targetBrief) {
+                    return {
+                        kind: 'text',
+                        title: 'Document',
+                        text: `This reads like a document to file, but Junior can't tell which brief it belongs to — open the brief first, then paste it in, and it'll be filed there and remembered from then on.`,
+                    };
+                }
+                const filed = await captureDocument(targetBrief.id, meta.title, ctx.input);
+                return { kind: 'document', documentId: filed.documentId, name: filed.name, docType: filed.docType, briefName: targetBrief.name };
             }
 
             case 'authority_search':
