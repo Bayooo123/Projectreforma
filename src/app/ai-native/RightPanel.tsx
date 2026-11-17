@@ -54,7 +54,7 @@ export default function RightPanel({
                                 </div>
                                 <span className={styles.kbBar}><span className={styles.kbBarFill} style={{ width: runningPass ? '60%' : '100%' }} /></span>
                                 <div className={styles.kbStatusCaption}>
-                                    Run now checks every active matter for a missing next date and opens a gap for it. {knowledge.openGapCount} open right now.
+                                    Run now checks every active matter for a missing next date, a matter that&apos;s gone quiet, or a client update still waiting on your review. {knowledge.openGapCount} open right now.
                                 </div>
                             </div>
                             <div className={styles.sourcesList}>
@@ -73,11 +73,11 @@ export default function RightPanel({
 
                         <div className={styles.panelList}>
                             <div className={styles.panelSectionHead}>
-                                <span className={styles.panelSectionTitle}>Gaps</span>
+                                <span className={styles.panelSectionTitle}>For your attention</span>
                                 <span className={styles.panelSectionCount}>{gaps.length ? `${gaps.length} open` : ''}</span>
                             </div>
                             {gaps.length === 0 ? (
-                                <div className={styles.panelEmpty}>Nothing missing here.</div>
+                                <div className={styles.panelEmpty}>Nothing waiting on you.</div>
                             ) : gaps.map(g => (
                                 <div key={g.id} className={styles.gapPanelCard}>
                                     <div className={styles.gapPanelBody}>
@@ -91,7 +91,7 @@ export default function RightPanel({
                                             onChange={e => setReplies(r => ({ ...r, [g.id]: e.target.value }))}
                                             onKeyDown={e => { if (e.key === 'Enter') onResolveGap(g.id, replies[g.id] ?? ''); }}
                                         />
-                                        <button type="button" className={styles.gapAddBtn} onClick={() => onResolveGap(g.id, replies[g.id] ?? '')}>Add</button>
+                                        <button type="button" className={styles.gapAddBtn} onClick={() => onResolveGap(g.id, replies[g.id] ?? '')}>Reply</button>
                                     </div>
                                 </div>
                             ))}

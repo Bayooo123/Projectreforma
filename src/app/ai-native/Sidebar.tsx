@@ -102,7 +102,7 @@ export default function Sidebar({
                     {runningPass ? 'Checking the knowledge base…' : 'Knowledge base'}
                 </span>
                 <span className={styles.kbBar}><span className={styles.kbBarFill} style={{ width: runningPass ? '60%' : '100%' }} /></span>
-                <span className={styles.kbSub}>{knowledge.openGapCount} open gap{knowledge.openGapCount === 1 ? '' : 's'} · Run now to check for more</span>
+                <span className={styles.kbSub}>{knowledge.openGapCount} need{knowledge.openGapCount === 1 ? 's' : ''} your attention · Run now to check for more</span>
             </button>
         </aside>
     );
