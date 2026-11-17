@@ -603,6 +603,11 @@ model KnowledgeGap {
   hint        String?
   status      String    @default("open") // open | closed
   answer      String?
+  /// info (default, answer becomes a standing Instruction) | confirm_update
+  /// (answer closes out the ClientUpdateDraft named by refId instead)
+  category    String    @default("info")
+  /// Reference id the category gives meaning to — e.g. a ClientUpdateDraft.id for confirm_update
+  refId       String?
   createdAt   DateTime  @default(now())
   resolvedAt  DateTime?
 
