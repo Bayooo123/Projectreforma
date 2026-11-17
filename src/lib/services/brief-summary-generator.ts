@@ -1,5 +1,4 @@
-import Anthropic from '@anthropic-ai/sdk';
-import { config } from '@/lib/config';
+import { completeText } from '@/lib/agents/ai-client';
 
 export type BriefType = 'litigation' | 'transactional';
 
@@ -21,7 +20,7 @@ export interface BriefSummaryResult {
 
 const MAX_DOCS        = 12;
 const MAX_OCR_CHARS   = 8_000;
-const MAX_PDF_VISION  = 6;
+const MAX_PDF_EXTRACT = 6;
 const MAX_EMAILS      = 20;
 const MAX_EMAIL_CHARS = 3_000;
 
@@ -187,12 +186,22 @@ async function extractDocxText(url: string): Promise<string | null> {
     }
 }
 
-async function fetchPdfBase64(url: string): Promise<string | null> {
+/**
+ * Real extracted text, not raw bytes handed to a vision model — reuses the
+ * same pdfjs extraction (with OCR fallback for scanned pages) every other
+ * document in Reforma goes through on upload, so this generator isn't
+ * locked to whichever provider happens to support native PDF vision.
+ */
+async function extractPdfText(url: string): Promise<string | null> {
     try {
         const res = await fetch(url);
         if (!res.ok) return null;
-        return Buffer.from(await res.arrayBuffer()).toString('base64');
-    } catch {
+        const buffer = Buffer.from(await res.arrayBuffer());
+        const { TextExtractor } = await import('@/lib/ingestion/text-extractor');
+        const text = await TextExtractor.extract(buffer, 'application/pdf');
+        return text?.trim() || null;
+    } catch (err) {
+        console.error('[BriefSummary] PDF text extraction failed:', err);
         return null;
     }
 }
@@ -283,10 +292,6 @@ export async function generateBriefSummaryFromDocuments(
     emails: EmailInput[] = [],
     previous: PreviousSummary | null = null,
 ): Promise<BriefSummaryResult | null> {
-    const apiKey = config.ANTHROPIC_API_KEY;
-    if (!apiKey) { console.error('[BriefSummary] ANTHROPIC_API_KEY not set'); return null; }
-
-    const anthropic = new Anthropic({ apiKey });
     const briefType = detectBriefType(briefMeta.isLitigationDerived, briefMeta.category);
 
     const metaLines = [
@@ -304,39 +309,29 @@ export async function generateBriefSummaryFromDocuments(
     const docsWithOcr  = documents.filter(d => d.ocrText && d.ocrText.trim().length > 30).slice(0, MAX_DOCS);
     const docsWithoutOcr = documents.filter(d => !d.ocrText || d.ocrText.trim().length <= 30);
 
-    const pdfDocsToFetch  = docsWithoutOcr.filter(d => isPdf(d.name, d.type)).slice(0, MAX_PDF_VISION);
+    const pdfDocsToFetch  = docsWithoutOcr.filter(d => isPdf(d.name, d.type)).slice(0, MAX_PDF_EXTRACT);
     const docxDocsToFetch = docsWithoutOcr.filter(d => isDocx(d.name, d.type)).slice(0, MAX_DOCS);
 
     // Fetch everything in parallel
-    const [pdfResults, docxTexts] = await Promise.all([
-        Promise.all(pdfDocsToFetch.map(d => fetchPdfBase64(d.url))),
+    const [pdfTexts, docxTexts] = await Promise.all([
+        Promise.all(pdfDocsToFetch.map(d => extractPdfText(d.url))),
         Promise.all(docxDocsToFetch.map(d => extractDocxText(d.url))),
     ]);
 
-    // Build text block from OCR + mammoth-extracted .docx text
+    // Build text block from OCR + extracted PDF + mammoth-extracted .docx text
     const textParts: string[] = [];
     docsWithOcr.forEach((d, i) =>
         textParts.push(`--- Document ${i + 1}: ${d.name} ---\n${d.ocrText!.slice(0, MAX_OCR_CHARS)}`)
     );
+    pdfTexts.forEach((text, i) => {
+        if (text) textParts.push(`--- Document: ${pdfDocsToFetch[i].name} ---\n${text.slice(0, MAX_OCR_CHARS)}`);
+    });
     docxTexts.forEach((text, i) => {
         if (text) textParts.push(`--- Document: ${docxDocsToFetch[i].name} ---\n${text.slice(0, MAX_OCR_CHARS)}`);
     });
     const textBlock = textParts.join('\n\n');
     const emailBlock = buildEmailBlock(emails);
 
-    // Build document blocks for PDFs without OCR.
-    // No `title` field — not supported by the pdfs beta.
-    const docBlocks: any[] = [];
-    pdfResults.forEach(b64 => {
-        if (b64) {
-            docBlocks.push({
-                type: 'document',
-                source: { type: 'base64', media_type: 'application/pdf', data: b64 },
-            });
-        }
-    });
-
-    const systemPrompt = 'You are a specialised Legal Analyst. Respond only in the exact format requested.';
     const promptText = previous
         ? (briefType === 'transactional'
             ? buildIncrementalTransactionalPrompt(metaLines, previous.prose, JSON.stringify(previous.chronology), textBlock, emailBlock)
@@ -345,30 +340,22 @@ export async function generateBriefSummaryFromDocuments(
             ? buildTransactionalPrompt(metaLines, textBlock, emailBlock)
             : buildLitigationPrompt(metaLines, textBlock, emailBlock));
 
-    // System prompt embedded in user turn — avoids SDK version conflicts with betas
-    const userContent: any[] = [
-        ...docBlocks,
-        { type: 'text', text: `${systemPrompt}\n\n${promptText}` },
-    ];
-
-    // Sonnet when PDFs need vision, emails are present, or merging into a prior
-    // summary (richer reasoning needed). Haiku only for pure text-only, first-pass briefs.
-    const usesSonnet = docBlocks.length > 0 || emails.length > 0 || !!previous;
-    const model = usesSonnet ? 'claude-sonnet-5' : 'claude-haiku-4-5-20251001';
+    // The richer-reasoning tier when there's a PDF to make sense of, email
+    // correspondence to weigh, or a prior summary to merge into — the quick
+    // tier otherwise, for a pure first-pass, text-only brief.
+    const tier = (pdfDocsToFetch.length > 0 || emails.length > 0 || !!previous) ? 'complex' : 'quick';
 
     try {
-        const callParams: any = {
-            model,
-            max_tokens: 2048,
-            messages: [{ role: 'user', content: userContent }],
-        };
-
-        const response = await (anthropic.messages.create as any)(callParams);
-        const text = response.content[0]?.type === 'text' ? response.content[0].text.trim() : '';
-        return parseResponse(text, briefType);
-    } catch (err: any) {
-        const detail = err?.message ?? String(err);
-        console.error('[BriefSummary] Claude call failed:', detail);
-        throw new Error(`Claude API error: ${detail}`);
+        const text = await completeText({
+            system: 'You are a specialised Legal Analyst. Respond only in the exact format requested.',
+            prompt: promptText,
+            tier,
+            maxTokens: 2048,
+        });
+        return parseResponse(text.trim(), briefType);
+    } catch (err) {
+        const detail = err instanceof Error ? err.message : String(err);
+        console.error('[BriefSummary] AI call failed:', detail);
+        throw new Error(`Brief summary generation failed: ${detail}`);
     }
 }
