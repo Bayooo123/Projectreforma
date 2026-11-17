@@ -164,6 +164,8 @@
 .kicker { font-size: 12.5px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
 .pageTitle { margin: 0; font-family: var(--font-serif); font-weight: 700; font-size: 32px; line-height: 1.1; letter-spacing: -.02em; }
 .pageMeta { font-size: 13.5px; color: var(--text-body); }
+.focusBanner { margin-top: 4px; font-size: 12.5px; color: var(--text-muted); display: inline-flex; align-items: center; gap: 6px; }
+.focusBanner strong { color: var(--text-body); font-weight: 600; }
 
 .emptyState {
     margin-left: 46px; padding: 28px; border: 1px dashed var(--border); border-radius: 15px;

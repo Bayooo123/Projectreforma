@@ -1,11 +1,13 @@
 import { redirect } from 'next/navigation';
 import { getCurrentUserWithWorkspace } from '@/lib/workspace';
+import { prisma } from '@/lib/prisma';
 import {
     listBriefsWithStatus, listRunsAction, listOpenGapsAction, listInstructionsAction,
     getLedgerSummary, getKnowledgeStatusAction,
 } from '@/app/actions/ai-native';
 import AiNativeClient from './AiNativeClient';
 import type { RunView } from './types';
+import type { PracticeFocus } from '@/app/actions/reforma-x';
 
 export default async function AiNativePage() {
     const data = await getCurrentUserWithWorkspace();
@@ -20,13 +22,14 @@ export default async function AiNativePage() {
         );
     }
 
-    const [briefs, runs, gaps, instructions, ledger, knowledge] = await Promise.all([
+    const [briefs, runs, gaps, instructions, ledger, knowledge, workspaceFocus] = await Promise.all([
         listBriefsWithStatus(),
         listRunsAction(null),
         listOpenGapsAction(null),
         listInstructionsAction(null),
         getLedgerSummary(),
         getKnowledgeStatusAction(),
+        prisma.workspace.findUnique({ where: { id: data.workspace.id }, select: { practiceFocus: true } }),
     ]);
 
     return (
@@ -37,6 +40,7 @@ export default async function AiNativePage() {
             initialInstructions={instructions}
             initialLedger={ledger}
             initialKnowledge={knowledge}
+            practiceFocus={(workspaceFocus?.practiceFocus ?? null) as PracticeFocus | null}
         />
     );
 }

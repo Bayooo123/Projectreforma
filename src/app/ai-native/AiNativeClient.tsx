@@ -14,6 +14,13 @@ import {
     listRunsAction, listOpenGapsAction, listInstructionsAction, getKnowledgeStatusAction, runKnowledgePassAction,
     listBriefsWithStatus, getLedgerSummary,
 } from '@/app/actions/ai-native';
+import type { PracticeFocus } from '@/app/actions/reforma-x';
+
+const PRACTICE_FOCUS_LABELS: Record<PracticeFocus, string> = {
+    LITIGATION_HEAVY: 'litigation-heavy practice',
+    ACADEMIC_CAPACITY_BUILDING: 'academic work and capacity building',
+    CORPORATE_ADVISORY: 'corporate client advisory',
+};
 
 function isPendingRun(r: RunView): boolean {
     if (r.kind === 'confirm') return true;
@@ -23,7 +30,7 @@ function isPendingRun(r: RunView): boolean {
 }
 
 export default function AiNativeClient({
-    initialBriefs, initialRuns, initialGaps, initialInstructions, initialLedger, initialKnowledge,
+    initialBriefs, initialRuns, initialGaps, initialInstructions, initialLedger, initialKnowledge, practiceFocus,
 }: {
     initialBriefs: BriefSummary[];
     initialRuns: RunView[];
@@ -31,6 +38,7 @@ export default function AiNativeClient({
     initialInstructions: InstructionView[];
     initialLedger: LedgerSummary;
     initialKnowledge: KnowledgeStatus;
+    practiceFocus: PracticeFocus | null;
 }) {
     const [w, setW] = useState(1440);
     const [sideOpen, setSideOpen] = useState(false);
@@ -241,6 +249,11 @@ export default function AiNativeClient({
                             <span className={styles.kicker}>{headKicker}</span>
                             <h1 className={styles.pageTitle}>{headTitle}</h1>
                             <span className={styles.pageMeta}>{headMeta}</span>
+                            {!selectedBrief && practiceFocus && (
+                                <span className={styles.focusBanner}>
+                                    Set up for your <strong>{PRACTICE_FOCUS_LABELS[practiceFocus]}</strong> — Junior leads with that.
+                                </span>
+                            )}
                         </div>
 
                         {workingLabel && (
