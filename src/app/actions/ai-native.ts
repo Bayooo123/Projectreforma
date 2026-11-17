@@ -36,6 +36,7 @@ export async function executeAgent(agent: Exclude<JuniorAgent, 'first_draft'>, r
         kind: result.kind,
         payload: result.kind === 'ledger' ? { items: result.items, total: result.total }
             : result.kind === 'gap' ? { gapId: result.gapId, text: result.text, hint: result.hint }
+            : result.kind === 'document' ? { documentId: result.documentId, name: result.name, docType: result.docType, briefName: result.briefName }
             : result.kind === 'text' ? { title: result.title, text: result.text }
             : result.kind === 'error' ? { text: result.text }
             : undefined,

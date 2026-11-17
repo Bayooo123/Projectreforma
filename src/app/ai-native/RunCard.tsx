@@ -2,7 +2,7 @@
 
 import {
     PenLine, SpellCheck, FileText, CalendarClock, Receipt, Scale, Loader, BookMarked, FileSearch,
-    Check, Minus, FolderPlus, Copy, Download, PencilLine, CircleAlert, SearchX, type LucideIcon,
+    Check, Minus, FolderPlus, Copy, Download, PencilLine, CircleAlert, SearchX, FileCheck2, type LucideIcon,
 } from 'lucide-react';
 import styles from './page.module.css';
 import { AGENT_LABELS, type AgentKey, type RunView, type RunStepView } from './types';
@@ -10,7 +10,7 @@ import { AGENT_LABELS, type AgentKey, type RunView, type RunStepView } from './t
 const AGENT_ICON: Record<string, LucideIcon> = {
     first_draft: PenLine, proofread: SpellCheck, standard_document: FileText,
     deadline_watch: CalendarClock, ledger: Receipt, authority_search: Scale,
-    brief_status: FileSearch, unclear: Loader, instruction: BookMarked,
+    brief_status: FileSearch, document_capture: FileCheck2, unclear: Loader, instruction: BookMarked,
 };
 
 function naira(n: number) {
@@ -165,6 +165,20 @@ export default function RunCard({
                         ))}
                         <div className={styles.ledgerTotalRow}>
                             <span>Recorded</span><span>{naira(run.payload?.total ?? 0)}</span>
+                        </div>
+                    </div>
+                )}
+
+                {run.kind === 'document' && (
+                    <div className={styles.gapCard}>
+                        <div className={styles.gapHead}>
+                            <span className={styles.confirmHeadIcon}><FileCheck2 size={16} /></span>
+                            <span>
+                                <div className={styles.gapTitle}>Filed to {run.payload?.briefName ?? 'the brief'}</div>
+                                <div className={styles.gapText}>
+                                    “{run.payload?.name ?? 'Document'}” ({run.payload?.docType ?? 'Other Document'}) — saved to the knowledge base, not just this conversation.
+                                </div>
+                            </span>
                         </div>
                     </div>
                 )}
