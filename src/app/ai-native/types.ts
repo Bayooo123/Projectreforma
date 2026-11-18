@@ -20,8 +20,13 @@ export const AGENT_LABELS: Record<AgentKey, string> = {
 
 /** The agents selectable from the sidebar's "Reforma(X)" submenu — the full suite minus the two internal, non-routable kinds (unclear/instruction). */
 export const NAV_AGENTS: AgentKey[] = [
-    'first_draft', 'proofread', 'standard_document', 'deadline_watch', 'ledger', 'authority_search', 'brief_status', 'document_capture',
+    'first_draft', 'proofread', 'standard_document', 'deadline_watch', 'ledger', 'brief_status', 'document_capture', 'authority_search',
 ];
+
+/** Listed in the nav, but not yet backed by a real search — flagged "Soon" rather than presented as equally live. */
+export const AGENT_COMING_SOON: Partial<Record<AgentKey, true>> = {
+    authority_search: true,
+};
 
 export const AGENT_ICON: Record<AgentKey, LucideIcon> = {
     first_draft: PenLine, proofread: SpellCheck, standard_document: FileText,
@@ -89,4 +94,10 @@ export interface InstructionView {
 export interface KnowledgeStatus {
     sources: { name: string; count: number }[];
     openGapCount: number;
+    lastPassAt: string | null;
+}
+
+export interface AttentionCounts {
+    total: number;
+    byAgent: Partial<Record<AgentKey, number>>;
 }

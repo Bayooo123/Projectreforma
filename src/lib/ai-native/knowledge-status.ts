@@ -1,12 +1,13 @@
 import { prisma } from '@/lib/prisma';
 
 export async function getKnowledgeStatus(workspaceId: string) {
-    const [briefsAndFilings, courtRecords, correspondence, precedents, openGapCount] = await Promise.all([
+    const [briefsAndFilings, courtRecords, correspondence, precedents, openGapCount, workspace] = await Promise.all([
         prisma.document.count({ where: { brief: { workspaceId } } }),
         prisma.calendarEntry.count({ where: { matter: { workspaceId } } }),
         prisma.inboundEmail.count({ where: { workspaceId } }),
         prisma.draftingTemplate.count({ where: { workspaceId, isPublished: true } }),
         prisma.knowledgeGap.count({ where: { workspaceId, status: 'open' } }),
+        prisma.workspace.findUnique({ where: { id: workspaceId }, select: { lastKnowledgePassAt: true } }),
     ]);
 
     return {
@@ -17,6 +18,39 @@ export async function getKnowledgeStatus(workspaceId: string) {
             { name: 'Firm precedents', count: precedents },
         ],
         openGapCount,
+        lastPassAt: workspace?.lastKnowledgePassAt?.toISOString() ?? null,
+    };
+}
+
+/**
+ * Everything genuinely waiting on the lawyer right now, attributed to the
+ * agent responsible for it where that's a real, well-defined count (not
+ * every category maps to one agent — stale_matter and a confirm_update
+ * gap still count toward the total, just with no agent badge of their own).
+ * A pending ClientUpdateDraft counts here the moment it's created, not only
+ * once it's aged into a confirm_update gap — the gap is an escalation for
+ * the WhatsApp case where nothing else would surface it, not the only time
+ * a pending draft is "waiting on you".
+ */
+export async function getAttentionCounts(workspaceId: string) {
+    const [openGaps, pendingDraftCount] = await Promise.all([
+        prisma.knowledgeGap.findMany({ where: { workspaceId, status: 'open' }, select: { category: true } }),
+        prisma.clientUpdateDraft.count({ where: { workspaceId, status: 'pending' } }),
+    ]);
+
+    const confirmUpdateGapCount = openGaps.filter(g => g.category === 'confirm_update').length;
+    const deadlineWatch = openGaps.filter(g => g.category === 'info').length;
+    const ledger = openGaps.filter(g => g.category === 'stale_ledger' || g.category === 'no_invoice').length;
+
+    return {
+        // A confirm_update gap is raised for a draft that's still 'pending' — already
+        // counted in pendingDraftCount, so it isn't added again here.
+        total: openGaps.length + pendingDraftCount - confirmUpdateGapCount,
+        byAgent: {
+            first_draft: pendingDraftCount,
+            deadline_watch: deadlineWatch,
+            ledger,
+        },
     };
 }
 
@@ -160,6 +194,8 @@ export async function runKnowledgePass(workspaceId: string) {
         });
         created++;
     }
+
+    await prisma.workspace.update({ where: { id: workspaceId }, data: { lastKnowledgePassAt: new Date() } });
 
     return { checked: matters.length, created };
 }

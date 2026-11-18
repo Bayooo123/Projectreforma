@@ -1,24 +1,32 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { PanelLeft, PanelRight, ChevronRight, Database, Download } from 'lucide-react';
 import styles from './page.module.css';
 import Sidebar from './Sidebar';
 import RightPanel from './RightPanel';
 import Composer from './Composer';
 import RunCard from './RunCard';
-import { AGENT_LABELS, type AgentKey, type BriefSummary, type RunView, type GapView, type InstructionView, type LedgerSummary, type KnowledgeStatus } from './types';
-
-function naira(n: number) {
-    return `₦${n.toLocaleString('en-NG')}`;
-}
+import { AGENT_LABELS, type AgentKey, type BriefSummary, type RunView, type GapView, type InstructionView, type LedgerSummary, type KnowledgeStatus, type AttentionCounts } from './types';
 import {
     classifyInput, executeAgent, identifyBriefForDraft, draftForMatchedBrief, confirmCreateBriefAndDraft,
     dismissConfirm, approveAiNativeDraft, discardAiNativeDraft, addInstructionAction, resolveGapAction,
     listRunsAction, listOpenGapsAction, listInstructionsAction, getKnowledgeStatusAction, runKnowledgePassAction,
-    listBriefsWithStatus, getLedgerSummary,
+    listBriefsWithStatus, getLedgerSummary, getAttentionCountsAction,
 } from '@/app/actions/ai-native';
 import type { PracticeFocus } from '@/app/actions/reforma-x';
+
+function naira(n: number) {
+    return `₦${n.toLocaleString('en-NG')}`;
+}
+
+function formatMinutes(ms: number): string {
+    const mins = Math.round(ms / 60_000);
+    if (mins <= 0) return 'under a minute';
+    return `${mins} min`;
+}
+
+const AUTO_PASS_MINUTES = 15;
 
 const PRACTICE_FOCUS_LABELS: Record<PracticeFocus, string> = {
     LITIGATION_HEAVY: 'litigation-heavy practice',
@@ -34,7 +42,7 @@ function isPendingRun(r: RunView): boolean {
 }
 
 export default function AiNativeClient({
-    initialBriefs, initialRuns, initialGaps, initialInstructions, initialLedger, initialKnowledge, practiceFocus,
+    initialBriefs, initialRuns, initialGaps, initialInstructions, initialLedger, initialKnowledge, initialAttention, practiceFocus,
 }: {
     initialBriefs: BriefSummary[];
     initialRuns: RunView[];
@@ -42,6 +50,7 @@ export default function AiNativeClient({
     initialInstructions: InstructionView[];
     initialLedger: LedgerSummary;
     initialKnowledge: KnowledgeStatus;
+    initialAttention: AttentionCounts;
     practiceFocus: PracticeFocus | null;
 }) {
     const [w, setW] = useState(1440);
@@ -61,6 +70,8 @@ export default function AiNativeClient({
     const [instructions, setInstructions] = useState(initialInstructions);
     const [ledger, setLedger] = useState(initialLedger);
     const [knowledge, setKnowledge] = useState(initialKnowledge);
+    const [attention, setAttention] = useState(initialAttention);
+    const [now, setNow] = useState(() => Date.now());
 
     const [draftTexts, setDraftTexts] = useState<Record<string, string>>({});
     const [gapReplies, setGapReplies] = useState<Record<string, string>>({});
@@ -87,10 +98,10 @@ export default function AiNativeClient({
     const scopedInstructions = selectedId ? instructions.filter(i => i.briefId === selectedId || !i.briefId) : instructions;
     const reviewCount = briefs.filter(b => b.pending).length;
 
-    async function refreshAll() {
-        const [b, r, g, i, l, k] = await Promise.all([
+    const refreshAll = useCallback(async () => {
+        const [b, r, g, i, l, k, a] = await Promise.all([
             listBriefsWithStatus(), listRunsAction(null), listOpenGapsAction(null),
-            listInstructionsAction(null), getLedgerSummary(), getKnowledgeStatusAction(),
+            listInstructionsAction(null), getLedgerSummary(), getKnowledgeStatusAction(), getAttentionCountsAction(),
         ]);
         setBriefs(b as BriefSummary[]);
         setRuns(r as unknown as RunView[]);
@@ -98,7 +109,24 @@ export default function AiNativeClient({
         setInstructions(i as InstructionView[]);
         setLedger(l);
         setKnowledge(k);
-    }
+        setAttention(a);
+    }, []);
+
+    // A real recurring check, not a fabricated one: every 15 minutes while
+    // this page stays open, the same bounded pass "Run now" triggers fires
+    // again on its own, and the sidebar's "last pass / next pass" times are
+    // read from that real activity, not invented.
+    useEffect(() => {
+        const id = setInterval(() => {
+            runKnowledgePassAction().then(() => refreshAll()).catch(err => console.error('[ai-native] auto knowledge pass failed:', err));
+        }, AUTO_PASS_MINUTES * 60_000);
+        return () => clearInterval(id);
+    }, [refreshAll]);
+
+    useEffect(() => {
+        const id = setInterval(() => setNow(Date.now()), 30_000);
+        return () => clearInterval(id);
+    }, []);
 
     function selectBrief(id: string | null) {
         setSelectedId(id);
@@ -203,6 +231,11 @@ export default function AiNativeClient({
         : (selectedBrief ? `Filed to ${selectedBrief.briefNumber}` : 'Junior finds the brief');
     const sendLabel = mode === 'instruct' ? 'Save instruction' : 'Send';
 
+    const lastPassAt = knowledge.lastPassAt ? new Date(knowledge.lastPassAt).getTime() : null;
+    const nextPassAt = lastPassAt ? lastPassAt + AUTO_PASS_MINUTES * 60_000 : null;
+    const lastPassLabel = lastPassAt ? `Last pass ${formatMinutes(Math.max(0, now - lastPassAt))} ago` : 'No pass yet';
+    const nextPassLabel = nextPassAt && nextPassAt > now ? `next in ${formatMinutes(nextPassAt - now)}` : 'next pass due';
+
     const headKicker = selectedBrief ? selectedBrief.briefNumber
         : selectedAgent ? 'Agent'
         : new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
@@ -227,7 +260,9 @@ export default function AiNativeClient({
                     onSelectAgent={selectAgent}
                     briefs={briefs}
                     recentRuns={runs}
-                    knowledge={knowledge}
+                    attention={attention}
+                    lastPassLabel={lastPassLabel}
+                    nextPassLabel={nextPassLabel}
                     onOpenKnowledge={() => { if (!panelDocked) setPanelOpen(true); }}
                     runningPass={runningPass}
                 />

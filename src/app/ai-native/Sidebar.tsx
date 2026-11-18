@@ -1,9 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Plus, Search, Inbox, Folder, Database, ChevronRight, Sun, Moon } from 'lucide-react';
+import { Plus, Search, Inbox, Bell, Folder, Database, ChevronRight, Sun, Moon } from 'lucide-react';
 import styles from './page.module.css';
-import { AGENT_LABELS, AGENT_ICON, NAV_AGENTS, type AgentKey, type BriefSummary, type RunView, type KnowledgeStatus } from './types';
+import { AGENT_LABELS, AGENT_ICON, AGENT_COMING_SOON, NAV_AGENTS, type AgentKey, type BriefSummary, type RunView, type AttentionCounts } from './types';
 
 function readStoredTheme(): 'light' | 'dark' | null {
     if (typeof window === 'undefined') return null;
@@ -38,7 +38,8 @@ function ThemeToggle() {
 }
 
 export default function Sidebar({
-    docked, selectedId, onSelect, selectedAgent, onSelectAgent, briefs, recentRuns, knowledge, onOpenKnowledge, runningPass,
+    docked, selectedId, onSelect, selectedAgent, onSelectAgent, briefs, recentRuns, attention,
+    lastPassLabel, nextPassLabel, onOpenKnowledge, runningPass,
 }: {
     docked: boolean;
     selectedId: string | null;
@@ -47,16 +48,17 @@ export default function Sidebar({
     onSelectAgent: (agent: AgentKey | null) => void;
     briefs: BriefSummary[];
     recentRuns: RunView[];
-    knowledge: KnowledgeStatus;
+    attention: AttentionCounts;
+    lastPassLabel: string;
+    nextPassLabel: string;
     onOpenKnowledge: () => void;
     runningPass: boolean;
 }) {
     const [query, setQuery] = useState('');
-    const [agentsOpen, setAgentsOpen] = useState(false);
+    const [agentsOpen, setAgentsOpen] = useState(true);
     const filtered = query.trim()
         ? briefs.filter(b => b.name.toLowerCase().includes(query.toLowerCase()) || b.briefNumber.toLowerCase().includes(query.toLowerCase()))
         : briefs;
-    const reviewCount = briefs.filter(b => b.pending).length;
     const briefById = new Map(briefs.map(b => [b.id, b]));
 
     function goHome() {
@@ -81,25 +83,6 @@ export default function Sidebar({
                 </div>
             </div>
 
-            {agentsOpen && (
-                <div className={styles.agentList}>
-                    {NAV_AGENTS.map(a => {
-                        const Icon = AGENT_ICON[a];
-                        return (
-                            <button
-                                key={a}
-                                type="button"
-                                className={`${styles.agentRow} ${selectedAgent === a ? styles.agentRowSelected : ''}`}
-                                onClick={() => onSelectAgent(a)}
-                            >
-                                <span className={styles.agentIcon}><Icon size={14} /></span>
-                                <span style={{ flex: 1, textAlign: 'left' }}>{AGENT_LABELS[a]}</span>
-                            </button>
-                        );
-                    })}
-                </div>
-            )}
-
             <div className={styles.searchWrap}>
                 <div className={styles.search}>
                     <Search size={14} />
@@ -109,6 +92,12 @@ export default function Sidebar({
             </div>
 
             <div className={styles.sidebarScroll}>
+                <button type="button" className={styles.allActivityBtn} onClick={onOpenKnowledge} title="Everything waiting on you, across every brief">
+                    <Bell size={15} style={{ color: 'var(--text-body)' }} />
+                    <span style={{ flex: 1, textAlign: 'left' }}>For your attention</span>
+                    {attention.total > 0 && <span className={styles.reviewPill}>{attention.total}</span>}
+                </button>
+
                 <button
                     type="button"
                     className={`${styles.allActivityBtn} ${!selectedId && !selectedAgent ? styles.allActivitySelected : ''}`}
@@ -117,8 +106,31 @@ export default function Sidebar({
                 >
                     <Inbox size={15} style={{ color: 'var(--text-body)' }} />
                     <span style={{ flex: 1, textAlign: 'left' }}>All activity</span>
-                    {reviewCount > 0 && <span className={styles.reviewPill}>{reviewCount}</span>}
                 </button>
+
+                {agentsOpen && (
+                    <div className={styles.briefList}>
+                        <div className={styles.sectionLabel}><span>Agents</span></div>
+                        {NAV_AGENTS.map(a => {
+                            const Icon = AGENT_ICON[a];
+                            const count = attention.byAgent[a] ?? 0;
+                            const soon = !!AGENT_COMING_SOON[a];
+                            return (
+                                <button
+                                    key={a}
+                                    type="button"
+                                    className={`${styles.agentRow} ${selectedAgent === a ? styles.agentRowSelected : ''}`}
+                                    onClick={() => onSelectAgent(a)}
+                                >
+                                    <span className={styles.agentIcon}><Icon size={14} /></span>
+                                    <span style={{ flex: 1, textAlign: 'left' }}>{AGENT_LABELS[a]}</span>
+                                    {soon && <span className={styles.soonTag}>Soon</span>}
+                                    {!soon && count > 0 && <span className={styles.reviewPill}>{count}</span>}
+                                </button>
+                            );
+                        })}
+                    </div>
+                )}
 
                 <div className={styles.briefList}>
                     <div className={styles.sectionLabel}><span>Briefs</span><span>{briefs.length}</span></div>
@@ -164,10 +176,10 @@ export default function Sidebar({
             <button type="button" className={styles.kbCard} onClick={onOpenKnowledge}>
                 <span className={styles.kbHead}>
                     <span style={{ color: 'var(--green-primary)', display: 'flex' }}><Database size={14} /></span>
-                    {runningPass ? 'Checking the knowledge base…' : 'Knowledge base'}
+                    {runningPass ? 'Checking the knowledge base…' : 'Knowledge base current'}
                 </span>
                 <span className={styles.kbBar}><span className={styles.kbBarFill} style={{ width: runningPass ? '60%' : '100%' }} /></span>
-                <span className={styles.kbSub}>{knowledge.openGapCount} need{knowledge.openGapCount === 1 ? 's' : ''} your attention · Run now to check for more</span>
+                <span className={styles.kbSub}>{lastPassLabel} · {nextPassLabel}</span>
             </button>
         </aside>
     );
