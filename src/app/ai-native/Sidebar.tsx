@@ -1,16 +1,50 @@
 'use client';
 
-import { useState } from 'react';
-import { Plus, Search, Inbox, Folder, Database } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Plus, Search, Inbox, Folder, Database, ChevronRight, Sun, Moon } from 'lucide-react';
 import styles from './page.module.css';
-import { AGENT_LABELS, type AgentKey, type BriefSummary, type RunView, type KnowledgeStatus } from './types';
+import { AGENT_LABELS, AGENT_ICON, NAV_AGENTS, type AgentKey, type BriefSummary, type RunView, type KnowledgeStatus } from './types';
+
+function readStoredTheme(): 'light' | 'dark' | null {
+    if (typeof window === 'undefined') return null;
+    try {
+        return (localStorage.getItem('ai-native-theme') as 'light' | 'dark' | null) ?? null;
+    } catch {
+        return null;
+    }
+}
+
+function ThemeToggle() {
+    const [theme, setTheme] = useState<'light' | 'dark' | null>(readStoredTheme);
+
+    function toggle() {
+        const prefersDark = typeof window !== 'undefined' && window.matchMedia?.('(prefers-color-scheme: dark)').matches;
+        const current = theme ?? (prefersDark ? 'dark' : 'light');
+        const next = current === 'dark' ? 'light' : 'dark';
+        setTheme(next);
+        try { localStorage.setItem('ai-native-theme', next); } catch { /* non-fatal */ }
+    }
+
+    useEffect(() => {
+        const root = document.querySelector(`.${styles.app}`);
+        if (root && theme) root.setAttribute('data-theme', theme);
+    }, [theme]);
+
+    return (
+        <button type="button" className={styles.iconBtn} title="Toggle dark mode" onClick={toggle}>
+            {theme === 'dark' ? <Sun size={14} /> : <Moon size={14} />}
+        </button>
+    );
+}
 
 export default function Sidebar({
-    docked, selectedId, onSelect, briefs, recentRuns, knowledge, onOpenKnowledge, runningPass,
+    docked, selectedId, onSelect, selectedAgent, onSelectAgent, briefs, recentRuns, knowledge, onOpenKnowledge, runningPass,
 }: {
     docked: boolean;
     selectedId: string | null;
     onSelect: (id: string | null) => void;
+    selectedAgent: AgentKey | null;
+    onSelectAgent: (agent: AgentKey | null) => void;
     briefs: BriefSummary[];
     recentRuns: RunView[];
     knowledge: KnowledgeStatus;
@@ -18,23 +52,53 @@ export default function Sidebar({
     runningPass: boolean;
 }) {
     const [query, setQuery] = useState('');
+    const [agentsOpen, setAgentsOpen] = useState(false);
     const filtered = query.trim()
         ? briefs.filter(b => b.name.toLowerCase().includes(query.toLowerCase()) || b.briefNumber.toLowerCase().includes(query.toLowerCase()))
         : briefs;
     const reviewCount = briefs.filter(b => b.pending).length;
     const briefById = new Map(briefs.map(b => [b.id, b]));
 
+    function goHome() {
+        onSelect(null);
+        onSelectAgent(null);
+    }
+
     return (
         <aside className={`${styles.sidebar} ${docked ? styles.sidebarDocked : styles.sidebarOverlay}`}>
             <div className={styles.sidebarHead}>
-                <div className={styles.brandRow}>
-                    <span className={styles.brandName}>Reforma</span>
-                    <span className={styles.brandSub}>Junior</span>
-                </div>
-                <button type="button" className={styles.iconBtn} title="New" onClick={() => onSelect(null)}>
-                    <Plus size={15} />
+                <button type="button" className={styles.brandRow} onClick={() => setAgentsOpen(v => !v)} title="Show the agent suite">
+                    <span className={styles.brandName}>Reforma<span className={styles.brandX}>(X)</span></span>
+                    <span className={`${styles.brandChevron} ${agentsOpen ? styles.brandChevronOpen : ''}`}>
+                        <ChevronRight size={14} />
+                    </span>
                 </button>
+                <div className={styles.headRight}>
+                    <ThemeToggle />
+                    <button type="button" className={styles.iconBtn} title="New" onClick={goHome}>
+                        <Plus size={15} />
+                    </button>
+                </div>
             </div>
+
+            {agentsOpen && (
+                <div className={styles.agentList}>
+                    {NAV_AGENTS.map(a => {
+                        const Icon = AGENT_ICON[a];
+                        return (
+                            <button
+                                key={a}
+                                type="button"
+                                className={`${styles.agentRow} ${selectedAgent === a ? styles.agentRowSelected : ''}`}
+                                onClick={() => onSelectAgent(a)}
+                            >
+                                <span className={styles.agentIcon}><Icon size={14} /></span>
+                                <span style={{ flex: 1, textAlign: 'left' }}>{AGENT_LABELS[a]}</span>
+                            </button>
+                        );
+                    })}
+                </div>
+            )}
 
             <div className={styles.searchWrap}>
                 <div className={styles.search}>
@@ -47,8 +111,9 @@ export default function Sidebar({
             <div className={styles.sidebarScroll}>
                 <button
                     type="button"
-                    className={`${styles.allActivityBtn} ${!selectedId ? styles.allActivitySelected : ''}`}
-                    onClick={() => onSelect(null)}
+                    className={`${styles.allActivityBtn} ${!selectedId && !selectedAgent ? styles.allActivitySelected : ''}`}
+                    onClick={goHome}
+                    title="Everything, across every agent and every brief"
                 >
                     <Inbox size={15} style={{ color: 'var(--text-body)' }} />
                     <span style={{ flex: 1, textAlign: 'left' }}>All activity</span>

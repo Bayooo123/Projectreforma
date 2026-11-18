@@ -1,17 +1,10 @@
 'use client';
 
 import {
-    PenLine, SpellCheck, FileText, CalendarClock, Receipt, Scale, Loader, BookMarked, FileSearch,
-    Check, Minus, FolderPlus, Copy, Download, PencilLine, CircleAlert, SearchX, FileCheck2, type LucideIcon,
+    Loader, Check, Minus, FolderPlus, Copy, Download, PencilLine, CircleAlert, SearchX, FileCheck2, FileText,
 } from 'lucide-react';
 import styles from './page.module.css';
-import { AGENT_LABELS, type AgentKey, type RunView, type RunStepView } from './types';
-
-const AGENT_ICON: Record<string, LucideIcon> = {
-    first_draft: PenLine, proofread: SpellCheck, standard_document: FileText,
-    deadline_watch: CalendarClock, ledger: Receipt, authority_search: Scale,
-    brief_status: FileSearch, document_capture: FileCheck2, unclear: Loader, instruction: BookMarked,
-};
+import { AGENT_LABELS, AGENT_ICON, type AgentKey, type RunView, type RunStepView } from './types';
 
 function naira(n: number) {
     return `₦${n.toLocaleString('en-NG')}`;
@@ -39,7 +32,7 @@ export default function RunCard({
     onGapReplyChange: (v: string) => void;
     onGapSubmit: () => void;
 }) {
-    const Icon = AGENT_ICON[run.agent] ?? Loader;
+    const Icon = AGENT_ICON[run.agent as AgentKey] ?? Loader;
     const label = AGENT_LABELS[run.agent as AgentKey] ?? run.agent;
     const time = new Date(run.createdAt).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
     const steps = run.steps ?? [];
