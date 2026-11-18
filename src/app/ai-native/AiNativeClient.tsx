@@ -1,13 +1,17 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { PanelLeft, PanelRight, ChevronRight, Database } from 'lucide-react';
+import { PanelLeft, PanelRight, ChevronRight, Database, Download } from 'lucide-react';
 import styles from './page.module.css';
 import Sidebar from './Sidebar';
 import RightPanel from './RightPanel';
 import Composer from './Composer';
 import RunCard from './RunCard';
 import { AGENT_LABELS, type AgentKey, type BriefSummary, type RunView, type GapView, type InstructionView, type LedgerSummary, type KnowledgeStatus } from './types';
+
+function naira(n: number) {
+    return `₦${n.toLocaleString('en-NG')}`;
+}
 import {
     classifyInput, executeAgent, identifyBriefForDraft, draftForMatchedBrief, confirmCreateBriefAndDraft,
     dismissConfirm, approveAiNativeDraft, discardAiNativeDraft, addInstructionAction, resolveGapAction,
@@ -44,7 +48,7 @@ export default function AiNativeClient({
     const [sideOpen, setSideOpen] = useState(false);
     const [panelOpen, setPanelOpen] = useState(false);
     const [selectedId, setSelectedId] = useState<string | null>(null);
-    const [tab, setTab] = useState<'knowledge' | 'ledger'>('knowledge');
+    const [selectedAgent, setSelectedAgent] = useState<AgentKey | null>(null);
     const [mode, setMode] = useState<'ask' | 'instruct'>('ask');
     const [input, setInput] = useState('');
     const [busy, setBusy] = useState(false);
@@ -76,7 +80,9 @@ export default function AiNativeClient({
     const scrim = (!sideDocked && sideOpen) || (!panelDocked && panelOpen);
 
     const selectedBrief = selectedId ? briefs.find(b => b.id === selectedId) ?? null : null;
-    const visibleRuns = selectedId ? runs.filter(r => r.briefId === selectedId) : runs;
+    const visibleRuns = selectedId ? runs.filter(r => r.briefId === selectedId)
+        : selectedAgent ? runs.filter(r => r.agent === selectedAgent)
+        : runs;
     const scopedGaps = selectedId ? gaps.filter(g => g.briefId === selectedId) : gaps;
     const scopedInstructions = selectedId ? instructions.filter(i => i.briefId === selectedId || !i.briefId) : instructions;
     const reviewCount = briefs.filter(b => b.pending).length;
@@ -96,6 +102,13 @@ export default function AiNativeClient({
 
     function selectBrief(id: string | null) {
         setSelectedId(id);
+        setSelectedAgent(null);
+        setSideOpen(false);
+    }
+
+    function selectAgent(agent: AgentKey | null) {
+        setSelectedAgent(agent);
+        setSelectedId(null);
         setSideOpen(false);
     }
 
@@ -179,7 +192,6 @@ export default function AiNativeClient({
     }
     function switchToInstruct() {
         setMode('instruct');
-        setTab('knowledge');
         inputRef.current?.focus();
     }
 
@@ -191,11 +203,16 @@ export default function AiNativeClient({
         : (selectedBrief ? `Filed to ${selectedBrief.briefNumber}` : 'Junior finds the brief');
     const sendLabel = mode === 'instruct' ? 'Save instruction' : 'Send';
 
-    const headKicker = selectedBrief ? selectedBrief.briefNumber : new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
-    const headTitle = selectedBrief ? selectedBrief.name : 'All activity';
+    const headKicker = selectedBrief ? selectedBrief.briefNumber
+        : selectedAgent ? 'Agent'
+        : new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
+    const headTitle = selectedBrief ? selectedBrief.name
+        : selectedAgent ? AGENT_LABELS[selectedAgent]
+        : 'All activity';
     const headMeta = selectedBrief
         ? [selectedBrief.court, selectedBrief.judge && `Hon. Justice ${selectedBrief.judge}`, selectedBrief.nextDate ? `Next ${new Date(selectedBrief.nextDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}` : 'No next date'].filter(Boolean).join(' · ')
-        : (reviewCount ? `${reviewCount} waiting on you` : 'Nothing waiting on you');
+        : selectedAgent ? `${visibleRuns.length} run${visibleRuns.length === 1 ? '' : 's'} · every brief`
+        : (reviewCount ? `${reviewCount} waiting on you` : 'Nothing waiting on you — every agent, every brief');
 
     return (
         <div className={styles.app}>
@@ -206,10 +223,12 @@ export default function AiNativeClient({
                     docked={sideDocked}
                     selectedId={selectedId}
                     onSelect={selectBrief}
+                    selectedAgent={selectedAgent}
+                    onSelectAgent={selectAgent}
                     briefs={briefs}
                     recentRuns={runs}
                     knowledge={knowledge}
-                    onOpenKnowledge={() => { setTab('knowledge'); if (!panelDocked) setPanelOpen(true); }}
+                    onOpenKnowledge={() => { if (!panelDocked) setPanelOpen(true); }}
                     runningPass={runningPass}
                 />
             )}
@@ -222,8 +241,8 @@ export default function AiNativeClient({
                                 <PanelLeft size={15} />
                             </button>
                         )}
-                        <span>{selectedBrief ? 'Briefs' : 'Workspace'}</span>
-                        {selectedBrief && (
+                        <span>{selectedBrief ? 'Briefs' : selectedAgent ? 'Reforma(X)' : 'Workspace'}</span>
+                        {(selectedBrief || selectedAgent) && (
                             <>
                                 <ChevronRight size={14} style={{ color: 'var(--border)' }} />
                                 <span className={styles.crumbCurrent}>{headTitle}</span>
@@ -249,12 +268,22 @@ export default function AiNativeClient({
                             <span className={styles.kicker}>{headKicker}</span>
                             <h1 className={styles.pageTitle}>{headTitle}</h1>
                             <span className={styles.pageMeta}>{headMeta}</span>
-                            {!selectedBrief && practiceFocus && (
+                            {!selectedBrief && !selectedAgent && practiceFocus && (
                                 <span className={styles.focusBanner}>
                                     Set up for your <strong>{PRACTICE_FOCUS_LABELS[practiceFocus]}</strong> — Junior leads with that.
                                 </span>
                             )}
                         </div>
+
+                        {selectedAgent === 'ledger' && !selectedBrief && (
+                            <div className={styles.ledgerPanelTotalCard} style={{ marginLeft: 46, marginBottom: 28, maxWidth: 360 }}>
+                                <div className={styles.ledgerPanelCaption}>Last {ledger.entries.length} entries</div>
+                                <div className={styles.ledgerPanelTotal}>{naira(ledger.total)}</div>
+                                <a className={styles.ledgerPanelDownload} href="/api/ai-native/ledger/export">
+                                    <Download size={13} />Download spreadsheet
+                                </a>
+                            </div>
+                        )}
 
                         {workingLabel && (
                             <article className={styles.run}>
@@ -319,12 +348,9 @@ export default function AiNativeClient({
             {showPanel && (
                 <RightPanel
                     docked={panelDocked}
-                    tab={tab}
-                    onTab={setTab}
                     knowledge={knowledge}
                     gaps={scopedGaps}
                     instructions={scopedInstructions}
-                    ledger={ledger}
                     onRunNow={handleRunNow}
                     runningPass={runningPass}
                     onResolveGap={handleResolveGap}

@@ -33,6 +33,45 @@
 .app textarea:focus, .app input:focus { outline: none; }
 .app ::placeholder { color: var(--text-muted); }
 
+/* Dark mode: system preference by default, overridable by the toggle in
+   the sidebar (persisted as data-theme, see ThemeToggle in Sidebar.tsx). */
+@media (prefers-color-scheme: dark) {
+    .app:not([data-theme="light"]) {
+        --green-primary: #1FD6AE;
+        --green-deep: #22E6BD;
+        --green-bright: #2FEFC8;
+        --mint: #113A32;
+        --mint-pale: #143F37;
+        --bg-app: #0A1512;
+        --surface: #10201C;
+        --border: #223732;
+        --text-primary: #EAF6F3;
+        --text-body: #AFC7C2;
+        --text-muted: #6C8884;
+        --error: #FF7A6E;
+        --shadow-xs: 0 1px 2px rgba(0, 0, 0, .3);
+        --shadow-card: 0 1px 2px rgba(0, 0, 0, .3), 0 24px 48px -20px rgba(0, 0, 0, .6);
+        --shadow-panel: 0 1px 2px rgba(0, 0, 0, .3), 0 30px 60px -30px rgba(0, 0, 0, .55);
+    }
+}
+.app[data-theme="dark"] {
+    --green-primary: #1FD6AE;
+    --green-deep: #22E6BD;
+    --green-bright: #2FEFC8;
+    --mint: #113A32;
+    --mint-pale: #143F37;
+    --bg-app: #0A1512;
+    --surface: #10201C;
+    --border: #223732;
+    --text-primary: #EAF6F3;
+    --text-body: #AFC7C2;
+    --text-muted: #6C8884;
+    --error: #FF7A6E;
+    --shadow-xs: 0 1px 2px rgba(0, 0, 0, .3);
+    --shadow-card: 0 1px 2px rgba(0, 0, 0, .3), 0 24px 48px -20px rgba(0, 0, 0, .6);
+    --shadow-panel: 0 1px 2px rgba(0, 0, 0, .3), 0 30px 60px -30px rgba(0, 0, 0, .55);
+}
+
 .scrim {
     position: absolute;
     inset: 0;
@@ -63,9 +102,16 @@
     align-items: center;
     justify-content: space-between;
 }
-.brandRow { display: flex; align-items: baseline; gap: 8px; }
-.brandName { font-family: var(--font-serif); font-weight: 700; font-size: 19px; letter-spacing: -0.015em; }
-.brandSub { font-size: 12.5px; font-weight: 500; color: var(--text-muted); }
+.brandRow {
+    display: flex; align-items: center; gap: 6px; border: none; background: transparent;
+    padding: 0; cursor: pointer; color: var(--text-primary);
+}
+.brandName { font-family: var(--font-serif); font-weight: 700; font-size: 19px; letter-spacing: -0.015em; display: flex; align-items: baseline; gap: 3px; }
+.brandX { color: var(--green-primary); }
+.brandChevron { color: var(--text-muted); display: flex; transition: transform .15s; }
+.brandChevronOpen { transform: rotate(90deg); }
+
+.headRight { display: flex; align-items: center; gap: 6px; }
 
 .iconBtn {
     width: 28px; height: 28px; display: flex; align-items: center; justify-content: center;
@@ -73,6 +119,17 @@
     color: var(--text-body); cursor: pointer; box-shadow: var(--shadow-xs);
 }
 .iconBtn:hover { color: var(--green-primary); }
+
+.agentList { display: flex; flex-direction: column; gap: 1px; padding: 6px 12px 2px; }
+.agentRow {
+    display: flex; align-items: center; gap: 9px; width: 100%; text-align: left;
+    padding: 6px 10px; border: 1px solid transparent; border-radius: 7px; cursor: pointer;
+    background: transparent; font-size: 13px; color: var(--text-body);
+}
+.agentRow:hover { background: var(--surface); }
+.agentRowSelected { background: var(--surface); border-color: var(--border); box-shadow: var(--shadow-xs); color: var(--text-primary); font-weight: 500; }
+.agentIcon { color: var(--text-muted); display: flex; }
+.agentRowSelected .agentIcon { color: var(--green-primary); }
 
 .searchWrap { padding: 0 12px 14px; }
 .search {

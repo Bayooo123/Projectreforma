@@ -1,3 +1,8 @@
+import {
+    PenLine, SpellCheck, FileText, CalendarClock, Receipt, Scale, Loader, BookMarked, FileSearch,
+    FileCheck2, type LucideIcon,
+} from 'lucide-react';
+
 export type AgentKey = 'first_draft' | 'proofread' | 'standard_document' | 'deadline_watch' | 'ledger' | 'authority_search' | 'brief_status' | 'document_capture' | 'unclear' | 'instruction';
 
 export const AGENT_LABELS: Record<AgentKey, string> = {
@@ -11,6 +16,17 @@ export const AGENT_LABELS: Record<AgentKey, string> = {
     document_capture: 'Document Capture',
     unclear: 'Junior',
     instruction: 'Instruction',
+};
+
+/** The agents selectable from the sidebar's "Reforma(X)" submenu — the full suite minus the two internal, non-routable kinds (unclear/instruction). */
+export const NAV_AGENTS: AgentKey[] = [
+    'first_draft', 'proofread', 'standard_document', 'deadline_watch', 'ledger', 'authority_search', 'brief_status', 'document_capture',
+];
+
+export const AGENT_ICON: Record<AgentKey, LucideIcon> = {
+    first_draft: PenLine, proofread: SpellCheck, standard_document: FileText,
+    deadline_watch: CalendarClock, ledger: Receipt, authority_search: Scale,
+    brief_status: FileSearch, document_capture: FileCheck2, unclear: Loader, instruction: BookMarked,
 };
 
 export interface BriefSummary {
