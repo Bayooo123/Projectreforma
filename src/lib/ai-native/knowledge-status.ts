@@ -22,11 +22,12 @@ export async function getKnowledgeStatus(workspaceId: string) {
 
 const STALE_MATTER_DAYS = 60;
 const STALE_DRAFT_HOURS = 24;
+const STALE_LEDGER_DAYS = 30;
 
 /**
  * A real, bounded check — not the full semantic "re-reads every brief,
  * filing and email" review the design describes, which would need its own
- * scheduled AI pipeline. It checks three concrete things, each becoming a
+ * scheduled AI pipeline. It checks five concrete things, each becoming a
  * real KnowledgeGap (never a simulated one) when it finds something:
  *
  * 1. Does every active matter have a next date on record?
@@ -37,11 +38,13 @@ const STALE_DRAFT_HOURS = 24;
  *    drafted and sent to the lawyer — over WhatsApp especially, where
  *    there's no in-app "Approve" to close the loop, so Reforma would
  *    otherwise never learn whether, or in what final form, it went out?
+ * 4. Has anyone logged an expense recently, firm-wide?
+ * 5. Has a matter with recorded expenses never been invoiced?
  */
 export async function runKnowledgePass(workspaceId: string) {
     const matters = await prisma.matter.findMany({
         where: { workspaceId, status: 'active', deletedAt: null },
-        select: { id: true, name: true, nextCourtDate: true, briefs: { select: { id: true }, take: 1 } },
+        select: { id: true, name: true, clientId: true, nextCourtDate: true, briefs: { select: { id: true }, take: 1 } },
     });
 
     let created = 0;
@@ -89,6 +92,50 @@ export async function runKnowledgePass(workspaceId: string) {
                 created++;
             }
         }
+
+        if (m.clientId) {
+            const [expenseCount, invoiceCount] = await Promise.all([
+                prisma.expense.count({ where: { matterId: m.id } }),
+                prisma.invoice.count({ where: { matterId: m.id } }),
+            ]);
+            if (expenseCount > 0 && invoiceCount === 0) {
+                const existing = await prisma.knowledgeGap.findFirst({ where: { workspaceId, category: 'no_invoice', refId: m.id, status: 'open' } });
+                if (!existing) {
+                    await prisma.knowledgeGap.create({
+                        data: {
+                            workspaceId,
+                            briefId,
+                            category: 'no_invoice',
+                            refId: m.id,
+                            text: `No invoice has been raised for ${m.name} since it commenced, though there are expenses recorded against it — may I prepare one for your review?`,
+                            hint: 'Reply "yes" to prepare a draft, or "not now" to skip',
+                        },
+                    });
+                    created++;
+                }
+            }
+        }
+    }
+
+    const sinceLedger = new Date(Date.now() - STALE_LEDGER_DAYS * 24 * 3600_000);
+    const [lastExpense, openLedgerGap] = await Promise.all([
+        prisma.expense.findFirst({ where: { workspaceId }, orderBy: { date: 'desc' }, select: { date: true } }),
+        prisma.knowledgeGap.findFirst({ where: { workspaceId, category: 'stale_ledger', status: 'open' } }),
+    ]);
+    if (!openLedgerGap && (!lastExpense || lastExpense.date < sinceLedger)) {
+        const text = lastExpense
+            ? `No financial records uploaded since ${lastExpense.date.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })} — provide them.`
+            : 'No financial records have been logged yet — provide them.';
+        await prisma.knowledgeGap.create({
+            data: {
+                workspaceId,
+                briefId: null,
+                category: 'stale_ledger',
+                text,
+                hint: 'e.g. fuel 5000, filing fee 20000',
+            },
+        });
+        created++;
     }
 
     const stalePendingDrafts = await prisma.clientUpdateDraft.findMany({

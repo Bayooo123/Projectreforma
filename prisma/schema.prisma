@@ -420,6 +420,7 @@ model Matter {
   litigationMilestones  LitigationMilestone[]
   pulseEvents           PulseEvent[]
   clientUpdateDrafts    ClientUpdateDraft[]
+  expenses              Expense[]
 
   @@index([workspaceId])
   @@index([status])
@@ -598,21 +599,25 @@ model JuniorRun {
 model KnowledgeGap {
   id          String    @id @default(cuid())
   workspaceId String
-  briefId     String
+  /// Null for a firm-wide gap (e.g. stale_ledger) that isn't about any one brief — same nullable-for-firm-wide shape as Instruction.briefId.
+  briefId     String?
   text        String
   hint        String?
   status      String    @default("open") // open | closed
   answer      String?
   /// info (default, answer becomes a standing Instruction) | confirm_update
-  /// (answer closes out the ClientUpdateDraft named by refId instead)
+  /// (answer closes out the ClientUpdateDraft named by refId) | stale_ledger
+  /// (answer is parsed as new ledger entries) | no_invoice (answer, unless a
+  /// decline, prepares a draft Invoice for the matter named by refId)
   category    String    @default("info")
-  /// Reference id the category gives meaning to — e.g. a ClientUpdateDraft.id for confirm_update
+  /// Reference id the category gives meaning to — a ClientUpdateDraft.id for
+  /// confirm_update, a Matter.id for no_invoice
   refId       String?
   createdAt   DateTime  @default(now())
   resolvedAt  DateTime?
 
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  brief     Brief     @relation(fields: [briefId], references: [id], onDelete: Cascade)
+  brief     Brief?    @relation(fields: [briefId], references: [id], onDelete: Cascade)
 
   @@index([workspaceId, status])
   @@index([briefId, status])
@@ -908,6 +913,10 @@ model SubscriptionPayment {
 model Expense {
   id          String            @id @default(cuid())
   workspaceId String
+  /// The matter this expense was recorded against, when the Ledger agent was
+  /// run with a brief in context — optional, so a general firm overhead
+  /// expense (rent, salaries) stays valid with no matter at all.
+  matterId    String?
   amount      Decimal           @db.Decimal(20, 2)
   /// @searchable
   description String?
@@ -918,12 +927,14 @@ model Expense {
   updatedAt   DateTime          @updatedAt
   category    ExpenseCategory   @default(MISCELLANEOUS)
   workspace   Workspace         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  matter      Matter?           @relation(fields: [matterId], references: [id], onDelete: SetNull)
   auditLogs   ExpenseAuditLog[]
 
   @@index([workspaceId])
   @@index([date])
   @@index([workspaceId, date])
   @@index([workspaceId, category])
+  @@index([matterId])
 }
 
 model ExpenseAuditLog {

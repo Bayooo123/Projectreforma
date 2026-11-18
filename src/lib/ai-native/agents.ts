@@ -83,7 +83,7 @@ export async function dispatchAgent(agent: Exclude<JuniorAgent, 'first_draft'>, 
             }
 
             case 'ledger':
-                return recordLedgerEntries(ctx.workspaceId, ctx.input);
+                return recordLedgerEntries(ctx.workspaceId, ctx.input, ctx.brief?.matter?.id ?? null);
 
             case 'brief_status': {
                 if (!ctx.brief) {
