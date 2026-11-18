@@ -4,7 +4,7 @@ import { getCurrentUserWithWorkspace } from '@/lib/workspace';
 import { prisma } from '@/lib/prisma';
 import {
     listBriefsWithStatus, listRunsAction, listOpenGapsAction, listInstructionsAction,
-    getLedgerSummary, getKnowledgeStatusAction,
+    getLedgerSummary, getKnowledgeStatusAction, getAttentionCountsAction,
 } from '@/app/actions/ai-native';
 import { runKnowledgePass } from '@/lib/ai-native/knowledge-status';
 import AiNativeClient from './AiNativeClient';
@@ -25,19 +25,21 @@ export default async function AiNativePage() {
     }
 
     // Fire-and-forget: a real, bounded check (stale matters, unreviewed
-    // drafts, missing next dates), run on each visit rather than on a
-    // fabricated schedule. Never blocks the page — results appear on the
-    // next load or "Run now" click, whichever comes first.
+    // drafts, missing next dates), run on every page load. The client also
+    // re-runs this on a real 15-minute interval while the page stays open
+    // (AiNativeClient) — this one covers the visit itself, before that
+    // timer has had a chance to fire.
     const workspaceId = data.workspace.id;
     after(() => runKnowledgePass(workspaceId).catch(err => console.error('[ai-native] background knowledge pass failed:', err)));
 
-    const [briefs, runs, gaps, instructions, ledger, knowledge, workspaceFocus] = await Promise.all([
+    const [briefs, runs, gaps, instructions, ledger, knowledge, attention, workspaceFocus] = await Promise.all([
         listBriefsWithStatus(),
         listRunsAction(null),
         listOpenGapsAction(null),
         listInstructionsAction(null),
         getLedgerSummary(),
         getKnowledgeStatusAction(),
+        getAttentionCountsAction(),
         prisma.workspace.findUnique({ where: { id: data.workspace.id }, select: { practiceFocus: true } }),
     ]);
 
@@ -49,6 +51,7 @@ export default async function AiNativePage() {
             initialInstructions={instructions}
             initialLedger={ledger}
             initialKnowledge={knowledge}
+            initialAttention={attention}
             practiceFocus={(workspaceFocus?.practiceFocus ?? null) as PracticeFocus | null}
         />
     );

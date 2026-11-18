@@ -38,6 +38,10 @@ model Workspace {
   /// LITIGATION_HEAVY | ACADEMIC_CAPACITY_BUILDING | CORPORATE_ADVISORY.
   /// Null until the onboarding question has been answered.
   practiceFocus     String?
+  /// When runKnowledgePass last actually ran for this workspace — real,
+  /// not a display placeholder. Lets /ai-native show a genuine "last pass
+  /// X ago" instead of a number nobody can account for.
+  lastKnowledgePassAt DateTime?
   secondaryColor    String?               @default("#1e293b")
   geofenceEnabled   Boolean               @default(false)
   geofenceLat       Float?

@@ -10,7 +10,7 @@ import type { ExtractedCaseFacts } from '@/lib/ai-native/case-extraction';
 import { createRun, updateRun, listRuns } from '@/lib/ai-native/runs';
 import { addInstruction, listInstructions } from '@/lib/ai-native/instructions';
 import { resolveGap, listOpenGaps } from '@/lib/ai-native/gaps';
-import { getKnowledgeStatus, runKnowledgePass } from '@/lib/ai-native/knowledge-status';
+import { getKnowledgeStatus, runKnowledgePass, getAttentionCounts } from '@/lib/ai-native/knowledge-status';
 
 async function requireWorkspaceContext() {
     const data = await getCurrentUserWithWorkspace();
@@ -175,6 +175,11 @@ export async function getKnowledgeStatusAction() {
 export async function runKnowledgePassAction() {
     const { workspaceId } = await requireWorkspaceContext();
     return runKnowledgePass(workspaceId);
+}
+
+export async function getAttentionCountsAction() {
+    const { workspaceId } = await requireWorkspaceContext();
+    return getAttentionCounts(workspaceId);
 }
 
 export async function listBriefsWithStatus() {
