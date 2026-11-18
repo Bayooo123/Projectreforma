@@ -72,10 +72,10 @@ export interface RunView {
 
 export interface GapView {
     id: string;
-    briefId: string;
+    briefId: string | null;
     text: string;
     hint: string | null;
-    brief?: { name: string };
+    brief?: { name: string } | null;
 }
 
 export interface InstructionView {

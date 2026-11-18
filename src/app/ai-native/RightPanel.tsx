@@ -65,7 +65,7 @@ export default function RightPanel({
                     ) : gaps.map(g => (
                         <div key={g.id} className={styles.gapPanelCard}>
                             <div className={styles.gapPanelBody}>
-                                <span className={styles.gapPanelBrief}>{g.brief?.name ?? ''}</span>
+                                <span className={styles.gapPanelBrief}>{g.brief?.name ?? 'Firm-wide'}</span>
                                 <span className={styles.gapPanelText}>{g.text}</span>
                             </div>
                             <div className={styles.gapPanelReply}>

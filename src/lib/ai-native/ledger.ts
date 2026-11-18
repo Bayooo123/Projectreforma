@@ -9,7 +9,7 @@ const SYSTEM = `Extract each distinct expense from a lawyer's end-of-day note. R
  * the real Expense model (the same one the rest of the app already reads
  * from for distribution charts, exports, etc.) — not a parallel table.
  */
-export async function recordLedgerEntries(workspaceId: string, input: string) {
+export async function recordLedgerEntries(workspaceId: string, input: string, matterId?: string | null) {
     let items: { description: string; amount: number }[];
     try {
         const raw = await completeJSON({ system: SYSTEM, prompt: input, tier: 'quick', maxTokens: 500 });
@@ -28,6 +28,7 @@ export async function recordLedgerEntries(workspaceId: string, input: string) {
         prisma.expense.create({
             data: {
                 workspaceId,
+                matterId: matterId ?? null,
                 amount: item.amount,
                 description: item.description,
                 category: categorizeExpense({ title: item.description, amount: item.amount }),
